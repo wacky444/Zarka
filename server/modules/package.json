@@ -1,0 +1,15 @@
+{
+  "name": "nakama-ts-mod",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nakama server TypeScript module for async turn-based matches",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "nakama-runtime": "https://github.com/heroiclabs/nakama-common#v1.31.0"
+  }
+}

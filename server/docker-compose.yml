@@ -13,7 +13,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nakama -d nakama"]
+      test: ["CMD-SHELL", "pg_isready -U nakama -d nakama0000"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -29,10 +29,10 @@ services:
       - "/bin/sh"
       - "-ecx"
       - >
-        /nakama/nakama migrate up --database.address nakama:localdev@postgres:5432/nakama &&
-        exec /nakama/nakama --name nakama1 --database.address nakama:localdev@postgres:5432/nakama --logger.level DEBUG --session.token_expiry_sec 7200 --config /nakama/data/local.yml --runtime.path /nakama/data/modules
+        /nakama/nakama migrate up --database.address nakama:localdev@postgres:5432/nakama0000 &&
+        exec /nakama/nakama --name nakama1 --database.address nakama:localdev@postgres:5432/nakama0000 --logger.level DEBUG --session.token_expiry_sec 7200 --config /nakama/data/local.yml --runtime.path /nakama/data/modules
     environment:
-      - NAKAMA_DATABASE_ADDRESS=nakama:localdev@postgres:5432/nakama
+      - NAKAMA_DATABASE_ADDRESS=nakama:localdev@postgres:5432/nakama0000
     volumes:
       - ./modules:/nakama/data/modules
       - ./local.yml:/nakama/data/local.yml:ro

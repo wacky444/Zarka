@@ -39,3 +39,7 @@ Desktop.ini
 
 # Docker (local overrides)
 docker-compose.override.yml
+
+# Nakama JS server (TypeScript runtime)
+server/modules/node_modules/
+server/modules/build/
