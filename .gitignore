@@ -1,0 +1,41 @@
+# Node / Vite
+client/node_modules/
+client/dist/
+client/.vite/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# TypeScript
+*.tsbuildinfo
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Build outputs (generic)
+build/
+out/
+
+# Editor/IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Docker (local overrides)
+docker-compose.override.yml

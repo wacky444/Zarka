@@ -1,0 +1,44 @@
+# Compose spec: version key deprecated; relying on latest schema.
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: nakama-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: localdev
+      POSTGRES_USER: nakama
+      POSTGRES_DB: nakama0000
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nakama -d nakama"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  nakama:
+    image: heroiclabs/nakama:3.21.0
+    container_name: nakama
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    entrypoint:
+      - "/bin/sh"
+      - "-ecx"
+      - >
+        /nakama/nakama migrate up --database.address nakama:localdev@postgres:5432/nakama &&
+        exec /nakama/nakama --name nakama1 --database.address nakama:localdev@postgres:5432/nakama --logger.level DEBUG --session.token_expiry_sec 7200 --config /nakama/data/local.yml --runtime.path /nakama/data/modules
+    environment:
+      - NAKAMA_DATABASE_ADDRESS=nakama:localdev@postgres:5432/nakama
+    volumes:
+      - ./modules:/nakama/data/modules
+      - ./local.yml:/nakama/data/local.yml:ro
+    ports:
+      - "7350:7350"
+      - "7351:7351"
+      - "9100:9100"
+volumes:
+  pgdata: {}

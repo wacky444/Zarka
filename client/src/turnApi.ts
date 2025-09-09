@@ -1,0 +1,20 @@
+import { Client, Session } from '@heroiclabs/nakama-js';
+
+export class TurnService {
+    constructor(private client: Client, private session: Session) { }
+
+    async createMatch(size = 2) {
+        const res = await this.client.rpc(this.session, 'create_match', { size });
+        return res;
+    }
+
+    async submitTurn(match_id: string, move: any) {
+        const res = await this.client.rpc(this.session, 'submit_turn', { match_id, move });
+        return res;
+    }
+
+    async getState(match_id: string) {
+        const res = await this.client.rpc(this.session, 'get_state', { match_id });
+        return res;
+    }
+}

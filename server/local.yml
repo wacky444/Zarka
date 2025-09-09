@@ -1,0 +1,6 @@
+runtime:
+  path: "/nakama/data/modules"
+console:
+  port: 9100
+  username: "admin"
+  password: "password"
