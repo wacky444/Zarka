@@ -35,12 +35,10 @@ function create_match(ctx: nkruntime.Context, logger: nkruntime.Logger, nk: nkru
     }
   }
 
-  // There is no nk.uuidV4 in TS runtime; use nk.uuidV4 if present else fallback
-  // In JS runtime use nk.uuidv4(). Docs expose nk.uuidv4().
-  // Some versions expose nk.uuidV4; try both.
-  // @ts-ignore
-  const uuidFn = (nk as any).uuidv4 || (nk as any).uuidV4;
-  const matchId = uuidFn ? uuidFn() : ("match-" + Date.now() + Math.random().toString(16).slice(2));
+  // Create an authoritative match using our registered handler.
+  // Pass parameters as strings to align with runtime typing.
+  const params: { [key: string]: string } = { size: String(size) };
+  const matchId = nk.matchCreate("async_turn", params);
 
   const record: MatchRecord = {
     match_id: matchId,
@@ -178,8 +176,116 @@ function InitModule(ctx: nkruntime.Context, logger: nkruntime.Logger, nk: nkrunt
   } catch (error) {
     logger.error('Failed to register get_state: %s', (error && (error as Error).message) || String(error));
   }
+  // Register the authoritative match handler used by create_match.
+  try {
+    initializer.registerMatch<AsyncTurnState>("async_turn", {
+      matchInit: asyncTurnMatchInit,
+      matchJoinAttempt: asyncTurnMatchJoinAttempt,
+      matchJoin: asyncTurnMatchJoin,
+      matchLeave: asyncTurnMatchLeave,
+      matchLoop: asyncTurnMatchLoop,
+      matchTerminate: asyncTurnMatchTerminate,
+      matchSignal: asyncTurnMatchSignal,
+    });
+  } catch (error) {
+    logger.error('Failed to register match handler async_turn: %s', (error && (error as Error).message) || String(error));
+  }
   logger.info('TypeScript async_turn module loaded.');
 }
 
 // Reference InitModule to avoid it getting removed by bundlers.
 !InitModule && InitModule.bind(null);
+
+// ------------------------
+// Authoritative Match Logic
+// ------------------------
+
+type AsyncTurnState = nkruntime.MatchState & {
+  players: { [userId: string]: nkruntime.Presence };
+  order: string[]; // join order
+  size: number;
+  current_turn: number;
+  started: boolean;
+};
+
+const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> = function (ctx, logger, nk, params) {
+  const sizeStr = params && params["size"];
+  const size = Math.max(2, Math.min(8, parseInt(sizeStr || "2", 10) || 2));
+
+  const state: AsyncTurnState = {
+    players: {},
+    order: [],
+    size,
+    current_turn: 0,
+    started: false,
+  };
+
+  // Include some info in label for optional listing/filtering.
+  const label = JSON.stringify({ mode: "async", size: String(size), players: 0, started: false });
+  // Asynchronous turn-based can use a low tick rate.
+  const tickRate = 1;
+  return { state, tickRate, label };
+};
+
+const asyncTurnMatchJoinAttempt: nkruntime.MatchJoinAttemptFunction<AsyncTurnState> = function (ctx, logger, nk, dispatcher, tick, state, presence, metadata) {
+  const alreadyJoined = !!state.players[presence.userId];
+  const capacity = Object.keys(state.players).length + (alreadyJoined ? 0 : 1);
+  const accept = capacity <= state.size;
+  return accept ? { state, accept } : { state, accept: false, rejectMessage: "match_full" };
+};
+
+const asyncTurnMatchJoin: nkruntime.MatchJoinFunction<AsyncTurnState> = function (ctx, logger, nk, dispatcher, tick, state, presences) {
+  for (const p of presences) {
+    if (!state.players[p.userId]) {
+      state.players[p.userId] = p;
+      state.order.push(p.userId);
+    }
+  }
+  const playerCount = Object.keys(state.players).length;
+  if (!state.started && playerCount >= 2) {
+    state.started = true;
+  }
+  // Update label to reflect current player count.
+  try {
+    const label = JSON.stringify({ mode: "async", size: String(state.size), players: playerCount, started: state.started });
+    dispatcher.matchLabelUpdate(label);
+  } catch (e) {
+    // ignore label update errors
+  }
+  return { state };
+};
+
+const asyncTurnMatchLeave: nkruntime.MatchLeaveFunction<AsyncTurnState> = function (ctx, logger, nk, dispatcher, tick, state, presences) {
+  for (const p of presences) {
+    if (state.players[p.userId]) {
+      delete state.players[p.userId];
+      const idx = state.order.indexOf(p.userId);
+      if (idx !== -1) state.order.splice(idx, 1);
+    }
+  }
+  const playerCount = Object.keys(state.players).length;
+  try {
+    const label = JSON.stringify({ mode: "async", size: String(state.size), players: playerCount, started: state.started });
+    dispatcher.matchLabelUpdate(label);
+  } catch {}
+  // End match when empty
+  if (playerCount === 0) {
+    return null;
+  }
+  return { state };
+};
+
+const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> = function (ctx, logger, nk, dispatcher, tick, state, messages) {
+  // Asynchronous: no real-time cadence needed; messages can be ignored or handled if used.
+  // Keep state as-is.
+  return { state };
+};
+
+const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState> = function (ctx, logger, nk, dispatcher, tick, state, data) {
+  // Optional: allow out-of-band signals (e.g., reservations or debug pings)
+  return { state, data: "ok" };
+};
+
+const asyncTurnMatchTerminate: nkruntime.MatchTerminateFunction<AsyncTurnState> = function (ctx, logger, nk, dispatcher, tick, state, graceSeconds) {
+  return { state };
+};
