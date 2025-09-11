@@ -42,7 +42,36 @@ export class MainScene extends Phaser.Scene {
         this.statusText.setText(`Match created: ${this.currentMatchId}`);
       });
 
-      makeButton(this, 10, 80, "Submit Turn", async () => {
+      makeButton(this, 10, 80, "Join Match", async () => {
+        if (!this.turnService) throw new Error("No service");
+        if (!this.currentMatchId) {
+          this.statusText.setText("Create a match first.");
+          return;
+        }
+        const res = await this.turnService.joinMatch(this.currentMatchId);
+        interface JoinMatchPayload {
+          ok?: boolean;
+          joined?: boolean;
+          players?: string[];
+          size?: number;
+          match_id?: string;
+          error?: string;
+        }
+        const parsed = this.parseRpcPayload<JoinMatchPayload>(res);
+        if (parsed && parsed.ok) {
+          const count = Array.isArray(parsed.players)
+            ? parsed.players.length
+            : undefined;
+          this.statusText.setText(
+            `Join OK. Players: ${count ?? "?"}/${parsed.size ?? "?"}`
+          );
+        } else {
+          this.statusText.setText("join_match error (see console).");
+          console.log("join_match response:", parsed);
+        }
+      });
+
+      makeButton(this, 10, 120, "Submit Turn", async () => {
         if (!this.turnService) throw new Error("No service");
         if (!this.currentMatchId) {
           this.statusText.setText("Create a match first.");
@@ -66,7 +95,7 @@ export class MainScene extends Phaser.Scene {
         }
       });
 
-      makeButton(this, 10, 120, "Get State", async () => {
+      makeButton(this, 10, 160, "Get State", async () => {
         if (!this.turnService) throw new Error("No service");
         if (!this.currentMatchId) {
           this.statusText.setText("Create a match first.");
@@ -85,6 +114,11 @@ export class MainScene extends Phaser.Scene {
           const count = Array.isArray(parsed.turns) ? parsed.turns.length : 0;
           this.statusText.setText(`State OK. Turns: ${count}`);
         }
+      });
+
+      // Open the new Game Scene showcasing a hex grid
+      makeButton(this, 10, 200, "Open Game Scene", () => {
+        this.scene.start("GameScene");
       });
     } catch (e) {
       console.error(e);

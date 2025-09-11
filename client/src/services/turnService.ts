@@ -22,4 +22,9 @@ export class TurnService {
     const res = await this.client.rpc(this.session, "get_state", { match_id });
     return res;
   }
+
+  async joinMatch(match_id: string) {
+    const res = await this.client.rpc(this.session, "join_match", { match_id });
+    return res;
+  }
 }
