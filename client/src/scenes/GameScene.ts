@@ -34,7 +34,7 @@ export class GameScene extends Phaser.Scene {
 
     const texture = this.textures.get("hex");
     const frameNames = texture.getFrameNames().filter((f) => f !== "__BASE");
-    const cellTypes = Object.values(CellType) as CellType[];
+    const cellTypes = Object.values(HexTile) as CellType[];
 
     const sprites: Phaser.GameObjects.Image[] = [];
 

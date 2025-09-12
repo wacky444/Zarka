@@ -120,6 +120,11 @@ export class MainScene extends Phaser.Scene {
       makeButton(this, 10, 200, "Open Game Scene", () => {
         this.scene.start("GameScene");
       });
+
+      // Open Matches List scene
+      makeButton(this, 10, 240, "List Matches", () => {
+        this.scene.start("MatchesList");
+      });
     } catch (e) {
       console.error(e);
       const msg = e instanceof Error ? e.message : String(e);
