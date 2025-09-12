@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { makeButton } from "../ui/button";
+import { HexTile, CellType } from "@shared";
 
 export class GameScene extends Phaser.Scene {
   private cam!: Phaser.Cameras.Scene2D.Camera;
@@ -33,6 +34,7 @@ export class GameScene extends Phaser.Scene {
 
     const texture = this.textures.get("hex");
     const frameNames = texture.getFrameNames().filter((f) => f !== "__BASE");
+    const cellTypes = Object.values(CellType) as CellType[];
 
     const sprites: Phaser.GameObjects.Image[] = [];
 
@@ -42,7 +44,10 @@ export class GameScene extends Phaser.Scene {
         const y = row * dy + (col % 2 ? dy / 2 : 0) + tileH; // offset every other column
         const frame = frameNames[(Math.random() * frameNames.length) | 0];
         const img = this.add.image(x, y, "hex", frame);
-        //img.setOrigin(0.5);
+        // Attach a HexTile model to this sprite for shared logic/state
+        const cellType = cellTypes[(Math.random() * cellTypes.length) | 0];
+        const tile = new HexTile({ q: col, r: row }, cellType, { frame });
+        img.setData("tile", tile);
         sprites.push(img);
       }
     }
@@ -52,6 +57,8 @@ export class GameScene extends Phaser.Scene {
     const gridHeight = rows * dy + tileH * 2 + dy / 2;
     this.cam.setBounds(0, 0, gridWidth, gridHeight);
     this.cam.centerOn(gridWidth / 2, gridHeight / 2);
+
+    // Shared model (HexTile) is now used via sprite data above
 
     // Drag to pan
     this.enableDragPan();
@@ -71,13 +78,7 @@ export class GameScene extends Phaser.Scene {
     // const dragStart = new Phaser.Math.Vector2();
     // const camStart = new Phaser.Math.Vector2();
 
-    this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
-      // isDragging = true;
-    });
-
-    this.input.on("pointerup", () => {
-      // isDragging = false;
-    });
+    // No-op handlers removed
 
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
       if (!p.isDown) return;

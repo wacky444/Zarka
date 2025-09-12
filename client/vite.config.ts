@@ -5,6 +5,11 @@ export default defineConfig({
     port: 5173,
     open: true,
   },
+  resolve: {
+    alias: {
+      "@shared": new URL("../shared/src", import.meta.url).pathname,
+    },
+  },
   build: {
     // Ensure all built assets go into a separate folder
     outDir: "dist",

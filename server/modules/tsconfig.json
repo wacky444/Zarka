@@ -7,13 +7,12 @@
     "noImplicitReturns": true,
     "removeComments": true,
     "outFile": "./build/index.js",
-    "typeRoots": [
-      "./node_modules"
-    ]
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["../../shared/src/*"]
+    },
+    "typeRoots": ["./node_modules"]
   },
-  "files": [
-    "./node_modules/nakama-runtime/index.d.ts",
-    "./src/main.ts"
-  ],
+  "files": ["./node_modules/nakama-runtime/index.d.ts", "./src/main.ts"],
   "exclude": ["node_modules", "build"]
 }
