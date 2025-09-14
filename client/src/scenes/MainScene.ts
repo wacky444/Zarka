@@ -14,6 +14,31 @@ export class MainScene extends Phaser.Scene {
     super("MainScene");
   }
 
+  private async joinMatch(matchId: string) {
+    if (!this.turnService) throw new Error("No service");
+    const res = await this.turnService.joinMatch(matchId);
+    interface JoinMatchPayload {
+      ok?: boolean;
+      joined?: boolean;
+      players?: string[];
+      size?: number;
+      match_id?: string;
+      error?: string;
+    }
+    const parsed = this.parseRpcPayload<JoinMatchPayload>(res);
+    if (parsed && parsed.ok) {
+      const count = Array.isArray(parsed.players)
+        ? parsed.players.length
+        : undefined;
+      this.statusText.setText(
+        `Join OK. Players: ${count ?? "?"}/${parsed.size ?? "?"}`
+      );
+    } else {
+      this.statusText.setText("join_match error (see console).");
+      console.log("join_match response:", parsed);
+    }
+  }
+
   preload() {}
 
   async create() {
@@ -40,6 +65,9 @@ export class MainScene extends Phaser.Scene {
         this.currentMatchId = parsed.match_id;
         this.moveCounter = 0;
         this.statusText.setText(`Match created: ${this.currentMatchId}`);
+
+        // Auto-join the match we just created
+        await this.joinMatch(parsed.match_id);
       });
 
       makeButton(this, 10, 80, "Join Match", async () => {
@@ -48,27 +76,8 @@ export class MainScene extends Phaser.Scene {
           this.statusText.setText("Create a match first.");
           return;
         }
-        const res = await this.turnService.joinMatch(this.currentMatchId);
-        interface JoinMatchPayload {
-          ok?: boolean;
-          joined?: boolean;
-          players?: string[];
-          size?: number;
-          match_id?: string;
-          error?: string;
-        }
-        const parsed = this.parseRpcPayload<JoinMatchPayload>(res);
-        if (parsed && parsed.ok) {
-          const count = Array.isArray(parsed.players)
-            ? parsed.players.length
-            : undefined;
-          this.statusText.setText(
-            `Join OK. Players: ${count ?? "?"}/${parsed.size ?? "?"}`
-          );
-        } else {
-          this.statusText.setText("join_match error (see console).");
-          console.log("join_match response:", parsed);
-        }
+
+        // TODO move this button to matches list scene
       });
 
       makeButton(this, 10, 120, "Submit Turn", async () => {

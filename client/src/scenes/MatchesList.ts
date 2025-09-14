@@ -45,7 +45,7 @@ export class MatchesList extends Phaser.Scene {
     try {
       const { client, session } = await initNakama();
       // Limit to 50 entries, no extra filters.
-      const list = await client.listMatches(session, 50);
+      const list = await client.listMatches(session, 50, true, "", 0, 500, "");
       const matches: ApiMatch[] = list.matches ?? [];
       if (!matches.length) {
         this.statusText.setText("No matches found.");
