@@ -63,7 +63,11 @@ function create_match(
   };
 
   nk.storageWrite([write]);
-  return JSON.stringify({ match_id: matchId, size });
+  const response: import("@shared").CreateMatchPayload = {
+    match_id: matchId,
+    size,
+  };
+  return JSON.stringify(response);
 }
 
 // RPC: submit_turn
@@ -152,7 +156,11 @@ function submit_turn(
   // Write both records in one call; version ensures OCC on match record
   nk.storageWrite(writes);
 
-  return JSON.stringify({ ok: true, turn: match.current_turn });
+  const response2: import("@shared").SubmitTurnPayload = {
+    ok: true,
+    turn: match.current_turn,
+  };
+  return JSON.stringify(response2);
 }
 
 // RPC: get_state
@@ -199,7 +207,11 @@ function get_state(
   for (const r of turnResults) {
     if (r && r.value) turns.push(r.value as TurnRecord);
   }
-  return JSON.stringify({ match, turns });
+  const response3: import("@shared").GetStatePayload = {
+    match,
+    turns,
+  };
+  return JSON.stringify(response3);
 }
 
 // RPC: join_match
@@ -277,13 +289,99 @@ function join_match(
     ]);
   }
 
-  return JSON.stringify({
+  const response4: import("@shared").JoinMatchPayload = {
     ok: true,
     match_id: matchId,
     size: match.size,
     players: match.players,
     joined: joinedNow,
-  });
+  };
+  return JSON.stringify(response4);
+}
+
+// RPC: leave_match
+// Type-only import for payload
+import type { LeaveMatchPayload } from "@shared";
+
+function leave_match(
+  ctx: nkruntime.Context,
+  logger: nkruntime.Logger,
+  nk: nkruntime.Nakama,
+  payload: string
+): string {
+  if (!ctx || !ctx.userId) {
+    throw {
+      message: "No user context",
+      code: nkruntime.Codes.INVALID_ARGUMENT,
+    } as nkruntime.Error;
+  }
+  if (!payload || payload === "") {
+    throw {
+      message: "Missing payload",
+      code: nkruntime.Codes.INVALID_ARGUMENT,
+    } as nkruntime.Error;
+  }
+  let json: any;
+  try {
+    json = JSON.parse(payload);
+  } catch {
+    throw {
+      message: "bad_json",
+      code: nkruntime.Codes.INVALID_ARGUMENT,
+    } as nkruntime.Error;
+  }
+  const matchId: string = json.match_id;
+  if (!matchId || matchId === "") {
+    throw {
+      message: "match_id required",
+      code: nkruntime.Codes.INVALID_ARGUMENT,
+    } as nkruntime.Error;
+  }
+
+  const matchKey = MATCH_KEY_PREFIX + matchId;
+  const reads = nk.storageRead([
+    { collection: MATCH_COLLECTION, key: matchKey, userId: SERVER_USER_ID },
+  ]);
+  if (!reads || reads.length !== 1) {
+    throw {
+      message: "not_found",
+      code: nkruntime.Codes.NOT_FOUND,
+    } as nkruntime.Error;
+  }
+  const read = reads[0];
+  const match = read.value as MatchRecord;
+
+  const idx = match.players.indexOf(ctx.userId);
+  const wasInMatch = idx !== -1;
+  if (wasInMatch) {
+    match.players.splice(idx, 1);
+    try {
+      nk.storageWrite([
+        {
+          collection: MATCH_COLLECTION,
+          key: matchKey,
+          userId: SERVER_USER_ID,
+          value: match,
+          permissionRead: 2,
+          permissionWrite: 0,
+          version: read.version, // OCC
+        },
+      ]);
+    } catch (e) {
+      throw {
+        message: "storage_write_failed",
+        code: nkruntime.Codes.INTERNAL,
+      } as nkruntime.Error;
+    }
+  }
+
+  const response: LeaveMatchPayload = {
+    ok: true,
+    match_id: matchId,
+    players: match.players,
+    left: wasInMatch,
+  };
+  return JSON.stringify(response);
 }
 
 function InitModule(
@@ -321,6 +419,14 @@ function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register join_match: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("leave_match", leave_match);
+  } catch (error) {
+    logger.error(
+      "Failed to register leave_match: %s",
       (error && (error as Error).message) || String(error)
     );
   }

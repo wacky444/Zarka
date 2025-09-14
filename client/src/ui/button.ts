@@ -1,12 +1,15 @@
 import Phaser from "phaser";
 
+export type UIButton = Phaser.GameObjects.Text & { tags: string[] };
+
 export function makeButton(
   scene: Phaser.Scene,
   x: number,
   y: number,
   label: string,
-  onClick: () => Promise<void> | void
-): Phaser.GameObjects.Text {
+  onClick: () => Promise<void> | void,
+  tags: string[] = ["main"]
+): UIButton {
   const txt = scene.add
     .text(x, y, `[ ${label} ]`, {
       color: "#00ff88",
@@ -28,5 +31,9 @@ export function makeButton(
         console.error(e);
       }
     });
-  return txt;
+
+  // Attach tags for view-based visibility control
+  const button = txt as UIButton;
+  button.tags = tags;
+  return button;
 }

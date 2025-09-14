@@ -9,7 +9,8 @@
     "outFile": "./build/index.js",
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["../../shared/src/*"]
+      "@shared/*": ["../../shared/src/*"],
+      "@shared": ["../../shared/src/index.ts"]
     },
     "typeRoots": ["./node_modules"]
   },

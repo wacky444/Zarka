@@ -27,4 +27,11 @@ export class TurnService {
     const res = await this.client.rpc(this.session, "join_match", { match_id });
     return res;
   }
+
+  async leaveMatch(match_id: string) {
+    const res = await this.client.rpc(this.session, "leave_match", {
+      match_id,
+    });
+    return res;
+  }
 }

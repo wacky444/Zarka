@@ -2,13 +2,26 @@ import Phaser from "phaser";
 import { RpcResponse } from "@heroiclabs/nakama-js";
 import { initNakama } from "../services/nakama";
 import { TurnService } from "../services/turnService";
-import { makeButton } from "../ui/button";
+import { makeButton, UIButton } from "../ui/button";
+import { MatchesListView } from "./MatchesList";
+import { InMatchView } from "./InMatchView";
+import type {
+  LeaveMatchPayload,
+  JoinMatchPayload,
+  CreateMatchPayload,
+  SubmitTurnPayload,
+  GetStatePayload,
+} from "@shared";
 
 export class MainScene extends Phaser.Scene {
   private statusText!: Phaser.GameObjects.Text;
   private turnService: TurnService | null = null;
   private currentMatchId: string | null = null;
   private moveCounter = 0;
+  private matchesListView!: MatchesListView;
+  private inMatchView!: InMatchView;
+  private activeView: "main" | "matchList" | "inMatch" = "main";
+  private buttons: UIButton[] = [];
 
   constructor() {
     super("MainScene");
@@ -17,22 +30,24 @@ export class MainScene extends Phaser.Scene {
   private async joinMatch(matchId: string) {
     if (!this.turnService) throw new Error("No service");
     const res = await this.turnService.joinMatch(matchId);
-    interface JoinMatchPayload {
-      ok?: boolean;
-      joined?: boolean;
-      players?: string[];
-      size?: number;
-      match_id?: string;
-      error?: string;
-    }
     const parsed = this.parseRpcPayload<JoinMatchPayload>(res);
     if (parsed && parsed.ok) {
+      // Track joined match
+      this.currentMatchId = matchId;
+      this.moveCounter = 0;
       const count = Array.isArray(parsed.players)
         ? parsed.players.length
         : undefined;
       this.statusText.setText(
         `Join OK. Players: ${count ?? "?"}/${parsed.size ?? "?"}`
       );
+      // Hide list and switch to inMatch view
+      if (this.matchesListView) this.matchesListView.hide();
+      if (this.inMatchView) {
+        this.inMatchView.setMatchInfo(matchId);
+        this.inMatchView.show();
+      }
+      this.showView("inMatch");
     } else {
       this.statusText.setText("join_match error (see console).");
       console.log("join_match response:", parsed);
@@ -51,51 +66,35 @@ export class MainScene extends Phaser.Scene {
       this.turnService = new TurnService(client, session);
       this.statusText.setText("Authenticated. Use the buttons below.");
 
-      // Buttons
-      makeButton(this, 10, 40, "Create Match", async () => {
-        if (!this.turnService) throw new Error("No service");
-        const createRes = await this.turnService.createMatch(2);
-        interface CreateMatchPayload {
-          match_id: string;
-          size: number;
-        }
-        const parsed = this.parseRpcPayload<CreateMatchPayload>(createRes);
-        if (!parsed || !parsed.match_id)
-          throw new Error("No match_id returned");
-        this.currentMatchId = parsed.match_id;
-        this.moveCounter = 0;
-        this.statusText.setText(`Match created: ${this.currentMatchId}`);
-
-        // Auto-join the match we just created
-        await this.joinMatch(parsed.match_id);
+      // Instantiate Matches List view (hidden by default)
+      this.matchesListView = new MatchesListView(this);
+      this.matchesListView.setOnJoin(async (matchId: string) => {
+        await this.joinMatch(matchId);
       });
 
-      makeButton(this, 10, 80, "Join Match", async () => {
-        if (!this.turnService) throw new Error("No service");
-        if (!this.currentMatchId) {
-          this.statusText.setText("Create a match first.");
-          return;
+      // Instantiate In-Match view (hidden by default)
+      this.inMatchView = new InMatchView(this);
+      this.inMatchView.setOnLeave(async () => {
+        if (!this.turnService || !this.currentMatchId) return;
+        const res = await this.turnService.leaveMatch(this.currentMatchId);
+        const parsed = this.parseRpcPayload<LeaveMatchPayload>(res);
+        if (parsed && parsed.ok) {
+          this.currentMatchId = null;
+          this.inMatchView.hide();
+          this.showView("main");
+          this.statusText.setText("Left match.");
+        } else {
+          this.statusText.setText("leave_match error (see console).");
+          console.log("leave_match response:", parsed);
         }
-
-        // TODO move this button to matches list scene
       });
-
-      makeButton(this, 10, 120, "Submit Turn", async () => {
-        if (!this.turnService) throw new Error("No service");
-        if (!this.currentMatchId) {
-          this.statusText.setText("Create a match first.");
-          return;
-        }
+      this.inMatchView.setOnEndTurn(async () => {
+        if (!this.currentMatchId || !this.turnService) return;
         const move = { n: ++this.moveCounter, ts: Date.now() };
         const res = await this.turnService.submitTurn(
           this.currentMatchId,
           move
         );
-        interface SubmitTurnPayload {
-          ok?: boolean;
-          turn?: number;
-          [k: string]: unknown;
-        }
         const parsed = this.parseRpcPayload<SubmitTurnPayload>(res);
         if (parsed && parsed.ok) {
           this.statusText.setText(`Turn submitted. Turn #: ${parsed.turn}`);
@@ -104,36 +103,166 @@ export class MainScene extends Phaser.Scene {
         }
       });
 
-      makeButton(this, 10, 160, "Get State", async () => {
-        if (!this.turnService) throw new Error("No service");
-        if (!this.currentMatchId) {
-          this.statusText.setText("Create a match first.");
-          return;
-        }
-        const res = await this.turnService.getState(this.currentMatchId);
-        interface GetStatePayload {
-          error?: string;
-          match?: unknown;
-          turns?: unknown[];
-        }
-        const parsed = this.parseRpcPayload<GetStatePayload>(res);
-        if (parsed.error) {
-          this.statusText.setText("State error: " + parsed.error);
-        } else {
-          const count = Array.isArray(parsed.turns) ? parsed.turns.length : 0;
-          this.statusText.setText(`State OK. Turns: ${count}`);
-        }
-      });
+      // Buttons
+      this.buttons.push(
+        makeButton(
+          this,
+          10,
+          40,
+          "Create Match",
+          async () => {
+            if (!this.turnService) throw new Error("No service");
+            const createRes = await this.turnService.createMatch(2);
+            const parsed = this.parseRpcPayload<CreateMatchPayload>(createRes);
+            if (!parsed || !parsed.match_id)
+              throw new Error("No match_id returned");
+            this.currentMatchId = parsed.match_id;
+            this.statusText.setText(`Match created: ${this.currentMatchId}`);
+
+            // Auto-join the match we just created
+            await this.joinMatch(parsed.match_id);
+          },
+          ["main"]
+        )
+      );
+
+      this.buttons.push(
+        makeButton(
+          this,
+          10,
+          80,
+          "Join Match",
+          async () => {
+            if (!this.turnService) throw new Error("No service");
+            if (!this.currentMatchId) {
+              this.statusText.setText("Create a match first.");
+              return;
+            }
+
+            // TODO move this button to matches list scene
+          },
+          ["main"]
+        )
+      );
+
+      this.buttons.push(
+        makeButton(
+          this,
+          10,
+          120,
+          "Submit Turn",
+          async () => {
+            if (!this.turnService) throw new Error("No service");
+            if (!this.currentMatchId) {
+              this.statusText.setText("Create a match first.");
+              return;
+            }
+            const move = { n: ++this.moveCounter, ts: Date.now() };
+            const res = await this.turnService.submitTurn(
+              this.currentMatchId,
+              move
+            );
+            interface SubmitTurnPayload {
+              ok?: boolean;
+              turn?: number;
+              [k: string]: unknown;
+            }
+            const parsed = this.parseRpcPayload<SubmitTurnPayload>(res);
+            if (parsed && parsed.ok) {
+              this.statusText.setText(`Turn submitted. Turn #: ${parsed.turn}`);
+            } else {
+              this.statusText.setText("submit_turn error (see console).");
+            }
+          },
+          ["main"]
+        )
+      );
+
+      this.buttons.push(
+        makeButton(
+          this,
+          10,
+          160,
+          "Get State",
+          async () => {
+            if (!this.turnService) throw new Error("No service");
+            if (!this.currentMatchId) {
+              this.statusText.setText("Create a match first.");
+              return;
+            }
+            const res = await this.turnService.getState(this.currentMatchId);
+            const parsed = this.parseRpcPayload<GetStatePayload>(res);
+            if (parsed.error) {
+              this.statusText.setText("State error: " + parsed.error);
+            } else {
+              const count = Array.isArray(parsed.turns)
+                ? parsed.turns.length
+                : 0;
+              this.statusText.setText(`State OK. Turns: ${count}`);
+            }
+          },
+          ["main"]
+        )
+      );
 
       // Open the new Game Scene showcasing a hex grid
-      makeButton(this, 10, 200, "Open Game Scene", () => {
-        this.scene.start("GameScene");
-      });
+      this.buttons.push(
+        makeButton(
+          this,
+          10,
+          200,
+          "Open Game Scene",
+          () => {
+            this.scene.start("GameScene");
+          },
+          ["main"]
+        )
+      );
 
-      // Open Matches List scene
-      makeButton(this, 10, 240, "List Matches", () => {
-        this.scene.start("MatchesList");
-      });
+      // Matches list view toggle
+      this.buttons.push(
+        makeButton(
+          this,
+          10,
+          240,
+          "List Matches",
+          () => {
+            this.showView("matchList");
+            this.matchesListView.show();
+          },
+          ["main"]
+        )
+      );
+
+      // View-specific buttons for MatchesList
+      this.buttons.push(
+        makeButton(
+          this,
+          10,
+          70,
+          "Refresh",
+          () => this.matchesListView.refresh(),
+          ["matchList"]
+        )
+      );
+      this.buttons.push(
+        makeButton(
+          this,
+          110,
+          70,
+          "Back",
+          () => {
+            this.matchesListView.hide();
+            this.showView("main");
+          },
+          ["matchList"]
+        )
+      );
+
+      // Placeholder: inMatch view buttons can be added and tagged with ["inMatch"]
+
+      // Initialize in main view
+      this.applyViewVisibility();
     } catch (e) {
       console.error(e);
       const msg = e instanceof Error ? e.message : String(e);
@@ -150,5 +279,21 @@ export class MainScene extends Phaser.Scene {
       return raw as T; // already parsed
     }
     throw new Error("Unsupported payload type: " + typeof raw);
+  }
+
+  private showView(view: "main" | "matchList" | "inMatch") {
+    this.activeView = view;
+    this.applyViewVisibility();
+  }
+
+  private applyViewVisibility() {
+    // Toggle buttons based on tags
+    this.buttons.forEach((btn) => {
+      const show = btn.tags.includes(this.activeView);
+      btn.setVisible(show).setActive(show);
+      // Optional: also disable interaction when hidden
+      btn.disableInteractive();
+      if (show) btn.setInteractive({ useHandCursor: true });
+    });
   }
 }
