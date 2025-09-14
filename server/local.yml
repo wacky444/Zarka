@@ -1,6 +1,6 @@
 runtime:
   path: "/nakama/data/modules"
-  js_entrypoint: "build/index.js"
+  js_entrypoint: "build/server/modules/src/main.js"
 console:
   port: 9100
   username: "admin"

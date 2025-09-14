@@ -6,7 +6,8 @@
     "skipLibCheck": true,
     "noImplicitReturns": true,
     "removeComments": true,
-    "outFile": "./build/index.js",
+    "module": "commonjs",
+    "outDir": "./build",
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["../../shared/src/*"],
