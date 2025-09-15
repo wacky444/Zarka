@@ -15,6 +15,7 @@ interface MatchRecord {
   rows?: number;
   created_at: number;
   current_turn: number;
+  creator?: string;
 }
 
 interface TurnRecord {
@@ -32,6 +33,12 @@ function create_match(
   nk: nkruntime.Nakama,
   payload: string
 ): string {
+  if (!ctx || !ctx.userId) {
+    throw {
+      message: "No user context",
+      code: nkruntime.Codes.INVALID_ARGUMENT,
+    } as nkruntime.Error;
+  }
   let size = 2;
   if (payload && payload !== "") {
     try {
@@ -46,7 +53,10 @@ function create_match(
 
   // Create an authoritative match using our registered handler.
   // Pass parameters as strings to align with runtime typing.
-  const params: { [key: string]: string } = { size: String(size) };
+  const params: { [key: string]: string } = {
+    size: String(size),
+    creator: ctx.userId,
+  };
   const matchId = nk.matchCreate("async_turn", params);
 
   const record: MatchRecord = {
@@ -55,6 +65,7 @@ function create_match(
     size: size,
     created_at: Math.floor(Date.now() / 1000),
     current_turn: 0,
+    creator: ctx.userId,
   };
 
   const write: nkruntime.StorageWriteRequest = {
@@ -124,11 +135,11 @@ function update_settings(
   const read = reads[0];
   const match = read.value as MatchRecord;
 
-  // Only allow a player in the match to update settings
-  const isParticipant = match.players.indexOf(ctx.userId) !== -1;
-  if (!isParticipant) {
+  // Only allow the match creator to update settings
+  const isCreator = !!match.creator && match.creator === ctx.userId;
+  if (!isCreator) {
     throw {
-      message: "not_in_match",
+      message: "not_creator",
       code: nkruntime.Codes.PERMISSION_DENIED,
     } as nkruntime.Error;
   }
@@ -413,6 +424,7 @@ function join_match(
     size: match.size,
     players: match.players,
     joined: joinedNow,
+    // creator info is stored in storage; clients can fetch via get_state or label
   };
   return JSON.stringify(response4);
 }
@@ -589,12 +601,14 @@ type AsyncTurnState = nkruntime.MatchState & {
   rows?: number;
   current_turn: number;
   started: boolean;
+  creator?: string;
 };
 
 const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
   function (ctx, logger, nk, params) {
     const sizeStr = params && params["size"];
     const size = Math.max(2, Math.min(8, parseInt(sizeStr || "2", 10) || 2));
+    const creator = params && params["creator"]; // optional
 
     const state: AsyncTurnState = {
       players: {},
@@ -604,6 +618,7 @@ const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
       rows: undefined,
       current_turn: 0,
       started: false,
+      creator: typeof creator === "string" ? creator : undefined,
     };
 
     // Include some info in label for optional listing/filtering.
@@ -612,6 +627,7 @@ const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
       size: String(size),
       players: 0,
       started: false,
+      creator: state.creator,
     });
     // Asynchronous turn-based can use a low tick rate.
     const tickRate = 1;

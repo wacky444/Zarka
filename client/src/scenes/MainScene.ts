@@ -22,6 +22,7 @@ export class MainScene extends Phaser.Scene {
   private inMatchView!: InMatchView;
   private activeView: "main" | "matchList" | "inMatch" = "main";
   private buttons: UIButton[] = [];
+  private currentUserId: string | null = null;
 
   constructor() {
     super("MainScene");
@@ -51,6 +52,19 @@ export class MainScene extends Phaser.Scene {
       if (this.matchesListView) this.matchesListView.hide();
       if (this.inMatchView) {
         this.inMatchView.setMatchInfo(matchId);
+        // Fetch creator info to reflect in the UI
+        try {
+          const stateRes = await this.turnService.getState(matchId);
+          const st = this.parseRpcPayload<GetStatePayload>(stateRes);
+          const matchObj =
+            st && st.match ? (st.match as { creator?: string }) : undefined;
+          const creator: string | undefined = matchObj?.creator;
+          const isSelf =
+            !!creator && !!this.currentUserId && creator === this.currentUserId;
+          this.inMatchView.setCreator(creator, isSelf);
+        } catch (e) {
+          console.warn("Failed to load creator info", e);
+        }
         this.inMatchView.show();
       }
       this.showView("inMatch");
@@ -70,6 +84,7 @@ export class MainScene extends Phaser.Scene {
     try {
       const { client, session } = await initNakama();
       this.turnService = new TurnService(client, session);
+      this.currentUserId = session.user_id ?? null;
       // Pre-connect the realtime socket so join calls don't race the connection
       await this.turnService.connectSocket();
       // Real-time settings updates from server

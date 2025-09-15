@@ -48,8 +48,10 @@ export function addLabeledStepper(
   min: number,
   max: number,
   getter: () => number,
-  setter: (v: number) => void
-): void {
+  setter: (v: number) => void,
+  onlyHost: boolean = false,
+  isHost: boolean = true
+): { setEnabled: (enabled: boolean) => void } {
   const lab = scene.add.text(x, y, `${label}:`, { color: "#ffffff" });
   container.add(lab);
 
@@ -85,4 +87,27 @@ export function addLabeledStepper(
 
   container.add(decBtn);
   container.add(incBtn);
+
+  // Helper to toggle interactivity/appearance
+  const applyEnabled = (btn: UIButton, enabled: boolean) => {
+    if (enabled) {
+      btn.setAlpha(1);
+      btn.setInteractive({ useHandCursor: true });
+    } else {
+      btn.setAlpha(0.5);
+      btn.disableInteractive();
+    }
+  };
+
+  // Initial state: if host-only and not host, disable
+  const initialEnabled = !onlyHost || isHost;
+  applyEnabled(decBtn, initialEnabled);
+  applyEnabled(incBtn, initialEnabled);
+
+  return {
+    setEnabled: (enabled: boolean) => {
+      applyEnabled(decBtn, enabled);
+      applyEnabled(incBtn, enabled);
+    },
+  };
 }

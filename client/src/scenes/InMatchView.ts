@@ -8,10 +8,15 @@ export class InMatchView {
   private title!: Phaser.GameObjects.Text;
   private matchIdText!: Phaser.GameObjects.Text;
   private settingsText!: Phaser.GameObjects.Text;
+  private creatorText!: Phaser.GameObjects.Text;
 
   private players = 2;
   private cols = 5;
   private rows = 4;
+  private isHost = false;
+  private playersStepper?: { setEnabled: (enabled: boolean) => void };
+  private colsStepper?: { setEnabled: (enabled: boolean) => void };
+  private rowsStepper?: { setEnabled: (enabled: boolean) => void };
 
   private onLeave?: () => void | Promise<void>;
   private onEndTurn?: () => void | Promise<void>;
@@ -34,6 +39,11 @@ export class InMatchView {
       color: "#cccccc",
     });
     this.container.add(this.matchIdText);
+
+    this.creatorText = scene.add.text(300, 60, "Creator: -", {
+      color: "#cccccc",
+    });
+    this.container.add(this.creatorText);
 
     // Controls
     let y = 80;
@@ -67,7 +77,7 @@ export class InMatchView {
     y += 40;
 
     // Players control
-    addLabeledStepper(
+    this.playersStepper = addLabeledStepper(
       this.scene,
       this.container,
       10,
@@ -80,11 +90,13 @@ export class InMatchView {
         // Clamp to 1..100 just in case a custom input sneaks in
         this.players = Phaser.Math.Clamp(v, 1, 100);
         this.emitSettings();
-      }
+      },
+      true, // onlyHost
+      this.isHost
     );
 
     // Columns control
-    addLabeledStepper(
+    this.colsStepper = addLabeledStepper(
       this.scene,
       this.container,
       230,
@@ -96,11 +108,13 @@ export class InMatchView {
       (v) => {
         this.cols = Phaser.Math.Clamp(v, 1, 100);
         this.emitSettings();
-      }
+      },
+      true, // onlyHost
+      this.isHost
     );
 
     // Rows control
-    addLabeledStepper(
+    this.rowsStepper = addLabeledStepper(
       this.scene,
       this.container,
       470,
@@ -112,7 +126,9 @@ export class InMatchView {
       (v) => {
         this.rows = Phaser.Math.Clamp(v, 1, 100);
         this.emitSettings();
-      }
+      },
+      true, // onlyHost
+      this.isHost
     );
 
     y += 60;
@@ -137,6 +153,17 @@ export class InMatchView {
 
   setMatchInfo(matchId?: string) {
     this.matchIdText.setText(`Match: ${matchId ?? "-"}`);
+  }
+
+  setCreator(creatorId?: string, isSelf = false) {
+    const label = isSelf ? "You" : creatorId ?? "-";
+    this.creatorText.setText(`Creator: ${label}`);
+    this.isHost = !!isSelf;
+    // Toggle host-only steppers accordingly
+    const enabled = this.isHost;
+    this.playersStepper?.setEnabled(enabled);
+    this.colsStepper?.setEnabled(enabled);
+    this.rowsStepper?.setEnabled(enabled);
   }
 
   show() {
