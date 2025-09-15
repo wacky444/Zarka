@@ -32,6 +32,12 @@ export class MainScene extends Phaser.Scene {
     const res = await this.turnService.joinMatch(matchId);
     const parsed = this.parseRpcPayload<JoinMatchPayload>(res);
     if (parsed && parsed.ok) {
+      // Establish realtime presence in the authoritative match so players appear in state
+      try {
+        await this.turnService.joinRealtimeMatch(matchId);
+      } catch (e) {
+        console.warn("Realtime join failed", e);
+      }
       // Track joined match
       this.currentMatchId = matchId;
       this.moveCounter = 0;
@@ -79,6 +85,8 @@ export class MainScene extends Phaser.Scene {
         const res = await this.turnService.leaveMatch(this.currentMatchId);
         const parsed = this.parseRpcPayload<LeaveMatchPayload>(res);
         if (parsed && parsed.ok) {
+          // Also leave the realtime match to remove presence from state
+          await this.turnService.leaveRealtimeMatch(this.currentMatchId);
           this.currentMatchId = null;
           this.inMatchView.hide();
           this.showView("main");
