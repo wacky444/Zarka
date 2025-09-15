@@ -2,6 +2,11 @@ import Phaser from "phaser";
 
 export type UIButton = Phaser.GameObjects.Text & { tags: string[] };
 
+export type StepperHandle = {
+  setEnabled: (enabled: boolean) => void;
+  setDisplayValue: (v: number) => void;
+};
+
 export function makeButton(
   scene: Phaser.Scene,
   x: number,
@@ -51,7 +56,7 @@ export function addLabeledStepper(
   setter: (v: number) => void,
   onlyHost: boolean = false,
   isHost: boolean = true
-): { setEnabled: (enabled: boolean) => void } {
+): StepperHandle {
   const lab = scene.add.text(x, y, `${label}:`, { color: "#ffffff" });
   container.add(lab);
 
@@ -108,6 +113,11 @@ export function addLabeledStepper(
     setEnabled: (enabled: boolean) => {
       applyEnabled(decBtn, enabled);
       applyEnabled(incBtn, enabled);
+    },
+    // Update the visual number without calling the provided setter (useful for remote sync)
+    setDisplayValue: (v: number) => {
+      const clamped = Math.max(min, Math.min(max, v));
+      valText.setText(`${clamped}`);
     },
   };
 }

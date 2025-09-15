@@ -100,6 +100,8 @@ export class MainScene extends Phaser.Scene {
         if (s) this.statusText.setText(`Settings sync: ${s}`);
         // Optionally reflect in inMatch UI label
         // (InMatchView already shows current inputs; this just confirms sync)
+        // Update the inMatch controls for non-hosts (and host echo) without re-emitting
+        if (this.inMatchView) this.inMatchView.applySettings(p);
       });
       this.statusText.setText("Authenticated. Use the buttons below.");
 

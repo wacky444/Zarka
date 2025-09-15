@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { makeButton, addLabeledStepper } from "../ui/button";
+import { makeButton, addLabeledStepper, StepperHandle } from "../ui/button";
 import { InMatchSettings } from "@shared";
 
 export class InMatchView {
@@ -14,9 +14,9 @@ export class InMatchView {
   private cols = 5;
   private rows = 4;
   private isHost = false;
-  private playersStepper?: { setEnabled: (enabled: boolean) => void };
-  private colsStepper?: { setEnabled: (enabled: boolean) => void };
-  private rowsStepper?: { setEnabled: (enabled: boolean) => void };
+  private playersStepper?: StepperHandle;
+  private colsStepper?: StepperHandle;
+  private rowsStepper?: StepperHandle;
 
   private onLeave?: () => void | Promise<void>;
   private onEndTurn?: () => void | Promise<void>;
@@ -164,6 +164,24 @@ export class InMatchView {
     this.playersStepper?.setEnabled(enabled);
     this.colsStepper?.setEnabled(enabled);
     this.rowsStepper?.setEnabled(enabled);
+  }
+
+  // Apply settings coming from the server (host changes) and refresh UI fields without re-emitting
+  applySettings(partial: { size?: number; cols?: number; rows?: number }) {
+    if (typeof partial.size === "number") {
+      this.players = Phaser.Math.Clamp(partial.size, 1, 100);
+      this.playersStepper?.setDisplayValue(this.players);
+    }
+    if (typeof partial.cols === "number") {
+      this.cols = Phaser.Math.Clamp(partial.cols, 1, 100);
+      this.colsStepper?.setDisplayValue(this.cols);
+    }
+    if (typeof partial.rows === "number") {
+      this.rows = Phaser.Math.Clamp(partial.rows, 1, 100);
+      this.rowsStepper?.setDisplayValue(this.rows);
+    }
+    // Update summary label
+    this.settingsText.setText(this.settingsSummary());
   }
 
   show() {
