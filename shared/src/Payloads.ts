@@ -34,3 +34,14 @@ export type LeaveMatchPayload = {
   left?: boolean;
   error?: string;
 };
+
+// Update match settings
+export type UpdateSettingsPayload = {
+  ok?: boolean;
+  match_id?: string;
+  // Echo back applied settings if successful
+  size?: number; // players capacity
+  cols?: number;
+  rows?: number;
+  error?: string;
+};

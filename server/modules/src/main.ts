@@ -9,6 +9,8 @@ interface MatchRecord {
   match_id: string;
   players: string[];
   size: number;
+  cols?: number;
+  rows?: number;
   created_at: number;
   current_turn: number;
 }
@@ -68,6 +70,120 @@ function create_match(
     size,
   };
   return JSON.stringify(response);
+}
+
+// RPC: update_settings
+function update_settings(
+  ctx: nkruntime.Context,
+  logger: nkruntime.Logger,
+  nk: nkruntime.Nakama,
+  payload: string
+): string {
+  if (!ctx || !ctx.userId) {
+    throw {
+      message: "No user context",
+      code: nkruntime.Codes.INVALID_ARGUMENT,
+    } as nkruntime.Error;
+  }
+  if (!payload || payload === "") {
+    throw {
+      message: "Missing payload",
+      code: nkruntime.Codes.INVALID_ARGUMENT,
+    } as nkruntime.Error;
+  }
+  let json: any;
+  try {
+    json = JSON.parse(payload);
+  } catch {
+    throw {
+      message: "bad_json",
+      code: nkruntime.Codes.INVALID_ARGUMENT,
+    } as nkruntime.Error;
+  }
+  const matchId: string = json.match_id;
+  const settings = json.settings || {};
+  if (!matchId) {
+    throw {
+      message: "match_id required",
+      code: nkruntime.Codes.INVALID_ARGUMENT,
+    } as nkruntime.Error;
+  }
+
+  const matchKey = MATCH_KEY_PREFIX + matchId;
+  const reads = nk.storageRead([
+    { collection: MATCH_COLLECTION, key: matchKey, userId: SERVER_USER_ID },
+  ]);
+  if (!reads || reads.length !== 1) {
+    throw {
+      message: "not_found",
+      code: nkruntime.Codes.NOT_FOUND,
+    } as nkruntime.Error;
+  }
+  const read = reads[0];
+  const match = read.value as MatchRecord;
+
+  // Only allow a player in the match to update settings
+  const isParticipant = match.players.indexOf(ctx.userId) !== -1;
+  if (!isParticipant) {
+    throw {
+      message: "not_in_match",
+      code: nkruntime.Codes.PERMISSION_DENIED,
+    } as nkruntime.Error;
+  }
+
+  // Clamp values per request: min 1, max 100
+  const clamp = (n: any, min = 1, max = 100) => {
+    const v = parseInt(String(n ?? 0), 10);
+    if (isNaN(v)) return undefined;
+    return Math.max(min, Math.min(max, v));
+  };
+
+  const newSize = clamp(settings.players);
+  const newCols = clamp(settings.cols);
+  const newRows = clamp(settings.rows);
+  if (typeof newSize === "number") match.size = newSize;
+  if (typeof newCols === "number") match.cols = newCols;
+  if (typeof newRows === "number") match.rows = newRows;
+
+  try {
+    nk.storageWrite([
+      {
+        collection: MATCH_COLLECTION,
+        key: matchKey,
+        userId: SERVER_USER_ID,
+        value: match,
+        permissionRead: 2,
+        permissionWrite: 0,
+        version: read.version,
+      },
+    ]);
+    // Also notify the authoritative match, if active, so in-memory state reflects changes
+    try {
+      nk.matchSignal(
+        matchId,
+        JSON.stringify({
+          type: "update_settings",
+          size: match.size,
+          cols: match.cols,
+          rows: match.rows,
+        })
+      );
+    } catch {}
+  } catch (e) {
+    throw {
+      message: "storage_write_failed",
+      code: nkruntime.Codes.INTERNAL,
+    } as nkruntime.Error;
+  }
+
+  const response5: import("@shared").UpdateSettingsPayload = {
+    ok: true,
+    match_id: matchId,
+    size: match.size,
+    cols: match.cols,
+    rows: match.rows,
+  };
+  return JSON.stringify(response5);
 }
 
 // RPC: submit_turn
@@ -300,8 +416,6 @@ function join_match(
 }
 
 // RPC: leave_match
-// Type-only import for payload
-import type { LeaveMatchPayload } from "@shared";
 
 function leave_match(
   ctx: nkruntime.Context,
@@ -375,7 +489,7 @@ function leave_match(
     }
   }
 
-  const response: LeaveMatchPayload = {
+  const response: import("@shared").LeaveMatchPayload = {
     ok: true,
     match_id: matchId,
     players: match.players,
@@ -430,6 +544,14 @@ function InitModule(
       (error && (error as Error).message) || String(error)
     );
   }
+  try {
+    initializer.registerRpc("update_settings", update_settings);
+  } catch (error) {
+    logger.error(
+      "Failed to register update_settings: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
   // Register the authoritative match handler used by create_match.
   try {
     initializer.registerMatch<AsyncTurnState>("async_turn", {
@@ -461,6 +583,8 @@ type AsyncTurnState = nkruntime.MatchState & {
   players: { [userId: string]: nkruntime.Presence };
   order: string[]; // join order
   size: number;
+  cols?: number;
+  rows?: number;
   current_turn: number;
   started: boolean;
 };
@@ -474,6 +598,8 @@ const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
       players: {},
       order: [],
       size,
+      cols: undefined,
+      rows: undefined,
       current_turn: 0,
       started: false,
     };
@@ -563,7 +689,34 @@ const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
 
 const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState> =
   function (ctx, logger, nk, dispatcher, tick, state, data) {
-    // Optional: allow out-of-band signals (e.g., reservations or debug pings)
+    try {
+      const msg = typeof data === "string" ? JSON.parse(data) : data;
+      if (msg && msg.type === "update_settings") {
+        const clamp = (n: any, min = 1, max = 100) => {
+          const v = parseInt(String(n ?? 0), 10);
+          if (isNaN(v)) return undefined;
+          return Math.max(min, Math.min(max, v));
+        };
+        const ns = clamp(msg.size);
+        const nc = clamp(msg.cols);
+        const nr = clamp(msg.rows);
+        if (typeof ns === "number") state.size = ns;
+        if (typeof nc === "number") state.cols = nc;
+        if (typeof nr === "number") state.rows = nr;
+        // refresh label
+        try {
+          const label = JSON.stringify({
+            mode: "async",
+            size: String(state.size),
+            players: Object.keys(state.players).length,
+            started: state.started,
+          });
+          dispatcher.matchLabelUpdate(label);
+        } catch {}
+      }
+    } catch (e) {
+      logger.warn("matchSignal parse error: %v", e);
+    }
     return { state, data: "ok" };
   };
 

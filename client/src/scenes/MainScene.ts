@@ -102,6 +102,18 @@ export class MainScene extends Phaser.Scene {
           this.statusText.setText("submit_turn error (see console).");
         }
       });
+      this.inMatchView.setOnSettingsChange(async (s) => {
+        if (!this.turnService || !this.currentMatchId) return;
+        try {
+          await this.turnService.updateSettings(this.currentMatchId, s);
+          this.statusText.setText(
+            `Settings updated: players=${s.players}, ${s.cols}x${s.rows}`
+          );
+        } catch (e) {
+          console.error("update_settings error", e);
+          this.statusText.setText("Failed to update settings");
+        }
+      });
 
       // Buttons
       this.buttons.push(

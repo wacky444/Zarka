@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { makeButton } from "../ui/button";
+import { makeButton, addLabeledStepper } from "../ui/button";
 import { InMatchSettings } from "@shared";
 
 export class InMatchView {
@@ -67,43 +67,50 @@ export class InMatchView {
     y += 40;
 
     // Players control
-    this.addLabeledStepper(
+    addLabeledStepper(
+      this.scene,
+      this.container,
       10,
       y,
       "Players",
-      2,
-      8,
+      1,
+      100,
       () => this.players,
       (v) => {
-        this.players = v;
+        // Clamp to 1..100 just in case a custom input sneaks in
+        this.players = Phaser.Math.Clamp(v, 1, 100);
         this.emitSettings();
       }
     );
 
     // Columns control
-    this.addLabeledStepper(
+    addLabeledStepper(
+      this.scene,
+      this.container,
       230,
       y,
       "Columns",
-      3,
-      50,
+      1,
+      100,
       () => this.cols,
       (v) => {
-        this.cols = v;
+        this.cols = Phaser.Math.Clamp(v, 1, 100);
         this.emitSettings();
       }
     );
 
     // Rows control
-    this.addLabeledStepper(
+    addLabeledStepper(
+      this.scene,
+      this.container,
       470,
       y,
       "Rows",
-      3,
-      50,
+      1,
+      100,
       () => this.rows,
       (v) => {
-        this.rows = v;
+        this.rows = Phaser.Math.Clamp(v, 1, 100);
         this.emitSettings();
       }
     );
@@ -151,51 +158,5 @@ export class InMatchView {
 
   private settingsSummary() {
     return `Settings -> Players: ${this.players} | Map: ${this.cols} x ${this.rows}`;
-  }
-
-  private addLabeledStepper(
-    x: number,
-    y: number,
-    label: string,
-    min: number,
-    max: number,
-    getter: () => number,
-    setter: (v: number) => void
-  ) {
-    const lab = this.scene.add.text(x, y, `${label}:`, { color: "#ffffff" });
-    this.container.add(lab);
-
-    const valText = this.scene.add.text(x + 80, y, `${getter()}`, {
-      color: "#ffff88",
-    });
-    this.container.add(valText);
-
-    const decBtn = makeButton(
-      this.scene,
-      x + 130,
-      y - 2,
-      "-",
-      () => {
-        const v = Math.max(min, getter() - 1);
-        setter(v);
-        valText.setText(`${v}`);
-      },
-      ["inMatch"]
-    );
-    const incBtn = makeButton(
-      this.scene,
-      x + 170,
-      y - 2,
-      "+",
-      () => {
-        const v = Math.min(max, getter() + 1);
-        setter(v);
-        valText.setText(`${v}`);
-      },
-      ["inMatch"]
-    );
-
-    this.container.add(decBtn);
-    this.container.add(incBtn);
   }
 }

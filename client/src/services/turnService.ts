@@ -1,4 +1,5 @@
 import { Client, Session } from "@heroiclabs/nakama-js";
+import type { InMatchSettings } from "@shared";
 
 export type Move = { n: number; ts: number };
 
@@ -31,6 +32,14 @@ export class TurnService {
   async leaveMatch(match_id: string) {
     const res = await this.client.rpc(this.session, "leave_match", {
       match_id,
+    });
+    return res;
+  }
+
+  async updateSettings(match_id: string, settings: InMatchSettings) {
+    const res = await this.client.rpc(this.session, "update_settings", {
+      match_id,
+      settings,
     });
     return res;
   }
