@@ -179,85 +179,6 @@ export class MainScene extends Phaser.Scene {
         )
       );
 
-      this.buttons.push(
-        makeButton(
-          this,
-          10,
-          80,
-          "Join Match",
-          async () => {
-            if (!this.turnService) throw new Error("No service");
-            if (!this.currentMatchId) {
-              this.statusText.setText("Create a match first.");
-              return;
-            }
-
-            // TODO move this button to matches list scene
-          },
-          ["main"]
-        )
-      );
-
-      this.buttons.push(
-        makeButton(
-          this,
-          10,
-          120,
-          "Submit Turn",
-          async () => {
-            if (!this.turnService) throw new Error("No service");
-            if (!this.currentMatchId) {
-              this.statusText.setText("Create a match first.");
-              return;
-            }
-            const move = { n: ++this.moveCounter, ts: Date.now() };
-            const res = await this.turnService.submitTurn(
-              this.currentMatchId,
-              move
-            );
-            interface SubmitTurnPayload {
-              ok?: boolean;
-              turn?: number;
-              [k: string]: unknown;
-            }
-            const parsed = this.parseRpcPayload<SubmitTurnPayload>(res);
-            if (parsed && parsed.ok) {
-              this.statusText.setText(`Turn submitted. Turn #: ${parsed.turn}`);
-            } else {
-              this.statusText.setText("submit_turn error (see console).");
-            }
-          },
-          ["main"]
-        )
-      );
-
-      this.buttons.push(
-        makeButton(
-          this,
-          10,
-          160,
-          "Get State",
-          async () => {
-            if (!this.turnService) throw new Error("No service");
-            if (!this.currentMatchId) {
-              this.statusText.setText("Create a match first.");
-              return;
-            }
-            const res = await this.turnService.getState(this.currentMatchId);
-            const parsed = this.parseRpcPayload<GetStatePayload>(res);
-            if (parsed.error) {
-              this.statusText.setText("State error: " + parsed.error);
-            } else {
-              const count = Array.isArray(parsed.turns)
-                ? parsed.turns.length
-                : 0;
-              this.statusText.setText(`State OK. Turns: ${count}`);
-            }
-          },
-          ["main"]
-        )
-      );
-
       // Open the new Game Scene showcasing a hex grid
       this.buttons.push(
         makeButton(
@@ -345,8 +266,8 @@ export class MainScene extends Phaser.Scene {
       const show = btn.tags.includes(this.activeView);
       btn.setVisible(show).setActive(show);
       // Optional: also disable interaction when hidden
-      btn.disableInteractive();
-      if (show) btn.setInteractive({ useHandCursor: true });
+      // btn.disableInteractive();
+      // if (show) btn.setInteractive({ useHandCursor: true });
     });
   }
 }
