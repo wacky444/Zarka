@@ -70,6 +70,22 @@ export class MainScene extends Phaser.Scene {
     try {
       const { client, session } = await initNakama();
       this.turnService = new TurnService(client, session);
+      // Pre-connect the realtime socket so join calls don't race the connection
+      await this.turnService.connectSocket();
+      // Real-time settings updates from server
+      this.turnService.setOnSettingsUpdate((p) => {
+        const s = [
+          p.size !== undefined ? `players=${p.size}` : null,
+          p.cols !== undefined && p.rows !== undefined
+            ? `${p.cols}x${p.rows}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(", ");
+        if (s) this.statusText.setText(`Settings sync: ${s}`);
+        // Optionally reflect in inMatch UI label
+        // (InMatchView already shows current inputs; this just confirms sync)
+      });
       this.statusText.setText("Authenticated. Use the buttons below.");
 
       // Instantiate Matches List view (hidden by default)

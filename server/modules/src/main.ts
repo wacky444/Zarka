@@ -3,6 +3,8 @@ const MATCH_COLLECTION = "async_turn_matches";
 const TURN_COLLECTION = "async_turn_turns";
 const MATCH_KEY_PREFIX = "match_";
 const SERVER_USER_ID = "00000000-0000-0000-0000-000000000000";
+// Match opcodes for realtime messages
+const OPCODE_SETTINGS_UPDATE = 100;
 
 // Types of objects we store
 interface MatchRecord {
@@ -651,6 +653,22 @@ const asyncTurnMatchJoin: nkruntime.MatchJoinFunction<AsyncTurnState> =
     } catch (e) {
       // ignore label update errors
     }
+    // Send current settings to the newly joined presences so their UI updates immediately.
+    try {
+      const payload = JSON.stringify({
+        size: state.size,
+        cols: state.cols,
+        rows: state.rows,
+        started: state.started,
+      });
+      dispatcher.broadcastMessage(
+        OPCODE_SETTINGS_UPDATE,
+        payload,
+        presences, // target only newly joined
+        null,
+        true
+      );
+    } catch {}
     return { state };
   };
 
@@ -712,6 +730,22 @@ const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState> =
             started: state.started,
           });
           dispatcher.matchLabelUpdate(label);
+        } catch {}
+        // Broadcast the updated settings to all connected presences in real time
+        try {
+          const payload = JSON.stringify({
+            size: state.size,
+            cols: state.cols,
+            rows: state.rows,
+            started: state.started,
+          });
+          dispatcher.broadcastMessage(
+            OPCODE_SETTINGS_UPDATE,
+            payload,
+            null, // null => everyone in the match
+            null,
+            true
+          );
         } catch {}
       }
     } catch (e) {
