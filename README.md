@@ -56,7 +56,29 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173. The game scene will authenticate with a device ID and call the `get_state` RPC (initially this returns `not_found` until a match is created). Device auth is a quick start method—later you can add email, custom, or social auth.
+Open http://localhost:5173. The application now starts with a **login screen** featuring multiple authentication options:
+
+### Authentication Options
+
+1. **Facebook Login** - Integrated Facebook SDK authentication (requires Facebook App ID configuration)
+2. **Email Registration/Login** - Create accounts or login with email and password
+3. **Guest Access** - Quick device-based authentication for immediate access
+
+### Login Flow
+
+- **First Visit**: Shows login screen with authentication options
+- **Returning Users**: Automatically restores valid sessions and proceeds to main game
+- **Session Management**: Persistent login state across browser sessions with automatic token refresh
+
+### Account Management
+
+Once authenticated, users can:
+
+- Access **Account Settings** to view profile information
+- **Link/Unlink Facebook** accounts to existing email accounts  
+- **Logout** to return to login screen and clear session
+
+The game scene will authenticate with the stored session and call the `get_state` RPC. Email and Facebook auth provide persistent user accounts, while guest mode uses device ID for quick access.
 
 ### Turn Flow (Current Lua Prototype)
 
@@ -96,12 +118,13 @@ Scaling Considerations:
 
 ## Next Steps (Suggested Enhancements)
 
-- UI: Buttons to create a match, submit a dummy move, and refresh state.
-- Match Listing: Query storage to list active matches (add an index record or use authoritative listing).
-- Validation: Enforce player order (e.g., round-robin) and reject moves out of turn.
-- Auth Upgrade: Replace device auth with email/custom ID; persist display names.
-- Real-Time: Migrate to authoritative matches for push-based turn notifications.
-- Testing: Add a lightweight integration script invoking RPCs to assert turn sequence.
+- UI: Enhanced match management with spectator mode and player profiles.
+- Match Listing: Advanced filtering and search capabilities for active matches.
+- Validation: Real-time move validation and anti-cheat mechanisms.
+- Real-Time: Migrate to authoritative matches for instant turn notifications.
+- Testing: Comprehensive integration test suite for authentication and game flows.
+- **Facebook Configuration**: Set up Facebook App ID in `client/index.html` for production Facebook authentication.
+- **Social Features**: Friend lists, private matches, and in-game messaging.
 
 ## Troubleshooting
 
