@@ -132,6 +132,35 @@ Scaling Considerations:
 - [ ] **Social Features**: Friend lists, private matches, and in-game messaging
 - [ ] Validation: Enforce player order (e.g., round-robin) and reject moves out of turn
 
+## Deployment
+
+### GitHub Pages
+
+The game is automatically deployed to GitHub Pages on every push to the main branch.
+
+**Live Demo**: https://wacky444.github.io/Zarka/
+
+The deployment:
+- Builds the client application with production settings
+- Uses the configured Nakama server for multiplayer functionality
+- Serves static assets from the `client/dist` folder
+
+To configure for your own deployment:
+1. Enable GitHub Pages in your repository settings (Settings → Pages → Source: GitHub Actions)
+2. Update `client/.env.production` with your Nakama server details
+3. Push to the main branch to trigger deployment
+
+### Local Production Build
+
+To test the production build locally:
+
+```bash
+cd client
+cp .env.production .env
+NODE_ENV=production npm run build
+npm run preview
+```
+
 ## Troubleshooting
 
 - If the client cannot connect, ensure ports 7350/7351 are not blocked and Docker containers are healthy.

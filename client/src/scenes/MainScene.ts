@@ -364,7 +364,13 @@ export class MainScene extends Phaser.Scene {
     } catch (e) {
       console.error(e);
       const msg = e instanceof Error ? e.message : String(e);
-      this.statusText.setText("Init error: " + msg);
+      
+      // Provide user-friendly error message for server connection issues
+      if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+        this.statusText.setText("Server unavailable. Please check your connection or try again later.");
+      } else {
+        this.statusText.setText("Init error: " + msg);
+      }
     }
   }
 
