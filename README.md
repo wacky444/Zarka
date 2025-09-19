@@ -116,15 +116,21 @@ Scaling Considerations:
 - For large histories, page turns instead of iterating back 50. Use cursor-based listing or store an aggregate state snapshot every N turns.
 - When switching to authoritative real-time matches, you can migrate logic into a Go or TypeScript (JS) match handler for push updates.
 
-## Next Steps (Suggested Enhancements)
+## Next Steps
 
-- UI: Enhanced match management with spectator mode and player profiles.
-- Match Listing: Advanced filtering and search capabilities for active matches.
-- Validation: Real-time move validation and anti-cheat mechanisms.
-- Real-Time: Migrate to authoritative matches for instant turn notifications.
-- Testing: Comprehensive integration test suite for authentication and game flows.
-- **Facebook Configuration**: Set up Facebook App ID in `client/index.html` for production Facebook authentication.
-- **Social Features**: Friend lists, private matches, and in-game messaging.
+- [ ] Match options:
+  - [ ] Set time of day to force next round
+  - [ ] Autoskip if someone has moved and the time limit has passed
+  - [ ] Number of bot players
+- [x] **Auth Upgrade**: Implemented comprehensive login system with email/Facebook authentication and session management
+- [ ] Enhanced match management with spectator mode and player profiles
+- [ ] Advanced filtering and search capabilities for active matches
+- [ ] Real-time move validation and anti-cheat mechanisms
+- [ ] Migrate to authoritative matches for instant turn notifications
+- [ ] Comprehensive integration test suite for authentication and game flows
+- [ ] **Facebook Configuration**: Set up Facebook App ID in `client/index.html` for production Facebook authentication
+- [ ] **Social Features**: Friend lists, private matches, and in-game messaging
+- [ ] Validation: Enforce player order (e.g., round-robin) and reject moves out of turn
 
 ## Troubleshooting
 
