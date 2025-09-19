@@ -234,6 +234,20 @@ export class MainScene extends Phaser.Scene {
       );
 
       // Placeholder: inMatch view buttons can be added and tagged with ["inMatch"]
+      this.buttons.push(
+        makeButton(
+          this,
+          290,
+          80,
+          "Back to Menu",
+          () => {
+            this.inMatchView.hide();
+            this.showView("main");
+            this.statusText.setText("Back to main menu (still in match).");
+          },
+          ["inMatch"]
+        )
+      );
 
       // Initialize in main view
       this.applyViewVisibility();
