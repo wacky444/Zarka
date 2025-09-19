@@ -118,10 +118,10 @@ Scaling Considerations:
 
 ## Next Steps
 
-- [ ] Match options:
-  - [ ] Set time of day to force next round
-  - [ ] Autoskip if someone has moved and the time limit has passed
-  - [ ] Number of bot players
+- [x] **Match options**:
+  - [x] Set time of day to force next round (default 23:00)
+  - [x] Autoskip if someone has moved and the time limit has passed (default ON)
+  - [x] Number of bot players (default 0, range 0-10)
 - [x] **Auth Upgrade**: Implemented comprehensive login system with email/Facebook authentication and session management
 - [ ] Enhanced match management with spectator mode and player profiles
 - [ ] Advanced filtering and search capabilities for active matches

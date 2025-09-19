@@ -7,6 +7,16 @@ export type StepperHandle = {
   setDisplayValue: (v: number) => void;
 };
 
+export type ToggleHandle = {
+  setEnabled: (enabled: boolean) => void;
+  setDisplayValue: (v: boolean) => void;
+};
+
+export type TimeInputHandle = {
+  setEnabled: (enabled: boolean) => void;
+  setDisplayValue: (v: string) => void;
+};
+
 export function makeButton(
   scene: Phaser.Scene,
   x: number,
@@ -118,6 +128,132 @@ export function addLabeledStepper(
     setDisplayValue: (v: number) => {
       const clamped = Math.max(min, Math.min(max, v));
       valText.setText(`${clamped}`);
+    },
+  };
+}
+
+// Adds a labeled toggle (on/off) control to a container
+export function addLabeledToggle(
+  scene: Phaser.Scene,
+  container: Phaser.GameObjects.Container,
+  x: number,
+  y: number,
+  label: string,
+  getter: () => boolean,
+  setter: (v: boolean) => void,
+  onlyHost: boolean = false,
+  isHost: boolean = true
+): ToggleHandle {
+  const lab = scene.add.text(x, y, `${label}:`, { color: "#ffffff" });
+  container.add(lab);
+
+  const valText = scene.add.text(x + 80, y, getter() ? "ON" : "OFF", {
+    color: "#ffff88",
+  });
+  container.add(valText);
+
+  const toggleBtn = makeButton(
+    scene,
+    x + 130,
+    y - 2,
+    "Toggle",
+    () => {
+      const newValue = !getter();
+      setter(newValue);
+      valText.setText(newValue ? "ON" : "OFF");
+    },
+    ["inMatch"]
+  );
+
+  container.add(toggleBtn);
+
+  // Helper to toggle interactivity/appearance
+  const applyEnabled = (btn: UIButton, enabled: boolean) => {
+    if (enabled) {
+      btn.setAlpha(1);
+      btn.setInteractive({ useHandCursor: true });
+    } else {
+      btn.setAlpha(0.5);
+      btn.disableInteractive();
+    }
+  };
+
+  // Initial state: if host-only and not host, disable
+  const initialEnabled = !onlyHost || isHost;
+  applyEnabled(toggleBtn, initialEnabled);
+
+  return {
+    setEnabled: (enabled: boolean) => {
+      applyEnabled(toggleBtn, enabled);
+    },
+    setDisplayValue: (v: boolean) => {
+      valText.setText(v ? "ON" : "OFF");
+    },
+  };
+}
+
+// Adds a labeled time input control to a container
+export function addLabeledTimeInput(
+  scene: Phaser.Scene,
+  container: Phaser.GameObjects.Container,
+  x: number,
+  y: number,
+  label: string,
+  getter: () => string,
+  setter: (v: string) => void,
+  onlyHost: boolean = false,
+  isHost: boolean = true
+): TimeInputHandle {
+  const lab = scene.add.text(x, y, `${label}:`, { color: "#ffffff" });
+  container.add(lab);
+
+  const valText = scene.add.text(x + 80, y, getter(), {
+    color: "#ffff88",
+  });
+  container.add(valText);
+
+  const editBtn = makeButton(
+    scene,
+    x + 130,
+    y - 2,
+    "Edit",
+    () => {
+      // Simple increment hour for now - in a real game you'd have a proper time picker
+      const current = getter();
+      const [hours, minutes] = current.split(":").map(Number);
+      const newHours = (hours + 1) % 24;
+      const newTime = `${newHours.toString().padStart(2, "0")}:${minutes
+        .toString()
+        .padStart(2, "0")}`;
+      setter(newTime);
+      valText.setText(newTime);
+    },
+    ["inMatch"]
+  );
+
+  container.add(editBtn);
+
+  // Helper to toggle interactivity/appearance
+  const applyEnabled = (btn: UIButton, enabled: boolean) => {
+    if (enabled) {
+      btn.setAlpha(1);
+      btn.setInteractive({ useHandCursor: true });
+    } else {
+      btn.setAlpha(0.5);
+      btn.disableInteractive();
+    }
+  };
+
+  // Initial state: if host-only and not host, disable
+  const initialEnabled = !onlyHost || isHost;
+  applyEnabled(editBtn, initialEnabled);
+
+  return {
+    setEnabled: (enabled: boolean) => {
+      applyEnabled(editBtn, enabled);
+    },
+    setDisplayValue: (v: string) => {
+      valText.setText(v);
     },
   };
 }

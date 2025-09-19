@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { makeButton, addLabeledStepper, StepperHandle } from "../ui/button";
+import { makeButton, addLabeledStepper, StepperHandle, addLabeledToggle, ToggleHandle, addLabeledTimeInput, TimeInputHandle } from "../ui/button";
 import { InMatchSettings } from "@shared";
 
 export class InMatchView {
@@ -13,10 +13,16 @@ export class InMatchView {
   private players = 2;
   private cols = 5;
   private rows = 4;
+  private roundTime = "23:00"; // Default time for round forcing
+  private autoSkip = true; // Default auto-skip enabled
+  private botPlayers = 0; // Default no bot players
   private isHost = false;
   private playersStepper?: StepperHandle;
   private colsStepper?: StepperHandle;
   private rowsStepper?: StepperHandle;
+  private roundTimeInput?: TimeInputHandle;
+  private autoSkipToggle?: ToggleHandle;
+  private botPlayersStepper?: StepperHandle;
 
   private onLeave?: () => void | Promise<void>;
   private onEndTurn?: () => void | Promise<void>;
@@ -131,6 +137,58 @@ export class InMatchView {
       this.isHost
     );
 
+    y += 40;
+
+    // Round Time control
+    this.roundTimeInput = addLabeledTimeInput(
+      this.scene,
+      this.container,
+      10,
+      y,
+      "Round Time",
+      () => this.roundTime,
+      (v) => {
+        this.roundTime = v;
+        this.emitSettings();
+      },
+      true, // onlyHost
+      this.isHost
+    );
+
+    // Auto-skip control
+    this.autoSkipToggle = addLabeledToggle(
+      this.scene,
+      this.container,
+      230,
+      y,
+      "Auto-skip",
+      () => this.autoSkip,
+      (v) => {
+        this.autoSkip = v;
+        this.emitSettings();
+      },
+      true, // onlyHost
+      this.isHost
+    );
+
+    // Bot Players control
+    this.botPlayersStepper = addLabeledStepper(
+      this.scene,
+      this.container,
+      470,
+      y,
+      "Bot Players",
+      0,
+      10,
+      () => this.botPlayers,
+      (v) => {
+        this.botPlayers = Phaser.Math.Clamp(v, 0, 10);
+        this.emitSettings();
+      },
+      true, // onlyHost
+      this.isHost
+    );
+
     y += 60;
 
     this.settingsText = scene.add.text(10, y, this.settingsSummary(), {
@@ -164,10 +222,20 @@ export class InMatchView {
     this.playersStepper?.setEnabled(enabled);
     this.colsStepper?.setEnabled(enabled);
     this.rowsStepper?.setEnabled(enabled);
+    this.roundTimeInput?.setEnabled(enabled);
+    this.autoSkipToggle?.setEnabled(enabled);
+    this.botPlayersStepper?.setEnabled(enabled);
   }
 
   // Apply settings coming from the server (host changes) and refresh UI fields without re-emitting
-  applySettings(partial: { size?: number; cols?: number; rows?: number }) {
+  applySettings(partial: { 
+    size?: number; 
+    cols?: number; 
+    rows?: number; 
+    roundTime?: string; 
+    autoSkip?: boolean; 
+    botPlayers?: number; 
+  }) {
     if (typeof partial.size === "number") {
       this.players = Phaser.Math.Clamp(partial.size, 1, 100);
       this.playersStepper?.setDisplayValue(this.players);
@@ -179,6 +247,18 @@ export class InMatchView {
     if (typeof partial.rows === "number") {
       this.rows = Phaser.Math.Clamp(partial.rows, 1, 100);
       this.rowsStepper?.setDisplayValue(this.rows);
+    }
+    if (typeof partial.roundTime === "string") {
+      this.roundTime = partial.roundTime;
+      this.roundTimeInput?.setDisplayValue(this.roundTime);
+    }
+    if (typeof partial.autoSkip === "boolean") {
+      this.autoSkip = partial.autoSkip;
+      this.autoSkipToggle?.setDisplayValue(this.autoSkip);
+    }
+    if (typeof partial.botPlayers === "number") {
+      this.botPlayers = Phaser.Math.Clamp(partial.botPlayers, 0, 10);
+      this.botPlayersStepper?.setDisplayValue(this.botPlayers);
     }
     // Update summary label
     this.settingsText.setText(this.settingsSummary());
@@ -193,7 +273,14 @@ export class InMatchView {
   }
 
   getSettings(): InMatchSettings {
-    return { players: this.players, cols: this.cols, rows: this.rows };
+    return { 
+      players: this.players, 
+      cols: this.cols, 
+      rows: this.rows,
+      roundTime: this.roundTime,
+      autoSkip: this.autoSkip,
+      botPlayers: this.botPlayers
+    };
   }
 
   private emitSettings() {
@@ -202,6 +289,6 @@ export class InMatchView {
   }
 
   private settingsSummary() {
-    return `Settings -> Players: ${this.players} | Map: ${this.cols} x ${this.rows}`;
+    return `Settings -> Players: ${this.players} | Map: ${this.cols} x ${this.rows} | Round Time: ${this.roundTime} | Auto-skip: ${this.autoSkip ? "ON" : "OFF"} | Bots: ${this.botPlayers}`;
   }
 }
