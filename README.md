@@ -56,7 +56,29 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173. The game scene will authenticate with a device ID and call the `get_state` RPC (initially this returns `not_found` until a match is created). Device auth is a quick start method—later you can add email, custom, or social auth.
+Open http://localhost:5173. The application now starts with a **login screen** featuring multiple authentication options:
+
+### Authentication Options
+
+1. **Facebook Login** - Integrated Facebook SDK authentication (requires Facebook App ID configuration)
+2. **Email Registration/Login** - Create accounts or login with email and password
+3. **Guest Access** - Quick device-based authentication for immediate access
+
+### Login Flow
+
+- **First Visit**: Shows login screen with authentication options
+- **Returning Users**: Automatically restores valid sessions and proceeds to main game
+- **Session Management**: Persistent login state across browser sessions with automatic token refresh
+
+### Account Management
+
+Once authenticated, users can:
+
+- Access **Account Settings** to view profile information
+- **Link/Unlink Facebook** accounts to existing email accounts  
+- **Logout** to return to login screen and clear session
+
+The game scene will authenticate with the stored session and call the `get_state` RPC. Email and Facebook auth provide persistent user accounts, while guest mode uses device ID for quick access.
 
 ### Turn Flow (Current Lua Prototype)
 
@@ -100,10 +122,15 @@ Scaling Considerations:
   - [ ] Set time of day to force next round
   - [ ] Autoskip if someone has moved and the time limit has passed
   - [ ] Number of bot players
-- [ ] Auth Upgrade: Replace device auth with email/custom ID; persist display names.
-- [ ] Validation: Enforce player order (e.g., round-robin) and reject moves out of turn.
-- [ ] Testing: Add a lightweight integration script invoking RPCs to assert turn sequence.
-- 
+- [x] **Auth Upgrade**: Implemented comprehensive login system with email/Facebook authentication and session management
+- [ ] Enhanced match management with spectator mode and player profiles
+- [ ] Advanced filtering and search capabilities for active matches
+- [ ] Real-time move validation and anti-cheat mechanisms
+- [ ] Migrate to authoritative matches for instant turn notifications
+- [ ] Comprehensive integration test suite for authentication and game flows
+- [ ] **Facebook Configuration**: Set up Facebook App ID in `client/index.html` for production Facebook authentication
+- [ ] **Social Features**: Friend lists, private matches, and in-game messaging
+- [ ] Validation: Enforce player order (e.g., round-robin) and reject moves out of turn
 
 ## Troubleshooting
 
