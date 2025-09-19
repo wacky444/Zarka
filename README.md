@@ -94,14 +94,16 @@ Scaling Considerations:
 - For large histories, page turns instead of iterating back 50. Use cursor-based listing or store an aggregate state snapshot every N turns.
 - When switching to authoritative real-time matches, you can migrate logic into a Go or TypeScript (JS) match handler for push updates.
 
-## Next Steps (Suggested Enhancements)
+## Next Steps
 
-- UI: Buttons to create a match, submit a dummy move, and refresh state.
-- Match Listing: Query storage to list active matches (add an index record or use authoritative listing).
-- Validation: Enforce player order (e.g., round-robin) and reject moves out of turn.
-- Auth Upgrade: Replace device auth with email/custom ID; persist display names.
-- Real-Time: Migrate to authoritative matches for push-based turn notifications.
-- Testing: Add a lightweight integration script invoking RPCs to assert turn sequence.
+- [ ] Match options:
+  - [ ] Set time of day to force next round
+  - [ ] Autoskip if someone has moved and the time limit has passed
+  - [ ] Number of bot players
+- [ ] Auth Upgrade: Replace device auth with email/custom ID; persist display names.
+- [ ] Validation: Enforce player order (e.g., round-robin) and reject moves out of turn.
+- [ ] Testing: Add a lightweight integration script invoking RPCs to assert turn sequence.
+- 
 
 ## Troubleshooting
 
