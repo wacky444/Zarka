@@ -4,7 +4,9 @@
   "private": true,
   "description": "Nakama server TypeScript module for async turn-based matches",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "restart:nakama": "cd .. && docker compose up -d --build nakama",
+    "build:server": "npm run build && npm run restart:nakama"
   },
   "devDependencies": {
     "typescript": "^5.5.4"
