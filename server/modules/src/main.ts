@@ -13,6 +13,9 @@ interface MatchRecord {
   size: number;
   cols?: number;
   rows?: number;
+  roundTime?: string;
+  autoSkip?: boolean;
+  botPlayers?: number;
   created_at: number;
   current_turn: number;
   creator?: string;
@@ -151,12 +154,26 @@ function update_settings(
     return Math.max(min, Math.min(max, v));
   };
 
+  // Validate time format (HH:MM)
+  const validateTime = (timeStr: any): string | undefined => {
+    if (typeof timeStr !== "string") return undefined;
+    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    return timeRegex.test(timeStr) ? timeStr : undefined;
+  };
+
   const newSize = clamp(settings.players);
   const newCols = clamp(settings.cols);
   const newRows = clamp(settings.rows);
+  const newRoundTime = validateTime(settings.roundTime);
+  const newAutoSkip = typeof settings.autoSkip === "boolean" ? settings.autoSkip : undefined;
+  const newBotPlayers = clamp(settings.botPlayers, 0, 10); // Bot players: 0-10
+  
   if (typeof newSize === "number") match.size = newSize;
   if (typeof newCols === "number") match.cols = newCols;
   if (typeof newRows === "number") match.rows = newRows;
+  if (typeof newRoundTime === "string") match.roundTime = newRoundTime;
+  if (typeof newAutoSkip === "boolean") match.autoSkip = newAutoSkip;
+  if (typeof newBotPlayers === "number") match.botPlayers = newBotPlayers;
 
   try {
     nk.storageWrite([
@@ -179,6 +196,9 @@ function update_settings(
           size: match.size,
           cols: match.cols,
           rows: match.rows,
+          roundTime: match.roundTime,
+          autoSkip: match.autoSkip,
+          botPlayers: match.botPlayers,
         })
       );
     } catch {}
@@ -195,6 +215,9 @@ function update_settings(
     size: match.size,
     cols: match.cols,
     rows: match.rows,
+    roundTime: match.roundTime,
+    autoSkip: match.autoSkip,
+    botPlayers: match.botPlayers,
   };
   return JSON.stringify(response5);
 }
@@ -544,6 +567,9 @@ function list_my_matches(
       creator?: string;
       cols?: number;
       rows?: number;
+      roundTime?: string;
+      autoSkip?: boolean;
+      botPlayers?: number;
     }> = [];
 
     // Since storage records are server-owned, we need to read them differently
@@ -573,6 +599,9 @@ function list_my_matches(
               creator: match.creator,
               cols: match.cols,
               rows: match.rows,
+              roundTime: match.roundTime,
+              autoSkip: match.autoSkip,
+              botPlayers: match.botPlayers,
             });
           }
         }
@@ -689,6 +718,9 @@ type AsyncTurnState = nkruntime.MatchState & {
   size: number;
   cols?: number;
   rows?: number;
+  roundTime?: string;
+  autoSkip?: boolean;
+  botPlayers?: number;
   current_turn: number;
   started: boolean;
   creator?: string;
@@ -706,6 +738,9 @@ const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
       size,
       cols: undefined,
       rows: undefined,
+      roundTime: "23:00", // Default round time
+      autoSkip: true, // Default auto-skip enabled
+      botPlayers: 0, // Default no bot players
       current_turn: 0,
       started: false,
       creator: typeof creator === "string" ? creator : undefined,
@@ -765,6 +800,9 @@ const asyncTurnMatchJoin: nkruntime.MatchJoinFunction<AsyncTurnState> =
         size: state.size,
         cols: state.cols,
         rows: state.rows,
+        roundTime: state.roundTime,
+        autoSkip: state.autoSkip,
+        botPlayers: state.botPlayers,
         started: state.started,
       });
       dispatcher.broadcastMessage(
@@ -821,12 +859,27 @@ const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState> =
           if (isNaN(v)) return undefined;
           return Math.max(min, Math.min(max, v));
         };
+        
+        // Validate time format (HH:MM)
+        const validateTime = (timeStr: any): string | undefined => {
+          if (typeof timeStr !== "string") return undefined;
+          const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+          return timeRegex.test(timeStr) ? timeStr : undefined;
+        };
+        
         const ns = clamp(msg.size);
         const nc = clamp(msg.cols);
         const nr = clamp(msg.rows);
+        const nrt = validateTime(msg.roundTime);
+        const nas = typeof msg.autoSkip === "boolean" ? msg.autoSkip : undefined;
+        const nbp = clamp(msg.botPlayers, 0, 10);
+        
         if (typeof ns === "number") state.size = ns;
         if (typeof nc === "number") state.cols = nc;
         if (typeof nr === "number") state.rows = nr;
+        if (typeof nrt === "string") state.roundTime = nrt;
+        if (typeof nas === "boolean") state.autoSkip = nas;
+        if (typeof nbp === "number") state.botPlayers = nbp;
         // refresh label
         try {
           const label = JSON.stringify({
@@ -843,6 +896,9 @@ const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState> =
             size: state.size,
             cols: state.cols,
             rows: state.rows,
+            roundTime: state.roundTime,
+            autoSkip: state.autoSkip,
+            botPlayers: state.botPlayers,
             started: state.started,
           });
           dispatcher.broadcastMessage(

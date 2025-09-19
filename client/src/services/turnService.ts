@@ -74,6 +74,9 @@ export class TurnService {
               size?: number;
               cols?: number;
               rows?: number;
+              roundTime?: string;
+              autoSkip?: boolean;
+              botPlayers?: number;
               started?: boolean;
             };
             if (this.onSettingsUpdate) this.onSettingsUpdate(payload);
@@ -129,6 +132,9 @@ export class TurnService {
       size?: number;
       cols?: number;
       rows?: number;
+      roundTime?: string;
+      autoSkip?: boolean;
+      botPlayers?: number;
       started?: boolean;
     }) => void
   ) {
