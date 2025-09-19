@@ -45,3 +45,19 @@ export type UpdateSettingsPayload = {
   rows?: number;
   error?: string;
 };
+
+// List matches the current user has joined
+export type ListMyMatchesPayload = {
+  ok?: boolean;
+  matches?: Array<{
+    match_id: string;
+    size: number;
+    players: string[];
+    current_turn: number;
+    created_at: number;
+    creator?: string;
+    cols?: number;
+    rows?: number;
+  }>;
+  error?: string;
+};

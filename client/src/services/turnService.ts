@@ -53,6 +53,11 @@ export class TurnService {
     return res;
   }
 
+  async listMyMatches() {
+    const res = await this.client.rpc(this.session, "list_my_matches", {});
+    return res;
+  }
+
   // Realtime (authoritative) helpers
   // Ensure there's a connected socket we can use to join/leave the match for presence.
   private async ensureSocketConnected(): Promise<Socket> {

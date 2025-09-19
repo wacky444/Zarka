@@ -4,6 +4,7 @@ import { initNakama } from "../services/nakama";
 import { TurnService } from "../services/turnService";
 import { makeButton, UIButton } from "../ui/button";
 import { MatchesListView } from "./MatchesList";
+import { MyMatchesListView } from "./MyMatchesList";
 import { InMatchView } from "./InMatchView";
 import type {
   LeaveMatchPayload,
@@ -19,8 +20,9 @@ export class MainScene extends Phaser.Scene {
   private currentMatchId: string | null = null;
   private moveCounter = 0;
   private matchesListView!: MatchesListView;
+  private myMatchesListView!: MyMatchesListView;
   private inMatchView!: InMatchView;
-  private activeView: "main" | "matchList" | "inMatch" = "main";
+  private activeView: "main" | "matchList" | "myMatchList" | "inMatch" = "main";
   private buttons: UIButton[] = [];
   private currentUserId: string | null = null;
 
@@ -108,6 +110,32 @@ export class MainScene extends Phaser.Scene {
       // Instantiate Matches List view (hidden by default)
       this.matchesListView = new MatchesListView(this);
       this.matchesListView.setOnJoin(async (matchId: string) => {
+        await this.joinMatch(matchId);
+      });
+
+      // Instantiate My Matches List view (hidden by default)
+      this.myMatchesListView = new MyMatchesListView(this);
+      this.myMatchesListView.setTurnService(this.turnService);
+      this.myMatchesListView.setOnLeave(async (matchId: string) => {
+        if (!this.turnService) return;
+        const res = await this.turnService.leaveMatch(matchId);
+        const parsed = this.parseRpcPayload<LeaveMatchPayload>(res);
+        if (parsed && parsed.ok) {
+          this.statusText.setText(`Left match: ${matchId}`);
+          // Also leave the realtime match to remove presence from state
+          await this.turnService.leaveRealtimeMatch(matchId);
+          // If we're leaving the current match, clear it
+          if (this.currentMatchId === matchId) {
+            this.currentMatchId = null;
+            this.inMatchView.hide();
+            this.showView("main");
+          }
+          // Refresh the list to reflect the change
+          this.myMatchesListView.refresh();
+        }
+      });
+      this.myMatchesListView.setOnView(async (matchId: string) => {
+        // Switch to the match view
         await this.joinMatch(matchId);
       });
 
@@ -208,6 +236,21 @@ export class MainScene extends Phaser.Scene {
         )
       );
 
+      // My Matches list view toggle
+      this.buttons.push(
+        makeButton(
+          this,
+          10,
+          280,
+          "My Matches",
+          () => {
+            this.showView("myMatchList");
+            this.myMatchesListView.show();
+          },
+          ["main"]
+        )
+      );
+
       // View-specific buttons for MatchesList
       this.buttons.push(
         makeButton(
@@ -230,6 +273,31 @@ export class MainScene extends Phaser.Scene {
             this.showView("main");
           },
           ["matchList"]
+        )
+      );
+
+      // View-specific buttons for MyMatchesList
+      this.buttons.push(
+        makeButton(
+          this,
+          10,
+          70,
+          "Refresh",
+          () => this.myMatchesListView.refresh(),
+          ["myMatchList"]
+        )
+      );
+      this.buttons.push(
+        makeButton(
+          this,
+          110,
+          70,
+          "Back",
+          () => {
+            this.myMatchesListView.hide();
+            this.showView("main");
+          },
+          ["myMatchList"]
         )
       );
 
@@ -269,7 +337,7 @@ export class MainScene extends Phaser.Scene {
     throw new Error("Unsupported payload type: " + typeof raw);
   }
 
-  private showView(view: "main" | "matchList" | "inMatch") {
+  private showView(view: "main" | "matchList" | "myMatchList" | "inMatch") {
     this.activeView = view;
     this.applyViewVisibility();
   }

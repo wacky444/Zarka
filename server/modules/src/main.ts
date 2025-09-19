@@ -512,6 +512,88 @@ function leave_match(
   return JSON.stringify(response);
 }
 
+// RPC: list_my_matches
+function list_my_matches(
+  ctx: nkruntime.Context,
+  logger: nkruntime.Logger,
+  nk: nkruntime.Nakama,
+  payload: string
+): string {
+  if (!ctx || !ctx.userId) {
+    throw {
+      message: "No user context",
+      code: nkruntime.Codes.INVALID_ARGUMENT,
+    } as nkruntime.Error;
+  }
+
+  try {
+    // List all matches in storage where the current user is in players array
+    const storageObjects = nk.storageList(
+      ctx.userId, // Use current user as the storage user (this will only find public read records)
+      MATCH_COLLECTION,
+      100, // limit
+      ""   // cursor
+    );
+
+    const myMatches: Array<{
+      match_id: string;
+      size: number;
+      players: string[];
+      current_turn: number;
+      created_at: number;
+      creator?: string;
+      cols?: number;
+      rows?: number;
+    }> = [];
+
+    // Since storage records are server-owned, we need to read them differently
+    // Let's try using storageRead with pattern matching or iterate through known matches
+    // For now, let's use a simpler approach: search through available storage
+    
+    // Actually, let's read from server storage and filter
+    const allMatchObjects = nk.storageList(
+      SERVER_USER_ID,
+      MATCH_COLLECTION, 
+      100, // limit
+      ""   // cursor
+    );
+
+    if (allMatchObjects && allMatchObjects.objects) {
+      for (const obj of allMatchObjects.objects) {
+        if (obj.value) {
+          const match = obj.value as MatchRecord;
+          // Check if current user is in players array
+          if (match.players && match.players.indexOf(ctx.userId) !== -1) {
+            myMatches.push({
+              match_id: match.match_id,
+              size: match.size,
+              players: match.players,
+              current_turn: match.current_turn,
+              created_at: match.created_at,
+              creator: match.creator,
+              cols: match.cols,
+              rows: match.rows,
+            });
+          }
+        }
+      }
+    }
+
+    const response: import("@shared").ListMyMatchesPayload = {
+      ok: true,
+      matches: myMatches,
+    };
+    return JSON.stringify(response);
+  } catch (e) {
+    logger.error("Error in list_my_matches: %s", (e as Error).message || String(e));
+    const response: import("@shared").ListMyMatchesPayload = {
+      ok: false,
+      error: (e as Error).message || String(e),
+    };
+    return JSON.stringify(response);
+  }
+}
+
 function InitModule(
   ctx: nkruntime.Context,
   logger: nkruntime.Logger,
@@ -563,6 +645,14 @@ function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register update_settings: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("list_my_matches", list_my_matches);
+  } catch (error) {
+    logger.error(
+      "Failed to register list_my_matches: %s",
       (error && (error as Error).message) || String(error)
     );
   }
