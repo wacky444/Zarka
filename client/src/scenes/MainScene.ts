@@ -1,6 +1,7 @@
 import Phaser from "phaser";
-import { RpcResponse } from "@heroiclabs/nakama-js";
+import { Client, Session, RpcResponse } from "@heroiclabs/nakama-js";
 import { initNakama } from "../services/nakama";
+import { SessionManager } from "../services/sessionManager";
 import { TurnService } from "../services/turnService";
 import { makeButton, UIButton } from "../ui/button";
 import { MatchesListView } from "./MatchesList";
@@ -78,13 +79,23 @@ export class MainScene extends Phaser.Scene {
 
   preload() {}
 
-  async create() {
+  async create(data?: { client?: Client; session?: Session }) {
     this.statusText = this.add.text(10, 10, "Connecting...", {
       color: "#ffffff",
     });
 
     try {
-      const { client, session } = await initNakama();
+      // Use passed session data if available, otherwise initialize new connection
+      let client, session;
+      if (data && data.client && data.session) {
+        client = data.client;
+        session = data.session;
+      } else {
+        const result = await initNakama();
+        client = result.client;
+        session = result.session;
+      }
+      
       this.turnService = new TurnService(client, session);
       this.currentUserId = session.user_id ?? null;
       // Pre-connect the realtime socket so join calls don't race the connection
@@ -251,6 +262,37 @@ export class MainScene extends Phaser.Scene {
         )
       );
 
+      // Logout button
+      this.buttons.push(
+        makeButton(
+          this,
+          10,
+          320,
+          "Logout",
+          () => {
+            this.logout();
+          },
+          ["main"]
+        )
+      );
+
+      // Account Settings button
+      this.buttons.push(
+        makeButton(
+          this,
+          10,
+          360,
+          "Account Settings",
+          () => {
+            this.scene.start("AccountScene", { 
+              client: this.turnService?.getClient(), 
+              session: this.turnService?.getSession() 
+            });
+          },
+          ["main"]
+        )
+      );
+
       // View-specific buttons for MatchesList
       this.buttons.push(
         makeButton(
@@ -351,5 +393,27 @@ export class MainScene extends Phaser.Scene {
       // btn.disableInteractive();
       // if (show) btn.setInteractive({ useHandCursor: true });
     });
+  }
+
+  private logout() {
+    // Clear the session
+    SessionManager.clearSession();
+    
+    // Disconnect from turn service if connected
+    if (this.turnService) {
+      try {
+        this.turnService.disconnect();
+      } catch (error) {
+        console.warn("Error disconnecting turn service:", error);
+      }
+    }
+    
+    // Reset state
+    this.turnService = null;
+    this.currentMatchId = null;
+    this.currentUserId = null;
+    
+    // Navigate back to login scene
+    this.scene.start("LoginScene");
   }
 }

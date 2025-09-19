@@ -139,4 +139,26 @@ export class TurnService {
   async connectSocket(): Promise<void> {
     await this.ensureSocketConnected();
   }
+
+  // Disconnect the socket and clean up
+  disconnect(): void {
+    if (this.socket) {
+      try {
+        this.socket.disconnect(true);
+      } catch (error) {
+        console.warn("Error disconnecting socket:", error);
+      }
+      this.socket = null;
+    }
+    this.onSettingsUpdate = undefined;
+  }
+
+  // Getters for client and session (used in MainScene)
+  getClient(): Client {
+    return this.client;
+  }
+
+  getSession(): Session {
+    return this.session;
+  }
 }
