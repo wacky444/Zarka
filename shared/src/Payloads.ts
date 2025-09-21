@@ -43,6 +43,9 @@ export type UpdateSettingsPayload = {
   size?: number; // players capacity
   cols?: number;
   rows?: number;
+  roundTime?: string;
+  autoSkip?: boolean;
+  botPlayers?: number;
   error?: string;
 };
 
@@ -58,6 +61,9 @@ export type ListMyMatchesPayload = {
     creator?: string;
     cols?: number;
     rows?: number;
+    roundTime?: string;
+    autoSkip?: boolean;
+    botPlayers?: number;
   }>;
   error?: string;
 };
