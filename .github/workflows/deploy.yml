@@ -52,7 +52,7 @@ jobs:
           VITE_NAKAMA_PORT: ${{ vars.NAKAMA_PORT || '443' }}
           VITE_NAKAMA_SERVER_KEY: ${{ vars.NAKAMA_SERVER_KEY || 'defaultkey' }}
           VITE_NAKAMA_SSL: ${{ vars.NAKAMA_SSL || 'true' }}
-          
+
       - name: List build output (for debugging)
         run: |
           echo "Build output:"
@@ -74,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     # Only deploy on pushes to main branch
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
