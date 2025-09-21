@@ -147,8 +147,16 @@ The deployment:
 
 To configure for your own deployment:
 1. Enable GitHub Pages in your repository settings (Settings → Pages → Source: GitHub Actions)
-2. Update `client/.env.production` with your Nakama server details
+2. Configure GitHub repository variables for your Nakama server:
+   - Go to Settings → Secrets and variables → Actions → Variables tab
+   - Add these variables:
+     - `NAKAMA_HOST`: Your Nakama server hostname (e.g., `your-server.com`)
+     - `NAKAMA_PORT`: Your Nakama server port (e.g., `443` for HTTPS)
+     - `NAKAMA_SERVER_KEY`: Your Nakama server key (optional, defaults to `defaultkey`)
+     - `NAKAMA_SSL`: Set to `true` for HTTPS or `false` for HTTP (optional, defaults to `true`)
 3. Push to the main branch to trigger deployment
+
+**Note**: If you don't set these variables, the deployment will use placeholder values from `.env.production`
 
 ### Local Production Build
 

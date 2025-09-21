@@ -46,9 +46,13 @@ jobs:
       - name: Build client
         run: |
           cd client
-          cp .env.production .env
           NODE_ENV=production npm run build
-
+        env:
+          VITE_NAKAMA_HOST: ${{ vars.NAKAMA_HOST || 'your-nakama-server.com' }}
+          VITE_NAKAMA_PORT: ${{ vars.NAKAMA_PORT || '443' }}
+          VITE_NAKAMA_SERVER_KEY: ${{ vars.NAKAMA_SERVER_KEY || 'defaultkey' }}
+          VITE_NAKAMA_SSL: ${{ vars.NAKAMA_SSL || 'true' }}
+          
       - name: List build output (for debugging)
         run: |
           echo "Build output:"
