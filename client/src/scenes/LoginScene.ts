@@ -19,12 +19,31 @@ export class LoginScene extends Phaser.Scene {
   private usernameDisplay!: Phaser.GameObjects.Text;
 
   constructor() {
-    super("LoginScene");
+    super("LoginScene"); // Required to show the scene on logout
   }
 
   preload() {}
 
   async create() {
+    // Since the LoginScene is the first scene, it will be loaded even if we have a valid session.
+    // Change the scene back to MainScene
+    try {
+      if (SessionManager.hasValidSession()) {
+        const restored = await SessionManager.restoreSession();
+        if (restored) {
+          // Navigate directly and stop this scene to avoid UI overlap
+          this.scene.stop();
+          this.scene.start("MainScene", {
+            client: restored.client,
+            session: restored.session,
+          });
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("Auto-restore on LoginScene failed:", e);
+    }
+
     // Initialize Nakama client
     const { host, port, useSSL, serverKey } = getEnv();
     this.client = new Client(serverKey, host, port, useSSL);
