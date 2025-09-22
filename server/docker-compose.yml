@@ -40,5 +40,24 @@ services:
       - "7350:7350"
       - "7351:7351"
       - "9100:9100"
+
+  caddy:
+    image: caddy
+    container_name: caddy
+    restart: unless-stopped
+    depends_on:
+      - nakama
+    environment:
+      - CADDY_DOMAIN=${CADDY_DOMAIN:-}
+      - CADDY_EMAIL=${CADDY_EMAIL:-}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
 volumes:
   pgdata: {}
+  caddy_data: {}
+  caddy_config: {}
