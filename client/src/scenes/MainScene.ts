@@ -51,8 +51,6 @@ export class MainScene extends Phaser.Scene {
       this.statusText.setText(
         `Join OK. Players: ${count ?? "?"}/${parsed.size ?? "?"}`
       );
-      // Hide list and switch to inMatch view
-      if (this.matchesListView) this.matchesListView.hide();
       if (this.inMatchView) {
         this.inMatchView.setMatchInfo(matchId);
         // Fetch creator info to reflect in the UI
@@ -68,7 +66,6 @@ export class MainScene extends Phaser.Scene {
         } catch (e) {
           console.warn("Failed to load creator info", e);
         }
-        this.inMatchView.show();
       }
       this.showView("inMatch");
     } else {
@@ -148,8 +145,6 @@ export class MainScene extends Phaser.Scene {
       this.myMatchesListView.setOnView(async (matchId: string) => {
         // Switch to the match view
         await this.joinMatch(matchId);
-        this.matchesListView.hide(); // TODO use applyViewVisibility and tags instead of hide each view
-        this.myMatchesListView.hide();
       });
 
       // Instantiate In-Match view (hidden by default)
@@ -162,7 +157,6 @@ export class MainScene extends Phaser.Scene {
           // Also leave the realtime match to remove presence from state
           await this.turnService.leaveRealtimeMatch(this.currentMatchId);
           this.currentMatchId = null;
-          this.inMatchView.hide();
           this.showView("main");
           this.statusText.setText("Left match.");
         } else {
@@ -243,7 +237,6 @@ export class MainScene extends Phaser.Scene {
           "List Matches",
           () => {
             this.showView("matchList");
-            this.matchesListView.show();
           },
           ["main"]
         )
@@ -258,7 +251,6 @@ export class MainScene extends Phaser.Scene {
           "My Matches",
           () => {
             this.showView("myMatchList");
-            this.myMatchesListView.show();
           },
           ["main"]
         )
@@ -313,7 +305,6 @@ export class MainScene extends Phaser.Scene {
           70,
           "Back",
           () => {
-            this.matchesListView.hide();
             this.showView("main");
           },
           ["matchList"]
@@ -338,7 +329,6 @@ export class MainScene extends Phaser.Scene {
           70,
           "Back",
           () => {
-            this.myMatchesListView.hide();
             this.showView("main");
           },
           ["myMatchList"]
@@ -353,9 +343,6 @@ export class MainScene extends Phaser.Scene {
           80,
           "Back to Menu",
           () => {
-            this.matchesListView.hide();
-            this.myMatchesListView.hide();
-            this.inMatchView.hide();
             this.showView("main");
             this.statusText.setText("Back to main menu (still in match).");
           },
@@ -405,6 +392,24 @@ export class MainScene extends Phaser.Scene {
       // btn.disableInteractive();
       // if (show) btn.setInteractive({ useHandCursor: true });
     });
+
+    // Toggle sub-views to ensure only one is visible at a time
+    try {
+      if (this.matchesListView) {
+        if (this.activeView === "matchList") this.matchesListView.show();
+        else this.matchesListView.hide();
+      }
+      if (this.myMatchesListView) {
+        if (this.activeView === "myMatchList") this.myMatchesListView.show();
+        else this.myMatchesListView.hide();
+      }
+      if (this.inMatchView) {
+        if (this.activeView === "inMatch") this.inMatchView.show();
+        else this.inMatchView.hide();
+      }
+    } catch (e) {
+      console.warn("applyViewVisibility: view toggle error", e);
+    }
   }
 
   private logout() {
