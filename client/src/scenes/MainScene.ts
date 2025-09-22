@@ -95,7 +95,7 @@ export class MainScene extends Phaser.Scene {
         client = result.client;
         session = result.session;
       }
-      
+
       this.turnService = new TurnService(client, session);
       this.currentUserId = session.user_id ?? null;
       // Pre-connect the realtime socket so join calls don't race the connection
@@ -148,6 +148,8 @@ export class MainScene extends Phaser.Scene {
       this.myMatchesListView.setOnView(async (matchId: string) => {
         // Switch to the match view
         await this.joinMatch(matchId);
+        this.matchesListView.hide(); // TODO use applyViewVisibility and tags instead of hide each view
+        this.myMatchesListView.hide();
       });
 
       // Instantiate In-Match view (hidden by default)
@@ -284,9 +286,9 @@ export class MainScene extends Phaser.Scene {
           360,
           "Account Settings",
           () => {
-            this.scene.start("AccountScene", { 
-              client: this.turnService?.getClient(), 
-              session: this.turnService?.getSession() 
+            this.scene.start("AccountScene", {
+              client: this.turnService?.getClient(),
+              session: this.turnService?.getSession(),
             });
           },
           ["main"]
@@ -351,6 +353,8 @@ export class MainScene extends Phaser.Scene {
           80,
           "Back to Menu",
           () => {
+            this.matchesListView.hide();
+            this.myMatchesListView.hide();
             this.inMatchView.hide();
             this.showView("main");
             this.statusText.setText("Back to main menu (still in match).");
@@ -364,10 +368,12 @@ export class MainScene extends Phaser.Scene {
     } catch (e) {
       console.error(e);
       const msg = e instanceof Error ? e.message : String(e);
-      
+
       // Provide user-friendly error message for server connection issues
       if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
-        this.statusText.setText("Server unavailable. Please check your connection or try again later.");
+        this.statusText.setText(
+          "Server unavailable. Please check your connection or try again later."
+        );
       } else {
         this.statusText.setText("Init error: " + msg);
       }
@@ -404,7 +410,7 @@ export class MainScene extends Phaser.Scene {
   private logout() {
     // Clear the session
     SessionManager.clearSession();
-    
+
     // Disconnect from turn service if connected
     if (this.turnService) {
       try {
@@ -413,12 +419,12 @@ export class MainScene extends Phaser.Scene {
         console.warn("Error disconnecting turn service:", error);
       }
     }
-    
+
     // Reset state
     this.turnService = null;
     this.currentMatchId = null;
     this.currentUserId = null;
-    
+
     // Navigate back to login scene
     this.scene.start("LoginScene");
   }
