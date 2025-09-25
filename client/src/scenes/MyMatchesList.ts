@@ -13,6 +13,7 @@ type MyMatch = {
   creator?: string;
   cols?: number;
   rows?: number;
+  name?: string;
 };
 
 // A lightweight view container for My Matches List that can be mounted inside any Scene.
@@ -75,13 +76,13 @@ export class MyMatchesListView {
     try {
       const res = await this.turnService.listMyMatches();
       let payload: ListMyMatchesPayload;
-      
+
       if (typeof res.payload === "string") {
         payload = JSON.parse(res.payload) as ListMyMatchesPayload;
       } else {
         payload = (res.payload || {}) as ListMyMatchesPayload;
       }
-      
+
       if (payload.error) {
         this.statusText.setText("Error: " + payload.error);
         return;
@@ -92,7 +93,7 @@ export class MyMatchesListView {
         this.statusText.setText("You haven't joined any matches yet.");
         return;
       }
-      
+
       this.statusText.setText(`Found ${matches.length} matches you've joined:`);
       this.renderList(matches);
     } catch (e) {
@@ -112,9 +113,12 @@ export class MyMatchesListView {
       const playerCount = m.players.length;
       const maxPlayers = m.size;
       const turns = m.current_turn;
-      const isCreator = this.scene.registry.get('currentUserId') === m.creator;
-      
-      const text = `${idx + 1}. ${matchId} | ${playerCount}/${maxPlayers} players | ${turns} turns ${
+      const matchName = m.name && m.name.trim() ? m.name : `Match ${idx + 1}`;
+      const isCreator = this.scene.registry.get("currentUserId") === m.creator;
+
+      const text = `${
+        idx + 1
+      }. ${matchName} | ${playerCount}/${maxPlayers} players | ${turns} turns ${
         isCreator ? "(Host)" : ""
       }`;
       const lineY = y + idx * pad;

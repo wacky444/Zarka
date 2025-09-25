@@ -1,12 +1,24 @@
 import Phaser from "phaser";
-import { makeButton, addLabeledStepper, StepperHandle, addLabeledToggle, ToggleHandle, addLabeledTimeInput, TimeInputHandle } from "../ui/button";
+import {
+  makeButton,
+  addLabeledStepper,
+  StepperHandle,
+  addLabeledToggle,
+  ToggleHandle,
+  addLabeledTimeInput,
+  TimeInputHandle,
+  UIButton,
+} from "../ui/button";
 import { InMatchSettings } from "@shared";
 
 export class InMatchView {
+  private static readonly MAX_NAME_LENGTH = 64;
+  private static readonly DEFAULT_MATCH_NAME = "Zarka game";
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
   private title!: Phaser.GameObjects.Text;
   private matchIdText!: Phaser.GameObjects.Text;
+  private matchNameText!: Phaser.GameObjects.Text;
   private settingsText!: Phaser.GameObjects.Text;
   private creatorText!: Phaser.GameObjects.Text;
 
@@ -16,6 +28,7 @@ export class InMatchView {
   private roundTime = "23:00"; // Default time for round forcing
   private autoSkip = true; // Default auto-skip enabled
   private botPlayers = 0; // Default no bot players
+  private matchName = InMatchView.DEFAULT_MATCH_NAME;
   private isHost = false;
   private playersStepper?: StepperHandle;
   private colsStepper?: StepperHandle;
@@ -23,6 +36,7 @@ export class InMatchView {
   private roundTimeInput?: TimeInputHandle;
   private autoSkipToggle?: ToggleHandle;
   private botPlayersStepper?: StepperHandle;
+  private renameButton?: UIButton;
 
   private onLeave?: () => void | Promise<void>;
   private onEndTurn?: () => void | Promise<void>;
@@ -46,10 +60,28 @@ export class InMatchView {
     });
     this.container.add(this.matchIdText);
 
-    this.creatorText = scene.add.text(300, 60, "Creator: -", {
+    this.matchNameText = scene.add.text(10, 60, `Name: ${this.matchName}`, {
+      color: "#cccccc",
+    });
+    this.container.add(this.matchNameText);
+
+    this.creatorText = scene.add.text(300, 40, "Creator: -", {
       color: "#cccccc",
     });
     this.container.add(this.creatorText);
+
+    this.renameButton = makeButton(
+      scene,
+      300,
+      58,
+      "Rename",
+      async () => {
+        this.promptRename();
+      },
+      ["inMatch"]
+    );
+    this.container.add(this.renameButton);
+    this.setRenameEnabled(this.isHost);
 
     // Controls
     let y = 80;
@@ -209,8 +241,16 @@ export class InMatchView {
     this.onSettingsChange = handler;
   }
 
-  setMatchInfo(matchId?: string) {
+  setMatchInfo(matchId?: string, matchName?: string) {
     this.matchIdText.setText(`Match: ${matchId ?? "-"}`);
+    if (typeof matchName === "string") {
+      this.setMatchName(matchName);
+    }
+  }
+
+  setMatchName(matchName?: string) {
+    this.applyMatchName(matchName);
+    this.settingsText.setText(this.settingsSummary());
   }
 
   setCreator(creatorId?: string, isSelf = false) {
@@ -225,16 +265,18 @@ export class InMatchView {
     this.roundTimeInput?.setEnabled(enabled);
     this.autoSkipToggle?.setEnabled(enabled);
     this.botPlayersStepper?.setEnabled(enabled);
+    this.setRenameEnabled(enabled);
   }
 
   // Apply settings coming from the server (host changes) and refresh UI fields without re-emitting
-  applySettings(partial: { 
-    size?: number; 
-    cols?: number; 
-    rows?: number; 
-    roundTime?: string; 
-    autoSkip?: boolean; 
-    botPlayers?: number; 
+  applySettings(partial: {
+    size?: number;
+    cols?: number;
+    rows?: number;
+    roundTime?: string;
+    autoSkip?: boolean;
+    botPlayers?: number;
+    name?: string;
   }) {
     if (typeof partial.size === "number") {
       this.players = Phaser.Math.Clamp(partial.size, 1, 100);
@@ -260,6 +302,9 @@ export class InMatchView {
       this.botPlayers = Phaser.Math.Clamp(partial.botPlayers, 0, 10);
       this.botPlayersStepper?.setDisplayValue(this.botPlayers);
     }
+    if (typeof partial.name === "string") {
+      this.applyMatchName(partial.name);
+    }
     // Update summary label
     this.settingsText.setText(this.settingsSummary());
   }
@@ -273,13 +318,14 @@ export class InMatchView {
   }
 
   getSettings(): InMatchSettings {
-    return { 
-      players: this.players, 
-      cols: this.cols, 
+    return {
+      players: this.players,
+      cols: this.cols,
       rows: this.rows,
       roundTime: this.roundTime,
       autoSkip: this.autoSkip,
-      botPlayers: this.botPlayers
+      botPlayers: this.botPlayers,
+      name: this.matchName,
     };
   }
 
@@ -288,7 +334,57 @@ export class InMatchView {
     if (this.onSettingsChange) this.onSettingsChange(this.getSettings());
   }
 
+  private normalizeMatchName(value?: string): string {
+    if (typeof value !== "string") return InMatchView.DEFAULT_MATCH_NAME;
+    const trimmed = value.trim().replace(/\s+/g, " ");
+    if (!trimmed) return InMatchView.DEFAULT_MATCH_NAME;
+    return trimmed.slice(0, InMatchView.MAX_NAME_LENGTH);
+  }
+
+  private applyMatchName(name?: string): boolean {
+    const normalized = this.normalizeMatchName(name ?? this.matchName);
+    if (normalized === this.matchName) {
+      if (this.matchNameText) {
+        this.matchNameText.setText(`Name: ${this.matchName}`);
+      }
+      return false;
+    }
+    this.matchName = normalized;
+    if (this.matchNameText) {
+      this.matchNameText.setText(`Name: ${this.matchName}`);
+    }
+    return true;
+  }
+
+  private promptRename() {
+    if (!this.isHost) return;
+    const input = window.prompt("Match name", this.matchName);
+    if (input === null) return;
+    const changed = this.applyMatchName(input);
+    if (changed) {
+      this.emitSettings();
+    } else {
+      this.settingsText.setText(this.settingsSummary());
+    }
+  }
+
+  private setRenameEnabled(enabled: boolean) {
+    if (!this.renameButton) return;
+    if (enabled) {
+      this.renameButton.setAlpha(1);
+      this.renameButton.setInteractive({ useHandCursor: true });
+    } else {
+      this.renameButton.setAlpha(0.5);
+      this.renameButton.disableInteractive();
+    }
+    this.isHost = enabled;
+  }
+
   private settingsSummary() {
-    return `Settings -> Players: ${this.players} | Map: ${this.cols} x ${this.rows} | Round Time: ${this.roundTime} | Auto-skip: ${this.autoSkip ? "ON" : "OFF"} | Bots: ${this.botPlayers}`;
+    return `Settings -> Name: ${this.matchName} | Players: ${
+      this.players
+    } | Map: ${this.cols} x ${this.rows} | Round Time: ${
+      this.roundTime
+    } | Auto-skip: ${this.autoSkip ? "ON" : "OFF"} | Bots: ${this.botPlayers}`;
   }
 }

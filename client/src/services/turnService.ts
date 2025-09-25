@@ -15,8 +15,12 @@ export class TurnService {
 
   constructor(private client: Client, private session: Session) {}
 
-  async createMatch(size = 2) {
-    const res = await this.client.rpc(this.session, "create_match", { size });
+  async createMatch(size = 2, name?: string) {
+    const payload: { size: number; name?: string } = { size };
+    if (typeof name === "string" && name.trim()) {
+      payload.name = name;
+    }
+    const res = await this.client.rpc(this.session, "create_match", payload);
     return res;
   }
 
@@ -78,6 +82,7 @@ export class TurnService {
               autoSkip?: boolean;
               botPlayers?: number;
               started?: boolean;
+              name?: string;
             };
             if (this.onSettingsUpdate) this.onSettingsUpdate(payload);
           } catch (e) {
@@ -136,6 +141,7 @@ export class TurnService {
       autoSkip?: boolean;
       botPlayers?: number;
       started?: boolean;
+      name?: string;
     }) => void
   ) {
     this.onSettingsUpdate = cb;

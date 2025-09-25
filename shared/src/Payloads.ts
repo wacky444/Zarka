@@ -3,6 +3,7 @@
 export type CreateMatchPayload = {
   match_id: string;
   size: number;
+  name?: string;
   error?: string;
 };
 
@@ -12,6 +13,7 @@ export type JoinMatchPayload = {
   players?: string[];
   size?: number;
   match_id?: string;
+  name?: string;
   error?: string;
 };
 
@@ -46,6 +48,7 @@ export type UpdateSettingsPayload = {
   roundTime?: string;
   autoSkip?: boolean;
   botPlayers?: number;
+  name?: string;
   error?: string;
 };
 
@@ -64,6 +67,7 @@ export type ListMyMatchesPayload = {
     roundTime?: string;
     autoSkip?: boolean;
     botPlayers?: number;
+    name?: string;
   }>;
   error?: string;
 };

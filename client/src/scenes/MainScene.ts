@@ -19,6 +19,7 @@ export class MainScene extends Phaser.Scene {
   private statusText!: Phaser.GameObjects.Text;
   private turnService: TurnService | null = null;
   private currentMatchId: string | null = null;
+  private currentMatchName: string | null = null;
   private moveCounter = 0;
   private matchesListView!: MatchesListView;
   private myMatchesListView!: MyMatchesListView;
@@ -48,21 +49,37 @@ export class MainScene extends Phaser.Scene {
       const count = Array.isArray(parsed.players)
         ? parsed.players.length
         : undefined;
+      const displayName =
+        parsed.name && parsed.name.trim() ? parsed.name.trim() : undefined;
+      if (displayName) {
+        this.currentMatchName = displayName;
+      } else if (!this.currentMatchName) {
+        this.currentMatchName = "Match";
+      }
+      const nameForStatus = this.currentMatchName ?? "Match";
       this.statusText.setText(
-        `Join OK. Players: ${count ?? "?"}/${parsed.size ?? "?"}`
+        `Join OK: ${nameForStatus}. Players: ${count ?? "?"}/${
+          parsed.size ?? "?"
+        }`
       );
       if (this.inMatchView) {
-        this.inMatchView.setMatchInfo(matchId);
+        this.inMatchView.setMatchInfo(matchId, displayName);
         // Fetch creator info to reflect in the UI
         try {
           const stateRes = await this.turnService.getState(matchId);
           const st = this.parseRpcPayload<GetStatePayload>(stateRes);
           const matchObj =
-            st && st.match ? (st.match as { creator?: string }) : undefined;
+            st && st.match
+              ? (st.match as { creator?: string; name?: string })
+              : undefined;
           const creator: string | undefined = matchObj?.creator;
           const isSelf =
             !!creator && !!this.currentUserId && creator === this.currentUserId;
           this.inMatchView.setCreator(creator, isSelf);
+          if (matchObj?.name) {
+            this.inMatchView.setMatchName(matchObj.name);
+            this.currentMatchName = matchObj.name;
+          }
         } catch (e) {
           console.warn("Failed to load creator info", e);
         }
@@ -95,11 +112,13 @@ export class MainScene extends Phaser.Scene {
 
       this.turnService = new TurnService(client, session);
       this.currentUserId = session.user_id ?? null;
+      this.registry.set("currentUserId", this.currentUserId);
       // Pre-connect the realtime socket so join calls don't race the connection
       await this.turnService.connectSocket();
       // Real-time settings updates from server
       this.turnService.setOnSettingsUpdate((p) => {
         const s = [
+          p.name ? `name="${p.name}"` : null,
           p.size !== undefined ? `players=${p.size}` : null,
           p.cols !== undefined && p.rows !== undefined
             ? `${p.cols}x${p.rows}`
@@ -129,12 +148,13 @@ export class MainScene extends Phaser.Scene {
         const res = await this.turnService.leaveMatch(matchId);
         const parsed = this.parseRpcPayload<LeaveMatchPayload>(res);
         if (parsed && parsed.ok) {
-          this.statusText.setText(`Left match: ${matchId}`);
+          this.statusText.setText("Left match.");
           // Also leave the realtime match to remove presence from state
           await this.turnService.leaveRealtimeMatch(matchId);
           // If we're leaving the current match, clear it
           if (this.currentMatchId === matchId) {
             this.currentMatchId = null;
+            this.currentMatchName = null;
             this.inMatchView.hide();
             this.showView("main");
           }
@@ -157,6 +177,7 @@ export class MainScene extends Phaser.Scene {
           // Also leave the realtime match to remove presence from state
           await this.turnService.leaveRealtimeMatch(this.currentMatchId);
           this.currentMatchId = null;
+          this.currentMatchName = null;
           this.showView("main");
           this.statusText.setText("Left match.");
         } else {
@@ -183,7 +204,7 @@ export class MainScene extends Phaser.Scene {
         try {
           await this.turnService.updateSettings(this.currentMatchId, s);
           this.statusText.setText(
-            `Settings updated: players=${s.players}, ${s.cols}x${s.rows}`
+            `Settings updated: name="${s.name}" players=${s.players}, ${s.cols}x${s.rows}`
           );
         } catch (e) {
           console.error("update_settings error", e);
@@ -205,7 +226,12 @@ export class MainScene extends Phaser.Scene {
             if (!parsed || !parsed.match_id)
               throw new Error("No match_id returned");
             this.currentMatchId = parsed.match_id;
-            this.statusText.setText(`Match created: ${this.currentMatchId}`);
+            const createdName = parsed.name ?? "Untitled Match";
+            this.currentMatchName = createdName;
+            this.statusText.setText(`Match created: ${createdName}`);
+            if (this.inMatchView) {
+              this.inMatchView.setMatchName(createdName);
+            }
 
             // Auto-join the match we just created
             await this.joinMatch(parsed.match_id);
@@ -429,6 +455,7 @@ export class MainScene extends Phaser.Scene {
     this.turnService = null;
     this.currentMatchId = null;
     this.currentUserId = null;
+    this.registry.set("currentUserId", null);
 
     // Navigate back to login scene
     this.scene.start("LoginScene");

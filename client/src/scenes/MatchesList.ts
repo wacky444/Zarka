@@ -83,10 +83,69 @@ export class MatchesListView {
       const matchId = m.match_id ?? "?";
       const size = m.size ?? "?";
       const maxSize = m.max_size ?? "?";
-      const label = m.label ?? "";
-      const text = `${idx + 1}. ${matchId} | ${size}/${maxSize} ${
-        label ? `| ${label}` : ""
-      }`;
+      let matchName: string | undefined;
+      let stateTag = "";
+      if (m.label) {
+        try {
+          const parsed = JSON.parse(m.label) as {
+            name?: string;
+            started?: boolean;
+            players?: number;
+            size?: number | string;
+          };
+          if (parsed && typeof parsed.name === "string" && parsed.name.trim()) {
+            matchName = parsed.name.trim();
+          }
+          if (parsed && typeof parsed.started === "boolean") {
+            stateTag = parsed.started ? "In Progress" : "Open";
+          }
+          if (parsed && parsed.players !== undefined) {
+            const currentPlayers = Number(parsed.players);
+            if (!Number.isNaN(currentPlayers)) {
+              // override live size if available
+              const max =
+                parsed.size !== undefined ? Number(parsed.size) : undefined;
+              const maxDisplay = !Number.isNaN(max ?? NaN) ? max : maxSize;
+              const displayName =
+                matchName && matchName.length ? matchName : `Match ${idx + 1}`;
+              const line = `${
+                idx + 1
+              }. ${displayName} | ${currentPlayers}/${maxDisplay}`;
+              const status = stateTag ? ` | ${stateTag}` : "";
+              const text = line + status;
+              const lineY = y + idx * pad;
+              const lineObj = this.scene.add.text(10, lineY, text, {
+                color: "#00ffcc",
+              });
+              this.container.add(lineObj);
+              this.listItems.push(lineObj);
+
+              // Join button next to the entry
+              const joinBtn = makeButton(
+                this.scene,
+                620,
+                lineY,
+                "Join",
+                async () => {
+                  if (matchId && this.onJoin) {
+                    await this.onJoin(matchId);
+                  }
+                },
+                ["matchList"]
+              );
+              this.container.add(joinBtn);
+              this.listItems.push(joinBtn);
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to parse match label", e);
+        }
+      }
+      const displayName =
+        matchName && matchName.length ? matchName : `Match ${idx + 1}`;
+      const textBase = `${idx + 1}. ${displayName} | ${size}/${maxSize}`;
+      const text = stateTag ? `${textBase} | ${stateTag}` : textBase;
       const lineY = y + idx * pad;
       const line = this.scene.add.text(10, lineY, text, {
         color: "#00ffcc",

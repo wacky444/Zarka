@@ -5,6 +5,35 @@ const MATCH_KEY_PREFIX = "match_";
 const SERVER_USER_ID = "00000000-0000-0000-0000-000000000000";
 // Match opcodes for realtime messages
 const OPCODE_SETTINGS_UPDATE = 100;
+const MAX_MATCH_NAME_LENGTH = 64;
+const DEFAULT_MATCH_NAME = "Untitled Match";
+
+function normalizeMatchName(
+  value: any,
+  fallback: string = DEFAULT_MATCH_NAME
+): string {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim().replace(/\s+/g, " ");
+  if (!trimmed) return fallback;
+  return trimmed.slice(0, MAX_MATCH_NAME_LENGTH);
+}
+
+function buildMatchLabel(details: {
+  name?: string;
+  size: number;
+  players: number;
+  started: boolean;
+  creator?: string;
+}): string {
+  return JSON.stringify({
+    mode: "async",
+    name: details.name ?? null,
+    size: details.size,
+    players: details.players,
+    started: details.started,
+    creator: details.creator ?? null,
+  });
+}
 
 // Types of objects we store
 interface MatchRecord {
@@ -19,6 +48,7 @@ interface MatchRecord {
   created_at: number;
   current_turn: number;
   creator?: string;
+  name?: string;
 }
 
 interface TurnRecord {
@@ -43,22 +73,28 @@ function create_match(
     } as nkruntime.Error;
   }
   let size = 2;
+  let name = DEFAULT_MATCH_NAME;
   if (payload && payload !== "") {
     try {
       const json = JSON.parse(payload);
       if (json && typeof json.size === "number") {
         size = json.size;
       }
+      if (json && typeof json.name === "string") {
+        name = normalizeMatchName(json.name);
+      }
     } catch (err) {
       // ignore bad payload, use default size
     }
   }
+  name = normalizeMatchName(name);
 
   // Create an authoritative match using our registered handler.
   // Pass parameters as strings to align with runtime typing.
   const params: { [key: string]: string } = {
     size: String(size),
     creator: ctx.userId,
+    name,
   };
   const matchId = nk.matchCreate("async_turn", params);
 
@@ -69,6 +105,7 @@ function create_match(
     created_at: Math.floor(Date.now() / 1000),
     current_turn: 0,
     creator: ctx.userId,
+    name,
   };
 
   const write: nkruntime.StorageWriteRequest = {
@@ -84,6 +121,7 @@ function create_match(
   const response: import("@shared").CreateMatchPayload = {
     match_id: matchId,
     size,
+    name,
   };
   return JSON.stringify(response);
 }
@@ -165,15 +203,21 @@ function update_settings(
   const newCols = clamp(settings.cols);
   const newRows = clamp(settings.rows);
   const newRoundTime = validateTime(settings.roundTime);
-  const newAutoSkip = typeof settings.autoSkip === "boolean" ? settings.autoSkip : undefined;
+  const newAutoSkip =
+    typeof settings.autoSkip === "boolean" ? settings.autoSkip : undefined;
   const newBotPlayers = clamp(settings.botPlayers, 0, 10); // Bot players: 0-10
-  
+  const newName =
+    typeof settings.name === "string"
+      ? normalizeMatchName(settings.name)
+      : undefined;
+
   if (typeof newSize === "number") match.size = newSize;
   if (typeof newCols === "number") match.cols = newCols;
   if (typeof newRows === "number") match.rows = newRows;
   if (typeof newRoundTime === "string") match.roundTime = newRoundTime;
   if (typeof newAutoSkip === "boolean") match.autoSkip = newAutoSkip;
   if (typeof newBotPlayers === "number") match.botPlayers = newBotPlayers;
+  if (typeof newName === "string") match.name = newName;
 
   try {
     nk.storageWrite([
@@ -199,6 +243,7 @@ function update_settings(
           roundTime: match.roundTime,
           autoSkip: match.autoSkip,
           botPlayers: match.botPlayers,
+          name: match.name,
         })
       );
     } catch {}
@@ -218,6 +263,7 @@ function update_settings(
     roundTime: match.roundTime,
     autoSkip: match.autoSkip,
     botPlayers: match.botPlayers,
+    name: match.name,
   };
   return JSON.stringify(response5);
 }
@@ -447,6 +493,7 @@ function join_match(
     size: match.size,
     players: match.players,
     joined: joinedNow,
+    name: match.name,
     // creator info is stored in storage; clients can fetch via get_state or label
   };
   return JSON.stringify(response4);
@@ -555,7 +602,7 @@ function list_my_matches(
       ctx.userId, // Use current user as the storage user (this will only find public read records)
       MATCH_COLLECTION,
       100, // limit
-      ""   // cursor
+      "" // cursor
     );
 
     const myMatches: Array<{
@@ -570,18 +617,19 @@ function list_my_matches(
       roundTime?: string;
       autoSkip?: boolean;
       botPlayers?: number;
+      name?: string;
     }> = [];
 
     // Since storage records are server-owned, we need to read them differently
     // Let's try using storageRead with pattern matching or iterate through known matches
     // For now, let's use a simpler approach: search through available storage
-    
+
     // Actually, let's read from server storage and filter
     const allMatchObjects = nk.storageList(
       SERVER_USER_ID,
-      MATCH_COLLECTION, 
+      MATCH_COLLECTION,
       100, // limit
-      ""   // cursor
+      "" // cursor
     );
 
     if (allMatchObjects && allMatchObjects.objects) {
@@ -602,6 +650,7 @@ function list_my_matches(
               roundTime: match.roundTime,
               autoSkip: match.autoSkip,
               botPlayers: match.botPlayers,
+              name: match.name,
             });
           }
         }
@@ -614,7 +663,10 @@ function list_my_matches(
     };
     return JSON.stringify(response);
   } catch (e) {
-    logger.error("Error in list_my_matches: %s", (e as Error).message || String(e));
+    logger.error(
+      "Error in list_my_matches: %s",
+      (e as Error).message || String(e)
+    );
     const response: import("@shared").ListMyMatchesPayload = {
       ok: false,
       error: (e as Error).message || String(e),
@@ -724,6 +776,7 @@ type AsyncTurnState = nkruntime.MatchState & {
   current_turn: number;
   started: boolean;
   creator?: string;
+  name?: string;
 };
 
 const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
@@ -731,6 +784,11 @@ const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
     const sizeStr = params && params["size"];
     const size = Math.max(2, Math.min(8, parseInt(sizeStr || "2", 10) || 2));
     const creator = params && params["creator"]; // optional
+    const nameParam = params && params["name"];
+    const name =
+      typeof nameParam === "string"
+        ? normalizeMatchName(nameParam)
+        : DEFAULT_MATCH_NAME;
 
     const state: AsyncTurnState = {
       players: {},
@@ -744,12 +802,13 @@ const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
       current_turn: 0,
       started: false,
       creator: typeof creator === "string" ? creator : undefined,
+      name,
     };
 
     // Include some info in label for optional listing/filtering.
-    const label = JSON.stringify({
-      mode: "async",
-      size: String(size),
+    const label = buildMatchLabel({
+      name: state.name,
+      size: state.size,
       players: 0,
       started: false,
       creator: state.creator,
@@ -784,11 +843,12 @@ const asyncTurnMatchJoin: nkruntime.MatchJoinFunction<AsyncTurnState> =
     }
     // Update label to reflect current player count.
     try {
-      const label = JSON.stringify({
-        mode: "async",
-        size: String(state.size),
+      const label = buildMatchLabel({
+        name: state.name,
+        size: state.size,
         players: playerCount,
         started: state.started,
+        creator: state.creator,
       });
       dispatcher.matchLabelUpdate(label);
     } catch (e) {
@@ -803,6 +863,7 @@ const asyncTurnMatchJoin: nkruntime.MatchJoinFunction<AsyncTurnState> =
         roundTime: state.roundTime,
         autoSkip: state.autoSkip,
         botPlayers: state.botPlayers,
+        name: state.name,
         started: state.started,
       });
       dispatcher.broadcastMessage(
@@ -827,11 +888,12 @@ const asyncTurnMatchLeave: nkruntime.MatchLeaveFunction<AsyncTurnState> =
     }
     const playerCount = Object.keys(state.players).length;
     try {
-      const label = JSON.stringify({
-        mode: "async",
-        size: String(state.size),
+      const label = buildMatchLabel({
+        name: state.name,
+        size: state.size,
         players: playerCount,
         started: state.started,
+        creator: state.creator,
       });
       dispatcher.matchLabelUpdate(label);
     } catch {}
@@ -859,34 +921,41 @@ const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState> =
           if (isNaN(v)) return undefined;
           return Math.max(min, Math.min(max, v));
         };
-        
+
         // Validate time format (HH:MM)
         const validateTime = (timeStr: any): string | undefined => {
           if (typeof timeStr !== "string") return undefined;
           const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
           return timeRegex.test(timeStr) ? timeStr : undefined;
         };
-        
+
         const ns = clamp(msg.size);
         const nc = clamp(msg.cols);
         const nr = clamp(msg.rows);
         const nrt = validateTime(msg.roundTime);
-        const nas = typeof msg.autoSkip === "boolean" ? msg.autoSkip : undefined;
+        const nas =
+          typeof msg.autoSkip === "boolean" ? msg.autoSkip : undefined;
         const nbp = clamp(msg.botPlayers, 0, 10);
-        
+        const nn =
+          typeof msg.name === "string"
+            ? normalizeMatchName(msg.name, state.name ?? DEFAULT_MATCH_NAME)
+            : undefined;
+
         if (typeof ns === "number") state.size = ns;
         if (typeof nc === "number") state.cols = nc;
         if (typeof nr === "number") state.rows = nr;
         if (typeof nrt === "string") state.roundTime = nrt;
         if (typeof nas === "boolean") state.autoSkip = nas;
         if (typeof nbp === "number") state.botPlayers = nbp;
+        if (typeof nn === "string") state.name = nn;
         // refresh label
         try {
-          const label = JSON.stringify({
-            mode: "async",
-            size: String(state.size),
+          const label = buildMatchLabel({
+            name: state.name,
+            size: state.size,
             players: Object.keys(state.players).length,
             started: state.started,
+            creator: state.creator,
           });
           dispatcher.matchLabelUpdate(label);
         } catch {}
@@ -899,6 +968,7 @@ const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState> =
             roundTime: state.roundTime,
             autoSkip: state.autoSkip,
             botPlayers: state.botPlayers,
+            name: state.name,
             started: state.started,
           });
           dispatcher.broadcastMessage(
