@@ -4,6 +4,13 @@ import type { InMatchSettings } from "@shared";
 
 export type Move = { n: number; ts: number };
 
+type BasicUser = {
+  id?: string;
+  user_id?: string;
+  username?: string;
+  display_name?: string;
+};
+
 export class TurnService {
   private socket: Socket | null = null;
   private onSettingsUpdate?: (payload: {
@@ -12,8 +19,80 @@ export class TurnService {
     rows?: number;
     started?: boolean;
   }) => void;
+  private usernameCache = new Map<string, string>();
 
   constructor(private client: Client, private session: Session) {}
+
+  // Resolve Nakama usernames (or display names) for the given userIds with caching.
+  async resolveUsernames(userIds: string[]): Promise<Record<string, string>> {
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return {};
+    }
+
+    const ids = Array.from(
+      new Set(
+        userIds.filter(
+          (id): id is string => typeof id === "string" && id.trim().length > 0
+        )
+      )
+    );
+
+    if (ids.length === 0) {
+      return {};
+    }
+
+    // Seed the cache with the current user if available.
+    if (this.session.user_id) {
+      const currentName =
+        (typeof this.session.username === "string" &&
+          this.session.username.trim()) ||
+        this.session.user_id;
+      this.usernameCache.set(this.session.user_id, currentName);
+    }
+
+    const missing = ids.filter((id) => !this.usernameCache.has(id));
+    if (missing.length > 0) {
+      try {
+        const response = await this.client.getUsers(this.session, missing);
+        const users = Array.isArray(response?.users)
+          ? (response.users as BasicUser[])
+          : [];
+        for (const user of users) {
+          if (!user || typeof user !== "object") continue;
+          const id =
+            typeof user.user_id === "string"
+              ? user.user_id
+              : typeof user.id === "string"
+              ? user.id
+              : null;
+          if (!id) continue;
+          const username =
+            (typeof user.username === "string" && user.username.trim()) ||
+            (typeof user.display_name === "string" &&
+              user.display_name.trim()) ||
+            id;
+          this.usernameCache.set(id, username);
+        }
+      } catch (error) {
+        console.warn("resolveUsernames: failed to fetch", error);
+      }
+
+      for (const id of missing) {
+        if (!this.usernameCache.has(id)) {
+          this.usernameCache.set(id, id);
+        }
+      }
+    }
+
+    const result: Record<string, string> = {};
+    for (const id of ids) {
+      const cached = this.usernameCache.get(id);
+      if (cached) {
+        result[id] = cached;
+      }
+    }
+    return result;
+  }
 
   async createMatch(size = 2, name?: string) {
     const payload: { size: number; name?: string } = { size };

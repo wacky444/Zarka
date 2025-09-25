@@ -64,18 +64,55 @@ export class MainScene extends Phaser.Scene {
       );
       if (this.inMatchView) {
         this.inMatchView.setMatchInfo(matchId, displayName);
+        if (Array.isArray(parsed.players) && parsed.players.length > 0) {
+          try {
+            const usernameMap = await this.turnService.resolveUsernames(
+              parsed.players
+            );
+            const playerNames = parsed.players.map(
+              (id) => usernameMap[id] ?? id
+            );
+            this.inMatchView.setPlayers(playerNames);
+          } catch (e) {
+            console.warn("Failed to resolve player usernames", e);
+            this.inMatchView.setPlayers(parsed.players);
+          }
+        } else {
+          this.inMatchView.setPlayers([]);
+        }
         // Fetch creator info to reflect in the UI
         try {
           const stateRes = await this.turnService.getState(matchId);
           const st = this.parseRpcPayload<GetStatePayload>(stateRes);
           const matchObj =
             st && st.match
-              ? (st.match as { creator?: string; name?: string })
+              ? (st.match as {
+                  creator?: string;
+                  name?: string;
+                  players?: string[];
+                })
               : undefined;
           const creator: string | undefined = matchObj?.creator;
           const isSelf =
             !!creator && !!this.currentUserId && creator === this.currentUserId;
-          this.inMatchView.setCreator(creator, isSelf);
+          if (Array.isArray(matchObj?.players) && matchObj.players.length > 0) {
+            const usernameMap = await this.turnService.resolveUsernames(
+              matchObj.players
+            );
+            const playerNames = matchObj.players.map(
+              (id) => usernameMap[id] ?? id
+            );
+            this.inMatchView.setPlayers(playerNames);
+            const creatorDisplay = creator ? usernameMap[creator] : undefined;
+            this.inMatchView.setCreator(creator, isSelf, creatorDisplay);
+          } else {
+            let creatorDisplay: string | undefined;
+            if (creator) {
+              const single = await this.turnService.resolveUsernames([creator]);
+              creatorDisplay = single[creator];
+            }
+            this.inMatchView.setCreator(creator, isSelf, creatorDisplay);
+          }
           if (matchObj?.name) {
             this.inMatchView.setMatchName(matchObj.name);
             this.currentMatchName = matchObj.name;
@@ -155,6 +192,9 @@ export class MainScene extends Phaser.Scene {
           if (this.currentMatchId === matchId) {
             this.currentMatchId = null;
             this.currentMatchName = null;
+            this.inMatchView.setPlayers([]);
+            this.inMatchView.setCreator(undefined, false);
+            this.inMatchView.setMatchInfo();
             this.inMatchView.hide();
             this.showView("main");
           }
@@ -178,6 +218,9 @@ export class MainScene extends Phaser.Scene {
           await this.turnService.leaveRealtimeMatch(this.currentMatchId);
           this.currentMatchId = null;
           this.currentMatchName = null;
+          this.inMatchView.setPlayers([]);
+          this.inMatchView.setCreator(undefined, false);
+          this.inMatchView.setMatchInfo();
           this.showView("main");
           this.statusText.setText("Left match.");
         } else {

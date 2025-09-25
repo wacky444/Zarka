@@ -19,8 +19,9 @@ export class InMatchView {
   private title!: Phaser.GameObjects.Text;
   private matchIdText!: Phaser.GameObjects.Text;
   private matchNameText!: Phaser.GameObjects.Text;
-  private settingsText!: Phaser.GameObjects.Text;
   private creatorText!: Phaser.GameObjects.Text;
+  private playerListTitle!: Phaser.GameObjects.Text;
+  private playerListText!: Phaser.GameObjects.Text;
 
   private players = 2;
   private cols = 5;
@@ -30,6 +31,7 @@ export class InMatchView {
   private botPlayers = 0; // Default no bot players
   private matchName = InMatchView.DEFAULT_MATCH_NAME;
   private isHost = false;
+  private playerNames: string[] = [];
   private playersStepper?: StepperHandle;
   private colsStepper?: StepperHandle;
   private rowsStepper?: StepperHandle;
@@ -127,6 +129,7 @@ export class InMatchView {
       (v) => {
         // Clamp to 1..100 just in case a custom input sneaks in
         this.players = Phaser.Math.Clamp(v, 1, 100);
+        this.refreshPlayerList();
         this.emitSettings();
       },
       true, // onlyHost
@@ -223,10 +226,18 @@ export class InMatchView {
 
     y += 60;
 
-    this.settingsText = scene.add.text(10, y, this.settingsSummary(), {
-      color: "#a0a0ff",
+    this.playerListTitle = scene.add.text(10, y, "Players", {
+      color: "#a0ffa0",
+      fontSize: "18px",
     });
-    this.container.add(this.settingsText);
+    this.container.add(this.playerListTitle);
+
+    this.playerListText = scene.add.text(10, y + 24, "Waiting for players...", {
+      color: "#cccccc",
+    });
+    this.container.add(this.playerListText);
+
+    this.refreshPlayerList();
   }
 
   setOnLeave(handler: () => void | Promise<void>) {
@@ -250,11 +261,18 @@ export class InMatchView {
 
   setMatchName(matchName?: string) {
     this.applyMatchName(matchName);
-    this.settingsText.setText(this.settingsSummary());
   }
 
-  setCreator(creatorId?: string, isSelf = false) {
-    const label = isSelf ? "You" : creatorId ?? "-";
+  setCreator(creatorId?: string, isSelf = false, creatorName?: string) {
+    const normalizedName =
+      typeof creatorName === "string"
+        ? creatorName.trim().replace(/\s+/g, " ")
+        : undefined;
+    const label = isSelf
+      ? "You"
+      : normalizedName && normalizedName.length > 0
+      ? normalizedName
+      : creatorId ?? "-";
     this.creatorText.setText(`Creator: ${label}`);
     this.isHost = !!isSelf;
     // Toggle host-only steppers accordingly
@@ -305,8 +323,7 @@ export class InMatchView {
     if (typeof partial.name === "string") {
       this.applyMatchName(partial.name);
     }
-    // Update summary label
-    this.settingsText.setText(this.settingsSummary());
+    this.refreshPlayerList();
   }
 
   show() {
@@ -330,7 +347,6 @@ export class InMatchView {
   }
 
   private emitSettings() {
-    this.settingsText.setText(this.settingsSummary());
     if (this.onSettingsChange) this.onSettingsChange(this.getSettings());
   }
 
@@ -363,8 +379,6 @@ export class InMatchView {
     const changed = this.applyMatchName(input);
     if (changed) {
       this.emitSettings();
-    } else {
-      this.settingsText.setText(this.settingsSummary());
     }
   }
 
@@ -379,12 +393,27 @@ export class InMatchView {
     }
     this.isHost = enabled;
   }
+  setPlayers(usernames: string[]) {
+    const sanitized = Array.isArray(usernames)
+      ? usernames
+          .map((name) =>
+            typeof name === "string" ? name.trim().replace(/\s+/g, " ") : ""
+          )
+          .filter((name) => name.length > 0)
+      : [];
+    this.playerNames = sanitized;
+    this.refreshPlayerList();
+  }
 
-  private settingsSummary() {
-    return `Settings -> Name: ${this.matchName} | Players: ${
-      this.players
-    } | Map: ${this.cols} x ${this.rows} | Round Time: ${
-      this.roundTime
-    } | Auto-skip: ${this.autoSkip ? "ON" : "OFF"} | Bots: ${this.botPlayers}`;
+  private refreshPlayerList() {
+    if (!this.playerListTitle || !this.playerListText) return;
+    const playerCount = this.playerNames.length;
+    this.playerListTitle.setText(`Players (${playerCount}/${this.players})`);
+    if (playerCount === 0) {
+      this.playerListText.setText("Waiting for players...");
+      return;
+    }
+    const lines = this.playerNames.map((name, idx) => `${idx + 1}. ${name}`);
+    this.playerListText.setText(lines.join("\n"));
   }
 }
