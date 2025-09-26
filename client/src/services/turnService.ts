@@ -17,6 +17,10 @@ export class TurnService {
     size?: number;
     cols?: number;
     rows?: number;
+    roundTime?: string;
+    autoSkip?: boolean;
+    botPlayers?: number;
+    name?: string;
     started?: boolean;
   }) => void;
   private usernameCache = new Map<string, string>();
@@ -123,6 +127,13 @@ export class TurnService {
 
   async leaveMatch(match_id: string) {
     const res = await this.client.rpc(this.session, "leave_match", {
+      match_id,
+    });
+    return res;
+  }
+
+  async startMatch(match_id: string) {
+    const res = await this.client.rpc(this.session, "start_match", {
       match_id,
     });
     return res;

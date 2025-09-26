@@ -39,10 +39,15 @@ export class InMatchView {
   private autoSkipToggle?: ToggleHandle;
   private botPlayersStepper?: StepperHandle;
   private renameButton?: UIButton;
+  private startMatchButton?: UIButton;
 
   private onLeave?: () => void | Promise<void>;
   private onEndTurn?: () => void | Promise<void>;
   private onSettingsChange?: (s: InMatchSettings) => void | Promise<void>;
+  private onStartMatch?: () => void | Promise<void>;
+
+  private started = false;
+  private startMatchBusy = false;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -113,6 +118,26 @@ export class InMatchView {
       ["inMatch"]
     );
     this.container.add(endTurnBtn);
+
+    // Start match (host only)
+    this.startMatchButton = makeButton(
+      scene,
+      290,
+      y,
+      "Start Match",
+      async () => {
+        if (this.started || this.startMatchBusy) return;
+        if (!this.onStartMatch) return;
+        this.setStartMatchBusy(true);
+        try {
+          await this.onStartMatch();
+        } finally {
+          this.setStartMatchBusy(false);
+        }
+      },
+      ["inMatch"]
+    );
+    this.container.add(this.startMatchButton);
 
     y += 40;
 
@@ -238,6 +263,7 @@ export class InMatchView {
     this.container.add(this.playerListText);
 
     this.refreshPlayerList();
+    this.updateStartButtonState();
   }
 
   setOnLeave(handler: () => void | Promise<void>) {
@@ -252,10 +278,18 @@ export class InMatchView {
     this.onSettingsChange = handler;
   }
 
+  setOnStartMatch(handler: () => void | Promise<void>) {
+    this.onStartMatch = handler;
+    this.updateStartButtonState();
+  }
+
   setMatchInfo(matchId?: string, matchName?: string) {
     this.matchIdText.setText(`Match: ${matchId ?? "-"}`);
     if (typeof matchName === "string") {
       this.setMatchName(matchName);
+    }
+    if (!matchId) {
+      this.setMatchStarted(false);
     }
   }
 
@@ -284,6 +318,7 @@ export class InMatchView {
     this.autoSkipToggle?.setEnabled(enabled);
     this.botPlayersStepper?.setEnabled(enabled);
     this.setRenameEnabled(enabled);
+    this.updateStartButtonState();
   }
 
   // Apply settings coming from the server (host changes) and refresh UI fields without re-emitting
@@ -295,6 +330,7 @@ export class InMatchView {
     autoSkip?: boolean;
     botPlayers?: number;
     name?: string;
+    started?: boolean;
   }) {
     if (typeof partial.size === "number") {
       this.players = Phaser.Math.Clamp(partial.size, 1, 100);
@@ -322,6 +358,9 @@ export class InMatchView {
     }
     if (typeof partial.name === "string") {
       this.applyMatchName(partial.name);
+    }
+    if (typeof partial.started === "boolean") {
+      this.setMatchStarted(partial.started);
     }
     this.refreshPlayerList();
   }
@@ -393,6 +432,15 @@ export class InMatchView {
     }
     this.isHost = enabled;
   }
+
+  setMatchStarted(started: boolean) {
+    this.started = started;
+    if (started) {
+      this.startMatchBusy = false;
+    }
+    this.updateStartButtonState();
+  }
+
   setPlayers(usernames: string[]) {
     const sanitized = Array.isArray(usernames)
       ? usernames
@@ -415,5 +463,36 @@ export class InMatchView {
     }
     const lines = this.playerNames.map((name, idx) => `${idx + 1}. ${name}`);
     this.playerListText.setText(lines.join("\n"));
+  }
+
+  private updateStartButtonState() {
+    if (!this.startMatchButton) return;
+    const canStart = this.isHost && !this.started && !this.startMatchBusy;
+    if (canStart) {
+      this.startMatchButton.setAlpha(1);
+      this.startMatchButton.setText(
+        this.startMatchBusy ? "[ Starting... ]" : "[ Start Match ]"
+      );
+      this.startMatchButton.setInteractive({ useHandCursor: true });
+    } else {
+      const label = this.started
+        ? "[ Match Started ]"
+        : this.startMatchBusy
+        ? "[ Starting... ]"
+        : "[ Start Match ]";
+      this.startMatchButton.setText(label);
+      this.startMatchButton.setAlpha(this.started ? 0.6 : 0.5);
+      this.startMatchButton.disableInteractive();
+    }
+  }
+
+  private setStartMatchBusy(busy: boolean) {
+    this.startMatchBusy = busy;
+    if (this.startMatchButton) {
+      this.startMatchButton.setText(
+        busy ? "[ Starting... ]" : "[ Start Match ]"
+      );
+    }
+    this.updateStartButtonState();
   }
 }

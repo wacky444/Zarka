@@ -13,6 +13,7 @@ import type {
   CreateMatchPayload,
   SubmitTurnPayload,
   GetStatePayload,
+  StartMatchPayload,
 } from "@shared";
 
 export class MainScene extends Phaser.Scene {
@@ -57,13 +58,22 @@ export class MainScene extends Phaser.Scene {
         this.currentMatchName = "Match";
       }
       const nameForStatus = this.currentMatchName ?? "Match";
+      const stateSuffix =
+        typeof parsed.started === "boolean"
+          ? parsed.started
+            ? " (Started)"
+            : " (Waiting)"
+          : "";
       this.statusText.setText(
-        `Join OK: ${nameForStatus}. Players: ${count ?? "?"}/${
+        `Join OK: ${nameForStatus}${stateSuffix}. Players: ${count ?? "?"}/${
           parsed.size ?? "?"
         }`
       );
       if (this.inMatchView) {
         this.inMatchView.setMatchInfo(matchId, displayName);
+        if (typeof parsed.started === "boolean") {
+          this.inMatchView.setMatchStarted(parsed.started);
+        }
         if (Array.isArray(parsed.players) && parsed.players.length > 0) {
           try {
             const usernameMap = await this.turnService.resolveUsernames(
@@ -90,6 +100,7 @@ export class MainScene extends Phaser.Scene {
                   creator?: string;
                   name?: string;
                   players?: string[];
+                  started?: boolean;
                 })
               : undefined;
           const creator: string | undefined = matchObj?.creator;
@@ -116,6 +127,9 @@ export class MainScene extends Phaser.Scene {
           if (matchObj?.name) {
             this.inMatchView.setMatchName(matchObj.name);
             this.currentMatchName = matchObj.name;
+          }
+          if (typeof matchObj?.started === "boolean") {
+            this.inMatchView.setMatchStarted(matchObj.started);
           }
         } catch (e) {
           console.warn("Failed to load creator info", e);
@@ -160,6 +174,7 @@ export class MainScene extends Phaser.Scene {
           p.cols !== undefined && p.rows !== undefined
             ? `${p.cols}x${p.rows}`
             : null,
+          p.started !== undefined ? (p.started ? "started" : "waiting") : null,
         ]
           .filter(Boolean)
           .join(", ");
@@ -195,6 +210,7 @@ export class MainScene extends Phaser.Scene {
             this.inMatchView.setPlayers([]);
             this.inMatchView.setCreator(undefined, false);
             this.inMatchView.setMatchInfo();
+            this.inMatchView.setMatchStarted(false);
             this.inMatchView.hide();
             this.showView("main");
           }
@@ -221,6 +237,7 @@ export class MainScene extends Phaser.Scene {
           this.inMatchView.setPlayers([]);
           this.inMatchView.setCreator(undefined, false);
           this.inMatchView.setMatchInfo();
+          this.inMatchView.setMatchStarted(false);
           this.showView("main");
           this.statusText.setText("Left match.");
         } else {
@@ -240,6 +257,27 @@ export class MainScene extends Phaser.Scene {
           this.statusText.setText(`Turn submitted. Turn #: ${parsed.turn}`);
         } else {
           this.statusText.setText("submit_turn error (see console).");
+        }
+      });
+      this.inMatchView.setOnStartMatch(async () => {
+        if (!this.turnService || !this.currentMatchId) return;
+        try {
+          const res = await this.turnService.startMatch(this.currentMatchId);
+          const parsed = this.parseRpcPayload<StartMatchPayload>(res);
+          if (parsed && parsed.ok) {
+            this.inMatchView.setMatchStarted(true);
+            if (parsed.already_started) {
+              this.statusText.setText("Match was already started.");
+            } else {
+              this.statusText.setText("Match started.");
+            }
+          } else {
+            this.statusText.setText("start_match error (see console).");
+            console.log("start_match response:", parsed);
+          }
+        } catch (e) {
+          console.error("start_match error", e);
+          this.statusText.setText("start_match error (see console).");
         }
       });
       this.inMatchView.setOnSettingsChange(async (s) => {
@@ -274,6 +312,7 @@ export class MainScene extends Phaser.Scene {
             this.statusText.setText(`Match created: ${createdName}`);
             if (this.inMatchView) {
               this.inMatchView.setMatchName(createdName);
+              this.inMatchView.setMatchStarted(parsed.started ?? false);
             }
 
             // Auto-join the match we just created
@@ -408,7 +447,7 @@ export class MainScene extends Phaser.Scene {
       this.buttons.push(
         makeButton(
           this,
-          290,
+          430,
           80,
           "Back to Menu",
           () => {

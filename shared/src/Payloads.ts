@@ -5,6 +5,7 @@ export type CreateMatchPayload = {
   size: number;
   name?: string;
   error?: string;
+  started?: boolean;
 };
 
 export type JoinMatchPayload = {
@@ -14,6 +15,7 @@ export type JoinMatchPayload = {
   size?: number;
   match_id?: string;
   name?: string;
+  started?: boolean;
   error?: string;
 };
 
@@ -49,6 +51,7 @@ export type UpdateSettingsPayload = {
   autoSkip?: boolean;
   botPlayers?: number;
   name?: string;
+  started?: boolean;
   error?: string;
 };
 
@@ -68,6 +71,15 @@ export type ListMyMatchesPayload = {
     autoSkip?: boolean;
     botPlayers?: number;
     name?: string;
+    started?: boolean;
   }>;
+  error?: string;
+};
+
+export type StartMatchPayload = {
+  ok?: boolean;
+  match_id?: string;
+  started?: boolean;
+  already_started?: boolean;
   error?: string;
 };

@@ -49,6 +49,7 @@ interface MatchRecord {
   current_turn: number;
   creator?: string;
   name?: string;
+  started: boolean;
 }
 
 interface TurnRecord {
@@ -106,6 +107,7 @@ function create_match(
     current_turn: 0,
     creator: ctx.userId,
     name,
+    started: false,
   };
 
   const write: nkruntime.StorageWriteRequest = {
@@ -122,6 +124,7 @@ function create_match(
     match_id: matchId,
     size,
     name,
+    started: false,
   };
   return JSON.stringify(response);
 }
@@ -175,6 +178,9 @@ function update_settings(
   }
   const read = reads[0];
   const match = read.value as MatchRecord;
+  if (typeof match.started !== "boolean") {
+    match.started = false;
+  }
 
   // Only allow the match creator to update settings
   const isCreator = !!match.creator && match.creator === ctx.userId;
@@ -244,6 +250,7 @@ function update_settings(
           autoSkip: match.autoSkip,
           botPlayers: match.botPlayers,
           name: match.name,
+          started: match.started,
         })
       );
     } catch {}
@@ -264,8 +271,118 @@ function update_settings(
     autoSkip: match.autoSkip,
     botPlayers: match.botPlayers,
     name: match.name,
+    started: match.started,
   };
   return JSON.stringify(response5);
+}
+
+// RPC: start_match
+function start_match(
+  ctx: nkruntime.Context,
+  logger: nkruntime.Logger,
+  nk: nkruntime.Nakama,
+  payload: string
+): string {
+  if (!ctx || !ctx.userId) {
+    throw {
+      message: "No user context",
+      code: nkruntime.Codes.INVALID_ARGUMENT,
+    } as nkruntime.Error;
+  }
+  if (!payload || payload === "") {
+    throw {
+      message: "Missing payload",
+      code: nkruntime.Codes.INVALID_ARGUMENT,
+    } as nkruntime.Error;
+  }
+  let json: any;
+  try {
+    json = JSON.parse(payload);
+  } catch {
+    throw {
+      message: "bad_json",
+      code: nkruntime.Codes.INVALID_ARGUMENT,
+    } as nkruntime.Error;
+  }
+  const matchId: string = json.match_id;
+  if (!matchId || matchId === "") {
+    throw {
+      message: "match_id required",
+      code: nkruntime.Codes.INVALID_ARGUMENT,
+    } as nkruntime.Error;
+  }
+
+  const matchKey = MATCH_KEY_PREFIX + matchId;
+  const reads = nk.storageRead([
+    { collection: MATCH_COLLECTION, key: matchKey, userId: SERVER_USER_ID },
+  ]);
+  if (!reads || reads.length !== 1) {
+    throw {
+      message: "not_found",
+      code: nkruntime.Codes.NOT_FOUND,
+    } as nkruntime.Error;
+  }
+  const read = reads[0];
+  const match = read.value as MatchRecord;
+  if (typeof match.started !== "boolean") {
+    match.started = false;
+  }
+
+  if (!match.creator || match.creator !== ctx.userId) {
+    throw {
+      message: "not_creator",
+      code: nkruntime.Codes.PERMISSION_DENIED,
+    } as nkruntime.Error;
+  }
+
+  if (match.started) {
+    const already: import("@shared").StartMatchPayload = {
+      ok: true,
+      match_id: matchId,
+      started: true,
+      already_started: true,
+    };
+    return JSON.stringify(already);
+  }
+
+  match.started = true;
+
+  try {
+    nk.storageWrite([
+      {
+        collection: MATCH_COLLECTION,
+        key: matchKey,
+        userId: SERVER_USER_ID,
+        value: match,
+        permissionRead: 2,
+        permissionWrite: 0,
+        version: read.version,
+      },
+    ]);
+  } catch (e) {
+    throw {
+      message: "storage_write_failed",
+      code: nkruntime.Codes.INTERNAL,
+    } as nkruntime.Error;
+  }
+
+  try {
+    nk.matchSignal(
+      matchId,
+      JSON.stringify({
+        type: "start_match",
+      })
+    );
+  } catch (e) {
+    logger.warn("start_match: matchSignal failed: %s", (e as Error).message);
+  }
+
+  const response: import("@shared").StartMatchPayload = {
+    ok: true,
+    match_id: matchId,
+    started: true,
+  };
+  return JSON.stringify(response);
 }
 
 // RPC: submit_turn
@@ -314,6 +431,13 @@ function submit_turn(
     } as nkruntime.Error;
   }
   const match = reads[0].value as MatchRecord;
+  if (typeof match.started !== "boolean") {
+    match.started = false;
+  }
+  const wasStarted = match.started === true;
+  if (!match.started) {
+    match.started = true;
+  }
 
   // Add player if new
   if (match.players.indexOf(ctx.userId) === -1) {
@@ -354,6 +478,22 @@ function submit_turn(
   // Write both records in one call; version ensures OCC on match record
   nk.storageWrite(writes);
 
+  if (!wasStarted) {
+    try {
+      nk.matchSignal(
+        json.match_id,
+        JSON.stringify({
+          type: "start_match",
+        })
+      );
+    } catch (e) {
+      logger.warn(
+        "submit_turn: matchSignal start failed: %s",
+        (e as Error).message
+      );
+    }
+  }
+
   const response2: import("@shared").SubmitTurnPayload = {
     ok: true,
     turn: match.current_turn,
@@ -388,6 +528,9 @@ function get_state(
     return JSON.stringify({ error: "not_found" });
   }
   const match = records[0].value as MatchRecord;
+  if (typeof match.started !== "boolean") {
+    match.started = false;
+  }
 
   // Fetch last 50 turns
   const limit = 50;
@@ -460,8 +603,13 @@ function join_match(
   }
   const read = reads[0];
   const match = read.value as MatchRecord;
+  if (typeof match.started !== "boolean") {
+    match.started = false;
+  }
 
   let joinedNow = false;
+  let triggeredStart = false;
+
   if (match.players.indexOf(ctx.userId) === -1) {
     // capacity check
     const current = match.players.length;
@@ -474,6 +622,25 @@ function join_match(
     match.players.push(ctx.userId);
     joinedNow = true;
 
+    if (!match.started && match.players.length >= 2) {
+      match.started = true;
+      triggeredStart = true;
+    }
+
+    nk.storageWrite([
+      {
+        collection: MATCH_COLLECTION,
+        key: matchKey,
+        userId: SERVER_USER_ID,
+        value: match,
+        permissionRead: 2,
+        permissionWrite: 0,
+        version: read.version, // OCC
+      },
+    ]);
+  } else if (!match.started && match.players.length >= 2) {
+    match.started = true;
+    triggeredStart = true;
     nk.storageWrite([
       {
         collection: MATCH_COLLECTION,
@@ -487,6 +654,22 @@ function join_match(
     ]);
   }
 
+  if (triggeredStart) {
+    try {
+      nk.matchSignal(
+        matchId,
+        JSON.stringify({
+          type: "start_match",
+        })
+      );
+    } catch (e) {
+      logger.warn(
+        "join_match: matchSignal start failed: %s",
+        (e as Error).message
+      );
+    }
+  }
+
   const response4: import("@shared").JoinMatchPayload = {
     ok: true,
     match_id: matchId,
@@ -494,6 +677,7 @@ function join_match(
     players: match.players,
     joined: joinedNow,
     name: match.name,
+    started: match.started,
     // creator info is stored in storage; clients can fetch via get_state or label
   };
   return JSON.stringify(response4);
@@ -618,6 +802,7 @@ function list_my_matches(
       autoSkip?: boolean;
       botPlayers?: number;
       name?: string;
+      started?: boolean;
     }> = [];
 
     // Since storage records are server-owned, we need to read them differently
@@ -636,6 +821,9 @@ function list_my_matches(
       for (const obj of allMatchObjects.objects) {
         if (obj.value) {
           const match = obj.value as MatchRecord;
+          if (typeof match.started !== "boolean") {
+            match.started = false;
+          }
           // Check if current user is in players array
           if (match.players && match.players.indexOf(ctx.userId) !== -1) {
             myMatches.push({
@@ -651,6 +839,7 @@ function list_my_matches(
               autoSkip: match.autoSkip,
               botPlayers: match.botPlayers,
               name: match.name,
+              started: match.started,
             });
           }
         }
@@ -726,6 +915,14 @@ function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register update_settings: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("start_match", start_match);
+  } catch (error) {
+    logger.error(
+      "Failed to register start_match: %s",
       (error && (error as Error).message) || String(error)
     );
   }
@@ -840,6 +1037,24 @@ const asyncTurnMatchJoin: nkruntime.MatchJoinFunction<AsyncTurnState> =
     const playerCount = Object.keys(state.players).length;
     if (!state.started && playerCount >= 2) {
       state.started = true;
+      try {
+        dispatcher.broadcastMessage(
+          OPCODE_SETTINGS_UPDATE,
+          JSON.stringify({
+            size: state.size,
+            cols: state.cols,
+            rows: state.rows,
+            roundTime: state.roundTime,
+            autoSkip: state.autoSkip,
+            botPlayers: state.botPlayers,
+            name: state.name,
+            started: state.started,
+          }),
+          null,
+          null,
+          true
+        );
+      } catch {}
     }
     // Update label to reflect current player count.
     try {
@@ -979,6 +1194,39 @@ const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState> =
             true
           );
         } catch {}
+      } else if (msg && msg.type === "start_match") {
+        if (!state.started) {
+          state.started = true;
+          try {
+            const label = buildMatchLabel({
+              name: state.name,
+              size: state.size,
+              players: Object.keys(state.players).length,
+              started: state.started,
+              creator: state.creator,
+            });
+            dispatcher.matchLabelUpdate(label);
+          } catch {}
+          try {
+            const payload = JSON.stringify({
+              size: state.size,
+              cols: state.cols,
+              rows: state.rows,
+              roundTime: state.roundTime,
+              autoSkip: state.autoSkip,
+              botPlayers: state.botPlayers,
+              name: state.name,
+              started: state.started,
+            });
+            dispatcher.broadcastMessage(
+              OPCODE_SETTINGS_UPDATE,
+              payload,
+              null,
+              null,
+              true
+            );
+          } catch {}
+        }
       }
     } catch (e) {
       logger.warn("matchSignal parse error: %v", e);

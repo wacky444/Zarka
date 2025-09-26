@@ -14,6 +14,7 @@ type MyMatch = {
   cols?: number;
   rows?: number;
   name?: string;
+  started?: boolean;
 };
 
 // A lightweight view container for My Matches List that can be mounted inside any Scene.
@@ -115,12 +116,12 @@ export class MyMatchesListView {
       const turns = m.current_turn;
       const matchName = m.name && m.name.trim() ? m.name : `Match ${idx + 1}`;
       const isCreator = this.scene.registry.get("currentUserId") === m.creator;
+      const stateLabel = m.started ? "In Progress" : "Waiting";
+      const hostTag = isCreator ? " (Host)" : "";
 
       const text = `${
         idx + 1
-      }. ${matchName} | ${playerCount}/${maxPlayers} players | ${turns} turns ${
-        isCreator ? "(Host)" : ""
-      }`;
+      }. ${matchName} | ${playerCount}/${maxPlayers} players | ${turns} turns | ${stateLabel}${hostTag}`;
       const lineY = y + idx * pad;
       const line = this.scene.add.text(10, lineY, text, {
         color: "#00ccff",
