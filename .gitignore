@@ -45,5 +45,7 @@ docker-compose.override.yml
 server/modules/node_modules/
 server/modules/build/
 
-# Local Nakama config (example is tracked, real file is ignored)
+# Local Nakama config
 server/local.yml
+
+server/Caddyfile

@@ -1,0 +1,90 @@
+/// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
+
+import { createNakamaWrapper } from "../services/nakamaWrapper";
+import { StorageService } from "../services/storageService";
+import { makeNakamaError } from "../utils/errors";
+import { MatchRecord } from "../models/types";
+
+export function startMatchRpc(
+  ctx: nkruntime.Context,
+  logger: nkruntime.Logger,
+  nk: nkruntime.Nakama,
+  payload: string
+): string {
+  if (!ctx || !ctx.userId) {
+    throw makeNakamaError("No user context", nkruntime.Codes.INVALID_ARGUMENT);
+  }
+
+  if (!payload || payload === "") {
+    throw makeNakamaError("Missing payload", nkruntime.Codes.INVALID_ARGUMENT);
+  }
+
+  let json: any;
+  try {
+    json = JSON.parse(payload);
+  } catch {
+    throw makeNakamaError("bad_json", nkruntime.Codes.INVALID_ARGUMENT);
+  }
+
+  const matchId: string = json.match_id;
+  if (!matchId || matchId === "") {
+    throw makeNakamaError(
+      "match_id required",
+      nkruntime.Codes.INVALID_ARGUMENT
+    );
+  }
+
+  const nkWrapper = createNakamaWrapper(nk);
+  const storage = new StorageService(nkWrapper);
+  const read = storage.getMatch(matchId);
+
+  if (!read) {
+    throw makeNakamaError("not_found", nkruntime.Codes.NOT_FOUND);
+  }
+
+  const match: MatchRecord = read.match;
+  if (typeof match.started !== "boolean") {
+    match.started = false;
+  }
+
+  if (!match.creator || match.creator !== ctx.userId) {
+    throw makeNakamaError("not_creator", nkruntime.Codes.PERMISSION_DENIED);
+  }
+
+  if (match.started) {
+    const already: import("@shared").StartMatchPayload = {
+      ok: true,
+      match_id: matchId,
+      started: true,
+      already_started: true,
+    };
+    return JSON.stringify(already);
+  }
+
+  match.started = true;
+
+  try {
+    storage.writeMatch(match, read.version);
+  } catch (e) {
+    throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
+  }
+
+  try {
+    nkWrapper.matchSignal(
+      matchId,
+      JSON.stringify({
+        type: "start_match",
+      })
+    );
+  } catch (e) {
+    logger.warn("start_match: matchSignal failed: %s", (e as Error).message);
+  }
+
+  const response: import("@shared").StartMatchPayload = {
+    ok: true,
+    match_id: matchId,
+    started: true,
+  };
+
+  return JSON.stringify(response);
+}

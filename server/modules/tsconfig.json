@@ -13,8 +13,10 @@
       "@shared/*": ["../../shared/src/*"],
       "@shared": ["../../shared/src/index.ts"]
     },
-    "typeRoots": ["./node_modules"]
+    "typeRoots": ["./node_modules"],
+    "types": ["nakama-runtime"]
   },
-  "files": ["./node_modules/nakama-runtime/index.d.ts", "./src/main.ts"],
+  "files": ["./node_modules/nakama-runtime/index.d.ts"],
+  "include": ["./src/**/*.ts"],
   "exclude": ["node_modules", "build"]
 }
