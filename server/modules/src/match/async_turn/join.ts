@@ -28,6 +28,7 @@ export const asyncTurnMatchJoin: nkruntime.MatchJoinFunction<AsyncTurnState> =
             botPlayers: state.botPlayers,
             name: state.name,
             started: state.started,
+            players: Object.keys(state.players),
           }),
           null,
           null,
@@ -59,11 +60,12 @@ export const asyncTurnMatchJoin: nkruntime.MatchJoinFunction<AsyncTurnState> =
         botPlayers: state.botPlayers,
         name: state.name,
         started: state.started,
+        players: Object.keys(state.players),
       });
       dispatcher.broadcastMessage(
         OPCODE_SETTINGS_UPDATE,
         payload,
-        presences,
+        null,
         null,
         true
       );

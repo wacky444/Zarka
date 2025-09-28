@@ -179,10 +179,28 @@ export class MainScene extends Phaser.Scene {
           .filter(Boolean)
           .join(", ");
         if (s) this.statusText.setText(`Settings sync: ${s}`);
-        // Optionally reflect in inMatch UI label
-        // (InMatchView already shows current inputs; this just confirms sync)
-        // Update the inMatch controls for non-hosts (and host echo) without re-emitting
-        if (this.inMatchView) this.inMatchView.applySettings(p);
+        const view = this.inMatchView;
+        if (!view) return;
+        view.applySettings(p);
+        if (Array.isArray(p.players)) {
+          const players = [...p.players];
+          if (players.length === 0) {
+            view.setPlayers([]);
+          } else if (this.turnService) {
+            this.turnService
+              .resolveUsernames(players)
+              .then((map) => {
+                const names = players.map((id) => map[id] ?? id);
+                view.setPlayers(names);
+              })
+              .catch((e) => {
+                console.warn("Failed to resolve player usernames", e);
+                view.setPlayers(players);
+              });
+          } else {
+            view.setPlayers(players);
+          }
+        }
       });
       this.statusText.setText("Authenticated. Use the buttons below.");
 

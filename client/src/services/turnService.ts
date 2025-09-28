@@ -22,6 +22,7 @@ export class TurnService {
     botPlayers?: number;
     name?: string;
     started?: boolean;
+    players?: string[];
   }) => void;
   private usernameCache = new Map<string, string>();
 
@@ -161,7 +162,6 @@ export class TurnService {
       this.socket = this.client.createSocket(useSSL, false);
       // Listen for match data packets (settings updates, etc.)
       this.socket.onmatchdata = (m) => {
-        // We reserved 100 as the server opcode for settings updates
         if (m.op_code === 100) {
           try {
             const payload = JSON.parse(new TextDecoder().decode(m.data)) as {
@@ -173,6 +173,7 @@ export class TurnService {
               botPlayers?: number;
               started?: boolean;
               name?: string;
+              players?: string[];
             };
             if (this.onSettingsUpdate) this.onSettingsUpdate(payload);
           } catch (e) {
@@ -232,6 +233,7 @@ export class TurnService {
       botPlayers?: number;
       started?: boolean;
       name?: string;
+      players?: string[];
     }) => void
   ) {
     this.onSettingsUpdate = cb;

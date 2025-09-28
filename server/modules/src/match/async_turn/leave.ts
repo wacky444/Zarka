@@ -1,6 +1,7 @@
 /// <reference path="../../../node_modules/nakama-runtime/index.d.ts" />
 
 import { AsyncTurnState } from "../../models/types";
+import { OPCODE_SETTINGS_UPDATE } from "../../constants";
 import { buildMatchLabel } from "../../utils/label";
 
 export const asyncTurnMatchLeave: nkruntime.MatchLeaveFunction<AsyncTurnState> =
@@ -26,6 +27,27 @@ export const asyncTurnMatchLeave: nkruntime.MatchLeaveFunction<AsyncTurnState> =
         creator: state.creator,
       });
       dispatcher.matchLabelUpdate(label);
+    } catch {}
+
+    try {
+      const payload = JSON.stringify({
+        size: state.size,
+        cols: state.cols,
+        rows: state.rows,
+        roundTime: state.roundTime,
+        autoSkip: state.autoSkip,
+        botPlayers: state.botPlayers,
+        name: state.name,
+        started: state.started,
+        players: Object.keys(state.players),
+      });
+      dispatcher.broadcastMessage(
+        OPCODE_SETTINGS_UPDATE,
+        payload,
+        null,
+        null,
+        true
+      );
     } catch {}
 
     if (playerCount === 0) {

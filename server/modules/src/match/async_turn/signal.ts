@@ -52,6 +52,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             botPlayers: state.botPlayers,
             name: state.name,
             started: state.started,
+            players: Object.keys(state.players),
           });
           dispatcher.broadcastMessage(
             OPCODE_SETTINGS_UPDATE,
@@ -84,6 +85,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
               botPlayers: state.botPlayers,
               name: state.name,
               started: state.started,
+              players: Object.keys(state.players),
             });
             dispatcher.broadcastMessage(
               OPCODE_SETTINGS_UPDATE,
