@@ -1,119 +1,148 @@
-# Async Turn-Based Game (Phaser + Nakama)
+# GitHub Copilot Instructions for Zarka
 
-Always reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.
+These instructions are automatically included in every Copilot conversation for this workspace. Follow them before reaching for external searches or terminal commands.
 
-## Working Effectively
+## Project context
 
-### Server Setup (Docker + Nakama)
-- Start the server environment:
-  - `cd server`
-  - `docker compose up -d` -- takes 10-15 seconds. NEVER CANCEL. Set timeout to 60+ seconds.
-- Build Nakama TypeScript runtime modules:
-  - `cd server/modules`
-  - `npm install` -- takes 2-3 seconds
-  - `npm run build` -- takes 1-2 seconds
-  - `cd ../..`
-  - `cd server && docker compose up -d --build nakama` -- restart with built modules, takes 1-2 seconds
-- Verify services are running:
-  - `docker compose ps` (from server directory)
-  - `curl -f http://localhost:7350/healthcheck` -- should return {}
+- Async, turn-based hex strategy prototype built with **Phaser 3 + TypeScript + Vite** in `client/`.
+- Multiplayer backend uses **Nakama** (Docker + Postgres) with **TypeScript runtime modules** in `server/modules/` compiled to `build/main.js`.
+- Shared typesctript types (match state, payloads, hex grids) live in `shared/src/` and are consumed by both client and server.
 
-### Client Setup (Phaser + TypeScript + Vite)
-- ALWAYS run the server setup steps first.
-- Setup client environment:
-  - `cd client`
-  - `cp .env.example .env` -- copy environment variables
-  - `npm install` -- takes 6-8 seconds
-- Build client:
-  - `npm run build` -- takes 8-12 seconds. NEVER CANCEL. Set timeout to 60+ seconds.
-- Run development server:
-  - `npm run dev` -- starts on http://localhost:5173, takes <1 second
-- Lint code:
-  - `npm run lint` -- takes 1-2 seconds
+## Assistant etiquette
 
-### Validation
-- ALWAYS manually test the complete application after making changes:
-  - Server: Check that `docker compose ps` shows both postgres and nakama as healthy/running
-  - Client: Navigate to http://localhost:5173 and verify the game loads with authentication
-  - RPC Testing: Create a match, submit turns, and retrieve state using the web interface or Nakama console (http://localhost:9100, user: admin, pass: password)
-- Always run `npm run lint` in the client directory before committing changes
-- Test both the main menu interface and the hex grid game scene
+- Skim relevant files and summarize the current behavior before proposing changes; prefer repository sources over assumptions.
+- Open responses with a short acknowledgement plus a plan. Keep sentences short, friendly, and concrete—skip filler.
+- When editing code, explain the reasoning, reference the files or symbols you touched, and call out risks or TODOs.
+- Run or describe the smallest useful validation (build, lint, targeted test) after code changes. Only promise checks you actually execute.
+- Prefer PowerShell-compatible commands (Windows host). Present commands in fenced `powershell` blocks and note that long-running tasks must finish—never cancel them early.
+- Don't write code comments
 
-## Common Tasks
+## Workspace orientation
 
-### Repository Structure
 ```
-client/           # Phaser 3 + TypeScript + Vite web client
-  src/           # Client source code
-  public/        # Static assets
-  package.json   # Client dependencies and scripts
-server/          # Docker + Nakama configuration  
-  docker-compose.yml  # PostgreSQL + Nakama services
-  local.yml      # Nakama console/runtime config
-  modules/       # TypeScript runtime modules for Nakama
-    src/         # Server-side TypeScript source
-    package.json # Server module dependencies
-shared/          # Shared TypeScript types and models
-  src/           # Shared code between client and server
+client/             Phaser 3 game (Vite, TypeScript)
+  src/
+    scenes/         Game flow (LoginScene, GameScene, etc.)
+    services/       Nakama + turn APIs
+    ui/             Reusable UI components
+server/
+  docker-compose.yml
+  modules/          Nakama TypeScript runtime source + build pipeline
+shared/             Cross-cutting domain types
 ```
 
-### Key Files and Locations
-- Main client entry: `client/src/main.ts`
-- Game scenes: `client/src/scenes/` (MainScene.ts, GameScene.ts)
-- Nakama service: `client/src/services/nakama.ts`
-- Server RPCs: `server/modules/src/main.ts`
-- Shared types: `shared/src/` (hexTile.ts, Payloads.ts, inMatch.ts)
+Key files:
 
-### Available RPC Endpoints
-From TypeScript runtime modules in `server/modules/src/main.ts`:
-- `create_match` -- payload: `{ size?: number }` (optional)
-- `submit_turn` -- payload: `{ match_id: string, move: any }`
-- `get_state` -- payload: `{ match_id: string }`
-- `join_match` -- payload: `{ match_id: string }`
-- `leave_match` -- payload: `{ match_id: string }`
-- `update_settings` -- payload varies
+- `client/src/main.ts` boots Phaser and registers scenes.
+- `client/src/services/nakama.ts` handles session + RPC helpers.
+- `server/modules/src/rpc/*.ts` exposes RPC endpoints (`create_match`, `submit_turn`, etc.).
+- `server/modules/src/match/async_turn/*` owns match loop helpers.
+- `shared/src/index.ts` re-exports shared models; keep it in sync when adding types.
 
-### Testing RPC Endpoints
-Use Nakama console at http://localhost:9100 (admin/password) or test programmatically:
-```javascript
-// Example RPC test
-const client = new Client('defaultkey', '127.0.0.1', 7350, false);
-const session = await client.authenticateDevice('test-device-123', true);
-const result = await client.rpc(session, 'create_match', { size: 2 });
+## Coding conventions
+
+### General TypeScript
+
+- Target ES modules with strict typing. Avoid `any`; prefer explicit interfaces from `shared/` or new interfaces in the relevant module.
+- Use `const` and `readonly` where possible; default to arrow functions for callbacks and helper utilities.
+- Keep modules small and cohesive—one responsibility per file. Export named symbols for tree shaking.
+
+### Client (Phaser + Vite)
+
+- Derive scenes from `Phaser.Scene` and register them in `client/src/main.ts`.
+- Use services (`nakama.ts`, `turnService.ts`, `sessionManager.ts`) for IO; scenes should focus on presentation and state orchestration.
+- Keep UI building blocks in `client/src/ui/`; prefer lightweight composition over deep inheritance.
+- Assets live under `client/public/assets/`; update XML/JSON atlases alongside spritesheets when editing.
+
+### Nakama TypeScript runtime
+
+- RPCs live in `server/modules/src/rpc/`; validate payloads using helpers in `utils/validation.ts` and standardize error responses via `utils/errors.ts`.
+- Storage interactions should go through `services/storageService.ts` to preserve collection naming and permissions.
+- When modifying match loop logic, update both the state machine in `match/async_turn/loop.ts` and any signal handlers (`join`, `leave`, `signal`).
+- After server code changes, rebuild and redeploy modules:
+
+```powershell
+cd server/modules
+npm install           # first-time or when deps change
+npm run build         # invokes tsc --noEmit and esbuild bundle
+cd ..
+docker compose up -d --build nakama
 ```
 
-### Build and Runtime Requirements
-- Node.js 18+ (verified working with v20.19.5)
-- Docker Desktop running
-- Environment variables in `client/.env` (copy from .env.example)
+### Shared packages
 
-### Environment Configuration
-Default Nakama connection settings (client/.env):
+- Introduce new shared types in `shared/src/*.ts` and re-export from `shared/src/index.ts`.
+- Keep type-only imports when possible (`import type { Foo } from ...`).
+- Bump both client and server code when payload contracts change, and document breaking changes in the final response.
+
+## Build & validation workflow
+
+### Server environment (Docker + Nakama)
+
+```powershell
+cd server
+docker compose up -d
 ```
-VITE_NAKAMA_HOST=127.0.0.1
-VITE_NAKAMA_PORT=7350
-VITE_NAKAMA_SERVER_KEY=defaultkey
-VITE_NAKAMA_SSL=false
+
+- Bring modules up to date before restarting Nakama:
+
+```powershell
+cd server/modules
+npm install
+npm run build:server
+cd ..
+docker compose up -d --build nakama
 ```
 
-### Troubleshooting
-- If Nakama fails to start: Check that TypeScript modules are built first (`cd server/modules && npm run build`)
-- If client cannot connect: Ensure ports 7350/7351 are not blocked and Docker containers are healthy
-- If TypeScript errors appear: Run `npm install` in both client and server/modules directories
-- If build artifacts are missing: Always run `npm run build` in server/modules before starting Nakama
+- Verify services:
 
-### Performance Notes
-- Server startup: 10-15 seconds for initial Docker pull/setup
-- Module builds: 1-2 seconds each
-- Client builds: 8-12 seconds
-- Development server start: <1 second
-- NEVER CANCEL builds or long-running commands - they complete quickly in this project
+```powershell
+cd server
+docker compose ps
+curl -f http://localhost:7350/healthcheck
+```
 
-### Development Workflow
-1. Start server: `cd server && docker compose up -d`
-2. Build modules: `cd server/modules && npm install && npm run build`
-3. Restart Nakama: `cd server && docker compose up -d --build nakama`
-4. Setup client: `cd client && cp .env.example .env && npm install`
-5. Run client: `npm run dev`
-6. Test at http://localhost:5173
-7. Always run `npm run lint` before committing
+### Client environment (Vite)
+
+```powershell
+cd client
+copy .env.example .env
+npm install
+npm run build
+npm run dev
+npm run lint
+```
+
+All of these commands finish quickly (≤15 seconds). Let them complete—never cancel mid-run.
+
+## Testing & QA expectations
+
+- Manual smoke test after changes:
+  - Check `docker compose ps` for healthy Nakama + Postgres containers.
+  - Visit http://localhost:5173, authenticate (guest), and confirm the main menu render.
+  - Exercise RPCs: create a match, submit a turn, fetch state via the UI or Nakama console (http://localhost:9231, admin/password).
+- `cd client; npm run lint` (client) must be clean before considering work complete.
+- When altering server logic, validate a sample RPC via Copilot chat script or Nakama console.
+
+## RPC reference
+
+- `create_match` — payload `{ size?: number }` (default match size from settings service).
+- `submit_turn` — payload `{ match_id: string, move: Record<string, unknown> }`.
+- `get_state` — payload `{ match_id: string }`, returns match metadata + turn history.
+- `join_match` / `leave_match` — mutate participant roster.
+- `update_settings` — accepts partial settings; ensure validation updates stay in sync with client forms.
+- `listMyMatches` — used by lobby views to fetch active matches.
+
+## Troubleshooting & performance
+
+- If Nakama fails to start, rebuild modules first (`npm run build`) and check logs with `docker compose logs nakama --tail=100 | Select-String -Pattern "error"`.
+- Check Nakama logs with `docker compose logs nakama --since=60s | Select-String -Pattern "error"`.
+- Client connection issues usually stem from missing `.env` or Docker being offline; verify ports 7460/7461.
+- Regenerate TypeScript declarations after dependency bumps with the normal build—no separate command needed.
+- Typical timings: Docker start 10–15s, module build 1–2s, client build 8–12s, dev server <1s.
+
+## When uncertain
+
+- Use the tool context7
+- Consult the files in this repo or the official Copilot customization guide (https://code.visualstudio.com/docs/copilot/customization/custom-instructions) for clarification before guessing.
+- Document assumptions explicitly in your response, and propose follow-up actions if verification requires external systems beyond the repo.
