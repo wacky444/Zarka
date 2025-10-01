@@ -124,6 +124,15 @@ export class StorageService {
     return this.nk.storageList(SERVER_USER_ID, MATCH_COLLECTION, limit, cursor);
   }
 
+  isMatchActive(matchId: string): boolean {
+    try {
+      this.nk.matchSignal(matchId, JSON.stringify({ type: "ping" }));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   private getMatchKey(matchId: string): string {
     return MATCH_KEY_PREFIX + matchId;
   }

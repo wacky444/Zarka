@@ -12,6 +12,7 @@ import {
   updateSettingsRpc,
 } from "./rpc";
 import { asyncTurnMatchHandler } from "./match/async_turn";
+import { restoreMatchesFromStorage } from "./services/matchRestoration";
 
 export function InitModule(
   ctx: nkruntime.Context,
@@ -94,7 +95,21 @@ export function InitModule(
       (error && (error as Error).message) || String(error)
     );
   }
+
   logger.info("TypeScript async_turn module loaded.");
+
+  try {
+    const restoredCount = restoreMatchesFromStorage(ctx, logger, nk);
+    logger.info(
+      "Match restoration completed: %d matches restored",
+      restoredCount
+    );
+  } catch (error) {
+    logger.error(
+      "Failed to restore matches from storage: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
 }
 
 const globalScope = globalThis as {
