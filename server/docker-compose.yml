@@ -37,8 +37,8 @@ services:
       - ./modules:/nakama/data/modules
       - ./local.yml:/nakama/data/local.yml:ro
     ports:
-      - "7350:7350"
-      - "7351:7351"
+      - "7460:7460"
+      - "7461:7461"
       - "9100:9100"
 
   caddy:

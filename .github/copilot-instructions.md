@@ -99,7 +99,7 @@ docker compose up -d --build nakama
 ```powershell
 cd server
 docker compose ps
-curl -f http://localhost:7350/healthcheck
+curl -f http://localhost:7460/healthcheck
 ```
 
 ### Client environment (Vite)

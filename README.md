@@ -33,7 +33,7 @@ docker compose up -d
 This launches:
 
 - Postgres on 5432
-- Nakama gRPC/HTTP on 7350 (Websocket/HTTP)
+- Nakama gRPC/HTTP on 7460 (Websocket/HTTP)
 - Nakama console on 9100 (user: `admin` / pass: `password`)
 
 Check logs (optional):
@@ -75,7 +75,7 @@ Open http://localhost:5173. The application now starts with a **login screen** f
 Once authenticated, users can:
 
 - Access **Account Settings** to view profile information
-- **Link/Unlink Facebook** accounts to existing email accounts  
+- **Link/Unlink Facebook** accounts to existing email accounts
 - **Logout** to return to login screen and clear session
 
 The game scene will authenticate with the stored session and call the `get_state` RPC. Email and Facebook auth provide persistent user accounts, while guest mode uses device ID for quick access.
@@ -130,7 +130,7 @@ Scaling Considerations:
 - [ ] Comprehensive integration test suite for authentication and game flows
 - [ ] **Facebook Configuration**: Set up Facebook App ID in `client/index.html` for production Facebook authentication
 - [ ] **Social Features**: Friend lists, private matches, and in-game messaging
-- [ ] Validation: Enforce player order (e.g., round-robin) and reject moves out of turn
+- [ ] Validation: Enforce player order (all submitted before advancing) and reject moves out of turn
 
 ## Deployment
 
@@ -141,11 +141,13 @@ The game is automatically deployed to GitHub Pages on every push to the main bra
 **Live Demo**: https://wacky444.github.io/Zarka/
 
 The deployment:
+
 - Builds the client application with production settings
 - Uses the configured Nakama server for multiplayer functionality
 - Serves static assets from the `client/dist` folder
 
 To configure for your own deployment:
+
 1. Enable GitHub Pages in your repository settings (Settings → Pages → Source: GitHub Actions)
 2. Configure GitHub repository variables for your Nakama server:
    - Go to Settings → Secrets and variables → Actions → Variables tab

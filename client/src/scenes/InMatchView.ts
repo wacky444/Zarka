@@ -130,6 +130,10 @@ export class InMatchView {
       async () => {
         if (this.started || this.startMatchBusy) return;
         if (!this.onStartMatch) return;
+        const confirmed = window.confirm(
+          "Are you sure you want to start the match? Players will no longer be able to join."
+        );
+        if (!confirmed) return;
         this.setStartMatchBusy(true);
         try {
           await this.onStartMatch();
