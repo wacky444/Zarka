@@ -131,6 +131,12 @@ export class MainScene extends Phaser.Scene {
           }
           if (typeof matchObj?.started === "boolean") {
             this.inMatchView.setMatchStarted(matchObj.started);
+            if (matchObj.started) {
+              this.showView("inMatch");
+              this.scene.sleep("MainScene");
+              this.scene.run("GameScene");
+              return;
+            }
           }
         } catch (e) {
           console.warn("Failed to load creator info", e);
@@ -307,6 +313,8 @@ export class MainScene extends Phaser.Scene {
             } else {
               this.statusText.setText("Match started.");
             }
+            this.scene.sleep("MainScene");
+            this.scene.run("GameScene");
           } else {
             this.statusText.setText("start_match error (see console).");
             console.log("start_match response:", parsed);
@@ -377,20 +385,6 @@ export class MainScene extends Phaser.Scene {
 
             // Auto-join the match we just created
             await this.joinMatch(parsed.match_id);
-          },
-          ["main"]
-        )
-      );
-
-      // Open the new Game Scene showcasing a hex grid
-      this.buttons.push(
-        makeButton(
-          this,
-          10,
-          200,
-          "Open Game Scene",
-          () => {
-            this.scene.start("GameScene");
           },
           ["main"]
         )

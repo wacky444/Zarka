@@ -41,6 +41,7 @@ export class InMatchView {
   private renameButton?: UIButton;
   private startMatchButton?: UIButton;
   private removeMatchButton?: UIButton;
+  private returnToGameButton?: UIButton;
 
   private onLeave?: () => void | Promise<void>;
   private onEndTurn?: () => void | Promise<void>;
@@ -290,6 +291,23 @@ export class InMatchView {
 
     this.refreshPlayerList();
     this.updateStartButtonState();
+
+    // Return to game button (bottom right, only visible when match started)
+    const cam = scene.cameras.main;
+    this.returnToGameButton = makeButton(
+      scene,
+      cam.width - 100,
+      cam.height - 40,
+      "← Return",
+      () => {
+        scene.scene.sleep("MainScene");
+        scene.scene.run("GameScene");
+      },
+      ["inMatch"]
+    );
+    this.returnToGameButton.setScrollFactor(0);
+    this.container.add(this.returnToGameButton);
+    this.returnToGameButton.setVisible(false);
   }
 
   setOnLeave(handler: () => void | Promise<void>) {
@@ -481,6 +499,9 @@ export class InMatchView {
       this.startMatchBusy = false;
     }
     this.updateStartButtonState();
+    if (this.returnToGameButton) {
+      this.returnToGameButton.setVisible(started);
+    }
   }
 
   setPlayers(usernames: string[]) {

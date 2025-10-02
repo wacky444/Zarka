@@ -66,10 +66,18 @@ export class GameScene extends Phaser.Scene {
     // Scrollwheel zoom
     this.enableWheelZoom();
 
-    // Optional: Back button to return to main scene
-    makeButton(this, 10, 10, "Back", () => {
-      this.scene.start("MainScene");
+    // Hamburger menu button to show InMatchView
+    const menuBtn = makeButton(this, 0, 0, "☰", () => {
+      this.scene.stop("GameScene");
+      this.scene.wake("MainScene");
     }).setScrollFactor(0);
+
+    // Position in bottom right corner
+    const cam = this.cameras.main;
+    menuBtn.setPosition(
+      cam.width - menuBtn.width - 10,
+      cam.height - menuBtn.height - 10
+    );
   }
 
   private enableDragPan() {
