@@ -1,6 +1,10 @@
 /// <reference path="../../../node_modules/nakama-runtime/index.d.ts" />
 
-import { DEFAULT_MATCH_NAME, OPCODE_SETTINGS_UPDATE } from "../../constants";
+import {
+  DEFAULT_MATCH_NAME,
+  OPCODE_MATCH_REMOVED,
+  OPCODE_SETTINGS_UPDATE,
+} from "../../constants";
 import { AsyncTurnState } from "../../models/types";
 import { buildMatchLabel } from "../../utils/label";
 import { normalizeMatchName } from "../../utils/normalize";
@@ -96,6 +100,18 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             );
           } catch {}
         }
+      } else if (msg && msg.type === "match_removed") {
+        try {
+          const payload = JSON.stringify({ match_removed: true });
+          dispatcher.broadcastMessage(
+            OPCODE_MATCH_REMOVED,
+            payload,
+            null,
+            null,
+            true
+          );
+        } catch {}
+        return null;
       }
     } catch (e) {
       logger.warn("matchSignal parse error: %v", e);

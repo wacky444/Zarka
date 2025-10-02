@@ -24,6 +24,7 @@ export class TurnService {
     started?: boolean;
     players?: string[];
   }) => void;
+  private onMatchRemoved?: () => void;
   private usernameCache = new Map<string, string>();
 
   constructor(private client: Client, private session: Session) {}
@@ -153,6 +154,13 @@ export class TurnService {
     return res;
   }
 
+  async removeMatch(match_id: string) {
+    const res = await this.client.rpc(this.session, "remove_match", {
+      match_id,
+    });
+    return res;
+  }
+
   // Realtime (authoritative) helpers
   // Ensure there's a connected socket we can use to join/leave the match for presence.
   private async ensureSocketConnected(): Promise<Socket> {
@@ -177,8 +185,18 @@ export class TurnService {
             };
             if (this.onSettingsUpdate) this.onSettingsUpdate(payload);
           } catch (e) {
-            // ignore malformed packet
             console.warn("Failed to parse settings update", e);
+          }
+        } else if (m.op_code === 101) {
+          try {
+            const payload = JSON.parse(new TextDecoder().decode(m.data)) as {
+              match_removed?: boolean;
+            };
+            if (payload.match_removed && this.onMatchRemoved) {
+              this.onMatchRemoved();
+            }
+          } catch (e) {
+            console.warn("Failed to parse match removed message", e);
           }
         }
       };
@@ -239,6 +257,10 @@ export class TurnService {
     this.onSettingsUpdate = cb;
   }
 
+  setOnMatchRemoved(cb: () => void) {
+    this.onMatchRemoved = cb;
+  }
+
   // Optionally allow callers to pre-connect the socket
   async connectSocket(): Promise<void> {
     await this.ensureSocketConnected();
@@ -255,6 +277,7 @@ export class TurnService {
       this.socket = null;
     }
     this.onSettingsUpdate = undefined;
+    this.onMatchRemoved = undefined;
   }
 
   // Getters for client and session (used in MainScene)
