@@ -43,7 +43,11 @@ export function listMyMatchesRpc(
           if (typeof match.started !== "boolean") {
             match.started = false;
           }
-          if (match.players && match.players.indexOf(ctx.userId) !== -1) {
+          if (
+            match.players &&
+            match.players.indexOf(ctx.userId) !== -1 &&
+            (match.removed === 0 || match.removed === undefined)
+          ) {
             matches.push({
               match_id: match.match_id,
               size: match.size,

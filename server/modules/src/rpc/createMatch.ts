@@ -61,6 +61,7 @@ export function createMatchRpc(
     creator: ctx.userId,
     name,
     started: false,
+    removed: 0,
   };
 
   storage.writeMatch(record);
