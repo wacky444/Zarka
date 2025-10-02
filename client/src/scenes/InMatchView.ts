@@ -40,11 +40,13 @@ export class InMatchView {
   private botPlayersStepper?: StepperHandle;
   private renameButton?: UIButton;
   private startMatchButton?: UIButton;
+  private removeMatchButton?: UIButton;
 
   private onLeave?: () => void | Promise<void>;
   private onEndTurn?: () => void | Promise<void>;
   private onSettingsChange?: (s: InMatchSettings) => void | Promise<void>;
   private onStartMatch?: () => void | Promise<void>;
+  private onRemoveMatch?: () => void | Promise<void>;
 
   private started = false;
   private startMatchBusy = false;
@@ -138,6 +140,26 @@ export class InMatchView {
       ["inMatch"]
     );
     this.container.add(this.startMatchButton);
+
+    // Remove match (host only)
+    this.removeMatchButton = makeButton(
+      scene,
+      430,
+      y,
+      "Remove Match",
+      async () => {
+        if (!this.onRemoveMatch) return;
+        const confirmed = window.confirm(
+          "Are you sure you want to remove this match? This action cannot be undone."
+        );
+        if (confirmed) {
+          await this.onRemoveMatch();
+        }
+      },
+      ["inMatch"]
+    );
+    this.container.add(this.removeMatchButton);
+    this.setRemoveMatchEnabled(this.isHost);
 
     y += 40;
 
@@ -283,6 +305,10 @@ export class InMatchView {
     this.updateStartButtonState();
   }
 
+  setOnRemoveMatch(handler: () => void | Promise<void>) {
+    this.onRemoveMatch = handler;
+  }
+
   setMatchInfo(matchId?: string, matchName?: string) {
     this.matchIdText.setText(`Match: ${matchId ?? "-"}`);
     if (typeof matchName === "string") {
@@ -318,6 +344,7 @@ export class InMatchView {
     this.autoSkipToggle?.setEnabled(enabled);
     this.botPlayersStepper?.setEnabled(enabled);
     this.setRenameEnabled(enabled);
+    this.setRemoveMatchEnabled(enabled);
     this.updateStartButtonState();
   }
 
@@ -431,6 +458,17 @@ export class InMatchView {
       this.renameButton.disableInteractive();
     }
     this.isHost = enabled;
+  }
+
+  private setRemoveMatchEnabled(enabled: boolean) {
+    if (!this.removeMatchButton) return;
+    if (enabled) {
+      this.removeMatchButton.setAlpha(1);
+      this.removeMatchButton.setInteractive({ useHandCursor: true });
+    } else {
+      this.removeMatchButton.setAlpha(0.5);
+      this.removeMatchButton.disableInteractive();
+    }
   }
 
   setMatchStarted(started: boolean) {

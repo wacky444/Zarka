@@ -83,3 +83,9 @@ export type StartMatchPayload = {
   already_started?: boolean;
   error?: string;
 };
+
+export type RemoveMatchPayload = {
+  ok?: boolean;
+  match_id?: string;
+  error?: string;
+};

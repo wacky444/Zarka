@@ -14,6 +14,7 @@ import type {
   SubmitTurnPayload,
   GetStatePayload,
   StartMatchPayload,
+  RemoveMatchPayload,
 } from "@shared";
 
 export class MainScene extends Phaser.Scene {
@@ -202,6 +203,23 @@ export class MainScene extends Phaser.Scene {
           }
         }
       });
+      this.turnService.setOnMatchRemoved(() => {
+        this.statusText.setText(
+          "Match has been removed by the host. Returning to main menu."
+        );
+        if (this.currentMatchId && this.turnService) {
+          this.turnService
+            .leaveRealtimeMatch(this.currentMatchId)
+            .catch((e) => console.warn("Failed to leave realtime match", e));
+        }
+        this.currentMatchId = null;
+        this.currentMatchName = null;
+        this.inMatchView.setPlayers([]);
+        this.inMatchView.setCreator(undefined, false);
+        this.inMatchView.setMatchInfo();
+        this.inMatchView.setMatchStarted(false);
+        this.showView("main");
+      });
       this.statusText.setText("Authenticated. Use the buttons below.");
 
       // Instantiate Matches List view (hidden by default)
@@ -308,6 +326,30 @@ export class MainScene extends Phaser.Scene {
         } catch (e) {
           console.error("update_settings error", e);
           this.statusText.setText("Failed to update settings");
+        }
+      });
+      this.inMatchView.setOnRemoveMatch(async () => {
+        if (!this.turnService || !this.currentMatchId) return;
+        try {
+          const res = await this.turnService.removeMatch(this.currentMatchId);
+          const parsed = this.parseRpcPayload<RemoveMatchPayload>(res);
+          if (parsed && parsed.ok) {
+            await this.turnService.leaveRealtimeMatch(this.currentMatchId);
+            this.currentMatchId = null;
+            this.currentMatchName = null;
+            this.inMatchView.setPlayers([]);
+            this.inMatchView.setCreator(undefined, false);
+            this.inMatchView.setMatchInfo();
+            this.inMatchView.setMatchStarted(false);
+            this.showView("main");
+            this.statusText.setText("Match removed successfully.");
+          } else {
+            this.statusText.setText("remove_match error (see console).");
+            console.log("remove_match response:", parsed);
+          }
+        } catch (e) {
+          console.error("remove_match error", e);
+          this.statusText.setText("Failed to remove match (see console).");
         }
       });
 
