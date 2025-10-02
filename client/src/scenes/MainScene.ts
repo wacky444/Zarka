@@ -507,7 +507,7 @@ export class MainScene extends Phaser.Scene {
       this.buttons.push(
         makeButton(
           this,
-          430,
+          630,
           80,
           "Back to Menu",
           () => {

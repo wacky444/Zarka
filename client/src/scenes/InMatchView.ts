@@ -144,7 +144,7 @@ export class InMatchView {
     // Remove match (host only)
     this.removeMatchButton = makeButton(
       scene,
-      430,
+      450,
       y,
       "Remove Match",
       async () => {
