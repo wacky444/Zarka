@@ -6,6 +6,27 @@ import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { normalizeMatchName } from "../utils/normalize";
 
+function getNumberOfMatches(storage: StorageService, userId: string): number {
+  const existingMatches = storage.listServerMatches(100, "");
+  let creatorMatchCount = 0;
+
+  if (existingMatches && existingMatches.objects) {
+    for (const obj of existingMatches.objects) {
+      if (obj && obj.value) {
+        const match = obj.value as MatchRecord;
+        if (
+          match.creator === userId &&
+          (match.removed === 0 || match.removed === undefined)
+        ) {
+          creatorMatchCount++;
+        }
+      }
+    }
+  }
+
+  return creatorMatchCount;
+}
+
 export function createMatchRpc(
   ctx: nkruntime.Context,
   logger: nkruntime.Logger,
@@ -43,6 +64,15 @@ export function createMatchRpc(
 
   const nkWrapper = createNakamaWrapper(nk);
   const storage = new StorageService(nkWrapper);
+
+  const creatorMatchCount = getNumberOfMatches(storage, ctx.userId);
+
+  if (creatorMatchCount >= 3) {
+    throw {
+      message: "Maximum of 3 matches per user reached",
+      code: nkruntime.Codes.RESOURCE_EXHAUSTED,
+    } as nkruntime.Error;
+  }
 
   const params: { [key: string]: string } = {
     size: String(size),

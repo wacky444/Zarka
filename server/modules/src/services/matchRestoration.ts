@@ -83,24 +83,25 @@ export function restoreMatchesFromStorage(
           match.current_turn
         );
 
+        try {
+          storage.deleteMatch(oldMatchId);
+        } catch (deleteError) {
+          logger.warn(
+            "Failed to delete old match record %s: %s",
+            oldMatchId,
+            (deleteError as Error).message || String(deleteError)
+          );
+        }
+
         match.match_id = newMatchId;
         try {
-          storage.writeMatch(match, version);
+          storage.writeMatch(match);
         } catch (writeError) {
-          logger.warn(
-            "Failed to update storage with new match ID for %s: %s. Retrying without version.",
+          logger.error(
+            "Failed to write new match record for %s: %s",
             newMatchId,
             (writeError as Error).message || String(writeError)
           );
-          try {
-            storage.writeMatch(match);
-          } catch (retryError) {
-            logger.error(
-              "Failed to update storage on retry for %s: %s",
-              newMatchId,
-              (retryError as Error).message || String(retryError)
-            );
-          }
         }
 
         restoredCount++;

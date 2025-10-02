@@ -133,6 +133,16 @@ export class StorageService {
     }
   }
 
+  deleteMatch(matchId: string): void {
+    this.nk.storageDelete([
+      {
+        collection: MATCH_COLLECTION,
+        key: this.getMatchKey(matchId),
+        userId: SERVER_USER_ID,
+      },
+    ]);
+  }
+
   private getMatchKey(matchId: string): string {
     return MATCH_KEY_PREFIX + matchId;
   }

@@ -14,7 +14,7 @@ export interface MatchRecord {
   creator?: string;
   name?: string;
   started: boolean;
-  removed?: number;
+  removed: number;
 }
 
 export interface TurnRecord {
