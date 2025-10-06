@@ -1,4 +1,5 @@
-// Unified RPC payload types shared between client and server
+import type { MatchRecord, TurnRecord } from "./match";
+import type { GameMap } from "./hexTile";
 
 export type CreateMatchPayload = {
   match_id: string;
@@ -27,8 +28,8 @@ export type SubmitTurnPayload = {
 
 export type GetStatePayload = {
   error?: string;
-  match?: unknown;
-  turns?: unknown[];
+  match?: MatchRecord;
+  turns?: TurnRecord[];
 };
 
 export type LeaveMatchPayload = {
@@ -81,6 +82,7 @@ export type StartMatchPayload = {
   match_id?: string;
   started?: boolean;
   already_started?: boolean;
+  map?: GameMap;
   error?: string;
 };
 

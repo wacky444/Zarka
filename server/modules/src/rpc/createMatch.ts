@@ -5,6 +5,7 @@ import { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { normalizeMatchName } from "../utils/normalize";
+import { DEFAULT_MAP_COLS, DEFAULT_MAP_ROWS } from "@shared";
 
 function getNumberOfMatches(storage: StorageService, userId: string): number {
   const existingMatches = storage.listServerMatches(100, "");
@@ -78,6 +79,8 @@ export function createMatchRpc(
     size: String(size),
     creator: ctx.userId,
     name,
+    cols: String(DEFAULT_MAP_COLS),
+    rows: String(DEFAULT_MAP_ROWS),
   };
 
   const matchId = nkWrapper.matchCreate("async_turn", params);
@@ -86,6 +89,8 @@ export function createMatchRpc(
     match_id: matchId,
     players: [],
     size,
+    cols: DEFAULT_MAP_COLS,
+    rows: DEFAULT_MAP_ROWS,
     created_at: Math.floor(Date.now() / 1000),
     current_turn: 0,
     creator: ctx.userId,

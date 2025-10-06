@@ -16,9 +16,11 @@ export enum LocalizationType {
 }
 
 export interface CellType {
-    sprite: string;
-    localizationType: LocalizationType;
-    walkable: boolean;
+  sprite: string;
+  localizationType: LocalizationType;
+  walkable: boolean;
+  numberMin: number; // Minimum number of this cell type per map
+  numberMax: number;
 }
 
 export type Axial = { q: number; r: number };
@@ -30,21 +32,58 @@ export interface HexTileOptions {
   meta?: Record<string, unknown>;
 }
 
+export interface HexTileSnapshot {
+  id: string;
+  coord: Axial;
+  localizationType: LocalizationType;
+  walkable: boolean;
+  frame?: string;
+  meta?: Record<string, unknown>;
+}
+
+export type CellLibraryDefinition = Record<LocalizationType, CellType>;
+
 export class HexTile {
   readonly id: string;
   readonly coord: Axial;
   cellType: CellType;
   frame?: string;
-  walkable: boolean;
   meta: Record<string, unknown>;
 
   constructor(coord: Axial, cellType: CellType, opts: HexTileOptions = {}) {
     this.id = opts.id ?? `hex_${coord.q}_${coord.r}`;
     this.coord = coord;
-    this.cellType = cellType;
-    this.frame = opts.frame;
-    this.walkable = opts.walkable ?? true;
-    this.meta = opts.meta ?? {};
+    const walkable = opts.walkable ?? cellType.walkable;
+    this.cellType = { ...cellType, walkable };
+    this.frame = opts.frame ?? cellType.sprite;
+    this.meta = opts.meta ? { ...opts.meta } : {};
+  }
+
+  toSnapshot(): HexTileSnapshot {
+    return {
+      id: this.id,
+      coord: { ...this.coord },
+      localizationType: this.cellType.localizationType,
+      walkable: this.cellType.walkable,
+      frame: this.frame,
+      meta: { ...this.meta },
+    };
+  }
+
+  static fromSnapshot(
+    snapshot: HexTileSnapshot,
+    library: CellLibraryDefinition
+  ): HexTile {
+    const base = library[snapshot.localizationType];
+    if (!base) {
+      throw new Error(`Missing cell type for ${snapshot.localizationType}`);
+    }
+    return new HexTile(snapshot.coord, base, {
+      id: snapshot.id,
+      frame: snapshot.frame ?? base.sprite,
+      walkable: snapshot.walkable,
+      meta: snapshot.meta ? { ...snapshot.meta } : {},
+    });
   }
 }
 
@@ -59,4 +98,11 @@ export function neighbors(ax: Axial): Axial[] {
     { q: 0, r: +1 },
   ];
   return dirs.map((d) => ({ q: ax.q + d.q, r: ax.r + d.r }));
+}
+
+export interface GameMap {
+  cols: number;
+  rows: number;
+  seed: string;
+  tiles: HexTileSnapshot[];
 }

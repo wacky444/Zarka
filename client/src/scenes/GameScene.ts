@@ -1,6 +1,16 @@
 import Phaser from "phaser";
+import type { RpcResponse } from "@heroiclabs/nakama-js";
 import { makeButton } from "../ui/button";
-import { HexTile, CellType } from "@shared";
+import type { TurnService } from "../services/turnService";
+import {
+  CellLibrary,
+  DEFAULT_MAP_COLS,
+  DEFAULT_MAP_ROWS,
+  HexTile,
+  type GameMap,
+  generateGameMap,
+  type GetStatePayload,
+} from "@shared";
 
 export class GameScene extends Phaser.Scene {
   private cam!: Phaser.Cameras.Scene2D.Camera;
@@ -19,57 +29,29 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
-  create() {
+  async create() {
     this.cam = this.cameras.main;
     this.uiCam = this.cameras.add(0, 0, this.cam.width, this.cam.height);
     this.uiCam.setScroll(0, 0);
     this.uiCam.setZoom(1);
 
-    // Create a simple hex grid (pointy-top style) of 20 tiles (5 columns x 4 rows)
-    const cols = 5;
-    const rows = 4;
-
-    const tileW = 59.5;
-    const tileH = 205;
-
-    // Spacing for pointy-top hexagon layout (approximate using sprite bounds)
-    const dx = tileW * 1; // horizontal distance between columns
-    const dy = tileH * 1; // vertical distance between rows
-
-    const texture = this.textures.get("hex");
-    const frameNames = texture.getFrameNames().filter((f) => f !== "__BASE");
-    const cellTypes = Object.values(HexTile) as CellType[];
-
-    const sprites: Phaser.GameObjects.Image[] = [];
-
-    for (let col = 0; col < cols; col++) {
-      for (let row = 0; row < rows; row++) {
-        const x = col * dx + tileW; // +tileW to add a small left margin
-        const y = row * dy + (col % 2 ? dy / 2 : 0) + tileH; // offset every other column
-        const frame = frameNames[(Math.random() * frameNames.length) | 0];
-        const img = this.add.image(x, y, "hex", frame);
-        // Attach a HexTile model to this sprite for shared logic/state
-        const cellType = cellTypes[(Math.random() * cellTypes.length) | 0];
-        const tile = new HexTile({ q: col, r: row }, cellType, { frame });
-        img.setData("tile", tile);
-        sprites.push(img);
-      }
+    const fetched = await this.fetchMapFromServer();
+    const cols = fetched && fetched.cols > 0 ? fetched.cols : DEFAULT_MAP_COLS;
+    const rows = fetched && fetched.rows > 0 ? fetched.rows : DEFAULT_MAP_ROWS;
+    let map: GameMap;
+    if (
+      fetched &&
+      Array.isArray(fetched.tiles) &&
+      fetched.tiles.length === cols * rows
+    ) {
+      map = fetched;
+    } else {
+      map = generateGameMap(cols, rows, CellLibrary, fetched?.seed);
     }
 
-    this.uiCam.ignore(sprites);
+    this.renderMap(map);
 
-    // Camera bounds around the grid
-    const gridWidth = cols * dx + tileW * 2;
-    const gridHeight = rows * dy + tileH * 2 + dy / 2;
-    this.cam.setBounds(0, 0, gridWidth, gridHeight);
-    this.cam.centerOn(gridWidth / 2, gridHeight / 2);
-
-    // Shared model (HexTile) is now used via sprite data above
-
-    // Drag to pan
     this.enableDragPan();
-
-    // Scrollwheel zoom
     this.enableWheelZoom();
 
     // Hamburger menu button to show InMatchView
@@ -86,6 +68,74 @@ export class GameScene extends Phaser.Scene {
       uiCam.width - menuBtn.width - 10,
       uiCam.height - menuBtn.height - 10
     );
+  }
+
+  private async fetchMapFromServer(): Promise<GameMap | null> {
+    const service = this.registry.get("turnService") as TurnService | null;
+    const matchId = this.registry.get("currentMatchId") as string | null;
+    if (!service || !matchId) {
+      return null;
+    }
+    try {
+      const res = await service.getState(matchId);
+      const payload = this.parseRpcPayload<GetStatePayload>(res);
+      if (payload && payload.match && payload.match.map) {
+        return payload.match.map;
+      }
+    } catch (error) {
+      console.warn("fetchMapFromServer failed", error);
+    }
+    return null;
+  }
+
+  private parseRpcPayload<T>(res: RpcResponse): T {
+    const raw: unknown = (res as RpcResponse).payload as unknown;
+    if (typeof raw === "string") {
+      return JSON.parse(raw) as T;
+    }
+    if (raw && typeof raw === "object") {
+      return raw as T;
+    }
+    throw new Error("Unsupported payload type: " + typeof raw);
+  }
+
+  private renderMap(map: GameMap) {
+    const tileW = 128;
+    const tileH = 118;
+    const dx = tileW;
+    const dy = tileH;
+    const texture = this.textures.get("hex");
+    const sprites: Phaser.GameObjects.Image[] = [];
+
+    for (const snapshot of map.tiles) {
+      let tile: HexTile;
+      try {
+        tile = HexTile.fromSnapshot(snapshot, CellLibrary);
+      } catch (error) {
+        console.warn("Invalid tile snapshot", error);
+        continue;
+      }
+      const frame = tile.frame ?? tile.cellType.sprite;
+      if (!texture.has(frame)) {
+        continue;
+      }
+      const col = tile.coord.q;
+      const row = tile.coord.r;
+      const rowOffset = row % 2 !== 0 ? dx / 2 : 0; // Hexagons are offset every other row
+      const x = col * dx + tileW + rowOffset;
+      const y = row * dy + tileH;
+      const img = this.add.image(x, y, "hex", frame);
+      img.setData("tile", tile);
+      sprites.push(img);
+    }
+
+    this.uiCam.ignore(sprites);
+
+    const gridWidth = map.cols * dx + tileW * 2 + dx / 2;
+    const gridHeight = map.rows * dy + tileH * 2 + dy / 2;
+    this.cam.setBounds(0, 0, gridWidth, gridHeight);
+    this.cam.centerOn(gridWidth / 2, gridHeight / 2);
+    this.registry.set("currentMatchMap", map);
   }
 
   private enableDragPan() {

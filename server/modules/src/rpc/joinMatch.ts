@@ -4,6 +4,12 @@ import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { MatchRecord } from "../models/types";
+import {
+  CellLibrary,
+  DEFAULT_MAP_COLS,
+  DEFAULT_MAP_ROWS,
+  generateGameMap,
+} from "@shared";
 
 export function joinMatchRpc(
   ctx: nkruntime.Context,
@@ -50,6 +56,21 @@ export function joinMatchRpc(
   let joinedNow = false;
   let triggeredStart = false;
 
+  const ensureMap = () => {
+    const cols = match.cols && match.cols > 0 ? match.cols : DEFAULT_MAP_COLS;
+    const rows = match.rows && match.rows > 0 ? match.rows : DEFAULT_MAP_ROWS;
+    const existing = match.map;
+    const needsMap =
+      !existing || existing.cols !== cols || existing.rows !== rows;
+    if (!needsMap) {
+      return;
+    }
+    const generated = generateGameMap(cols, rows, CellLibrary, existing?.seed);
+    match.map = generated;
+    match.cols = generated.cols;
+    match.rows = generated.rows;
+  };
+
   if (match.players.indexOf(ctx.userId) === -1) {
     const current = match.players.length;
     if (current >= (match.size || 2)) {
@@ -61,12 +82,14 @@ export function joinMatchRpc(
     if (!match.started && match.players.length >= 2) {
       match.started = true;
       triggeredStart = true;
+      ensureMap();
     }
 
     storage.writeMatch(match, read.version);
   } else if (!match.started && match.players.length >= 2) {
     match.started = true;
     triggeredStart = true;
+    ensureMap();
     storage.writeMatch(match, read.version);
   }
 

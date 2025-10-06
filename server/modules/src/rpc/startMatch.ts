@@ -4,6 +4,12 @@ import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { MatchRecord } from "../models/types";
+import {
+  CellLibrary,
+  DEFAULT_MAP_COLS,
+  DEFAULT_MAP_ROWS,
+  generateGameMap,
+} from "@shared";
 
 export function startMatchRpc(
   ctx: nkruntime.Context,
@@ -47,16 +53,48 @@ export function startMatchRpc(
     match.started = false;
   }
 
+  const targetCols =
+    match.cols && match.cols > 0 ? match.cols : DEFAULT_MAP_COLS;
+  const targetRows =
+    match.rows && match.rows > 0 ? match.rows : DEFAULT_MAP_ROWS;
+  const existingMap = match.map;
+  const mapMismatch =
+    !existingMap ||
+    existingMap.cols !== targetCols ||
+    existingMap.rows !== targetRows;
+  let mapUpdated = false;
+
+  if (mapMismatch) {
+    const generated = generateGameMap(
+      targetCols,
+      targetRows,
+      CellLibrary,
+      existingMap?.seed
+    );
+    match.map = generated;
+    match.cols = generated.cols;
+    match.rows = generated.rows;
+    mapUpdated = true;
+  }
+
   if (!match.creator || match.creator !== ctx.userId) {
     throw makeNakamaError("not_creator", nkruntime.Codes.PERMISSION_DENIED);
   }
 
   if (match.started) {
+    if (mapUpdated) {
+      try {
+        storage.writeMatch(match, read.version);
+      } catch (e) {
+        throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
+      }
+    }
     const already: import("@shared").StartMatchPayload = {
       ok: true,
       match_id: matchId,
       started: true,
       already_started: true,
+      map: match.map,
     };
     return JSON.stringify(already);
   }
@@ -84,6 +122,7 @@ export function startMatchRpc(
     ok: true,
     match_id: matchId,
     started: true,
+    map: match.map,
   };
 
   return JSON.stringify(response);
