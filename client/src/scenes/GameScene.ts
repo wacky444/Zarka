@@ -4,6 +4,7 @@ import { HexTile, CellType } from "@shared";
 
 export class GameScene extends Phaser.Scene {
   private cam!: Phaser.Cameras.Scene2D.Camera;
+  private uiCam!: Phaser.Cameras.Scene2D.Camera;
 
   constructor() {
     super("GameScene");
@@ -20,6 +21,9 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.cam = this.cameras.main;
+    this.uiCam = this.cameras.add(0, 0, this.cam.width, this.cam.height);
+    this.uiCam.setScroll(0, 0);
+    this.uiCam.setZoom(1);
 
     // Create a simple hex grid (pointy-top style) of 20 tiles (5 columns x 4 rows)
     const cols = 5;
@@ -52,6 +56,8 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    this.uiCam.ignore(sprites);
+
     // Camera bounds around the grid
     const gridWidth = cols * dx + tileW * 2;
     const gridHeight = rows * dy + tileH * 2 + dy / 2;
@@ -72,11 +78,13 @@ export class GameScene extends Phaser.Scene {
       this.scene.wake("MainScene");
     }).setScrollFactor(0);
 
+    this.cam.ignore(menuBtn);
+
     // Position in bottom right corner
-    const cam = this.cameras.main;
+    const uiCam = this.uiCam;
     menuBtn.setPosition(
-      cam.width - menuBtn.width - 10,
-      cam.height - menuBtn.height - 10
+      uiCam.width - menuBtn.width - 10,
+      uiCam.height - menuBtn.height - 10
     );
   }
 
