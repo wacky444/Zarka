@@ -4,6 +4,7 @@ import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { MatchRecord } from "../models/types";
+import { assignSpawnPositions } from "../utils/playerCharacter";
 import {
   CellLibrary,
   DEFAULT_MAP_COLS,
@@ -98,6 +99,8 @@ export function startMatchRpc(
     };
     return JSON.stringify(already);
   }
+
+  assignSpawnPositions(match, logger);
 
   match.started = true;
 

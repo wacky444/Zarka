@@ -88,6 +88,7 @@ export function createMatchRpc(
   const record: MatchRecord = {
     match_id: matchId,
     players: [],
+    playerCharacters: {},
     size,
     cols: DEFAULT_MAP_COLS,
     rows: DEFAULT_MAP_ROWS,

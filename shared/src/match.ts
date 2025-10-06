@@ -1,8 +1,10 @@
 import type { GameMap } from "./hexTile";
+import type { PlayerCharacter } from "./playerCharacter";
 
 export interface MatchRecord {
   match_id: string;
   players: string[];
+  playerCharacters: Record<string, PlayerCharacter>;
   size: number;
   cols?: number;
   rows?: number;
