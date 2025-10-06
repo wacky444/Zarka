@@ -6,5 +6,5 @@ export type InMatchSettings = {
   autoSkip: boolean; // Auto-skip if someone has moved and time limit passed, default true
   botPlayers: number; // Number of bot players, default 0
   name: string;
-  seed: string; // Map generation seed
+  seed?: string; // Map generation seed
 };
