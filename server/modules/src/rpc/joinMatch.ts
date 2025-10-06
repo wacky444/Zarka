@@ -11,7 +11,6 @@ import {
   generateGameMap,
 } from "@shared";
 import {
-  assignSpawnPositions,
   ensureAllPlayerCharacters,
   ensurePlayerCharacter,
 } from "../utils/playerCharacter";
@@ -59,7 +58,6 @@ export function joinMatchRpc(
   }
 
   let joinedNow = false;
-  let triggeredStart = false;
   let shouldWrite = false;
 
   if (ensureAllPlayerCharacters(match)) {
@@ -94,52 +92,10 @@ export function joinMatchRpc(
       ensurePlayerCharacter(match, ctx.userId);
       shouldWrite = true;
     }
-
-    if (!match.started && match.players.length >= 2) {
-      match.started = true;
-      triggeredStart = true;
-      if (ensureMap()) {
-        shouldWrite = true;
-      }
-      shouldWrite = true;
-    }
-  } else if (!match.started && match.players.length >= 2) {
-    match.started = true;
-    triggeredStart = true;
-    if (ensureMap()) {
-      shouldWrite = true;
-    }
-    shouldWrite = true;
-    if (!match.playerCharacters[ctx.userId]) {
-      ensurePlayerCharacter(match, ctx.userId);
-      shouldWrite = true;
-    }
-  }
-
-  if (triggeredStart) {
-    if (assignSpawnPositions(match, logger)) {
-      shouldWrite = true;
-    }
   }
 
   if (shouldWrite) {
     storage.writeMatch(match, read.version);
-  }
-
-  if (triggeredStart) {
-    try {
-      nkWrapper.matchSignal(
-        matchId,
-        JSON.stringify({
-          type: "start_match",
-        })
-      );
-    } catch (e) {
-      logger.warn(
-        "join_match: matchSignal start failed: %s",
-        (e as Error).message
-      );
-    }
   }
 
   const response: import("@shared").JoinMatchPayload = {

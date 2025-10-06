@@ -10,11 +10,18 @@ import {
   type GameMap,
   generateGameMap,
   type GetStatePayload,
+  type MatchRecord,
 } from "@shared";
 
 export class GameScene extends Phaser.Scene {
+  private static readonly TILE_WIDTH = 128;
+  private static readonly TILE_HEIGHT = 118;
+
   private cam!: Phaser.Cameras.Scene2D.Camera;
   private uiCam!: Phaser.Cameras.Scene2D.Camera;
+  private currentMatch: MatchRecord | null = null;
+  private tilePositions: Record<string, { x: number; y: number }> = {};
+  private playerSprites: Phaser.GameObjects.Image[] = [];
 
   constructor() {
     super("GameScene");
@@ -27,6 +34,11 @@ export class GameScene extends Phaser.Scene {
       "/assets/spritesheets/hexagonAll_sheet.png",
       "/assets/spritesheets/hexagonAll_sheet.xml"
     );
+    this.load.atlasXML(
+      "char",
+      "/assets/spritesheets/roguelikeChar_transparent.png",
+      "/assets/spritesheets/roguelikeChar_transparent.xml"
+    );
   }
 
   async create() {
@@ -35,21 +47,15 @@ export class GameScene extends Phaser.Scene {
     this.uiCam.setScroll(0, 0);
     this.uiCam.setZoom(1);
 
-    const fetched = await this.fetchMapFromServer();
-    const cols = fetched && fetched.cols > 0 ? fetched.cols : DEFAULT_MAP_COLS;
-    const rows = fetched && fetched.rows > 0 ? fetched.rows : DEFAULT_MAP_ROWS;
-    let map: GameMap;
-    if (
-      fetched &&
-      Array.isArray(fetched.tiles) &&
-      fetched.tiles.length === cols * rows
-    ) {
-      map = fetched;
-    } else {
-      map = generateGameMap(cols, rows, CellLibrary, fetched?.seed);
-    }
+    const match = await this.fetchMatchFromServer();
+    this.currentMatch = match;
+
+    const map = this.resolveMap(match);
 
     this.renderMap(map);
+    if (match) {
+      this.renderPlayerCharacters(match);
+    }
 
     this.enableDragPan();
     this.enableWheelZoom();
@@ -70,7 +76,7 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
-  private async fetchMapFromServer(): Promise<GameMap | null> {
+  private async fetchMatchFromServer(): Promise<MatchRecord | null> {
     const service = this.registry.get("turnService") as TurnService | null;
     const matchId = this.registry.get("currentMatchId") as string | null;
     if (!service || !matchId) {
@@ -79,8 +85,8 @@ export class GameScene extends Phaser.Scene {
     try {
       const res = await service.getState(matchId);
       const payload = this.parseRpcPayload<GetStatePayload>(res);
-      if (payload && payload.match && payload.match.map) {
-        return payload.match.map;
+      if (payload && payload.match) {
+        return payload.match;
       }
     } catch (error) {
       console.warn("fetchMapFromServer failed", error);
@@ -99,13 +105,32 @@ export class GameScene extends Phaser.Scene {
     throw new Error("Unsupported payload type: " + typeof raw);
   }
 
+  private resolveMap(match: MatchRecord | null): GameMap {
+    if (
+      match &&
+      match.map &&
+      Array.isArray(match.map.tiles) &&
+      match.map.cols &&
+      match.map.rows &&
+      match.map.tiles.length === match.map.cols * match.map.rows
+    ) {
+      return match.map;
+    }
+
+    const cols = match?.cols && match.cols > 0 ? match.cols : DEFAULT_MAP_COLS;
+    const rows = match?.rows && match.rows > 0 ? match.rows : DEFAULT_MAP_ROWS;
+    const seed = match?.map?.seed;
+    return generateGameMap(cols, rows, CellLibrary, seed);
+  }
+
   private renderMap(map: GameMap) {
-    const tileW = 128;
-    const tileH = 118;
+    const tileW = GameScene.TILE_WIDTH;
+    const tileH = GameScene.TILE_HEIGHT;
     const dx = tileW;
     const dy = tileH;
     const texture = this.textures.get("hex");
     const sprites: Phaser.GameObjects.Image[] = [];
+    this.tilePositions = {};
 
     for (const snapshot of map.tiles) {
       let tile: HexTile;
@@ -127,6 +152,7 @@ export class GameScene extends Phaser.Scene {
       const img = this.add.image(x, y, "hex", frame);
       img.setData("tile", tile);
       sprites.push(img);
+      this.tilePositions[tile.id] = { x, y };
     }
 
     this.uiCam.ignore(sprites);
@@ -136,6 +162,64 @@ export class GameScene extends Phaser.Scene {
     this.cam.setBounds(0, 0, gridWidth, gridHeight);
     this.cam.centerOn(gridWidth / 2, gridHeight / 2);
     this.registry.set("currentMatchMap", map);
+  }
+
+  private getTileWorldPosition(
+    tileId: string,
+    coord: { q: number; r: number }
+  ): { x: number; y: number } {
+    const existing = this.tilePositions[tileId];
+    if (existing) {
+      return existing;
+    }
+    return this.axialToWorld(coord);
+  }
+
+  private axialToWorld(coord: { q: number; r: number }): {
+    x: number;
+    y: number;
+  } {
+    const tileW = GameScene.TILE_WIDTH;
+    const tileH = GameScene.TILE_HEIGHT;
+    const dx = tileW;
+    const dy = tileH;
+    const col = coord.q;
+    const row = coord.r;
+    const rowOffset = row % 2 !== 0 ? dx / 2 : 0;
+    const x = col * dx + tileW + rowOffset;
+    const y = row * dy + tileH;
+    return { x, y };
+  }
+
+  private renderPlayerCharacters(match: MatchRecord) {
+    if (!match.playerCharacters || !this.textures.exists("char")) {
+      return;
+    }
+
+    for (const sprite of this.playerSprites) {
+      sprite.destroy();
+    }
+    this.playerSprites = [];
+
+    for (const playerId in match.playerCharacters) {
+      if (
+        !Object.prototype.hasOwnProperty.call(match.playerCharacters, playerId)
+      ) {
+        continue;
+      }
+      const character = match.playerCharacters[playerId];
+      if (!character || !character.position) {
+        continue;
+      }
+      const { tileId, coord } = character.position;
+      const world = this.getTileWorldPosition(tileId, coord);
+      const sprite = this.add.image(world.x, world.y, "char", "body_02.png");
+      sprite.setDepth(5);
+      sprite.setScale(4);
+      sprite.setData("playerId", playerId);
+      this.uiCam.ignore(sprite);
+      this.playerSprites.push(sprite);
+    }
   }
 
   private enableDragPan() {

@@ -1,0 +1,7 @@
+<!-- The tiles are 16 x 16px and have a 1px margin between them. -->
+<TextureAtlas imagePath="roguelikeChar_transparent.png">
+	<SubTexture name="body_01.png" x="0" y="0" width="16" height="16"/>
+	<SubTexture name="body_02.png" x="17" y="0" width="16" height="16"/>
+	<SubTexture name="body_03.png" x="0" y="17" width="16" height="16"/>
+	<SubTexture name="body_04.png" x="17" y="17" width="16" height="16"/>
+</TextureAtlas>
