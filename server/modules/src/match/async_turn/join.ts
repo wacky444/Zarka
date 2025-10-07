@@ -14,28 +14,6 @@ export const asyncTurnMatchJoin: nkruntime.MatchJoinFunction<AsyncTurnState> =
     }
 
     const playerCount = Object.keys(state.players).length;
-    if (!state.started && playerCount >= 2) {
-      state.started = true;
-      try {
-        dispatcher.broadcastMessage(
-          OPCODE_SETTINGS_UPDATE,
-          JSON.stringify({
-            size: state.size,
-            cols: state.cols,
-            rows: state.rows,
-            roundTime: state.roundTime,
-            autoSkip: state.autoSkip,
-            botPlayers: state.botPlayers,
-            name: state.name,
-            started: state.started,
-            players: Object.keys(state.players),
-          }),
-          null,
-          null,
-          true
-        );
-      } catch {}
-    }
 
     try {
       const label = buildMatchLabel({

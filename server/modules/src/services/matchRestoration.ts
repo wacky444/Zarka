@@ -38,6 +38,11 @@ export function restoreMatchesFromStorage(
             match.started = false;
           }
 
+          if (match.removed && match.removed !== 0) {
+            logger.debug("Match %s marked removed, skipping", match.match_id);
+            continue;
+          }
+
           if (!storage.isMatchActive(match.match_id)) {
             matchesToRestore.push({ match, version: obj.version });
           } else {
