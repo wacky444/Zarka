@@ -75,12 +75,24 @@ export function ensureAllPlayerCharacters(match: MatchRecord): boolean {
     match.playerCharacters = {};
     mutated = true;
   }
-  for (const playerId of match.players) {
+
+  const ensureId = (playerId: string) => {
     if (!match.playerCharacters[playerId]) {
       match.playerCharacters[playerId] = createDefaultCharacter(playerId);
       mutated = true;
     }
+  };
+
+  for (const playerId of match.players) {
+    ensureId(playerId);
   }
+
+  const totalBots =
+    typeof match.botPlayers === "number" ? Math.max(0, match.botPlayers) : 0;
+  for (let i = 1; i <= totalBots; i += 1) {
+    ensureId(`bot${i}`);
+  }
+
   return mutated;
 }
 
@@ -127,6 +139,22 @@ export function assignSpawnPositions(
 
   let mutated = ensureAllPlayerCharacters(match);
 
+  const totalBots =
+    typeof match.botPlayers === "number" ? Math.max(0, match.botPlayers) : 0;
+  const roster: string[] = [...match.players];
+  for (let i = 1; i <= totalBots; i += 1) {
+    roster.push(`bot${i}`);
+  }
+
+  const characterIds = match.playerCharacters
+    ? Object.keys(match.playerCharacters)
+    : [];
+  for (const characterId of characterIds) {
+    if (roster.indexOf(characterId) === -1) {
+      roster.push(characterId);
+    }
+  }
+
   const walkableTiles = map.tiles.filter((tile) => tile.walkable);
   if (walkableTiles.length === 0) {
     logger.warn(
@@ -147,7 +175,7 @@ export function assignSpawnPositions(
 
   const used: Record<string, boolean> = {};
 
-  for (const playerId of match.players) {
+  for (const playerId of roster) {
     const character = match.playerCharacters?.[playerId];
     if (!character) {
       continue;
@@ -175,7 +203,7 @@ export function assignSpawnPositions(
     return undefined;
   };
 
-  for (const playerId of match.players) {
+  for (const playerId of roster) {
     const character = match.playerCharacters?.[playerId];
     if (!character) {
       continue;
