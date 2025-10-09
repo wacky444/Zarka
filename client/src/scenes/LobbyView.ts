@@ -11,7 +11,7 @@ import {
 } from "../ui/button";
 import { InMatchSettings } from "@shared";
 
-export class InMatchView {
+export class LobbyView {
   private static readonly MAX_NAME_LENGTH = 64;
   private static readonly DEFAULT_MATCH_NAME = "Zarka game";
   private scene: Phaser.Scene;
@@ -26,10 +26,10 @@ export class InMatchView {
   private players = 2;
   private cols = 5;
   private rows = 4;
-  private roundTime = "23:00"; // Default time for round forcing
-  private autoSkip = true; // Default auto-skip enabled
-  private botPlayers = 0; // Default no bot players
-  private matchName = InMatchView.DEFAULT_MATCH_NAME;
+  private roundTime = "23:00";
+  private autoSkip = true;
+  private botPlayers = 0;
+  private matchName = LobbyView.DEFAULT_MATCH_NAME;
   private isHost = false;
   private playerNames: string[] = [];
   private playersStepper?: StepperHandle;
@@ -59,7 +59,7 @@ export class InMatchView {
       .setVisible(false)
       .setActive(false);
 
-    this.title = scene.add.text(10, 10, "In Match", {
+    this.title = scene.add.text(10, 10, "Match Lobby", {
       color: "#ffffff",
       fontSize: "20px",
     });
@@ -93,10 +93,8 @@ export class InMatchView {
     this.container.add(this.renameButton);
     this.setRenameEnabled(this.isHost);
 
-    // Controls
     let y = 80;
 
-    // Leave match
     const leaveBtn = makeButton(
       scene,
       10,
@@ -109,7 +107,6 @@ export class InMatchView {
     );
     this.container.add(leaveBtn);
 
-    // End turn
     const endTurnBtn = makeButton(
       scene,
       150,
@@ -122,7 +119,6 @@ export class InMatchView {
     );
     this.container.add(endTurnBtn);
 
-    // Start match (host only)
     this.startMatchButton = makeButton(
       scene,
       290,
@@ -146,7 +142,6 @@ export class InMatchView {
     );
     this.container.add(this.startMatchButton);
 
-    // Remove match (host only)
     this.removeMatchButton = makeButton(
       scene,
       450,
@@ -168,7 +163,6 @@ export class InMatchView {
 
     y += 40;
 
-    // Players control
     this.playersStepper = addLabeledStepper(
       this.scene,
       this.container,
@@ -179,16 +173,14 @@ export class InMatchView {
       100,
       () => this.players,
       (v) => {
-        // Clamp to 1..100 just in case a custom input sneaks in
         this.players = Phaser.Math.Clamp(v, 1, 100);
         this.refreshPlayerList();
         this.emitSettings();
       },
-      true, // onlyHost
+      true,
       this.isHost
     );
 
-    // Columns control
     this.colsStepper = addLabeledStepper(
       this.scene,
       this.container,
@@ -202,11 +194,10 @@ export class InMatchView {
         this.cols = Phaser.Math.Clamp(v, 1, 100);
         this.emitSettings();
       },
-      true, // onlyHost
+      true,
       this.isHost
     );
 
-    // Rows control
     this.rowsStepper = addLabeledStepper(
       this.scene,
       this.container,
@@ -220,13 +211,12 @@ export class InMatchView {
         this.rows = Phaser.Math.Clamp(v, 1, 100);
         this.emitSettings();
       },
-      true, // onlyHost
+      true,
       this.isHost
     );
 
     y += 40;
 
-    // Round Time control
     this.roundTimeInput = addLabeledTimeInput(
       this.scene,
       this.container,
@@ -238,11 +228,10 @@ export class InMatchView {
         this.roundTime = v;
         this.emitSettings();
       },
-      true, // onlyHost
+      true,
       this.isHost
     );
 
-    // Auto-skip control
     this.autoSkipToggle = addLabeledToggle(
       this.scene,
       this.container,
@@ -254,11 +243,10 @@ export class InMatchView {
         this.autoSkip = v;
         this.emitSettings();
       },
-      true, // onlyHost
+      true,
       this.isHost
     );
 
-    // Bot Players control
     this.botPlayersStepper = addLabeledStepper(
       this.scene,
       this.container,
@@ -272,7 +260,7 @@ export class InMatchView {
         this.botPlayers = Phaser.Math.Clamp(v, 0, 10);
         this.emitSettings();
       },
-      true, // onlyHost
+      true,
       this.isHost
     );
 
@@ -292,7 +280,6 @@ export class InMatchView {
     this.refreshPlayerList();
     this.updateStartButtonState();
 
-    // Return to game button (bottom right, only visible when match started)
     const cam = scene.cameras.main;
     this.returnToGameButton = makeButton(
       scene,
@@ -357,7 +344,6 @@ export class InMatchView {
       : creatorId ?? "-";
     this.creatorText.setText(`Creator: ${label}`);
     this.isHost = !!isSelf;
-    // Toggle host-only steppers accordingly
     const enabled = this.isHost;
     this.playersStepper?.setEnabled(enabled);
     this.colsStepper?.setEnabled(enabled);
@@ -370,7 +356,6 @@ export class InMatchView {
     this.updateStartButtonState();
   }
 
-  // Apply settings coming from the server (host changes) and refresh UI fields without re-emitting
   applySettings(partial: {
     size?: number;
     cols?: number;
@@ -439,10 +424,10 @@ export class InMatchView {
   }
 
   private normalizeMatchName(value?: string): string {
-    if (typeof value !== "string") return InMatchView.DEFAULT_MATCH_NAME;
+    if (typeof value !== "string") return LobbyView.DEFAULT_MATCH_NAME;
     const trimmed = value.trim().replace(/\s+/g, " ");
-    if (!trimmed) return InMatchView.DEFAULT_MATCH_NAME;
-    return trimmed.slice(0, InMatchView.MAX_NAME_LENGTH);
+    if (!trimmed) return LobbyView.DEFAULT_MATCH_NAME;
+    return trimmed.slice(0, LobbyView.MAX_NAME_LENGTH);
   }
 
   private applyMatchName(name?: string): boolean {

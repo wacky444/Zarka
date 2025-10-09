@@ -6,7 +6,7 @@ import { TurnService } from "../services/turnService";
 import { makeButton, UIButton } from "../ui/button";
 import { MatchesListView } from "./MatchesList";
 import { MyMatchesListView } from "./MyMatchesList";
-import { InMatchView } from "./InMatchView";
+import { LobbyView } from "./LobbyView";
 import type {
   LeaveMatchPayload,
   JoinMatchPayload,
@@ -25,7 +25,7 @@ export class MainScene extends Phaser.Scene {
   private moveCounter = 0;
   private matchesListView!: MatchesListView;
   private myMatchesListView!: MyMatchesListView;
-  private inMatchView!: InMatchView;
+  private lobbyView!: LobbyView;
   private activeView: "main" | "matchList" | "myMatchList" | "inMatch" = "main";
   private buttons: UIButton[] = [];
   private currentUserId: string | null = null;
@@ -70,10 +70,10 @@ export class MainScene extends Phaser.Scene {
           parsed.size ?? "?"
         }`
       );
-      if (this.inMatchView) {
-        this.inMatchView.setMatchInfo(matchId, displayName);
+      if (this.lobbyView) {
+        this.lobbyView.setMatchInfo(matchId, displayName);
         if (typeof parsed.started === "boolean") {
-          this.inMatchView.setMatchStarted(parsed.started);
+          this.lobbyView.setMatchStarted(parsed.started);
         }
         if (Array.isArray(parsed.players) && parsed.players.length > 0) {
           try {
@@ -83,13 +83,13 @@ export class MainScene extends Phaser.Scene {
             const playerNames = parsed.players.map(
               (id) => usernameMap[id] ?? id
             );
-            this.inMatchView.setPlayers(playerNames);
+            this.lobbyView.setPlayers(playerNames);
           } catch (e) {
             console.warn("Failed to resolve player usernames", e);
-            this.inMatchView.setPlayers(parsed.players);
+            this.lobbyView.setPlayers(parsed.players);
           }
         } else {
-          this.inMatchView.setPlayers([]);
+          this.lobbyView.setPlayers([]);
         }
         // Fetch creator info to reflect in the UI
         try {
@@ -114,23 +114,23 @@ export class MainScene extends Phaser.Scene {
             const playerNames = matchObj.players.map(
               (id) => usernameMap[id] ?? id
             );
-            this.inMatchView.setPlayers(playerNames);
+            this.lobbyView.setPlayers(playerNames);
             const creatorDisplay = creator ? usernameMap[creator] : undefined;
-            this.inMatchView.setCreator(creator, isSelf, creatorDisplay);
+            this.lobbyView.setCreator(creator, isSelf, creatorDisplay);
           } else {
             let creatorDisplay: string | undefined;
             if (creator) {
               const single = await this.turnService.resolveUsernames([creator]);
               creatorDisplay = single[creator];
             }
-            this.inMatchView.setCreator(creator, isSelf, creatorDisplay);
+            this.lobbyView.setCreator(creator, isSelf, creatorDisplay);
           }
           if (matchObj?.name) {
-            this.inMatchView.setMatchName(matchObj.name);
+            this.lobbyView.setMatchName(matchObj.name);
             this.currentMatchName = matchObj.name;
           }
           if (typeof matchObj?.started === "boolean") {
-            this.inMatchView.setMatchStarted(matchObj.started);
+            this.lobbyView.setMatchStarted(matchObj.started);
             if (matchObj.started) {
               this.showView("inMatch");
               this.scene.sleep("MainScene");
@@ -188,7 +188,7 @@ export class MainScene extends Phaser.Scene {
           .filter(Boolean)
           .join(", ");
         if (s) this.statusText.setText(`Settings sync: ${s}`);
-        const view = this.inMatchView;
+        const view = this.lobbyView;
         if (!view) return;
         view.applySettings(p);
         if (Array.isArray(p.players)) {
@@ -222,10 +222,10 @@ export class MainScene extends Phaser.Scene {
         }
         this.setCurrentMatchId(null);
         this.currentMatchName = null;
-        this.inMatchView.setPlayers([]);
-        this.inMatchView.setCreator(undefined, false);
-        this.inMatchView.setMatchInfo();
-        this.inMatchView.setMatchStarted(false);
+        this.lobbyView.setPlayers([]);
+        this.lobbyView.setCreator(undefined, false);
+        this.lobbyView.setMatchInfo();
+        this.lobbyView.setMatchStarted(false);
         this.showView("main");
       });
       this.statusText.setText("Authenticated. Use the buttons below.");
@@ -251,11 +251,11 @@ export class MainScene extends Phaser.Scene {
           if (this.currentMatchId === matchId) {
             this.setCurrentMatchId(null);
             this.currentMatchName = null;
-            this.inMatchView.setPlayers([]);
-            this.inMatchView.setCreator(undefined, false);
-            this.inMatchView.setMatchInfo();
-            this.inMatchView.setMatchStarted(false);
-            this.inMatchView.hide();
+            this.lobbyView.setPlayers([]);
+            this.lobbyView.setCreator(undefined, false);
+            this.lobbyView.setMatchInfo();
+            this.lobbyView.setMatchStarted(false);
+            this.lobbyView.hide();
             this.showView("main");
           }
           // Refresh the list to reflect the change
@@ -267,9 +267,9 @@ export class MainScene extends Phaser.Scene {
         await this.joinMatch(matchId);
       });
 
-      // Instantiate In-Match view (hidden by default)
-      this.inMatchView = new InMatchView(this);
-      this.inMatchView.setOnLeave(async () => {
+      // Instantiate lobby view (hidden by default)
+      this.lobbyView = new LobbyView(this);
+      this.lobbyView.setOnLeave(async () => {
         if (!this.turnService || !this.currentMatchId) return;
         const res = await this.turnService.leaveMatch(this.currentMatchId);
         const parsed = this.parseRpcPayload<LeaveMatchPayload>(res);
@@ -278,10 +278,10 @@ export class MainScene extends Phaser.Scene {
           await this.turnService.leaveRealtimeMatch(this.currentMatchId);
           this.setCurrentMatchId(null);
           this.currentMatchName = null;
-          this.inMatchView.setPlayers([]);
-          this.inMatchView.setCreator(undefined, false);
-          this.inMatchView.setMatchInfo();
-          this.inMatchView.setMatchStarted(false);
+          this.lobbyView.setPlayers([]);
+          this.lobbyView.setCreator(undefined, false);
+          this.lobbyView.setMatchInfo();
+          this.lobbyView.setMatchStarted(false);
           this.showView("main");
           this.statusText.setText("Left match.");
         } else {
@@ -289,7 +289,7 @@ export class MainScene extends Phaser.Scene {
           console.log("leave_match response:", parsed);
         }
       });
-      this.inMatchView.setOnEndTurn(async () => {
+      this.lobbyView.setOnEndTurn(async () => {
         if (!this.currentMatchId || !this.turnService) return;
         const move = { n: ++this.moveCounter, ts: Date.now() };
         const res = await this.turnService.submitTurn(
@@ -303,13 +303,13 @@ export class MainScene extends Phaser.Scene {
           this.statusText.setText("submit_turn error (see console).");
         }
       });
-      this.inMatchView.setOnStartMatch(async () => {
+      this.lobbyView.setOnStartMatch(async () => {
         if (!this.turnService || !this.currentMatchId) return;
         try {
           const res = await this.turnService.startMatch(this.currentMatchId);
           const parsed = this.parseRpcPayload<StartMatchPayload>(res);
           if (parsed && parsed.ok) {
-            this.inMatchView.setMatchStarted(true);
+            this.lobbyView.setMatchStarted(true);
             if (parsed.already_started) {
               this.statusText.setText("Match was already started.");
             } else {
@@ -326,7 +326,7 @@ export class MainScene extends Phaser.Scene {
           this.statusText.setText("start_match error (see console).");
         }
       });
-      this.inMatchView.setOnSettingsChange(async (s) => {
+      this.lobbyView.setOnSettingsChange(async (s) => {
         if (!this.turnService || !this.currentMatchId) return;
         try {
           await this.turnService.updateSettings(this.currentMatchId, s);
@@ -338,7 +338,7 @@ export class MainScene extends Phaser.Scene {
           this.statusText.setText("Failed to update settings");
         }
       });
-      this.inMatchView.setOnRemoveMatch(async () => {
+      this.lobbyView.setOnRemoveMatch(async () => {
         if (!this.turnService || !this.currentMatchId) return;
         try {
           const res = await this.turnService.removeMatch(this.currentMatchId);
@@ -347,10 +347,10 @@ export class MainScene extends Phaser.Scene {
             await this.turnService.leaveRealtimeMatch(this.currentMatchId);
             this.setCurrentMatchId(null);
             this.currentMatchName = null;
-            this.inMatchView.setPlayers([]);
-            this.inMatchView.setCreator(undefined, false);
-            this.inMatchView.setMatchInfo();
-            this.inMatchView.setMatchStarted(false);
+            this.lobbyView.setPlayers([]);
+            this.lobbyView.setCreator(undefined, false);
+            this.lobbyView.setMatchInfo();
+            this.lobbyView.setMatchStarted(false);
             this.showView("main");
             this.statusText.setText("Match removed successfully.");
           } else {
@@ -380,9 +380,9 @@ export class MainScene extends Phaser.Scene {
             const createdName = parsed.name ?? "Untitled Match";
             this.currentMatchName = createdName;
             this.statusText.setText(`Match created: ${createdName}`);
-            if (this.inMatchView) {
-              this.inMatchView.setMatchName(createdName);
-              this.inMatchView.setMatchStarted(parsed.started ?? false);
+            if (this.lobbyView) {
+              this.lobbyView.setMatchName(createdName);
+              this.lobbyView.setMatchStarted(parsed.started ?? false);
             }
 
             // Auto-join the match we just created
@@ -573,9 +573,9 @@ export class MainScene extends Phaser.Scene {
         if (this.activeView === "myMatchList") this.myMatchesListView.show();
         else this.myMatchesListView.hide();
       }
-      if (this.inMatchView) {
-        if (this.activeView === "inMatch") this.inMatchView.show();
-        else this.inMatchView.hide();
+      if (this.lobbyView) {
+        if (this.activeView === "inMatch") this.lobbyView.show();
+        else this.lobbyView.hide();
       }
     } catch (e) {
       console.warn("applyViewVisibility: view toggle error", e);

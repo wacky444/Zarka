@@ -60,7 +60,7 @@ export class GameScene extends Phaser.Scene {
     this.enableDragPan();
     this.enableWheelZoom();
 
-    // Hamburger menu button to show InMatchView
+    // Hamburger menu button to show LobbyView
     const menuBtn = makeButton(this, 0, 0, "☰", () => {
       this.scene.stop("GameScene");
       this.scene.wake("MainScene");
