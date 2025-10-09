@@ -28,6 +28,13 @@ export class GameScene extends Phaser.Scene {
   private currentUserId: string | null = null;
   private currentPlayerName: string | null = null;
   private turnService: TurnService | null = null;
+  private pointerDownInUI = false;
+  private readonly pointerDownHandler = (pointer: Phaser.Input.Pointer) => {
+    this.pointerDownInUI = this.isPointerOverUI(pointer);
+  };
+  private readonly pointerUpHandler = () => {
+    this.pointerDownInUI = false;
+  };
 
   constructor() {
     super("GameScene");
@@ -80,10 +87,15 @@ export class GameScene extends Phaser.Scene {
     this.enableDragPan();
     this.enableWheelZoom();
 
+    this.input.on(Phaser.Input.Events.POINTER_DOWN, this.pointerDownHandler);
+    this.input.on(Phaser.Input.Events.POINTER_UP, this.pointerUpHandler);
+
     this.layoutUI();
     this.scale.on("resize", this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off("resize", this.handleResize, this);
+      this.input.off(Phaser.Input.Events.POINTER_DOWN, this.pointerDownHandler);
+      this.input.off(Phaser.Input.Events.POINTER_UP, this.pointerUpHandler);
     });
   }
 
@@ -242,7 +254,7 @@ export class GameScene extends Phaser.Scene {
     // No-op handlers removed
 
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
-      if (!p.isDown) return;
+      if (!p.isDown || this.pointerDownInUI) return;
 
       // const { x, y } = p.velocity; // camStart.x - dx
       const diffX = p.position.x - p.prevPosition.x;
@@ -323,5 +335,21 @@ export class GameScene extends Phaser.Scene {
       console.warn("resolveCurrentPlayerName failed", error);
       this.currentPlayerName = null;
     }
+  }
+
+  private isPointerOverUI(pointer: Phaser.Input.Pointer) {
+    if (!this.characterPanel || !this.uiCam) {
+      return false;
+    }
+    const panelX = this.characterPanel.x;
+    const panelY = this.characterPanel.y;
+    const width = this.characterPanel.getPanelWidth();
+    const height = this.uiCam.height;
+    return (
+      pointer.x >= panelX &&
+      pointer.x <= panelX + width &&
+      pointer.y >= panelY &&
+      pointer.y <= panelY + height
+    );
   }
 }

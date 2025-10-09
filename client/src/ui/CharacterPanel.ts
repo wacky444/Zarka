@@ -7,6 +7,19 @@ const MARGIN = 16;
 const PORTRAIT_SIZE = 96;
 const BAR_HEIGHT = 20;
 const BOX_HEIGHT = 120;
+const DEFAULT_MAIN_ACTIONS = [
+  "Move",
+  "Attack",
+  "Guard",
+  "Guard",
+  "Guard",
+  "Guard",
+  "Guard",
+  "Guard",
+  "Guard",
+  "Guard",
+  "Guard",
+]; // TODO change with a list from shared types
 
 export class CharacterPanel extends Phaser.GameObjects.Container {
   private background: Phaser.GameObjects.Rectangle;
@@ -172,9 +185,20 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       new Phaser.Geom.Rectangle(0, 0, this.mainActionDropdownWidth, 32),
       Phaser.Geom.Rectangle.Contains
     );
-    this.mainActionDropdown.on("pointerdown", () => {
-      this.toggleMainActionOptions();
-    });
+    this.mainActionDropdown.on(
+      "pointerdown",
+      (
+        pointer: Phaser.Input.Pointer,
+        localX: number,
+        localY: number,
+        event?: Phaser.Types.Input.EventData
+      ) => {
+        if (event) {
+          event.stopPropagation();
+        }
+        this.toggleMainActionOptions();
+      }
+    );
     this.add(this.mainActionDropdown);
     this.mainActionOptionsContainer = scene.add.container(
       MARGIN + 12,
@@ -277,7 +301,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       energy.max === 0 ? 0 : energy.current / energy.max
     );
     const actions = this.collectMainActions(character);
-    this.applyMainActions(actions.length > 0 ? actions : ["None"]);
+    this.applyMainActions(actions.length > 0 ? actions : DEFAULT_MAIN_ACTIONS);
     const secondary =
       character.actionPlan?.secondary?.actionId ?? "None selected";
     this.secondaryActionText.setText(secondary);
@@ -291,20 +315,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private applyMainActions(actions: string[]) {
-    this.mainActionValues = actions;
-    this.selectMainAction(actions[0] ?? null);
+    this.mainActionValues = actions.length > 0 ? actions : DEFAULT_MAIN_ACTIONS;
+    this.selectMainAction(
+      actions.length > 0 ? actions[0] ?? null : DEFAULT_MAIN_ACTIONS[0]
+    );
     this.closeMainActionOptions();
     this.rebuildMainActionOptions();
-    if (this.mainActionValues.length > 1) {
-      this.mainActionDropdown.setInteractive(
-        new Phaser.Geom.Rectangle(0, 0, this.mainActionDropdownWidth, 32),
-        Phaser.Geom.Rectangle.Contains
-      );
-      this.mainActionDropdown.setAlpha(1);
-    } else {
-      this.mainActionDropdown.disableInteractive();
-      this.mainActionDropdown.setAlpha(0.85);
-    }
+    this.mainActionDropdown.setInteractive(
+      new Phaser.Geom.Rectangle(0, 0, this.mainActionDropdownWidth, 32),
+      Phaser.Geom.Rectangle.Contains
+    );
+    this.mainActionDropdown.setAlpha(
+      this.mainActionValues.length > 1 ? 1 : 0.85
+    );
   }
 
   private collectMainActions(character: PlayerCharacter) {
@@ -316,17 +339,31 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private toggleMainActionOptions() {
-    if (this.mainActionValues.length <= 1) {
+    if (this.mainActionValues.length === 0) {
+      console.log("Main action dropdown toggle blocked: no options available.");
       return;
     }
+
     this.mainActionOptionsVisible = !this.mainActionOptionsVisible;
     this.mainActionOptionsContainer.setVisible(this.mainActionOptionsVisible);
   }
 
   private rebuildMainActionOptions() {
     this.mainActionOptionsContainer.removeAll(true);
-    if (this.mainActionValues.length <= 1) {
-      this.closeMainActionOptions();
+    if (this.mainActionValues.length === 0) {
+      const bg = this.scene.add
+        .rectangle(0, 0, this.mainActionDropdownWidth, 30, 0x101828)
+        .setOrigin(0, 0)
+        .setStrokeStyle(1, 0x334155);
+      bg.setScrollFactor(0);
+      const noOption = this.scene.add
+        .text(8, 6, "No actions available", {
+          fontSize: "15px",
+          color: "#94a3b8",
+        })
+        .setOrigin(0, 0);
+      noOption.setScrollFactor(0);
+      this.mainActionOptionsContainer.add([bg, noOption]);
       return;
     }
     const itemHeight = 30;
