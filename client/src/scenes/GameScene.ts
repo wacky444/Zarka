@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import type { RpcResponse } from "@heroiclabs/nakama-js";
-import { makeButton } from "../ui/button";
+import { makeButton, type UIButton } from "../ui/button";
+import { CharacterPanel } from "../ui/CharacterPanel";
 import type { TurnService } from "../services/turnService";
 import {
   CellLibrary,
@@ -22,6 +23,11 @@ export class GameScene extends Phaser.Scene {
   private currentMatch: MatchRecord | null = null;
   private tilePositions: Record<string, { x: number; y: number }> = {};
   private playerSprites: Phaser.GameObjects.Image[] = [];
+  private characterPanel: CharacterPanel | null = null;
+  private menuButton: UIButton | null = null;
+  private currentUserId: string | null = null;
+  private currentPlayerName: string | null = null;
+  private turnService: TurnService | null = null;
 
   constructor() {
     super("GameScene");
@@ -46,6 +52,17 @@ export class GameScene extends Phaser.Scene {
     this.uiCam = this.cameras.add(0, 0, this.cam.width, this.cam.height);
     this.uiCam.setScroll(0, 0);
     this.uiCam.setZoom(1);
+    this.turnService = this.registry.get("turnService") as TurnService | null;
+    this.currentUserId = this.registry.get("currentUserId") as string | null;
+
+    this.characterPanel = new CharacterPanel(this, 0, 0);
+    this.cam.ignore(this.characterPanel);
+
+    this.menuButton = makeButton(this, 0, 0, "☰", () => {
+      this.scene.stop("GameScene");
+      this.scene.wake("MainScene");
+    }).setScrollFactor(0);
+    this.cam.ignore(this.menuButton);
 
     const match = await this.fetchMatchFromServer();
     this.currentMatch = match;
@@ -57,27 +74,21 @@ export class GameScene extends Phaser.Scene {
       this.renderPlayerCharacters(match);
     }
 
+    await this.resolveCurrentPlayerName(match);
+    this.updateCharacterPanel(match);
+
     this.enableDragPan();
     this.enableWheelZoom();
 
-    // Hamburger menu button to show LobbyView
-    const menuBtn = makeButton(this, 0, 0, "☰", () => {
-      this.scene.stop("GameScene");
-      this.scene.wake("MainScene");
-    }).setScrollFactor(0);
-
-    this.cam.ignore(menuBtn);
-
-    // Position in bottom right corner
-    const uiCam = this.uiCam;
-    menuBtn.setPosition(
-      uiCam.width - menuBtn.width - 10,
-      uiCam.height - menuBtn.height - 10
-    );
+    this.layoutUI();
+    this.scale.on("resize", this.handleResize, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off("resize", this.handleResize, this);
+    });
   }
 
   private async fetchMatchFromServer(): Promise<MatchRecord | null> {
-    const service = this.registry.get("turnService") as TurnService | null;
+    const service = this.turnService;
     const matchId = this.registry.get("currentMatchId") as string | null;
     if (!service || !matchId) {
       return null;
@@ -89,7 +100,7 @@ export class GameScene extends Phaser.Scene {
         return payload.match;
       }
     } catch (error) {
-      console.warn("fetchMapFromServer failed", error);
+      console.warn("fetchMatchFromServer failed", error);
     }
     return null;
   }
@@ -263,5 +274,54 @@ export class GameScene extends Phaser.Scene {
         cam.scrollY += worldPointBefore.y - worldPointAfter.y;
       }
     );
+  }
+
+  private layoutUI() {
+    const width = this.uiCam ? this.uiCam.width : this.scale.width;
+    const height = this.uiCam ? this.uiCam.height : this.scale.height;
+    if (this.characterPanel) {
+      const panelWidth = this.characterPanel.getPanelWidth();
+      this.characterPanel.setPosition(width - panelWidth, 0);
+      this.characterPanel.setPanelSize(panelWidth, height);
+    }
+    if (this.menuButton) {
+      this.menuButton.setPosition(
+        width - this.menuButton.width - 10,
+        height - this.menuButton.height - 10
+      );
+    }
+  }
+
+  private handleResize(gameSize: Phaser.Structs.Size) {
+    const width = gameSize.width ?? this.scale.width;
+    const height = gameSize.height ?? this.scale.height;
+    this.cam.setSize(width, height);
+    this.uiCam.setSize(width, height);
+    this.layoutUI();
+  }
+
+  private updateCharacterPanel(match: MatchRecord | null) {
+    if (!this.characterPanel) {
+      return;
+    }
+    const nameMap =
+      this.currentUserId && this.currentPlayerName
+        ? { [this.currentUserId]: this.currentPlayerName }
+        : undefined;
+    this.characterPanel.updateFromMatch(match, this.currentUserId, nameMap);
+  }
+
+  private async resolveCurrentPlayerName(match: MatchRecord | null) {
+    if (!match || !this.currentUserId || !this.turnService) {
+      this.currentPlayerName = null;
+      return;
+    }
+    try {
+      const map = await this.turnService.resolveUsernames([this.currentUserId]);
+      this.currentPlayerName = map[this.currentUserId] ?? null;
+    } catch (error) {
+      console.warn("resolveCurrentPlayerName failed", error);
+      this.currentPlayerName = null;
+    }
   }
 }
