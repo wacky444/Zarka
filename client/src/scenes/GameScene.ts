@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import type { RpcResponse } from "@heroiclabs/nakama-js";
 import { makeButton } from "../ui/button";
+import { CharacterPanel } from "../ui/characterPanel";
 import type { TurnService } from "../services/turnService";
 import {
   CellLibrary,
@@ -22,6 +23,7 @@ export class GameScene extends Phaser.Scene {
   private currentMatch: MatchRecord | null = null;
   private tilePositions: Record<string, { x: number; y: number }> = {};
   private playerSprites: Phaser.GameObjects.Image[] = [];
+  private characterPanel?: CharacterPanel;
 
   constructor() {
     super("GameScene");
@@ -60,6 +62,22 @@ export class GameScene extends Phaser.Scene {
     this.enableDragPan();
     this.enableWheelZoom();
 
+    const uiCam = this.uiCam;
+
+    this.characterPanel = new CharacterPanel(
+      this,
+      uiCam.width - 140,
+      uiCam.height / 2
+    );
+    this.cam.ignore(this.characterPanel["container"]);
+
+    if (match && match.playerCharacters) {
+      const sessionId = this.registry.get("sessionId") as string | null;
+      if (sessionId && match.playerCharacters[sessionId]) {
+        this.characterPanel.updateCharacter(match.playerCharacters[sessionId]);
+      }
+    }
+
     // Hamburger menu button to show LobbyView
     const menuBtn = makeButton(this, 0, 0, "☰", () => {
       this.scene.stop("GameScene");
@@ -69,7 +87,6 @@ export class GameScene extends Phaser.Scene {
     this.cam.ignore(menuBtn);
 
     // Position in bottom right corner
-    const uiCam = this.uiCam;
     menuBtn.setPosition(
       uiCam.width - menuBtn.width - 10,
       uiCam.height - menuBtn.height - 10
