@@ -46,6 +46,7 @@ Key files:
 - Target ES modules with strict typing. Avoid `any`; prefer explicit interfaces from `shared/` or new interfaces in the relevant module.
 - Use `const` and `readonly` where possible; default to arrow functions for callbacks and helper utilities.
 - Keep modules small and cohesive—one responsibility per file. Export named symbols for tree shaking.
+- File names use `PascalCase`
 
 ### Client (Phaser + Vite)
 
@@ -53,6 +54,7 @@ Key files:
 - Use services (`nakama.ts`, `turnService.ts`, `sessionManager.ts`) for IO; scenes should focus on presentation and state orchestration.
 - Keep UI building blocks in `client/src/ui/`; prefer lightweight composition over deep inheritance.
 - Assets live under `client/public/assets/`; update XML/JSON atlases alongside spritesheets when editing.
+- Use external libraries freely, preferring phaser-friendly options (e.g. `phaser3-rex-plugins`).
 
 ### Nakama TypeScript runtime
 
