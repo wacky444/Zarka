@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import type { MatchRecord, PlayerCharacter } from "@shared";
-import { Dropdown } from "./Dropdown";
+import { GridSelect, type GridSelectItem } from "./GridSelect";
 
 const DEFAULT_WIDTH = 320;
 const TAB_HEIGHT = 40;
@@ -9,6 +9,36 @@ const PORTRAIT_SIZE = 96;
 const BAR_HEIGHT = 20;
 const BOX_HEIGHT = 120;
 const DEFAULT_MAIN_ACTIONS = ["Move", "Attack", "Guard"]; // TODO change with a list from shared types
+
+const ACTION_METADATA: Record<
+  string,
+  {
+    name: string;
+    description: string;
+    texture: string;
+    frame: string;
+    iconScale?: number;
+  }
+> = {
+  Move: {
+    name: "Move",
+    description: "Advance to an adjacent hex tile.",
+    texture: "hex",
+    frame: "grass_05.png",
+  },
+  Attack: {
+    name: "Attack",
+    description: "Strike an opponent within range.",
+    texture: "hex",
+    frame: "dirt_10.png",
+  },
+  Guard: {
+    name: "Guard",
+    description: "Brace to reduce incoming damage next turn.",
+    texture: "hex",
+    frame: "mars_02.png",
+  },
+};
 
 export class CharacterPanel extends Phaser.GameObjects.Container {
   private background: Phaser.GameObjects.Rectangle;
@@ -29,7 +59,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private secondaryActionBox: Phaser.GameObjects.Rectangle;
   private mainActionLabel: Phaser.GameObjects.Text;
   private secondaryActionLabel: Phaser.GameObjects.Text;
-  private mainActionDropdown: Dropdown;
+  private mainActionDropdown: GridSelect;
   private mainActionDropdownWidth: number;
   private secondaryActionText: Phaser.GameObjects.Text;
   private panelWidth: number;
@@ -139,13 +169,18 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       .setOrigin(0, 0);
     this.add(this.mainActionLabel);
     this.mainActionDropdownWidth = boxWidth - 24;
-    this.mainActionDropdown = new Dropdown(scene, MARGIN + 12, mainBoxY + 48, {
-      width: this.mainActionDropdownWidth,
-      placeholder: "Loading...",
-      emptyLabel: "Unknown",
-      listMaxHeight: 200,
-      depth: 20,
-    });
+    this.mainActionDropdown = new GridSelect(
+      scene,
+      MARGIN + 12,
+      mainBoxY + 48,
+      {
+        width: this.mainActionDropdownWidth,
+        title: "Select Main Action",
+        placeholder: "Choose action",
+        emptyLabel: "Unknown",
+        columns: 3,
+      }
+    );
     this.add(this.mainActionDropdown);
     const secondaryBoxY = mainBoxY + BOX_HEIGHT + 16;
     this.secondaryActionBox = scene.add
@@ -184,7 +219,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const dropdown = this.mainActionDropdown;
     const dropdownY = this.nameText.y + this.nameText.height + 12 + 48;
     dropdown.setPosition(MARGIN + 12, dropdownY);
-    dropdown.setDropdownWidth(this.mainActionDropdownWidth);
+    dropdown.setDisplayWidth(this.mainActionDropdownWidth);
   }
 
   getPanelWidth() {
@@ -244,10 +279,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private applyMainActions(actions: string[]) {
-    const values = actions.length > 0 ? actions : DEFAULT_MAIN_ACTIONS;
-    this.mainActionDropdown.setOptions(values);
-    const current = values[0] ?? "";
-    this.mainActionDropdown.setValue(current);
+    const items = this.buildMainActionItems(actions);
+    this.mainActionDropdown.setItems(items);
+    const first = items[0]?.id ?? null;
+    this.mainActionDropdown.setValue(first, false);
   }
 
   private collectMainActions(character: PlayerCharacter) {
@@ -256,5 +291,37 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (plan?.main?.actionId) set.add(plan.main.actionId);
     if (plan?.nextMain?.actionId) set.add(plan.nextMain.actionId);
     return Array.from(set);
+  }
+
+  private buildMainActionItems(actionIds: string[]): GridSelectItem[] {
+    const ids = actionIds.length > 0 ? actionIds : DEFAULT_MAIN_ACTIONS;
+    return ids.map((id) => this.resolveActionMetadata(id));
+  }
+
+  private resolveActionMetadata(actionId: string): GridSelectItem {
+    const meta = ACTION_METADATA[actionId];
+    if (meta) {
+      return {
+        id: actionId,
+        name: meta.name,
+        description: meta.description,
+        texture: meta.texture,
+        frame: meta.frame,
+        iconScale: meta.iconScale,
+      };
+    }
+    const name = this.formatActionName(actionId);
+    return {
+      id: actionId,
+      name,
+      description: "Description coming soon.",
+      texture: "hex",
+      frame: "grass_01.png",
+    };
+  }
+
+  private formatActionName(id: string) {
+    const spaced = id.replace(/[_-]+/g, " ");
+    return spaced.slice(0, 1).toUpperCase() + spaced.slice(1);
   }
 }

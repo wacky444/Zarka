@@ -21,6 +21,8 @@ declare module "phaser3-rex-plugins/templates/ui/ui-plugin" {
       simpleLabel(
         config: Record<string, unknown>
       ): Phaser.GameObjects.GameObject;
+      sizer(config: Record<string, unknown>): Phaser.GameObjects.GameObject;
+      gridTable(config: Record<string, unknown>): Phaser.GameObjects.GameObject;
     };
   }
 }
@@ -46,6 +48,10 @@ declare global {
           ): Phaser.GameObjects.GameObject;
           label(config: Record<string, unknown>): Phaser.GameObjects.GameObject;
           simpleLabel(
+            config: Record<string, unknown>
+          ): Phaser.GameObjects.GameObject;
+          sizer(config: Record<string, unknown>): Phaser.GameObjects.GameObject;
+          gridTable(
             config: Record<string, unknown>
           ): Phaser.GameObjects.GameObject;
         };
