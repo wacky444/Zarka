@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { MatchRecord, PlayerCharacter } from "@shared";
+import { Dropdown } from "./Dropdown";
 
 const DEFAULT_WIDTH = 320;
 const TAB_HEIGHT = 40;
@@ -7,19 +8,7 @@ const MARGIN = 16;
 const PORTRAIT_SIZE = 96;
 const BAR_HEIGHT = 20;
 const BOX_HEIGHT = 120;
-const DEFAULT_MAIN_ACTIONS = [
-  "Move",
-  "Attack",
-  "Guard",
-  "Guard",
-  "Guard",
-  "Guard",
-  "Guard",
-  "Guard",
-  "Guard",
-  "Guard",
-  "Guard",
-]; // TODO change with a list from shared types
+const DEFAULT_MAIN_ACTIONS = ["Move", "Attack", "Guard"]; // TODO change with a list from shared types
 
 export class CharacterPanel extends Phaser.GameObjects.Container {
   private background: Phaser.GameObjects.Rectangle;
@@ -40,15 +29,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private secondaryActionBox: Phaser.GameObjects.Rectangle;
   private mainActionLabel: Phaser.GameObjects.Text;
   private secondaryActionLabel: Phaser.GameObjects.Text;
-  private mainActionDropdown: Phaser.GameObjects.Container;
-  private mainActionDropdownBg: Phaser.GameObjects.Rectangle;
-  private mainActionSelectedText: Phaser.GameObjects.Text;
-  private mainActionCaret: Phaser.GameObjects.Text;
-  private mainActionOptionsContainer: Phaser.GameObjects.Container;
-  private mainActionValues: string[] = [];
-  private mainActionSelectedValue: string | null = null;
+  private mainActionDropdown: Dropdown;
   private mainActionDropdownWidth: number;
-  private mainActionOptionsVisible = false;
   private secondaryActionText: Phaser.GameObjects.Text;
   private panelWidth: number;
   private panelHeight: number;
@@ -157,56 +139,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       .setOrigin(0, 0);
     this.add(this.mainActionLabel);
     this.mainActionDropdownWidth = boxWidth - 24;
-    this.mainActionDropdown = scene.add.container(MARGIN + 12, mainBoxY + 48);
-    this.mainActionDropdown.setSize(this.mainActionDropdownWidth, 32);
-    this.mainActionDropdown.setScrollFactor(0);
-    this.mainActionDropdownBg = scene.add
-      .rectangle(0, 0, this.mainActionDropdownWidth, 32, 0x101828)
-      .setOrigin(0, 0)
-      .setStrokeStyle(1, 0x334155);
-    this.mainActionSelectedText = scene.add
-      .text(8, 6, "Loading...", {
-        fontSize: "15px",
-        color: "#ffffff",
-      })
-      .setOrigin(0, 0);
-    this.mainActionCaret = scene.add
-      .text(this.mainActionDropdownWidth - 18, 6, "▼", {
-        fontSize: "14px",
-        color: "#94a3b8",
-      })
-      .setOrigin(0, 0);
-    this.mainActionDropdown.add([
-      this.mainActionDropdownBg,
-      this.mainActionSelectedText,
-      this.mainActionCaret,
-    ]);
-    this.mainActionDropdown.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, this.mainActionDropdownWidth, 32),
-      Phaser.Geom.Rectangle.Contains
-    );
-    this.mainActionDropdown.on(
-      "pointerdown",
-      (
-        pointer: Phaser.Input.Pointer,
-        localX: number,
-        localY: number,
-        event?: Phaser.Types.Input.EventData
-      ) => {
-        if (event) {
-          event.stopPropagation();
-        }
-        this.toggleMainActionOptions();
-      }
-    );
+    this.mainActionDropdown = new Dropdown(scene, MARGIN + 12, mainBoxY + 48, {
+      width: this.mainActionDropdownWidth,
+      placeholder: "Loading...",
+      emptyLabel: "Unknown",
+      listMaxHeight: 200,
+      depth: 20,
+    });
     this.add(this.mainActionDropdown);
-    this.mainActionOptionsContainer = scene.add.container(
-      MARGIN + 12,
-      mainBoxY + 48 + 34
-    );
-    this.mainActionOptionsContainer.setVisible(false);
-    this.mainActionOptionsContainer.setScrollFactor(0);
-    this.add(this.mainActionOptionsContainer);
     const secondaryBoxY = mainBoxY + BOX_HEIGHT + 16;
     this.secondaryActionBox = scene.add
       .rectangle(MARGIN, secondaryBoxY, boxWidth, BOX_HEIGHT, 0x1b2440)
@@ -226,6 +166,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       })
       .setOrigin(0, 0);
     this.add(this.secondaryActionText);
+    this.bringToTop(this.mainActionDropdown);
   }
 
   setPanelSize(width: number, height: number) {
@@ -240,22 +181,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.secondaryActionBox.setSize(boxWidth, BOX_HEIGHT);
     this.secondaryActionBox.setDisplaySize(boxWidth, BOX_HEIGHT);
     this.mainActionDropdownWidth = boxWidth - 24;
-    this.mainActionDropdown.setSize(this.mainActionDropdownWidth, 32);
-    this.mainActionDropdownBg.setSize(this.mainActionDropdownWidth, 32);
-    this.mainActionDropdownBg.setDisplaySize(this.mainActionDropdownWidth, 32);
-    this.mainActionCaret.setX(this.mainActionDropdownWidth - 18);
-    const input = this.mainActionDropdown.input;
-    if (input && input.hitArea) {
-      const area = input.hitArea as Phaser.Geom.Rectangle;
-      area.width = this.mainActionDropdownWidth;
-      area.height = 32;
-    } else if (this.mainActionValues.length > 1) {
-      this.mainActionDropdown.setInteractive(
-        new Phaser.Geom.Rectangle(0, 0, this.mainActionDropdownWidth, 32),
-        Phaser.Geom.Rectangle.Contains
-      );
-    }
-    this.rebuildMainActionOptions();
+    const dropdown = this.mainActionDropdown;
+    const dropdownY = this.nameText.y + this.nameText.height + 12 + 48;
+    dropdown.setPosition(MARGIN + 12, dropdownY);
+    dropdown.setDropdownWidth(this.mainActionDropdownWidth);
   }
 
   getPanelWidth() {
@@ -315,19 +244,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private applyMainActions(actions: string[]) {
-    this.mainActionValues = actions.length > 0 ? actions : DEFAULT_MAIN_ACTIONS;
-    this.selectMainAction(
-      actions.length > 0 ? actions[0] ?? null : DEFAULT_MAIN_ACTIONS[0]
-    );
-    this.closeMainActionOptions();
-    this.rebuildMainActionOptions();
-    this.mainActionDropdown.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, this.mainActionDropdownWidth, 32),
-      Phaser.Geom.Rectangle.Contains
-    );
-    this.mainActionDropdown.setAlpha(
-      this.mainActionValues.length > 1 ? 1 : 0.85
-    );
+    const values = actions.length > 0 ? actions : DEFAULT_MAIN_ACTIONS;
+    this.mainActionDropdown.setOptions(values);
+    const current = values[0] ?? "";
+    this.mainActionDropdown.setValue(current);
   }
 
   private collectMainActions(character: PlayerCharacter) {
@@ -336,81 +256,5 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (plan?.main?.actionId) set.add(plan.main.actionId);
     if (plan?.nextMain?.actionId) set.add(plan.nextMain.actionId);
     return Array.from(set);
-  }
-
-  private toggleMainActionOptions() {
-    if (this.mainActionValues.length === 0) {
-      console.log("Main action dropdown toggle blocked: no options available.");
-      return;
-    }
-
-    this.mainActionOptionsVisible = !this.mainActionOptionsVisible;
-    this.mainActionOptionsContainer.setVisible(this.mainActionOptionsVisible);
-  }
-
-  private rebuildMainActionOptions() {
-    this.mainActionOptionsContainer.removeAll(true);
-    if (this.mainActionValues.length === 0) {
-      const bg = this.scene.add
-        .rectangle(0, 0, this.mainActionDropdownWidth, 30, 0x101828)
-        .setOrigin(0, 0)
-        .setStrokeStyle(1, 0x334155);
-      bg.setScrollFactor(0);
-      const noOption = this.scene.add
-        .text(8, 6, "No actions available", {
-          fontSize: "15px",
-          color: "#94a3b8",
-        })
-        .setOrigin(0, 0);
-      noOption.setScrollFactor(0);
-      this.mainActionOptionsContainer.add([bg, noOption]);
-      return;
-    }
-    const itemHeight = 30;
-    const totalHeight = this.mainActionValues.length * itemHeight;
-    const bg = this.scene.add
-      .rectangle(0, 0, this.mainActionDropdownWidth, totalHeight, 0x101828)
-      .setOrigin(0, 0)
-      .setStrokeStyle(1, 0x334155);
-    bg.setScrollFactor(0);
-    this.mainActionOptionsContainer.add(bg);
-    this.mainActionValues.forEach((value, index) => {
-      const label = this.formatActionLabel(value);
-      const optionText = this.scene.add
-        .text(8, index * itemHeight + 6, label, {
-          fontSize: "15px",
-          color: "#e2e8f0",
-        })
-        .setOrigin(0, 0)
-        .setInteractive({ useHandCursor: true });
-      optionText.setScrollFactor(0);
-      optionText.on("pointerover", () => {
-        optionText.setColor("#ffffff");
-      });
-      optionText.on("pointerout", () => {
-        optionText.setColor("#e2e8f0");
-      });
-      optionText.on("pointerdown", () => {
-        this.selectMainAction(value);
-      });
-      this.mainActionOptionsContainer.add(optionText);
-    });
-  }
-
-  private selectMainAction(value: string | null) {
-    this.mainActionSelectedValue = value;
-    const label = this.formatActionLabel(value ?? "None");
-    this.mainActionSelectedText.setText(label);
-    this.closeMainActionOptions();
-  }
-
-  private closeMainActionOptions() {
-    this.mainActionOptionsVisible = false;
-    this.mainActionOptionsContainer.setVisible(false);
-  }
-
-  private formatActionLabel(value: string) {
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : "Unknown";
   }
 }

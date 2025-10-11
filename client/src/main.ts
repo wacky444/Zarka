@@ -3,6 +3,7 @@ import { LoginScene } from "./scenes/LoginScene";
 import { MainScene } from "./scenes/MainScene";
 import { GameScene } from "./scenes/GameScene";
 import { AccountScene } from "./scenes/AccountScene";
+import RexUIPlugin from "phaser3-rex-plugins/templates/ui/ui-plugin";
 import { SessionManager } from "./services/sessionManager";
 
 const config: Phaser.Types.Core.GameConfig = {
@@ -12,6 +13,15 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 600,
   backgroundColor: "#202030",
   pixelArt: true,
+  plugins: {
+    scene: [
+      {
+        key: "rexUI",
+        plugin: RexUIPlugin,
+        mapping: "rexUI",
+      },
+    ],
+  },
   scene: [LoginScene, MainScene, GameScene, AccountScene],
 };
 
