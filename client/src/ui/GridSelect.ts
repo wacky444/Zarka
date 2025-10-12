@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { HoverTooltip } from "./HoverTooltip";
 
 export interface GridSelectItem {
   id: string;
@@ -44,6 +45,7 @@ type RexGridTable = Phaser.GameObjects.GameObject & {
     callback: (...args: unknown[]) => void,
     context?: unknown
   ) => unknown;
+  resetAllCellsSize?: (width: number, height: number) => unknown;
 };
 
 type RexRoundRectangle = Phaser.GameObjects.GameObject & {
@@ -84,6 +86,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private overlay: Phaser.GameObjects.Container | null = null;
   private modalCover: Phaser.GameObjects.Rectangle | null = null;
   private gridTable: RexGridTable | null = null;
+  private tooltip: HoverTooltip | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -167,6 +170,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
   override destroy(fromScene?: boolean) {
     this.closeModal(true);
+    this.tooltip?.destroy();
+    this.tooltip = null;
     super.destroy(fromScene);
   }
 
@@ -271,6 +276,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.gridTable?.setItems(this.items);
       this.gridTable?.refresh?.();
       this.gridTable?.layout?.();
+      this.tooltip?.hide();
       return;
     }
     const scene = this.scene;
@@ -321,6 +327,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         event: Phaser.Types.Input.EventData
       ) => {
         event.stopPropagation();
+        this.tooltip?.hide();
         this.closeModal();
       }
     );
@@ -384,6 +391,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     modal.layout();
     modal.setPosition(width / 2, height / 2);
     overlay.add(modal);
+    this.ensureTooltip();
     this.overlay = overlay;
     this.gridTable = gridTable;
   }
@@ -397,18 +405,21 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.overlay = null;
       this.modalCover = null;
       this.gridTable = null;
+      this.tooltip?.destroy();
+      this.tooltip = null;
       return;
     }
     this.overlay.setVisible(false);
     this.overlay.setActive(false);
     this.modalCover?.disableInteractive();
+    this.tooltip?.hide();
   }
 
   private createGridTable() {
     const scene = this.scene;
     const cellWidth =
       (this.modalWidth - 48 - (this.columns - 1) * 12) / this.columns;
-    const cellHeight = 140;
+    const cellHeight = 240;
 
     const gridTable = scene.rexUI.add.gridTable({
       width: this.modalWidth - 48,
@@ -449,6 +460,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     }) as RexGridTable;
 
     gridTable.setItems(this.items);
+    gridTable.resetAllCellsSize?.(cellWidth, cellHeight);
 
     gridTable.on(
       "cell.click",
@@ -476,6 +488,56 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this
     );
 
+    gridTable.on(
+      "cell.over",
+      (
+        cellContainer: Phaser.GameObjects.GameObject,
+        cellIndex: number,
+        pointer?: Phaser.Input.Pointer
+      ) => {
+        if (!pointer) {
+          return;
+        }
+        const shouldShow =
+          (
+            cellContainer as Phaser.GameObjects.GameObject & {
+              getData?: (key: string) => unknown;
+            }
+          ).getData?.("showTooltip") === true;
+        if (!shouldShow) {
+          this.tooltip?.hide();
+          return;
+        }
+        if (!this.tooltip) {
+          this.ensureTooltip();
+        }
+        const item = this.items[cellIndex];
+        if (!item) {
+          return;
+        }
+        const tooltipInstance = this.tooltip;
+        if (!tooltipInstance) {
+          return;
+        }
+        const tooltipGO = tooltipInstance.getGameObject();
+        tooltipGO.setDepth(10002);
+        this.scene.children.bringToTop(tooltipGO);
+        tooltipInstance.show(pointer.worldX, pointer.worldY, {
+          title: item.name,
+          body: item.description,
+        });
+      },
+      this
+    );
+
+    gridTable.on(
+      "cell.out",
+      () => {
+        this.tooltip?.hide();
+      },
+      this
+    );
+
     return gridTable;
   }
 
@@ -493,6 +555,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
     let container = existing as unknown as RexSizer | undefined;
     const cellWidth = cell.width;
     const cellHeight = cell.height;
+    const usableTextWidth = cellWidth - 24;
+    const maxDescriptionLines = 10;
 
     if (!container) {
       container = scene.rexUI.add.sizer({
@@ -508,6 +572,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
         12,
         CARD_BACKGROUND_COLOR
       ) as RexRoundRectangle;
+      bg.setSize?.(cellWidth, cellHeight);
+      bg.setDisplaySize?.(cellWidth, cellHeight);
       container.addBackground(bg);
 
       const icon = scene.add
@@ -519,6 +585,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         .text(0, 0, item.name, {
           fontSize: "17px",
           color: "#ffffff",
+          align: "center",
         })
         .setOrigin(0.5, 0.5);
 
@@ -526,10 +593,21 @@ export class GridSelect extends Phaser.GameObjects.Container {
         .text(0, 0, item.description, {
           fontSize: "13px",
           color: MODAL_TEXT_COLOR,
-          wordWrap: { width: cellWidth - 40 },
           align: "center",
         })
         .setOrigin(0.5, 0.5);
+
+      const nameTruncated = this.applySingleLineText(
+        nameText,
+        item.name,
+        usableTextWidth
+      );
+      const descTruncated = this.applyMultilineText(
+        descText,
+        item.description,
+        usableTextWidth,
+        maxDescriptionLines
+      );
 
       container.add(icon, 0, "center", { bottom: 4 }, false);
       container.add(nameText, 0, "center", { bottom: 2 }, false);
@@ -552,6 +630,14 @@ export class GridSelect extends Phaser.GameObjects.Container {
         "id",
         item.id
       );
+      (container as unknown as Phaser.GameObjects.GameObject).setData(
+        "showTooltip",
+        nameTruncated || descTruncated
+      );
+
+      (
+        container as unknown as { setMinSize?: (w: number, h: number) => void }
+      ).setMinSize?.(cellWidth, cellHeight);
 
       container.layout();
       return container as unknown as Phaser.GameObjects.GameObject;
@@ -587,17 +673,138 @@ export class GridSelect extends Phaser.GameObjects.Container {
         icon.setVisible(false);
       }
     }
-    nameText?.setText(item.name);
-    descText?.setText(item.description);
+    const nameTruncated = nameText
+      ? this.applySingleLineText(nameText, item.name, usableTextWidth)
+      : false;
+    const descTruncated = descText
+      ? this.applyMultilineText(
+          descText,
+          item.description,
+          usableTextWidth,
+          maxDescriptionLines
+        )
+      : false;
     containerGO.setData("id", item.id);
+    containerGO.setData("showTooltip", nameTruncated || descTruncated);
 
     const isSelected = this.selectedItem?.id === item.id;
     bg?.setFillStyle?.(
       isSelected ? CARD_BACKGROUND_SELECTED : CARD_BACKGROUND_COLOR,
       1
     );
+    bg?.setSize?.(cellWidth, cellHeight);
+    bg?.setDisplaySize?.(cellWidth, cellHeight);
+
+    (
+      container as unknown as { setMinSize?: (w: number, h: number) => void }
+    ).setMinSize?.(cellWidth, cellHeight);
 
     container.layout();
     return containerGO;
+  }
+
+  private ensureTooltip() {
+    if (!this.tooltip) {
+      this.tooltip = new HoverTooltip(this.scene);
+    }
+    const tooltipGO = this.tooltip.getGameObject();
+    tooltipGO.setDepth(10002);
+    this.scene.children.bringToTop(tooltipGO);
+    this.tooltip.hide();
+  }
+
+  private syncTextFont(target: Phaser.GameObjects.Text) {
+    const style = target.style as Phaser.GameObjects.TextStyle & {
+      syncFont?: (
+        canvas: HTMLCanvasElement,
+        context: CanvasRenderingContext2D
+      ) => void;
+    };
+    const context = target.context;
+    if (!context) {
+      return;
+    }
+    style.syncFont?.(target.canvas, context);
+  }
+
+  private measureText(target: Phaser.GameObjects.Text, content: string) {
+    const context = target.context;
+    if (!context) {
+      return target.width;
+    }
+    this.syncTextFont(target);
+    return context.measureText(content).width;
+  }
+
+  private ellipsize(
+    content: string,
+    target: Phaser.GameObjects.Text,
+    maxWidth: number
+  ) {
+    const ellipsis = "…";
+    const base = content.trimEnd();
+    if (base.length === 0) {
+      return "";
+    }
+    if (this.measureText(target, base) <= maxWidth) {
+      return base;
+    }
+    let current = base;
+    while (current.length > 1) {
+      current = current.slice(0, -1);
+      const candidate = `${current.trimEnd()}${ellipsis}`;
+      if (this.measureText(target, candidate) <= maxWidth) {
+        return candidate;
+      }
+    }
+    return ellipsis;
+  }
+
+  private applySingleLineText(
+    target: Phaser.GameObjects.Text,
+    content: string,
+    maxWidth: number
+  ): boolean {
+    const trimmed = content.trimEnd();
+    const display = this.ellipsize(trimmed, target, maxWidth);
+    target.setText(display);
+    const bounds = target.getBounds();
+    target.setFixedSize(maxWidth, bounds.height);
+    return display !== trimmed;
+  }
+
+  private applyMultilineText(
+    target: Phaser.GameObjects.Text,
+    content: string,
+    maxWidth: number,
+    maxLines: number
+  ): boolean {
+    target.setWordWrapWidth(maxWidth, true);
+    target.setText(content);
+    const wrapped = target.getWrappedText();
+    if (wrapped.length === 0) {
+      target.setText("");
+      target.setFixedSize(maxWidth, 0);
+      return false;
+    }
+    let truncated = false;
+    let lines = wrapped.slice();
+    if (wrapped.length > maxLines) {
+      lines = wrapped.slice(0, maxLines);
+      const lastIndex = lines.length - 1;
+      lines[lastIndex] = this.ellipsize(lines[lastIndex], target, maxWidth);
+      truncated = true;
+    } else {
+      const lastIndex = lines.length - 1;
+      const ellipsized = this.ellipsize(lines[lastIndex], target, maxWidth);
+      if (ellipsized !== lines[lastIndex]) {
+        truncated = true;
+      }
+      lines[lastIndex] = ellipsized;
+    }
+    target.setText(lines.join("\n"));
+    const bounds = target.getBounds();
+    target.setFixedSize(maxWidth, bounds.height);
+    return truncated;
   }
 }

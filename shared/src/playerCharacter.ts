@@ -1,4 +1,5 @@
 import type { Axial } from "./hexTile";
+import type { ActionCondition } from "./Action";
 
 export interface PlayerCharacter {
   id: string;
@@ -111,9 +112,8 @@ export interface PlayerActionPlan {
 
 export interface PlayerPlannedAction {
   actionId: string;
-  effortCost: number;
   extraEffort?: number;
-  conditions?: string;
+  conditions?: Array<ActionCondition>;
 }
 
 export type PlayerConditionFlag =

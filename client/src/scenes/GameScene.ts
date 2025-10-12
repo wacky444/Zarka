@@ -4,6 +4,7 @@ import { makeButton, type UIButton } from "../ui/button";
 import { CharacterPanel } from "../ui/CharacterPanel";
 import type { TurnService } from "../services/turnService";
 import {
+  ActionLibrary,
   CellLibrary,
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
@@ -13,6 +14,7 @@ import {
   type GetStatePayload,
   type MatchRecord,
 } from "@shared";
+import { buildBoardIconUrl, deriveBoardIconKey } from "../ui/actionIcons";
 
 export class GameScene extends Phaser.Scene {
   private static readonly TILE_WIDTH = 128;
@@ -52,6 +54,19 @@ export class GameScene extends Phaser.Scene {
       "/assets/spritesheets/roguelikeChar_transparent.png",
       "/assets/spritesheets/roguelikeChar_transparent.xml"
     );
+
+    const boardIconFrames = new Set<string>();
+    for (const definition of Object.values(ActionLibrary)) {
+      if (definition.texture === "Board Game Icons" && definition.frame) {
+        boardIconFrames.add(definition.frame);
+      }
+    }
+    for (const frame of boardIconFrames) {
+      const key = deriveBoardIconKey(frame);
+      if (!this.textures.exists(key)) {
+        this.load.image(key, buildBoardIconUrl(frame));
+      }
+    }
   }
 
   async create() {

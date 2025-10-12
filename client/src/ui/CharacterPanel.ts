@@ -1,6 +1,14 @@
 import Phaser from "phaser";
-import type { MatchRecord, PlayerCharacter } from "@shared";
+import {
+  ActionLibrary,
+  type ActionDefinition,
+  type ActionId,
+  type MatchRecord,
+  type PlayerCharacter,
+  ActionCategory,
+} from "@shared";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
+import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
 
 const DEFAULT_WIDTH = 320;
 const TAB_HEIGHT = 40;
@@ -8,37 +16,10 @@ const MARGIN = 16;
 const PORTRAIT_SIZE = 96;
 const BAR_HEIGHT = 20;
 const BOX_HEIGHT = 120;
-const DEFAULT_MAIN_ACTIONS = ["Move", "Attack", "Guard"]; // TODO change with a list from shared types
-
-const ACTION_METADATA: Record<
-  string,
-  {
-    name: string;
-    description: string;
-    texture: string;
-    frame: string;
-    iconScale?: number;
-  }
-> = {
-  Move: {
-    name: "Move",
-    description: "Advance to an adjacent hex tile.",
-    texture: "hex",
-    frame: "grass_05.png",
-  },
-  Attack: {
-    name: "Attack",
-    description: "Strike an opponent within range.",
-    texture: "hex",
-    frame: "dirt_10.png",
-  },
-  Guard: {
-    name: "Guard",
-    description: "Brace to reduce incoming damage next turn.",
-    texture: "hex",
-    frame: "mars_02.png",
-  },
-};
+const PRIMARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
+  .filter((definition) => definition.category === ActionCategory.Primary)
+  .map((definition) => definition.id)
+  .sort((a, b) => ActionLibrary[a].name.localeCompare(ActionLibrary[b].name));
 
 export class CharacterPanel extends Phaser.GameObjects.Container {
   private background: Phaser.GameObjects.Rectangle;
@@ -265,10 +246,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       energy.max === 0 ? 0 : energy.current / energy.max
     );
     const actions = this.collectMainActions(character);
-    this.applyMainActions(actions.length > 0 ? actions : DEFAULT_MAIN_ACTIONS);
-    const secondary =
-      character.actionPlan?.secondary?.actionId ?? "None selected";
-    this.secondaryActionText.setText(secondary);
+    this.applyMainActions(actions);
+    const secondaryId = character.actionPlan?.secondary?.actionId ?? null;
+    this.secondaryActionText.setText(
+      this.resolveSecondaryActionLabel(secondaryId)
+    );
   }
 
   private useBarValue(bar: Phaser.GameObjects.Rectangle, ratio: number) {
@@ -278,42 +260,51 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     bar.setSize(width, BAR_HEIGHT);
   }
 
-  private applyMainActions(actions: string[]) {
+  private applyMainActions(actions: ActionId[]) {
     const items = this.buildMainActionItems(actions);
+    const currentValue = this.mainActionDropdown.getValue();
     this.mainActionDropdown.setItems(items);
-    const first = items[0]?.id ?? null;
-    this.mainActionDropdown.setValue(first, false);
+    const targetId = currentValue ?? items[0]?.id ?? null;
+    this.mainActionDropdown.setValue(targetId, false);
+    if (!this.mainActionDropdown.getValue() && items[0]) {
+      this.mainActionDropdown.setValue(items[0].id, false);
+    }
   }
 
   private collectMainActions(character: PlayerCharacter) {
-    const set = new Set<string>();
+    const set = new Set<ActionId>();
     const plan = character.actionPlan;
-    if (plan?.main?.actionId) set.add(plan.main.actionId);
-    if (plan?.nextMain?.actionId) set.add(plan.nextMain.actionId);
+    if (plan?.main?.actionId) set.add(plan.main.actionId as ActionId);
+    if (plan?.nextMain?.actionId) set.add(plan.nextMain.actionId as ActionId);
     return Array.from(set);
   }
 
-  private buildMainActionItems(actionIds: string[]): GridSelectItem[] {
-    const ids = actionIds.length > 0 ? actionIds : DEFAULT_MAIN_ACTIONS;
+  private buildMainActionItems(actionIds: ActionId[]): GridSelectItem[] {
+    const ids: (ActionId | string)[] =
+      actionIds.length > 0
+        ? actionIds
+        : PRIMARY_ACTION_IDS.length > 0
+        ? PRIMARY_ACTION_IDS
+        : ["move", "punch", "protect"];
     return ids.map((id) => this.resolveActionMetadata(id));
   }
 
-  private resolveActionMetadata(actionId: string): GridSelectItem {
-    const meta = ACTION_METADATA[actionId];
-    if (meta) {
+  private resolveActionMetadata(actionId: ActionId | string): GridSelectItem {
+    const definition = ActionLibrary[actionId as ActionId] ?? null;
+    if (definition) {
+      const { texture, frame } = this.resolveActionTexture(definition);
       return {
-        id: actionId,
-        name: meta.name,
-        description: meta.description,
-        texture: meta.texture,
-        frame: meta.frame,
-        iconScale: meta.iconScale,
+        id: definition.id,
+        name: definition.name,
+        description: this.describeAction(definition),
+        texture,
+        frame,
       };
     }
-    const name = this.formatActionName(actionId);
+    const fallbackName = this.formatActionName(actionId);
     return {
       id: actionId,
-      name,
+      name: fallbackName,
       description: "Description coming soon.",
       texture: "hex",
       frame: "grass_01.png",
@@ -323,5 +314,36 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private formatActionName(id: string) {
     const spaced = id.replace(/[_-]+/g, " ");
     return spaced.slice(0, 1).toUpperCase() + spaced.slice(1);
+  }
+
+  private resolveSecondaryActionLabel(actionId: string | null) {
+    if (!actionId) {
+      return "None selected";
+    }
+    const definition = ActionLibrary[actionId as ActionId];
+    if (definition) {
+      return definition.name;
+    }
+    return this.formatActionName(actionId);
+  }
+
+  private describeAction(definition: ActionDefinition) {
+    if (definition.effects?.length) {
+      return definition.effects[0].description;
+    }
+    if (definition.notes?.length) {
+      return definition.notes[0];
+    }
+    if (definition.requirements?.length) {
+      return definition.requirements[0].description;
+    }
+    return "Description coming soon.";
+  }
+
+  private resolveActionTexture(definition: ActionDefinition) {
+    if (isBoardIconTexture(definition.texture) && definition.frame) {
+      return { texture: deriveBoardIconKey(definition.frame) };
+    }
+    return { texture: definition.texture, frame: definition.frame };
   }
 }
