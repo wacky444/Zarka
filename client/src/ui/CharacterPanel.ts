@@ -9,13 +9,14 @@ import {
 } from "@shared";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
 import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
+import { ProgressBar } from "./ProgressBar";
 
 const DEFAULT_WIDTH = 320;
 const TAB_HEIGHT = 40;
 const MARGIN = 16;
 const PORTRAIT_SIZE = 96;
 const BAR_HEIGHT = 20;
-const BOX_HEIGHT = 120;
+const BOX_HEIGHT = 180;
 const PRIMARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
   .filter((definition) => definition.category === ActionCategory.Primary)
   .map((definition) => definition.id)
@@ -32,10 +33,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private nameText: Phaser.GameObjects.Text;
   private healthLabel: Phaser.GameObjects.Text;
   private energyLabel: Phaser.GameObjects.Text;
-  private healthBarBg: Phaser.GameObjects.Rectangle;
-  private healthBarFill: Phaser.GameObjects.Rectangle;
-  private energyBarBg: Phaser.GameObjects.Rectangle;
-  private energyBarFill: Phaser.GameObjects.Rectangle;
+  private healthBar: ProgressBar;
+  private energyBar: ProgressBar;
   private mainActionBox: Phaser.GameObjects.Rectangle;
   private secondaryActionBox: Phaser.GameObjects.Rectangle;
   private mainActionLabel: Phaser.GameObjects.Text;
@@ -113,14 +112,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       })
       .setOrigin(0, 0);
     this.add(this.healthLabel);
-    this.healthBarBg = scene.add
-      .rectangle(barX, contentTop, this.barWidth, BAR_HEIGHT, 0x25304c)
-      .setOrigin(0, 0);
-    this.add(this.healthBarBg);
-    this.healthBarFill = scene.add
-      .rectangle(barX, contentTop, this.barWidth, BAR_HEIGHT, 0x4ade80)
-      .setOrigin(0, 0);
-    this.add(this.healthBarFill);
+    this.healthBar = new ProgressBar(scene, barX, contentTop, {
+      width: this.barWidth,
+      height: BAR_HEIGHT,
+      trackColor: 0x25304c,
+      barColor: 0x4ade80,
+    });
+    this.add(this.healthBar);
     this.energyLabel = scene.add
       .text(barX, contentTop + 32, "Energy", {
         fontSize: "14px",
@@ -128,14 +126,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       })
       .setOrigin(0, 0);
     this.add(this.energyLabel);
-    this.energyBarBg = scene.add
-      .rectangle(barX, contentTop + 46, this.barWidth, BAR_HEIGHT, 0x25304c)
-      .setOrigin(0, 0);
-    this.add(this.energyBarBg);
-    this.energyBarFill = scene.add
-      .rectangle(barX, contentTop + 46, this.barWidth, BAR_HEIGHT, 0xfacc15)
-      .setOrigin(0, 0);
-    this.add(this.energyBarFill);
+    this.energyBar = new ProgressBar(scene, barX, contentTop + 46, {
+      width: this.barWidth,
+      height: BAR_HEIGHT,
+      trackColor: 0x25304c,
+      barColor: 0xfacc15,
+    });
+    this.add(this.energyBar);
     const mainBoxY = this.nameText.y + this.nameText.height + 12;
     const boxWidth = width - MARGIN * 2;
     this.mainActionBox = scene.add
@@ -201,6 +198,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const dropdownY = this.nameText.y + this.nameText.height + 12 + 48;
     dropdown.setPosition(MARGIN + 12, dropdownY);
     dropdown.setDisplayWidth(this.mainActionDropdownWidth);
+    const barX = MARGIN * 2 + PORTRAIT_SIZE;
+    const contentTop = TAB_HEIGHT + MARGIN;
+    this.healthBar.setPosition(barX, contentTop);
+    this.energyBar.setPosition(barX, contentTop + 46);
+    this.healthBar.resize(this.barWidth, BAR_HEIGHT);
+    this.energyBar.resize(this.barWidth, BAR_HEIGHT);
   }
 
   getPanelWidth() {
@@ -228,8 +231,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   ) {
     if (!character) {
       this.nameText.setText("No character");
-      this.useBarValue(this.healthBarFill, 0);
-      this.useBarValue(this.energyBarFill, 0);
+      this.useBarValue(this.healthBar, 0);
+      this.useBarValue(this.energyBar, 0);
       this.applyMainActions([]);
       this.secondaryActionText.setText("None selected");
       return;
@@ -238,11 +241,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const health = character.stats.health;
     const energy = character.stats.energy;
     this.useBarValue(
-      this.healthBarFill,
+      this.healthBar,
       health.max === 0 ? 0 : health.current / health.max
     );
     this.useBarValue(
-      this.energyBarFill,
+      this.energyBar,
       energy.max === 0 ? 0 : energy.current / energy.max
     );
     const actions = this.collectMainActions(character);
@@ -253,11 +256,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     );
   }
 
-  private useBarValue(bar: Phaser.GameObjects.Rectangle, ratio: number) {
+  private useBarValue(bar: ProgressBar, ratio: number) {
     const clamped = Phaser.Math.Clamp(ratio, 0, 1);
-    const width = this.barWidth * clamped;
-    bar.setDisplaySize(width, BAR_HEIGHT);
-    bar.setSize(width, BAR_HEIGHT);
+    bar.setValue(clamped);
   }
 
   private applyMainActions(actions: ActionId[]) {
