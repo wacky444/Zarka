@@ -28,7 +28,7 @@ export function createDefaultCharacter(userId: string): PlayerCharacter {
       level: 1,
       experience: 0,
       experienceForNextLevel: 10,
-      availableSkillPoints: 0,
+      availableSkillPoints: 10,
       spentSkillPoints: 0,
     },
     economy: {

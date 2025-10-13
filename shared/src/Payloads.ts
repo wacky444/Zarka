@@ -26,6 +26,14 @@ export type SubmitTurnPayload = {
   error?: string;
 };
 
+export type UpdateMainActionPayload = {
+  ok?: boolean;
+  match_id?: string;
+  user_id?: string;
+  action_id?: string;
+  error?: string;
+};
+
 export type GetStatePayload = {
   error?: string;
   match?: MatchRecord;

@@ -13,6 +13,7 @@ import {
   generateGameMap,
   type GetStatePayload,
   type MatchRecord,
+  type UpdateMainActionPayload,
 } from "@shared";
 import { buildBoardIconUrl, deriveBoardIconKey } from "../ui/actionIcons";
 
@@ -31,6 +32,8 @@ export class GameScene extends Phaser.Scene {
   private currentPlayerName: string | null = null;
   private turnService: TurnService | null = null;
   private pointerDownInUI = false;
+  private mainActionUpdateRunning = false;
+  private pendingMainActionId: string | null | undefined;
   private readonly pointerDownHandler = (pointer: Phaser.Input.Pointer) => {
     this.pointerDownInUI = this.isPointerOverUI(pointer);
   };
@@ -79,6 +82,11 @@ export class GameScene extends Phaser.Scene {
 
     this.characterPanel = new CharacterPanel(this, 0, 0);
     this.cam.ignore(this.characterPanel);
+    this.characterPanel.on(
+      "main-action-change",
+      this.handleMainActionSelection,
+      this
+    );
 
     this.menuButton = makeButton(this, 0, 0, "☰", () => {
       this.scene.stop("GameScene");
@@ -111,6 +119,11 @@ export class GameScene extends Phaser.Scene {
       this.scale.off("resize", this.handleResize, this);
       this.input.off(Phaser.Input.Events.POINTER_DOWN, this.pointerDownHandler);
       this.input.off(Phaser.Input.Events.POINTER_UP, this.pointerUpHandler);
+      this.characterPanel?.off(
+        "main-action-change",
+        this.handleMainActionSelection,
+        this
+      );
     });
   }
 
@@ -349,6 +362,71 @@ export class GameScene extends Phaser.Scene {
     } catch (error) {
       console.warn("resolveCurrentPlayerName failed", error);
       this.currentPlayerName = null;
+    }
+  }
+
+  private async handleMainActionSelection(actionId: string | null) {
+    const matchId = this.registry.get("currentMatchId") as string | null;
+    if (!this.turnService || !this.currentUserId || !matchId) {
+      return;
+    }
+    if (this.mainActionUpdateRunning) {
+      this.pendingMainActionId = actionId;
+      return;
+    }
+    const character = this.currentMatch?.playerCharacters?.[this.currentUserId];
+    const previousId = character?.actionPlan?.main?.actionId ?? null;
+    if ((actionId ?? null) === (previousId ?? null)) {
+      return;
+    }
+    this.mainActionUpdateRunning = true;
+    this.pendingMainActionId = undefined;
+    try {
+      const res = await this.turnService.updateMainAction(matchId, actionId);
+      const payload = this.parseRpcPayload<UpdateMainActionPayload>(res);
+      if (payload.error) {
+        throw new Error(payload.error);
+      }
+      if (!this.currentMatch) {
+        return;
+      }
+      const target = this.currentMatch.playerCharacters?.[this.currentUserId];
+      if (!target) {
+        return;
+      }
+      target.actionPlan = target.actionPlan ?? {};
+      if (!actionId) {
+        if (target.actionPlan.main) {
+          delete target.actionPlan.main;
+        }
+        if (
+          target.actionPlan.secondary === undefined &&
+          target.actionPlan.nextMain === undefined &&
+          target.actionPlan.main === undefined
+        ) {
+          delete target.actionPlan;
+        }
+      } else {
+        const existing = target.actionPlan.main ?? {};
+        target.actionPlan.main = { ...existing, actionId };
+      }
+      this.updateCharacterPanel(this.currentMatch);
+    } catch (error) {
+      console.warn("update_main_action failed", error);
+      this.updateCharacterPanel(this.currentMatch);
+    } finally {
+      this.mainActionUpdateRunning = false;
+      if (this.pendingMainActionId !== undefined) {
+        const nextActionId = this.pendingMainActionId;
+        this.pendingMainActionId = undefined;
+        if (
+          (nextActionId ?? null) !==
+          (this.currentMatch?.playerCharacters?.[this.currentUserId]?.actionPlan
+            ?.main?.actionId ?? null)
+        ) {
+          void this.handleMainActionSelection(nextActionId);
+        }
+      }
     }
   }
 

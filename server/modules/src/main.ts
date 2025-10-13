@@ -10,6 +10,7 @@ import {
   removeMatchRpc,
   startMatchRpc,
   submitTurnRpc,
+  updateMainActionRpc,
   updateSettingsRpc,
 } from "./rpc";
 import { asyncTurnMatchHandler } from "./match/async_turn";
@@ -90,6 +91,14 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register remove_match: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("update_main_action", updateMainActionRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register update_main_action: %s",
       (error && (error as Error).message) || String(error)
     );
   }

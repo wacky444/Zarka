@@ -45,6 +45,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private panelWidth: number;
   private panelHeight: number;
   private barWidth: number;
+  private readonly handleMainActionSelection = (
+    actionId: string | null,
+    item?: GridSelectItem | null
+  ) => {
+    this.emit("main-action-change", actionId ?? null, item ?? null);
+  };
 
   constructor(
     scene: Phaser.Scene,
@@ -160,6 +166,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       }
     );
     this.add(this.mainActionDropdown);
+    this.mainActionDropdown.on("change", this.handleMainActionSelection);
     const secondaryBoxY = mainBoxY + BOX_HEIGHT + 16;
     this.secondaryActionBox = scene.add
       .rectangle(MARGIN, secondaryBoxY, boxWidth, BOX_HEIGHT, 0x1b2440)
@@ -180,6 +187,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       .setOrigin(0, 0);
     this.add(this.secondaryActionText);
     this.bringToTop(this.mainActionDropdown);
+  }
+
+  override destroy(fromScene?: boolean) {
+    this.mainActionDropdown.off("change", this.handleMainActionSelection);
+    super.destroy(fromScene);
   }
 
   setPanelSize(width: number, height: number) {

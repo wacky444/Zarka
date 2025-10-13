@@ -141,6 +141,14 @@ export class TurnService {
     return res;
   }
 
+  async updateMainAction(match_id: string, action_id: string | null) {
+    const res = await this.client.rpc(this.session, "update_main_action", {
+      match_id,
+      action_id,
+    });
+    return res;
+  }
+
   async updateSettings(match_id: string, settings: InMatchSettings) {
     const res = await this.client.rpc(this.session, "update_settings", {
       match_id,
