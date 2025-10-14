@@ -293,13 +293,15 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private buildMainActionItems(actionIds: ActionId[]): GridSelectItem[] {
-    const ids: (ActionId | string)[] =
-      actionIds.length > 0
-        ? actionIds
-        : PRIMARY_ACTION_IDS.length > 0
+    const fallback: (ActionId | string)[] =
+      PRIMARY_ACTION_IDS.length > 0
         ? PRIMARY_ACTION_IDS
         : ["move", "punch", "protect"];
-    return ids.map((id) => this.resolveActionMetadata(id));
+    const sourceIds =
+      actionIds.length > 0
+        ? Array.from(new Set([...actionIds, ...fallback]))
+        : fallback;
+    return sourceIds.map((id) => this.resolveActionMetadata(id));
   }
 
   private resolveActionMetadata(actionId: ActionId | string): GridSelectItem {
