@@ -1,14 +1,19 @@
 import Phaser from "phaser";
 import type { RpcResponse } from "@heroiclabs/nakama-js";
 import { makeButton, type UIButton } from "../ui/button";
-import { CharacterPanel } from "../ui/CharacterPanel";
+import { CharacterPanel, type MainActionSelection } from "../ui/CharacterPanel";
 import type { TurnService } from "../services/turnService";
 import {
   ActionLibrary,
+  ActionCategory,
   CellLibrary,
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
   HexTile,
+  type ActionId,
+  type ActionSubmission,
+  type Axial,
+  type PlayerPlannedAction,
   type GameMap,
   generateGameMap,
   type GetStatePayload,
@@ -33,11 +38,24 @@ export class GameScene extends Phaser.Scene {
   private turnService: TurnService | null = null;
   private pointerDownInUI = false;
   private mainActionUpdateRunning = false;
-  private pendingMainActionId: string | null | undefined;
+  private pendingMainActionSelection: MainActionSelection | undefined;
+  private locationSelectionActive = false;
+  private locationSelectionPointerId: number | null = null;
   private readonly pointerDownHandler = (pointer: Phaser.Input.Pointer) => {
-    this.pointerDownInUI = this.isPointerOverUI(pointer);
+    const overUI = this.isPointerOverUI(pointer);
+    this.pointerDownInUI = overUI;
+    if (this.locationSelectionActive) {
+      this.locationSelectionPointerId = overUI ? null : pointer.id;
+    }
   };
-  private readonly pointerUpHandler = () => {
+  private readonly pointerUpHandler = (pointer: Phaser.Input.Pointer) => {
+    if (
+      this.locationSelectionActive &&
+      this.locationSelectionPointerId !== null &&
+      pointer.id === this.locationSelectionPointerId
+    ) {
+      this.locationSelectionPointerId = null;
+    }
     this.pointerDownInUI = false;
   };
 
@@ -87,6 +105,11 @@ export class GameScene extends Phaser.Scene {
       this.handleMainActionSelection,
       this
     );
+    this.characterPanel.on(
+      "main-action-location-request",
+      this.beginMainActionLocationPick,
+      this
+    );
 
     this.menuButton = makeButton(this, 0, 0, "☰", () => {
       this.scene.stop("GameScene");
@@ -124,6 +147,12 @@ export class GameScene extends Phaser.Scene {
         this.handleMainActionSelection,
         this
       );
+      this.characterPanel?.off(
+        "main-action-location-request",
+        this.beginMainActionLocationPick,
+        this
+      );
+      this.cancelMainActionLocationPick();
     });
   }
 
@@ -202,6 +231,29 @@ export class GameScene extends Phaser.Scene {
       const y = row * dy + tileH;
       const img = this.add.image(x, y, "hex", frame);
       img.setData("tile", tile);
+      img.setInteractive({ useHandCursor: false });
+      img.on(
+        Phaser.Input.Events.POINTER_UP,
+        (pointer: Phaser.Input.Pointer) => {
+          if (!this.locationSelectionActive) {
+            return;
+          }
+          if (pointer.button !== 0) {
+            return;
+          }
+          if (
+            this.locationSelectionPointerId === null ||
+            pointer.id !== this.locationSelectionPointerId
+          ) {
+            return;
+          }
+          const tileData = img.getData("tile") as HexTile | undefined;
+          if (!tileData) {
+            return;
+          }
+          this.completeMainActionLocationPick(tileData);
+        }
+      );
       sprites.push(img);
       this.tilePositions[tile.id] = { x, y };
     }
@@ -365,24 +417,43 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private async handleMainActionSelection(actionId: string | null) {
+  private async handleMainActionSelection(
+    selection: MainActionSelection | null | undefined
+  ) {
+    this.cancelMainActionLocationPick();
     const matchId = this.registry.get("currentMatchId") as string | null;
     if (!this.turnService || !this.currentUserId || !matchId) {
       return;
     }
-    if (this.mainActionUpdateRunning) {
-      this.pendingMainActionId = actionId;
+    const normalizedSelection: MainActionSelection = {
+      actionId: selection?.actionId ?? null,
+      targetLocation: this.normalizeAxial(selection?.targetLocation),
+    };
+    const character =
+      this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
+    const previousPlan = character?.actionPlan?.main ?? null;
+    const previousActionId = previousPlan?.actionId ?? null;
+    const previousTarget = this.normalizeAxial(previousPlan?.targetLocationId);
+    if (
+      normalizedSelection.actionId === previousActionId &&
+      this.isSameAxial(normalizedSelection.targetLocation, previousTarget)
+    ) {
       return;
     }
-    const character = this.currentMatch?.playerCharacters?.[this.currentUserId];
-    const previousId = character?.actionPlan?.main?.actionId ?? null;
-    if ((actionId ?? null) === (previousId ?? null)) {
+    if (this.mainActionUpdateRunning) {
+      this.pendingMainActionSelection = normalizedSelection;
       return;
     }
     this.mainActionUpdateRunning = true;
-    this.pendingMainActionId = undefined;
+    this.pendingMainActionSelection = undefined;
     try {
-      const res = await this.turnService.updateMainAction(matchId, actionId);
+      const submission = normalizedSelection.actionId
+        ? this.buildMainActionSubmission(
+            normalizedSelection.actionId,
+            normalizedSelection.targetLocation
+          )
+        : null;
+      const res = await this.turnService.updateMainAction(matchId, submission);
       const payload = this.parseRpcPayload<UpdateMainActionPayload>(res);
       if (payload.error) {
         throw new Error(payload.error);
@@ -390,12 +461,13 @@ export class GameScene extends Phaser.Scene {
       if (!this.currentMatch) {
         return;
       }
-      const target = this.currentMatch.playerCharacters?.[this.currentUserId];
+      const target =
+        this.currentMatch.playerCharacters?.[this.currentUserId] ?? null;
       if (!target) {
         return;
       }
       target.actionPlan = target.actionPlan ?? {};
-      if (!actionId) {
+      if (!submission) {
         if (target.actionPlan.main) {
           delete target.actionPlan.main;
         }
@@ -407,8 +479,16 @@ export class GameScene extends Phaser.Scene {
           delete target.actionPlan;
         }
       } else {
-        const existing = target.actionPlan.main ?? {};
-        target.actionPlan.main = { ...existing, actionId };
+        const nextPlan: PlayerPlannedAction = {
+          ...(target.actionPlan.main ?? {}),
+          actionId: submission.actionId,
+        };
+        if (payload.targetLocationId) {
+          nextPlan.targetLocationId = payload.targetLocationId;
+        } else if (nextPlan.targetLocationId) {
+          delete nextPlan.targetLocationId;
+        }
+        target.actionPlan.main = nextPlan;
       }
       this.updateCharacterPanel(this.currentMatch);
     } catch (error) {
@@ -416,18 +496,90 @@ export class GameScene extends Phaser.Scene {
       this.updateCharacterPanel(this.currentMatch);
     } finally {
       this.mainActionUpdateRunning = false;
-      if (this.pendingMainActionId !== undefined) {
-        const nextActionId = this.pendingMainActionId;
-        this.pendingMainActionId = undefined;
-        if (
-          (nextActionId ?? null) !==
-          (this.currentMatch?.playerCharacters?.[this.currentUserId]?.actionPlan
-            ?.main?.actionId ?? null)
-        ) {
-          void this.handleMainActionSelection(nextActionId);
-        }
+      if (this.pendingMainActionSelection) {
+        const nextSelection = this.pendingMainActionSelection;
+        this.pendingMainActionSelection = undefined;
+        void this.handleMainActionSelection(nextSelection);
       }
     }
+  }
+
+  private beginMainActionLocationPick() {
+    if (this.locationSelectionActive) {
+      return;
+    }
+    const selection = this.characterPanel?.getMainActionSelection();
+    if (!selection || !selection.actionId) {
+      return;
+    }
+    this.locationSelectionActive = true;
+    this.locationSelectionPointerId = null;
+    this.characterPanel?.setLocationSelectionPending(true);
+    this.input.setDefaultCursor("crosshair");
+  }
+
+  private cancelMainActionLocationPick() {
+    if (this.locationSelectionActive) {
+      this.locationSelectionActive = false;
+      this.input.setDefaultCursor("default");
+    }
+    this.locationSelectionPointerId = null;
+    this.characterPanel?.setLocationSelectionPending(false);
+  }
+
+  private completeMainActionLocationPick(tile: HexTile) {
+    const selection = this.characterPanel?.getMainActionSelection();
+    if (!selection || !selection.actionId) {
+      this.cancelMainActionLocationPick();
+      return;
+    }
+    const coord = this.normalizeAxial(tile.coord);
+    this.locationSelectionPointerId = null;
+    this.cancelMainActionLocationPick();
+    if (!coord) {
+      return;
+    }
+    this.characterPanel?.setMainActionTarget(coord, true);
+  }
+
+  private buildMainActionSubmission(
+    actionId: string,
+    target: Axial | null
+  ): ActionSubmission {
+    const typedId = actionId as ActionId;
+    const definition = ActionLibrary[typedId] ?? null;
+    const category = definition?.category ?? ActionCategory.Primary;
+    const submission: ActionSubmission = {
+      playerId: this.currentUserId!,
+      actionId: definition ? definition.id : typedId,
+      category,
+    };
+    if (target) {
+      submission.targetLocationId = { q: target.q, r: target.r };
+    }
+    return submission;
+  }
+
+  private normalizeAxial(value: Axial | null | undefined): Axial | null {
+    if (!value) {
+      return null;
+    }
+    const q = typeof value.q === "number" ? value.q : Number(value.q);
+    const r = typeof value.r === "number" ? value.r : Number(value.r);
+    if (Number.isNaN(q) || Number.isNaN(r)) {
+      return null;
+    }
+    return { q, r };
+  }
+
+  private isSameAxial(a: Axial | null, b: Axial | null) {
+    if (!a && !b) {
+      return true;
+    }
+    if (!a || !b) {
+      return false;
+    }
+    return a.q === b.q && a.r === b.r;
   }
 
   private isPointerOverUI(pointer: Phaser.Input.Pointer) {

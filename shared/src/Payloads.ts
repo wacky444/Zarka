@@ -1,5 +1,5 @@
 import type { MatchRecord, TurnRecord } from "./match";
-import type { GameMap } from "./hexTile";
+import type { GameMap, Axial } from "./hexTile";
 
 export type CreateMatchPayload = {
   match_id: string;
@@ -31,6 +31,7 @@ export type UpdateMainActionPayload = {
   match_id?: string;
   user_id?: string;
   action_id?: string;
+  targetLocationId?: Axial;
   error?: string;
 };
 

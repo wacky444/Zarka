@@ -4,6 +4,7 @@ import { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
+import type { ActionSubmission, Axial, PlayerPlannedAction } from "@shared";
 
 export function updateMainActionRpc(
   ctx: nkruntime.Context,
@@ -24,21 +25,44 @@ export function updateMainActionRpc(
     throw makeNakamaError("bad_json", nkruntime.Codes.INVALID_ARGUMENT);
   }
   const matchId: string | undefined = json.match_id;
-  const actionIdRaw: unknown = json.action_id;
-  const actionId = typeof actionIdRaw === "string" ? actionIdRaw.trim() : "";
-  const clearAction = actionId.length === 0;
+  const submissionRaw: unknown = json.submission;
+  const submission: ActionSubmission | null =
+    submissionRaw === null || submissionRaw === undefined
+      ? null
+      : (submissionRaw as ActionSubmission);
   if (!matchId) {
     throw makeNakamaError(
       "match_id required",
       nkruntime.Codes.INVALID_ARGUMENT
     );
   }
-  if (!clearAction && actionId.length === 0) {
-    throw makeNakamaError(
-      "action_id required",
-      nkruntime.Codes.INVALID_ARGUMENT
-    );
+  const normalizeActionId = (raw: unknown) =>
+    typeof raw === "string" ? raw.trim() : "";
+  let actionId = "";
+  let targetLocation: Axial | undefined;
+  if (submission) {
+    actionId = normalizeActionId(submission.actionId);
+    if (actionId.length === 0) {
+      throw makeNakamaError(
+        "action_id required",
+        nkruntime.Codes.INVALID_ARGUMENT
+      );
+    }
+    const locationCandidate = submission.targetLocationId as Axial | undefined;
+    if (locationCandidate) {
+      const { q, r } = locationCandidate as Record<string, unknown>;
+      const qNum = typeof q === "number" ? q : Number(q);
+      const rNum = typeof r === "number" ? r : Number(r);
+      if (isNaN(qNum) || isNaN(rNum)) {
+        throw makeNakamaError(
+          "invalid_target_location",
+          nkruntime.Codes.INVALID_ARGUMENT
+        );
+      }
+      targetLocation = { q: qNum, r: rNum };
+    }
   }
+  const clearAction = !submission;
   const nkWrapper = createNakamaWrapper(nk);
   const storage = new StorageService(nkWrapper);
   const read = storage.getMatch(matchId);
@@ -69,8 +93,15 @@ export function updateMainActionRpc(
       delete character.actionPlan;
     }
   } else {
-    const previous = character.actionPlan.main ?? {};
-    character.actionPlan.main = { ...previous, actionId };
+    const previous: PlayerPlannedAction =
+      character.actionPlan.main ?? ({ actionId } as PlayerPlannedAction);
+    const nextPlan: PlayerPlannedAction = { ...previous, actionId };
+    if (targetLocation) {
+      nextPlan.targetLocationId = targetLocation;
+    } else if (nextPlan.targetLocationId) {
+      delete nextPlan.targetLocationId;
+    }
+    character.actionPlan.main = nextPlan;
   }
   storage.writeMatch(match, read.version);
   const response: import("@shared").UpdateMainActionPayload = {
@@ -78,6 +109,7 @@ export function updateMainActionRpc(
     match_id: matchId,
     user_id: ctx.userId,
     action_id: clearAction ? undefined : actionId,
+    targetLocationId: clearAction ? undefined : targetLocation,
   };
   return JSON.stringify(response);
 }

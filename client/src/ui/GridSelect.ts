@@ -8,6 +8,7 @@ export interface GridSelectItem {
   texture: string;
   frame?: string;
   iconScale?: number;
+  tags?: string[];
 }
 
 interface GridSelectConfig {
@@ -212,6 +213,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
   getValue() {
     return this.selectedItem?.id ?? null;
+  }
+
+  getSelectedItem() {
+    return this.selectedItem;
   }
 
   setDisplayWidth(width: number) {

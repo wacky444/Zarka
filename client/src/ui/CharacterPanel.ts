@@ -3,6 +3,7 @@ import {
   ActionLibrary,
   type ActionDefinition,
   type ActionId,
+  type Axial,
   type MatchRecord,
   type PlayerCharacter,
   ActionCategory,
@@ -10,6 +11,7 @@ import {
 import { GridSelect, type GridSelectItem } from "./GridSelect";
 import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
 import { ProgressBar } from "./ProgressBar";
+import { LocationSelector } from "./LocationSelector";
 
 const DEFAULT_WIDTH = 320;
 const TAB_HEIGHT = 40;
@@ -21,6 +23,11 @@ const PRIMARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
   .filter((definition) => definition.category === ActionCategory.Primary)
   .map((definition) => definition.id)
   .sort((a, b) => ActionLibrary[a].name.localeCompare(ActionLibrary[b].name));
+
+export type MainActionSelection = {
+  actionId: string | null;
+  targetLocation: Axial | null;
+};
 
 export class CharacterPanel extends Phaser.GameObjects.Container {
   private background: Phaser.GameObjects.Rectangle;
@@ -41,15 +48,31 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private secondaryActionLabel: Phaser.GameObjects.Text;
   private mainActionDropdown: GridSelect;
   private mainActionDropdownWidth: number;
+  private locationSelector: LocationSelector;
   private secondaryActionText: Phaser.GameObjects.Text;
   private panelWidth: number;
   private panelHeight: number;
   private barWidth: number;
-  private readonly handleMainActionSelection = (
-    actionId: string | null,
-    item?: GridSelectItem | null
-  ) => {
-    this.emit("main-action-change", actionId ?? null, item ?? null);
+  private mainActionSelection: string | null = null;
+  private mainActionTarget: Axial | null = null;
+  private lastMainActionItem: GridSelectItem | null = null;
+  private readonly handleMainActionSelection = (actionId: string | null) => {
+    this.mainActionSelection = actionId ?? null;
+    this.lastMainActionItem = this.mainActionDropdown.getSelectedItem() ?? null;
+    if (!this.mainActionSelection) {
+      this.setMainActionTarget(null, false);
+    }
+    this.refreshLocationSelectorState();
+    this.emitMainActionChange();
+  };
+  private readonly handleLocationPickRequest = () => {
+    if (!this.mainActionSelection || !this.selectedActionSupportsLocation()) {
+      return;
+    }
+    this.emit("main-action-location-request");
+  };
+  private readonly handleLocationClear = () => {
+    this.setMainActionTarget(null, true);
   };
 
   constructor(
@@ -167,6 +190,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     );
     this.add(this.mainActionDropdown);
     this.mainActionDropdown.on("change", this.handleMainActionSelection);
+    const locationY = mainBoxY + 48 + this.mainActionDropdown.height + 12;
+    this.locationSelector = new LocationSelector(
+      scene,
+      MARGIN + 12,
+      locationY,
+      this.mainActionDropdownWidth
+    );
+    this.locationSelector.setEnabled(false);
+    this.locationSelector.setVisible(false);
+    this.locationSelector.setActive(false);
+    this.locationSelector.on("pick-request", this.handleLocationPickRequest);
+    this.locationSelector.on("clear-request", this.handleLocationClear);
+    this.add(this.locationSelector);
     const secondaryBoxY = mainBoxY + BOX_HEIGHT + 16;
     this.secondaryActionBox = scene.add
       .rectangle(MARGIN, secondaryBoxY, boxWidth, BOX_HEIGHT, 0x1b2440)
@@ -191,6 +227,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   override destroy(fromScene?: boolean) {
     this.mainActionDropdown.off("change", this.handleMainActionSelection);
+    this.locationSelector.off("pick-request", this.handleLocationPickRequest);
+    this.locationSelector.off("clear-request", this.handleLocationClear);
     super.destroy(fromScene);
   }
 
@@ -210,6 +248,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const dropdownY = this.nameText.y + this.nameText.height + 12 + 48;
     dropdown.setPosition(MARGIN + 12, dropdownY);
     dropdown.setDisplayWidth(this.mainActionDropdownWidth);
+    const locationY = dropdownY + dropdown.height + 12;
+    this.locationSelector.setPosition(MARGIN + 12, locationY);
+    this.locationSelector.setSelectorWidth(this.mainActionDropdownWidth);
     const barX = MARGIN * 2 + PORTRAIT_SIZE;
     const contentTop = TAB_HEIGHT + MARGIN;
     this.healthBar.setPosition(barX, contentTop);
@@ -245,7 +286,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.nameText.setText("No character");
       this.useBarValue(this.healthBar, 0);
       this.useBarValue(this.energyBar, 0);
-      this.applyMainActions([]);
+      this.applyMainActions([], null);
+      this.setMainActionTarget(null, false);
+      this.setLocationSelectionPending(false);
       this.secondaryActionText.setText("None selected");
       return;
     }
@@ -261,7 +304,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       energy.max === 0 ? 0 : energy.current / energy.max
     );
     const actions = this.collectMainActions(character);
-    this.applyMainActions(actions);
+    const mainActionId = character.actionPlan?.main?.actionId ?? null;
+    this.applyMainActions(actions, mainActionId);
+    const targetLocation = character.actionPlan?.main?.targetLocationId ?? null;
+    this.setMainActionTarget(targetLocation ?? null, false);
+    this.setLocationSelectionPending(false);
     const secondaryId = character.actionPlan?.secondary?.actionId ?? null;
     this.secondaryActionText.setText(
       this.resolveSecondaryActionLabel(secondaryId)
@@ -273,15 +320,23 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     bar.setValue(clamped);
   }
 
-  private applyMainActions(actions: ActionId[]) {
+  private applyMainActions(actions: ActionId[], preferredId: string | null) {
     const items = this.buildMainActionItems(actions);
-    const currentValue = this.mainActionDropdown.getValue();
     this.mainActionDropdown.setItems(items);
-    const targetId = currentValue ?? items[0]?.id ?? null;
-    this.mainActionDropdown.setValue(targetId, false);
-    if (!this.mainActionDropdown.getValue() && items[0]) {
+    if (preferredId) {
+      this.mainActionDropdown.setValue(preferredId, false);
+      if (!this.mainActionDropdown.getValue() && items[0]) {
+        this.mainActionDropdown.setValue(items[0].id, false);
+      }
+    } else if (!this.mainActionDropdown.getValue() && items[0]) {
       this.mainActionDropdown.setValue(items[0].id, false);
     }
+    this.lastMainActionItem = this.mainActionDropdown.getSelectedItem() ?? null;
+    this.mainActionSelection = this.mainActionDropdown.getValue();
+    if (!this.mainActionSelection) {
+      this.setMainActionTarget(null, false);
+    }
+    this.refreshLocationSelectorState();
   }
 
   private collectMainActions(character: PlayerCharacter) {
@@ -314,6 +369,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         description: this.describeAction(definition),
         texture,
         frame,
+        tags: definition.tags,
       };
     }
     const fallbackName = this.formatActionName(actionId);
@@ -324,6 +380,115 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       texture: "hex",
       frame: "grass_01.png",
     };
+  }
+
+  private refreshLocationSelectorState() {
+    this.lastMainActionItem = this.mainActionDropdown.getSelectedItem() ?? null;
+    const supports = this.selectedActionSupportsLocation();
+    this.locationSelector.setVisible(supports);
+    this.locationSelector.setActive(supports);
+    if (!supports) {
+      if (this.mainActionTarget !== null) {
+        this.mainActionTarget = null;
+      }
+      this.locationSelector.setValue(null);
+      this.locationSelector.setEnabled(false);
+      this.locationSelector.setPending(false);
+      return;
+    }
+    const hasSelection = this.mainActionSelection !== null;
+    this.locationSelector.setEnabled(hasSelection);
+    if (!hasSelection) {
+      this.locationSelector.setPending(false);
+    }
+  }
+
+  private selectedActionSupportsLocation() {
+    return this.lastMainActionItem?.tags?.includes("Ranged") ?? false;
+  }
+
+  private emitMainActionChange() {
+    const supports = this.selectedActionSupportsLocation();
+    const payload: MainActionSelection = {
+      actionId: this.mainActionSelection,
+      targetLocation:
+        supports && this.mainActionTarget
+          ? { q: this.mainActionTarget.q, r: this.mainActionTarget.r }
+          : null,
+    };
+    this.emit("main-action-change", payload);
+  }
+
+  setMainActionTarget(target: Axial | null, emit = false): boolean {
+    const supports = this.selectedActionSupportsLocation();
+    if (!supports) {
+      const changed = this.mainActionTarget !== null;
+      if (changed) {
+        this.mainActionTarget = null;
+      }
+      this.locationSelector.setValue(null);
+      this.locationSelector.setPending(false);
+      if (emit && changed) {
+        this.emitMainActionChange();
+      }
+      return changed;
+    }
+    const normalized = this.normalizeAxial(target);
+    if (this.isSameAxial(normalized, this.mainActionTarget)) {
+      return false;
+    }
+    this.mainActionTarget = normalized;
+    this.locationSelector.setValue(
+      normalized ? { q: normalized.q, r: normalized.r } : null
+    );
+    if (!normalized) {
+      this.locationSelector.setPending(false);
+    }
+    if (emit) {
+      this.emitMainActionChange();
+    }
+    return true;
+  }
+
+  getMainActionSelection(): MainActionSelection {
+    const supports = this.selectedActionSupportsLocation();
+    return {
+      actionId: this.mainActionSelection,
+      targetLocation:
+        supports && this.mainActionTarget
+          ? { q: this.mainActionTarget.q, r: this.mainActionTarget.r }
+          : null,
+    };
+  }
+
+  setLocationSelectionPending(active: boolean): void {
+    if (!this.selectedActionSupportsLocation()) {
+      this.locationSelector.setPending(false);
+      return;
+    }
+    this.locationSelector.setPending(active);
+  }
+
+  private normalizeAxial(target: Axial | null): Axial | null {
+    if (!target) {
+      return null;
+    }
+    const q = typeof target.q === "number" ? target.q : Number(target.q);
+    const r = typeof target.r === "number" ? target.r : Number(target.r);
+    if (Number.isNaN(q) || Number.isNaN(r)) {
+      return null;
+    }
+    return { q, r };
+  }
+
+  private isSameAxial(a: Axial | null, b: Axial | null) {
+    if (!a && !b) {
+      return true;
+    }
+    if (!a || !b) {
+      return false;
+    }
+    return a.q === b.q && a.r === b.r;
   }
 
   private formatActionName(id: string) {

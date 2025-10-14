@@ -1,3 +1,5 @@
+import { Axial } from "./hexTile";
+
 export enum ActionCategory {
   Primary = "Primary",
   Secondary = "Secondary",
@@ -75,6 +77,7 @@ export type ActionTag =
   | "Crafting"
   | "Utility"
   | "Area"
+  | "Ranged"
   | "Recon"
   | "Status"
   | "Economy";
@@ -133,7 +136,7 @@ export interface ActionSubmission {
   category: ActionCategory;
   extraExecutions?: number;
   targetPlayerIds?: string[];
-  targetLocationId?: string;
+  targetLocationId?: Axial;
   conditions?: ActionCondition[];
   notes?: string;
 }

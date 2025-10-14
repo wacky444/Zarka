@@ -1,6 +1,6 @@
 import { Client, Session, Socket } from "@heroiclabs/nakama-js";
 import { getEnv } from "./nakama";
-import type { InMatchSettings } from "@shared";
+import type { InMatchSettings, ActionSubmission } from "@shared";
 
 export type Move = { n: number; ts: number };
 
@@ -141,10 +141,13 @@ export class TurnService {
     return res;
   }
 
-  async updateMainAction(match_id: string, action_id: string | null) {
+  async updateMainAction(
+    match_id: string,
+    submission: ActionSubmission | null
+  ) {
     const res = await this.client.rpc(this.session, "update_main_action", {
       match_id,
-      action_id,
+      submission,
     });
     return res;
   }

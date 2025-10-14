@@ -114,6 +114,7 @@ export interface PlayerPlannedAction {
   actionId: string;
   extraEffort?: number;
   conditions?: Array<ActionCondition>;
+  targetLocationId?: Axial;
 }
 
 export type PlayerConditionFlag =

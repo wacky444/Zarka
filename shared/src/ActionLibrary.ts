@@ -22,7 +22,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       "Gastando 3 combustibles adicionales el incendio puede iniciarse en una localización adyacente.",
       "Solo jugadores con Percepción 4 detectan el incendio en el turno en que se crea.",
     ],
-    tags: ["Attack", "Area"],
+    tags: ["Attack", "Area", "Ranged"],
   },
   recover: {
     id: "recover",
@@ -182,7 +182,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "token.png",
-    tags: ["Recon", "Utility"],
+    tags: ["Recon", "Utility", "Ranged"],
   },
   place_c4: {
     id: "place_c4",
@@ -316,7 +316,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "arrow_right.png",
-    tags: ["Movement"],
+    tags: ["Movement", "Ranged"],
   },
   refuel: {
     id: "refuel",
@@ -480,7 +480,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "hand.png",
-    tags: ["Attack", "Area"],
+    tags: ["Attack", "Area", "Ranged"],
   },
   use_chemical_weapon: {
     id: "use_chemical_weapon",
@@ -528,7 +528,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "flag_triangle.png",
-    tags: ["Attack", "Utility"],
+    tags: ["Attack", "Utility", "Ranged"],
   },
   detonate_c4: {
     id: "detonate_c4",
@@ -680,7 +680,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "dice_sword.png",
-    tags: ["Attack"],
+    tags: ["Attack", "Ranged"],
   },
   shoot_harpoon: {
     id: "shoot_harpoon",
@@ -711,7 +711,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "bow.png",
-    tags: ["Attack"],
+    tags: ["Attack", "Ranged"],
   },
   fire_rocket_launcher: {
     id: "fire_rocket_launcher",
@@ -737,7 +737,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     texture: "Board Game Icons",
     frame: "exploding.png",
-    tags: ["Attack", "Area"],
+    tags: ["Attack", "Area", "Ranged"],
   },
   punch: {
     id: "punch",
@@ -942,7 +942,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     texture: "Board Game Icons",
     frame: "hexagon_question.png",
-    tags: ["Recon"],
+    tags: ["Recon", "Ranged"],
   },
   use_binoculars: {
     id: "use_binoculars",
@@ -964,7 +964,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "card_target.png",
-    tags: ["Recon"],
+    tags: ["Recon", "Ranged"],
   },
   detect: {
     id: "detect",
