@@ -31,6 +31,8 @@ export class GameScene extends Phaser.Scene {
   private currentMatch: MatchRecord | null = null;
   private tilePositions: Record<string, { x: number; y: number }> = {};
   private playerSprites: Phaser.GameObjects.Image[] = [];
+  private playerNameLabels: Phaser.GameObjects.Text[] = [];
+  private playerNameMap: Record<string, string> = {};
   private characterPanel: CharacterPanel | null = null;
   private menuButton: UIButton | null = null;
   private currentUserId: string | null = null;
@@ -122,12 +124,11 @@ export class GameScene extends Phaser.Scene {
 
     const map = this.resolveMap(match);
 
+    await this.resolvePlayerNames(match);
     this.renderMap(map);
     if (match) {
       this.renderPlayerCharacters(match);
     }
-
-    await this.resolveCurrentPlayerName(match);
     this.updateCharacterPanel(match);
 
     this.enableDragPan();
@@ -262,9 +263,15 @@ export class GameScene extends Phaser.Scene {
 
     const gridWidth = map.cols * dx + tileW * 2 + dx / 2;
     const gridHeight = map.rows * dy + tileH * 2 + dy / 2;
-    this.cam.setBounds(0, 0, gridWidth, gridHeight);
+    this.cam.setBounds(
+      -gridWidth / 2,
+      -gridHeight / 2,
+      gridWidth * 2,
+      gridHeight * 2
+    );
     this.cam.centerOn(gridWidth / 2, gridHeight / 2);
     this.registry.set("currentMatchMap", map);
+    1;
   }
 
   private getTileWorldPosition(
@@ -303,6 +310,10 @@ export class GameScene extends Phaser.Scene {
       sprite.destroy();
     }
     this.playerSprites = [];
+    for (const label of this.playerNameLabels) {
+      label.destroy();
+    }
+    this.playerNameLabels = [];
 
     for (const playerId in match.playerCharacters) {
       if (
@@ -318,10 +329,24 @@ export class GameScene extends Phaser.Scene {
       const world = this.getTileWorldPosition(tileId, coord);
       const sprite = this.add.image(world.x, world.y, "char", "body_02.png");
       sprite.setDepth(5);
-      sprite.setScale(4);
+      sprite.setScale(2);
       sprite.setData("playerId", playerId);
       this.uiCam.ignore(sprite);
       this.playerSprites.push(sprite);
+      const name = this.playerNameMap[playerId] ?? playerId;
+      const label = this.add.text(world.x, world.y, name, {
+        fontFamily: "Arial",
+        fontSize: "10px",
+        color: "#ffffff",
+        stroke: "#000000",
+        strokeThickness: 4,
+      });
+      label.setOrigin(0.5, 0.5);
+      const offset = sprite.displayHeight / 2 + 12;
+      label.setPosition(world.x, world.y - offset);
+      label.setDepth(6);
+      this.uiCam.ignore(label);
+      this.playerNameLabels.push(label);
     }
   }
 
@@ -397,23 +422,53 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const nameMap =
-      this.currentUserId && this.currentPlayerName
-        ? { [this.currentUserId]: this.currentPlayerName }
+      Object.keys(this.playerNameMap).length > 0
+        ? this.playerNameMap
         : undefined;
     this.characterPanel.updateFromMatch(match, this.currentUserId, nameMap);
   }
 
-  private async resolveCurrentPlayerName(match: MatchRecord | null) {
-    if (!match || !this.currentUserId || !this.turnService) {
-      this.currentPlayerName = null;
+  private async resolvePlayerNames(match: MatchRecord | null) {
+    this.playerNameMap = {};
+    this.currentPlayerName = null;
+    if (!match || !this.turnService) {
       return;
     }
+    const ids = new Set<string>();
+    if (Array.isArray(match.players)) {
+      for (const id of match.players) {
+        if (typeof id === "string" && id.trim().length > 0) {
+          ids.add(id);
+        }
+      }
+    }
+    if (match.playerCharacters) {
+      for (const id of Object.keys(match.playerCharacters)) {
+        if (typeof id === "string" && id.trim().length > 0) {
+          ids.add(id);
+        }
+      }
+    }
+    if (this.currentUserId) {
+      ids.add(this.currentUserId);
+    }
+    if (ids.size === 0) {
+      return;
+    }
+    const list = Array.from(ids);
     try {
-      const map = await this.turnService.resolveUsernames([this.currentUserId]);
-      this.currentPlayerName = map[this.currentUserId] ?? null;
+      const map = await this.turnService.resolveUsernames(list);
+      this.playerNameMap = map;
     } catch (error) {
-      console.warn("resolveCurrentPlayerName failed", error);
-      this.currentPlayerName = null;
+      console.warn("resolvePlayerNames failed", error);
+      const fallback: Record<string, string> = {};
+      for (const id of list) {
+        fallback[id] = id;
+      }
+      this.playerNameMap = fallback;
+    }
+    if (this.currentUserId) {
+      this.currentPlayerName = this.playerNameMap[this.currentUserId] ?? null;
     }
   }
 
