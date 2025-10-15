@@ -35,6 +35,17 @@ export type UpdateMainActionPayload = {
   error?: string;
 };
 
+export type UpdateReadyStatePayload = {
+  ok?: boolean;
+  match_id?: string;
+  ready?: boolean;
+  all_ready?: boolean;
+  turn?: number;
+  readyStates?: Record<string, boolean>;
+  advanced?: boolean;
+  error?: string;
+};
+
 export type GetStatePayload = {
   error?: string;
   match?: MatchRecord;

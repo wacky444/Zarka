@@ -19,6 +19,7 @@ import {
   type GetStatePayload,
   type MatchRecord,
   type UpdateMainActionPayload,
+  type UpdateReadyStatePayload,
 } from "@shared";
 import { buildBoardIconUrl, deriveBoardIconKey } from "../ui/actionIcons";
 
@@ -41,6 +42,8 @@ export class GameScene extends Phaser.Scene {
   private pointerDownInUI = false;
   private mainActionUpdateRunning = false;
   private pendingMainActionSelection: MainActionSelection | undefined;
+  private readyUpdateRunning = false;
+  private pendingReadyState: boolean | undefined;
   private locationSelectionActive = false;
   private locationSelectionPointerId: number | null = null;
   private readonly pointerDownHandler = (pointer: Phaser.Input.Pointer) => {
@@ -112,6 +115,7 @@ export class GameScene extends Phaser.Scene {
       this.beginMainActionLocationPick,
       this
     );
+    this.characterPanel.on("ready-change", this.handleReadyStateChange, this);
 
     this.menuButton = makeButton(this, 0, 0, "☰", () => {
       this.scene.stop("GameScene");
@@ -153,6 +157,7 @@ export class GameScene extends Phaser.Scene {
         this.beginMainActionLocationPick,
         this
       );
+      this.characterPanel?.off("ready-change", this.handleReadyStateChange, this);
       this.cancelMainActionLocationPick();
     });
   }
@@ -555,6 +560,78 @@ export class GameScene extends Phaser.Scene {
         const nextSelection = this.pendingMainActionSelection;
         this.pendingMainActionSelection = undefined;
         void this.handleMainActionSelection(nextSelection);
+      }
+    }
+  }
+
+  private async handleReadyStateChange(ready: boolean) {
+    const matchId = this.registry.get("currentMatchId") as string | null;
+    if (!this.turnService || !this.currentUserId || !matchId) {
+      return;
+    }
+    if (this.readyUpdateRunning) {
+      this.pendingReadyState = ready;
+      return;
+    }
+    this.readyUpdateRunning = true;
+    this.pendingReadyState = undefined;
+    const previous =
+      this.currentMatch?.readyStates?.[this.currentUserId] ?? false;
+    try {
+      const res = await this.turnService.updateReadyState(matchId, ready);
+      const payload = this.parseRpcPayload<UpdateReadyStatePayload>(res);
+      if (payload.error) {
+        throw new Error(payload.error);
+      }
+      if (!this.currentMatch) {
+        const latest = await this.fetchMatchFromServer();
+        if (latest) {
+          this.currentMatch = latest;
+        }
+      }
+      const nextStates = payload.readyStates ?? null;
+      if (this.currentMatch) {
+        if (nextStates) {
+          this.currentMatch.readyStates = nextStates;
+        } else {
+          this.currentMatch.readyStates = this.currentMatch.readyStates ?? {};
+          if (typeof payload.ready === "boolean") {
+            this.currentMatch.readyStates[this.currentUserId] = payload.ready;
+          }
+        }
+        if (typeof payload.turn === "number") {
+          this.currentMatch.current_turn = payload.turn;
+        }
+      }
+      const appliedReady =
+        (nextStates && this.currentUserId
+          ? nextStates[this.currentUserId]
+          : undefined) ?? payload.ready ?? ready;
+      this.characterPanel?.setReadyState(appliedReady, false);
+      if (payload.advanced) {
+        const latest = await this.fetchMatchFromServer();
+        if (latest) {
+          this.currentMatch = latest;
+          this.updateCharacterPanel(latest);
+          this.renderPlayerCharacters(latest);
+        }
+      } else if (this.currentMatch) {
+        this.updateCharacterPanel(this.currentMatch);
+      }
+    } catch (error) {
+      console.warn("update_ready_state failed", error);
+      this.characterPanel?.setReadyState(previous, false);
+      if (this.currentMatch) {
+        this.currentMatch.readyStates = this.currentMatch.readyStates ?? {};
+        this.currentMatch.readyStates[this.currentUserId] = previous;
+      }
+    } finally {
+      this.readyUpdateRunning = false;
+      if (this.pendingReadyState !== undefined) {
+        const next = this.pendingReadyState;
+        this.pendingReadyState = undefined;
+        this.characterPanel?.setReadyState(next, false);
+        void this.handleReadyStateChange(next);
       }
     }
   }

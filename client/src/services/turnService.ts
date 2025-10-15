@@ -80,6 +80,7 @@ export class TurnService {
           this.usernameCache.set(id, username);
         }
       } catch (error) {
+        // It's a bot, is not associated to a nakama user
         console.warn("resolveUsernames: failed to fetch", error);
       }
 
@@ -148,6 +149,14 @@ export class TurnService {
     const res = await this.client.rpc(this.session, "update_main_action", {
       match_id,
       submission,
+    });
+    return res;
+  }
+
+  async updateReadyState(match_id: string, ready: boolean) {
+    const res = await this.client.rpc(this.session, "update_ready_state", {
+      match_id,
+      ready,
     });
     return res;
   }

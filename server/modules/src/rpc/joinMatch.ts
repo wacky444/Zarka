@@ -60,6 +60,11 @@ export function joinMatchRpc(
   let joinedNow = false;
   let shouldWrite = false;
 
+  if (!match.readyStates) {
+    match.readyStates = {};
+    shouldWrite = true;
+  }
+
   if (ensureAllPlayerCharacters(match)) {
     shouldWrite = true;
   }
@@ -92,6 +97,12 @@ export function joinMatchRpc(
       ensurePlayerCharacter(match, ctx.userId);
       shouldWrite = true;
     }
+    match.readyStates[ctx.userId] = false;
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(match.readyStates, ctx.userId)) {
+    match.readyStates[ctx.userId] = false;
+    shouldWrite = true;
   }
 
   if (shouldWrite) {

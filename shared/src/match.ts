@@ -5,6 +5,7 @@ export interface MatchRecord {
   match_id: string;
   players: string[];
   playerCharacters: Record<string, PlayerCharacter>;
+  readyStates?: Record<string, boolean>;
   size: number;
   cols?: number;
   rows?: number;

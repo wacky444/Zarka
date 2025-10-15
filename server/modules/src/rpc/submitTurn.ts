@@ -5,6 +5,8 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { MatchRecord, TurnRecord } from "../models/types";
 
+// Maybe we don't need this, we just update the state and mark ready
+// The turn will advance when all players are ready
 export function submitTurnRpc(
   ctx: nkruntime.Context,
   logger: nkruntime.Logger,
@@ -57,6 +59,13 @@ export function submitTurnRpc(
   }
 
   match.current_turn = (match.current_turn || 0) + 1;
+
+  if (!match.readyStates) {
+    match.readyStates = {};
+  }
+  for (const playerId of match.players) {
+    match.readyStates[playerId] = false;
+  }
 
   const turnRecord: TurnRecord = {
     match_id: matchId,

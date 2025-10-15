@@ -48,6 +48,12 @@ export function leaveMatchRpc(
 
   if (wasInMatch) {
     match.players.splice(idx, 1);
+    if (
+      match.readyStates &&
+      Object.prototype.hasOwnProperty.call(match.readyStates, ctx.userId)
+    ) {
+      delete match.readyStates[ctx.userId];
+    }
     try {
       storage.writeMatch(match, read.version);
     } catch (e) {

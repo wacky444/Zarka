@@ -89,6 +89,7 @@ export function createMatchRpc(
     match_id: matchId,
     players: [],
     playerCharacters: {},
+    readyStates: {},
     size,
     cols: DEFAULT_MAP_COLS,
     rows: DEFAULT_MAP_ROWS,

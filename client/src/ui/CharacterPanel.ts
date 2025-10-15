@@ -42,6 +42,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private energyLabel: Phaser.GameObjects.Text;
   private healthBar: ProgressBar;
   private energyBar: ProgressBar;
+  private readyToggle!: Phaser.GameObjects.Text;
   private mainActionBox: Phaser.GameObjects.Rectangle;
   private secondaryActionBox: Phaser.GameObjects.Rectangle;
   private mainActionLabel: Phaser.GameObjects.Text;
@@ -56,6 +57,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private mainActionSelection: string | null = null;
   private mainActionTarget: Axial | null = null;
   private lastMainActionItem: GridSelectItem | null = null;
+  private readyState = false;
+  private readyEnabled = false;
   private readonly handleMainActionSelection = (actionId: string | null) => {
     this.mainActionSelection = actionId ?? null;
     this.lastMainActionItem = this.mainActionDropdown.getSelectedItem() ?? null;
@@ -73,6 +76,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   };
   private readonly handleLocationClear = () => {
     this.setMainActionTarget(null, true);
+  };
+  private readonly handleReadyToggle = () => {
+    if (!this.readyEnabled) {
+      return;
+    }
+    this.setReadyState(!this.readyState, true);
   };
 
   constructor(
@@ -162,6 +171,17 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       barColor: 0xfacc15,
     });
     this.add(this.energyBar);
+    const readyY = contentTop + 80;
+    this.readyToggle = scene.add
+      .text(barX, readyY, "[ ] Ready", {
+        fontSize: "15px",
+        color: "#ffffff",
+      })
+      .setOrigin(0, 0);
+    this.readyToggle.setInteractive({ useHandCursor: true });
+    this.readyToggle.on("pointerup", this.handleReadyToggle);
+    this.add(this.readyToggle);
+    this.setReadyEnabled(false);
     const mainBoxY = this.nameText.y + this.nameText.height + 12;
     const boxWidth = width - MARGIN * 2;
     this.mainActionBox = scene.add
@@ -229,6 +249,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.mainActionDropdown.off("change", this.handleMainActionSelection);
     this.locationSelector.off("pick-request", this.handleLocationPickRequest);
     this.locationSelector.off("clear-request", this.handleLocationClear);
+     this.readyToggle?.off("pointerup", this.handleReadyToggle);
     super.destroy(fromScene);
   }
 
@@ -257,6 +278,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.energyBar.setPosition(barX, contentTop + 46);
     this.healthBar.resize(this.barWidth, BAR_HEIGHT);
     this.energyBar.resize(this.barWidth, BAR_HEIGHT);
+    if (this.readyToggle) {
+      this.readyToggle.setPosition(barX, contentTop + 80);
+    }
   }
 
   getPanelWidth() {
@@ -269,18 +293,20 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     usernames?: Record<string, string>
   ) {
     if (!match || !currentUserId) {
-      this.applyCharacter(null, null);
+      this.applyCharacter(null, null, false);
       return;
     }
     const characters = match.playerCharacters ?? {};
     const character = characters[currentUserId] ?? null;
     const name = usernames?.[currentUserId] ?? null;
-    this.applyCharacter(character, name);
+    const ready = match.readyStates?.[currentUserId] ?? false;
+    this.applyCharacter(character, name, ready);
   }
 
   private applyCharacter(
     character: PlayerCharacter | null,
-    playerName: string | null
+    playerName: string | null,
+    ready: boolean
   ) {
     if (!character) {
       this.nameText.setText("No character");
@@ -290,6 +316,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.setMainActionTarget(null, false);
       this.setLocationSelectionPending(false);
       this.secondaryActionText.setText("None selected");
+      this.setReadyEnabled(false);
+      this.setReadyState(false, false);
       return;
     }
     this.nameText.setText(playerName ?? character.name);
@@ -313,11 +341,44 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.secondaryActionText.setText(
       this.resolveSecondaryActionLabel(secondaryId)
     );
+    this.setReadyEnabled(true);
+    this.setReadyState(ready, false);
   }
 
   private useBarValue(bar: ProgressBar, ratio: number) {
     const clamped = Phaser.Math.Clamp(ratio, 0, 1);
     bar.setValue(clamped);
+  }
+
+  setReadyState(ready: boolean, emit = false): boolean {
+    const normalized = !!ready;
+    const changed = this.readyState !== normalized;
+    this.readyState = normalized;
+    if (this.readyToggle) {
+      this.readyToggle.setText(normalized ? "[x] Ready" : "[ ] Ready");
+    }
+    if (emit && changed) {
+      this.emit("ready-change", normalized);
+    }
+    return changed;
+  }
+
+  getReadyState(): boolean {
+    return this.readyState;
+  }
+
+  private setReadyEnabled(enabled: boolean) {
+    this.readyEnabled = enabled;
+    if (!this.readyToggle) {
+      return;
+    }
+    if (enabled) {
+      this.readyToggle.setAlpha(1);
+      this.readyToggle.setInteractive({ useHandCursor: true });
+    } else {
+      this.readyToggle.setAlpha(0.5);
+      this.readyToggle.disableInteractive();
+    }
   }
 
   private applyMainActions(actions: ActionId[], preferredId: string | null) {
