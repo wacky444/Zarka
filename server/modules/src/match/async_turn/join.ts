@@ -1,8 +1,8 @@
 /// <reference path="../../../node_modules/nakama-runtime/index.d.ts" />
 
-import { OPCODE_SETTINGS_UPDATE } from "../../constants";
 import { AsyncTurnState } from "../../models/types";
 import { buildMatchLabel } from "../../utils/label";
+import { OPCODE_SETTINGS_UPDATE } from "@shared";
 
 export const asyncTurnMatchJoin: nkruntime.MatchJoinFunction<AsyncTurnState> =
   function (ctx, logger, nk, dispatcher, tick, state, presences) {

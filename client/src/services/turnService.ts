@@ -1,6 +1,13 @@
 import { Client, Session, Socket } from "@heroiclabs/nakama-js";
 import { getEnv } from "./nakama";
-import type { InMatchSettings, ActionSubmission } from "@shared";
+import {
+  OPCODE_MATCH_REMOVED,
+  OPCODE_SETTINGS_UPDATE,
+  OPCODE_TURN_ADVANCED,
+  type InMatchSettings,
+  type ActionSubmission,
+  type TurnAdvancedMessagePayload,
+} from "@shared";
 
 export type Move = { n: number; ts: number };
 
@@ -25,6 +32,7 @@ export class TurnService {
     players?: string[];
   }) => void;
   private onMatchRemoved?: () => void;
+  private onTurnAdvanced?: (payload: TurnAdvancedMessagePayload) => void;
   private usernameCache = new Map<string, string>();
 
   constructor(private client: Client, private session: Session) {}
@@ -190,7 +198,7 @@ export class TurnService {
       this.socket = this.client.createSocket(useSSL, false);
       // Listen for match data packets (settings updates, etc.)
       this.socket.onmatchdata = (m) => {
-        if (m.op_code === 100) {
+        if (m.op_code === OPCODE_SETTINGS_UPDATE) {
           try {
             const payload = JSON.parse(new TextDecoder().decode(m.data)) as {
               size?: number;
@@ -207,7 +215,7 @@ export class TurnService {
           } catch (e) {
             console.warn("Failed to parse settings update", e);
           }
-        } else if (m.op_code === 101) {
+        } else if (m.op_code === OPCODE_MATCH_REMOVED) {
           try {
             const payload = JSON.parse(new TextDecoder().decode(m.data)) as {
               match_removed?: boolean;
@@ -217,6 +225,17 @@ export class TurnService {
             }
           } catch (e) {
             console.warn("Failed to parse match removed message", e);
+          }
+        } else if (m.op_code === OPCODE_TURN_ADVANCED) {
+          try {
+            const payload = JSON.parse(
+              new TextDecoder().decode(m.data)
+            ) as TurnAdvancedMessagePayload;
+            if (this.onTurnAdvanced) {
+              this.onTurnAdvanced(payload);
+            }
+          } catch (e) {
+            console.warn("Failed to parse turn advanced message", e);
           }
         }
       };
@@ -281,6 +300,10 @@ export class TurnService {
     this.onMatchRemoved = cb;
   }
 
+  setOnTurnAdvanced(cb?: (payload: TurnAdvancedMessagePayload) => void) {
+    this.onTurnAdvanced = cb;
+  }
+
   // Optionally allow callers to pre-connect the socket
   async connectSocket(): Promise<void> {
     await this.ensureSocketConnected();
@@ -298,6 +321,7 @@ export class TurnService {
     }
     this.onSettingsUpdate = undefined;
     this.onMatchRemoved = undefined;
+    this.onTurnAdvanced = undefined;
   }
 
   // Getters for client and session (used in MainScene)

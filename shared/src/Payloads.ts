@@ -1,5 +1,10 @@
 import type { MatchRecord, TurnRecord } from "./match";
 import type { GameMap, Axial } from "./hexTile";
+import type { PlayerCharacter } from "./playerCharacter";
+
+export const OPCODE_SETTINGS_UPDATE = 100;
+export const OPCODE_MATCH_REMOVED = 101;
+export const OPCODE_TURN_ADVANCED = 102;
 
 export type CreateMatchPayload = {
   match_id: string;
@@ -43,6 +48,7 @@ export type UpdateReadyStatePayload = {
   turn?: number;
   readyStates?: Record<string, boolean>;
   advanced?: boolean;
+  playerCharacters?: Record<string, PlayerCharacter>;
   error?: string;
 };
 
@@ -110,4 +116,12 @@ export type RemoveMatchPayload = {
   ok?: boolean;
   match_id?: string;
   error?: string;
+};
+
+export type TurnAdvancedMessagePayload = {
+  match_id: string;
+  turn: number;
+  readyStates?: Record<string, boolean>;
+  playerCharacters?: Record<string, PlayerCharacter>;
+  advanced?: boolean;
 };

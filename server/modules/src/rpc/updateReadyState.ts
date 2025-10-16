@@ -4,6 +4,7 @@ import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { MatchRecord } from "../models/types";
+import { advanceTurn } from "../match/advanceTurn";
 
 export function updateReadyStateRpc(
   ctx: nkruntime.Context,
@@ -51,8 +52,7 @@ export function updateReadyStateRpc(
   ) {
     throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
   }
-
-  match.readyStates = match.readyStates ?? {};
+  turn: match.current_turn, (match.readyStates = match.readyStates ?? {});
   match.readyStates[ctx.userId] = ready;
 
   let advanced = false;
@@ -65,6 +65,7 @@ export function updateReadyStateRpc(
     );
 
   if (allReady) {
+    advanceTurn(match);
     match.current_turn = (match.current_turn || 0) + 1;
     const resetStates: Record<string, boolean> = {};
     for (const playerId of players) {
@@ -90,7 +91,10 @@ export function updateReadyStateRpc(
         matchId,
         JSON.stringify({
           type: "turn_advanced",
+          match_id: matchId,
           current_turn: match.current_turn,
+          readyStates: match.readyStates,
+          playerCharacters: match.playerCharacters,
         })
       );
     } catch (e) {
@@ -109,6 +113,7 @@ export function updateReadyStateRpc(
     turn: match.current_turn,
     readyStates: match.readyStates,
     advanced,
+    playerCharacters: match.playerCharacters,
   };
 
   return JSON.stringify(response);

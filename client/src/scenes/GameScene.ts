@@ -20,6 +20,7 @@ import {
   type MatchRecord,
   type UpdateMainActionPayload,
   type UpdateReadyStatePayload,
+  type TurnAdvancedMessagePayload,
 } from "@shared";
 import { buildBoardIconUrl, deriveBoardIconKey } from "../ui/actionIcons";
 
@@ -46,6 +47,11 @@ export class GameScene extends Phaser.Scene {
   private pendingReadyState: boolean | undefined;
   private locationSelectionActive = false;
   private locationSelectionPointerId: number | null = null;
+  private readonly turnAdvancedHandler = (
+    payload: TurnAdvancedMessagePayload
+  ) => {
+    this.handleTurnAdvancedUpdate(payload);
+  };
   private readonly pointerDownHandler = (pointer: Phaser.Input.Pointer) => {
     const overUI = this.isPointerOverUI(pointer);
     this.pointerDownInUI = overUI;
@@ -102,6 +108,9 @@ export class GameScene extends Phaser.Scene {
     this.uiCam.setZoom(1);
     this.turnService = this.registry.get("turnService") as TurnService | null;
     this.currentUserId = this.registry.get("currentUserId") as string | null;
+    if (this.turnService) {
+      this.turnService.setOnTurnAdvanced(this.turnAdvancedHandler);
+    }
 
     this.characterPanel = new CharacterPanel(this, 0, 0);
     this.cam.ignore(this.characterPanel);
@@ -157,8 +166,15 @@ export class GameScene extends Phaser.Scene {
         this.beginMainActionLocationPick,
         this
       );
-      this.characterPanel?.off("ready-change", this.handleReadyStateChange, this);
+      this.characterPanel?.off(
+        "ready-change",
+        this.handleReadyStateChange,
+        this
+      );
       this.cancelMainActionLocationPick();
+      if (this.turnService) {
+        this.turnService.setOnTurnAdvanced();
+      }
     });
   }
 
@@ -583,12 +599,6 @@ export class GameScene extends Phaser.Scene {
       if (payload.error) {
         throw new Error(payload.error);
       }
-      if (!this.currentMatch) {
-        const latest = await this.fetchMatchFromServer();
-        if (latest) {
-          this.currentMatch = latest;
-        }
-      }
       const nextStates = payload.readyStates ?? null;
       if (this.currentMatch) {
         if (nextStates) {
@@ -602,20 +612,19 @@ export class GameScene extends Phaser.Scene {
         if (typeof payload.turn === "number") {
           this.currentMatch.current_turn = payload.turn;
         }
+        if (payload.playerCharacters) {
+          this.currentMatch.playerCharacters = payload.playerCharacters;
+          this.renderPlayerCharacters(this.currentMatch);
+        }
       }
       const appliedReady =
         (nextStates && this.currentUserId
           ? nextStates[this.currentUserId]
-          : undefined) ?? payload.ready ?? ready;
+          : undefined) ??
+        payload.ready ??
+        ready;
       this.characterPanel?.setReadyState(appliedReady, false);
-      if (payload.advanced) {
-        const latest = await this.fetchMatchFromServer();
-        if (latest) {
-          this.currentMatch = latest;
-          this.updateCharacterPanel(latest);
-          this.renderPlayerCharacters(latest);
-        }
-      } else if (this.currentMatch) {
+      if (this.currentMatch) {
         this.updateCharacterPanel(this.currentMatch);
       }
     } catch (error) {
@@ -634,6 +643,31 @@ export class GameScene extends Phaser.Scene {
         void this.handleReadyStateChange(next);
       }
     }
+  }
+
+  private handleTurnAdvancedUpdate(payload: TurnAdvancedMessagePayload) {
+    if (!payload || typeof payload.match_id !== "string") {
+      return;
+    }
+    const matchId = this.registry.get("currentMatchId") as string | null;
+    if (!matchId || payload.match_id !== matchId) {
+      return;
+    }
+    const match = this.currentMatch;
+    if (!match) {
+      return;
+    }
+    if (typeof payload.turn === "number") {
+      match.current_turn = payload.turn;
+    }
+    if (payload.readyStates) {
+      match.readyStates = payload.readyStates;
+    }
+    if (payload.playerCharacters) {
+      match.playerCharacters = payload.playerCharacters;
+      this.renderPlayerCharacters(match);
+    }
+    this.updateCharacterPanel(match);
   }
 
   private beginMainActionLocationPick() {

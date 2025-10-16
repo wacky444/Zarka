@@ -113,6 +113,8 @@ export interface ActionDefinition {
   cooldown: number;
   texture: string;
   frame: string;
+  actionOrder: number;
+  actionSubOrder: number;
   experience?: ActionExperienceReward;
   requirements?: ActionRequirement[];
   extraExecution?: ActionExtraExecution;

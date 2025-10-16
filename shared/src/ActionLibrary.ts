@@ -9,6 +9,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     texture: "Board Game Icons",
     frame: "fire.png",
+    actionOrder: 0,
+    actionSubOrder: 0,
     requirements: [
       { description: "Consume 2 combustibles.", consumesResource: true },
     ],
@@ -32,6 +34,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     texture: "Board Game Icons",
     frame: "suit_hearts.png",
+    actionOrder: 1,
+    actionSubOrder: 0,
     requirements: [{ description: "Debe realizarse en el hospital." }],
     effects: [{ description: "Recupera 5 puntos de vida." }],
     tags: ["Support", "Status"],
@@ -44,6 +48,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     texture: "Board Game Icons",
     frame: "resource_apple.png",
+    actionOrder: 1,
+    actionSubOrder: 1,
     requirements: [
       {
         description:
@@ -79,6 +85,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     texture: "Board Game Icons",
     frame: "resource_apple.png",
+    actionOrder: 1,
+    actionSubOrder: 2,
     requirements: [{ description: "Debe realizarse en el restaurante." }],
     effects: [
       {
@@ -96,6 +104,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     texture: "Board Game Icons",
     frame: "pouch_add.png",
+    actionOrder: 1,
+    actionSubOrder: 3,
     requirements: [
       {
         description: "Requiere tener una venda disponible.",
@@ -123,6 +133,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     texture: "Board Game Icons",
     frame: "flask_full.png",
+    actionOrder: 1,
+    actionSubOrder: 4,
     requirements: [
       { description: "Requiere tener un medicamento.", consumesResource: true },
     ],
@@ -156,6 +168,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     texture: "Board Game Icons",
     frame: "book_open.png",
+    actionOrder: 2,
+    actionSubOrder: 0,
     tags: ["Utility", "Support"],
   },
   place_tracker: {
@@ -182,6 +196,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "token.png",
+    actionOrder: 2,
+    actionSubOrder: 1,
     tags: ["Recon", "Utility", "Ranged"],
   },
   place_c4: {
@@ -208,6 +224,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "exploding.png",
+    actionOrder: 2,
+    actionSubOrder: 2,
     tags: ["Attack", "Area", "Logistics"],
   },
   place_trap: {
@@ -231,6 +249,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "puzzle.png",
+    actionOrder: 2,
+    actionSubOrder: 3,
     tags: ["Attack", "Logistics"],
   },
   protect: {
@@ -251,6 +271,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     texture: "Board Game Icons",
     frame: "shield.png",
+    actionOrder: 3,
+    actionSubOrder: 0,
     tags: ["Support", "Status"],
   },
   dodge: {
@@ -275,6 +297,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "pawn_skip.png",
+    actionOrder: 3,
+    actionSubOrder: 1,
     tags: ["Support", "Status"],
   },
   knife_attack: {
@@ -299,6 +323,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "hand_cross.png",
+    actionOrder: 4,
+    actionSubOrder: 0,
     tags: ["Attack"],
   },
   move: {
@@ -316,6 +342,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "arrow_right.png",
+    actionOrder: 5,
+    actionSubOrder: 0,
     tags: ["Movement", "Ranged"],
   },
   refuel: {
@@ -328,6 +356,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [{ description: "Obtiene 3 unidades de combustible." }],
     texture: "Board Game Icons",
     frame: "tokens.png",
+    actionOrder: 6,
+    actionSubOrder: 0,
     tags: ["Logistics", "Economy"],
   },
   pick_up: {
@@ -345,6 +375,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "hand_token.png",
+    actionOrder: 6,
+    actionSubOrder: 1,
     tags: ["Logistics"],
   },
   search: {
@@ -361,6 +393,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "cards_seek.png",
+    actionOrder: 6,
+    actionSubOrder: 2,
     tags: ["Recon", "Logistics"],
   },
   manipulate: {
@@ -378,6 +412,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "card_flip.png",
+    actionOrder: 6,
+    actionSubOrder: 3,
     tags: ["Crafting"],
   },
   give: {
@@ -395,6 +431,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "token_give.png",
+    actionOrder: 6,
+    actionSubOrder: 4,
     tags: ["Support", "Logistics"],
   },
   poison_food: {
@@ -429,6 +467,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     texture: "Board Game Icons",
     frame: "skull.png",
+    actionOrder: 7,
+    actionSubOrder: 0,
     tags: ["Attack", "Status"],
   },
   drop: {
@@ -451,6 +491,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "token_remove.png",
+    actionOrder: 8,
+    actionSubOrder: 0,
     tags: ["Logistics"],
   },
   throw_object: {
@@ -480,6 +522,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "hand.png",
+    actionOrder: 8,
+    actionSubOrder: 1,
     tags: ["Attack", "Area", "Ranged"],
   },
   use_chemical_weapon: {
@@ -506,6 +550,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     texture: "Board Game Icons",
     frame: "flask_full.png",
+    actionOrder: 9,
+    actionSubOrder: 0,
     tags: ["Attack", "Area"],
   },
   scare: {
@@ -528,6 +574,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "flag_triangle.png",
+    actionOrder: 10,
+    actionSubOrder: 0,
     tags: ["Attack", "Utility", "Ranged"],
   },
   detonate_c4: {
@@ -551,6 +599,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "exploding_6.png",
+    actionOrder: 11,
+    actionSubOrder: 0,
     tags: ["Attack", "Area"],
   },
   axe_attack: {
@@ -575,6 +625,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "sword.png",
+    actionOrder: 11,
+    actionSubOrder: 1,
     tags: ["Attack"],
   },
   bat_attack: {
@@ -604,6 +656,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "sword.png",
+    actionOrder: 11,
+    actionSubOrder: 2,
     tags: ["Attack", "Area"],
   },
   chainsaw_attack: {
@@ -627,6 +681,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [{ description: "Elimina de inmediato al objetivo." }],
     texture: "Board Game Icons",
     frame: "sword.png",
+    actionOrder: 11,
+    actionSubOrder: 4,
     tags: ["Attack"],
   },
   start_chainsaw: {
@@ -649,6 +705,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     texture: "Board Game Icons",
     frame: "spinner.png",
+    actionOrder: 11,
+    actionSubOrder: 3,
     tags: ["Logistics"],
   },
   shoot_pistol: {
@@ -680,6 +738,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "dice_sword.png",
+    actionOrder: 11,
+    actionSubOrder: 5,
     tags: ["Attack", "Ranged"],
   },
   shoot_harpoon: {
@@ -711,6 +771,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "bow.png",
+    actionOrder: 11,
+    actionSubOrder: 6,
     tags: ["Attack", "Ranged"],
   },
   fire_rocket_launcher: {
@@ -737,6 +799,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     texture: "Board Game Icons",
     frame: "exploding.png",
+    actionOrder: 11,
+    actionSubOrder: 7,
     tags: ["Attack", "Area", "Ranged"],
   },
   punch: {
@@ -760,6 +824,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "hand.png",
+    actionOrder: 11,
+    actionSubOrder: 8,
     tags: ["Attack"],
   },
   pick_lock: {
@@ -782,6 +848,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     notes: ["Ganzúas o la habilidad Destreza 1 reducen el tiempo requerido."],
     texture: "Board Game Icons",
     frame: "lock_open.png",
+    actionOrder: 12,
+    actionSubOrder: 0,
     tags: ["Logistics", "Recon"],
   },
   steal: {
@@ -807,6 +875,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "pouch_remove.png",
+    actionOrder: 13,
+    actionSubOrder: 0,
     tags: ["Attack", "Economy"],
   },
   fabricate: {
@@ -829,6 +899,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     texture: "Board Game Icons",
     frame: "cards_stack.png",
+    actionOrder: 14,
+    actionSubOrder: 0,
     tags: ["Crafting", "Logistics"],
   },
   black_market_trade: {
@@ -846,6 +918,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     texture: "Board Game Icons",
     frame: "dollar.png",
+    actionOrder: 14,
+    actionSubOrder: 1,
     tags: ["Economy", "Logistics"],
   },
   inspect: {
@@ -867,6 +941,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "notepad.png",
+    actionOrder: 14,
+    actionSubOrder: 2,
     tags: ["Recon", "Logistics"],
   },
   focus: {
@@ -892,6 +968,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     texture: "Board Game Icons",
     frame: "hourglass.png",
+    actionOrder: 15,
+    actionSubOrder: 0,
     tags: ["Support", "Status"],
   },
   train: {
@@ -908,6 +986,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "award.png",
+    actionOrder: 15,
+    actionSubOrder: 1,
     tags: ["Support", "Status"],
   },
   activate_cameras: {
@@ -925,6 +1005,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     texture: "Board Game Icons",
     frame: "hand_token_open.png",
+    actionOrder: 16,
+    actionSubOrder: 0,
     tags: ["Recon", "Utility"],
   },
   look_through_window: {
@@ -942,6 +1024,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     texture: "Board Game Icons",
     frame: "hexagon_question.png",
+    actionOrder: 16,
+    actionSubOrder: 1,
     tags: ["Recon", "Ranged"],
   },
   use_binoculars: {
@@ -964,6 +1048,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "card_target.png",
+    actionOrder: 16,
+    actionSubOrder: 2,
     tags: ["Recon", "Ranged"],
   },
   detect: {
@@ -984,6 +1070,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "hexagon_tile.png",
+    actionOrder: 16,
+    actionSubOrder: 3,
     tags: ["Recon"],
   },
   use_antidote: {
@@ -1007,6 +1095,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "flask_half.png",
+    actionOrder: 17,
+    actionSubOrder: 0,
     tags: ["Support", "Status"],
   },
   inject_virus: {
@@ -1029,6 +1119,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     texture: "Board Game Icons",
     frame: "flask_full.png",
+    actionOrder: 17,
+    actionSubOrder: 1,
     tags: ["Attack", "Area", "Status"],
   },
   inject_vaccine: {
@@ -1048,6 +1140,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     texture: "Board Game Icons",
     frame: "flask_half.png",
+    actionOrder: 17,
+    actionSubOrder: 2,
     tags: ["Support", "Status"],
   },
   sleep: {
@@ -1071,6 +1165,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     texture: "Board Game Icons",
     frame: "pawn_table.png",
+    actionOrder: 17,
+    actionSubOrder: 3,
     tags: ["Support", "Status"],
   },
 };
