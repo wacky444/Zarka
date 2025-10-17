@@ -16,6 +16,11 @@ export interface MatchStorageObject {
   version: string;
 }
 
+export interface ReplayStorageObject {
+  key: string;
+  replay: ReplayRecord;
+}
+
 export function createStorageService(nk: nkruntime.Nakama): StorageService {
   return new StorageService(createNakamaWrapper(nk));
 }
@@ -107,6 +112,57 @@ export class StorageService {
         value: replay,
         permissionRead: 2,
         permissionWrite: 0,
+      },
+    ]);
+  }
+
+  listReplaysForMatch(matchId: string): ReplayStorageObject[] {
+    const items: ReplayStorageObject[] = [];
+    let cursor = "";
+    let hasMore = true;
+
+    while (hasMore) {
+      const response = this.nk.storageList(
+        SERVER_USER_ID,
+        REPLAY_COLLECTION,
+        100,
+        cursor
+      );
+
+      const objects = response?.objects ?? [];
+      if (!objects.length) {
+        break;
+      }
+
+      for (const obj of objects) {
+        if (!obj || !obj.key || !obj.value) {
+          continue;
+        }
+        const suffix = `:${matchId}`;
+        if (
+          obj.key.length >= suffix.length &&
+          obj.key.slice(obj.key.length - suffix.length) === suffix
+        ) {
+          items.push({
+            key: obj.key,
+            replay: obj.value as ReplayRecord,
+          });
+        }
+      }
+
+      cursor = response?.cursor ?? "";
+      hasMore = !!cursor;
+    }
+
+    return items;
+  }
+
+  deleteReplayByKey(key: string): void {
+    this.nk.storageDelete([
+      {
+        collection: REPLAY_COLLECTION,
+        key,
+        userId: SERVER_USER_ID,
       },
     ]);
   }

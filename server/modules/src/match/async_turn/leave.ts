@@ -50,9 +50,5 @@ export const asyncTurnMatchLeave: nkruntime.MatchLeaveFunction<AsyncTurnState> =
       );
     } catch {}
 
-    if (playerCount === 0) {
-      return null;
-    }
-
     return { state };
   };

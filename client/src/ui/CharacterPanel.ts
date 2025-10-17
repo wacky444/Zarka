@@ -13,7 +13,7 @@ import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
 import { ProgressBar } from "./ProgressBar";
 import { LocationSelector } from "./LocationSelector";
 
-const DEFAULT_WIDTH = 320;
+const DEFAULT_WIDTH = 420;
 const TAB_HEIGHT = 40;
 const MARGIN = 16;
 const PORTRAIT_SIZE = 96;
@@ -249,7 +249,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.mainActionDropdown.off("change", this.handleMainActionSelection);
     this.locationSelector.off("pick-request", this.handleLocationPickRequest);
     this.locationSelector.off("clear-request", this.handleLocationClear);
-     this.readyToggle?.off("pointerup", this.handleReadyToggle);
+    this.readyToggle?.off("pointerup", this.handleReadyToggle);
     super.destroy(fromScene);
   }
 

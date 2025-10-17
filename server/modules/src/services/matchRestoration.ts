@@ -1,7 +1,7 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import { MATCH_COLLECTION, SERVER_USER_ID } from "../constants";
 import { MatchRecord } from "../models/types";
+import type { ReplayRecord } from "@shared";
 import { createNakamaWrapper } from "./nakamaWrapper";
 import { StorageService } from "./storageService";
 
@@ -107,6 +107,27 @@ export function restoreMatchesFromStorage(
             newMatchId,
             (writeError as Error).message || String(writeError)
           );
+        }
+
+        const replayEntries = storage.listReplaysForMatch(oldMatchId);
+        if (replayEntries.length > 0) {
+          for (const entry of replayEntries) {
+            const updatedReplay: ReplayRecord = {
+              ...entry.replay,
+              match_id: newMatchId,
+            };
+            try {
+              storage.appendReplayTurn(updatedReplay);
+              storage.deleteReplayByKey(entry.key);
+            } catch (replayError) {
+              logger.warn(
+                "Failed to migrate replay turn %s for %s: %s",
+                entry.key,
+                newMatchId,
+                (replayError as Error).message || String(replayError)
+              );
+            }
+          }
         }
 
         restoredCount++;
