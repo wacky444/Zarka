@@ -3,10 +3,12 @@
 import {
   MATCH_COLLECTION,
   MATCH_KEY_PREFIX,
+  REPLAY_COLLECTION,
   SERVER_USER_ID,
   TURN_COLLECTION,
 } from "../constants";
 import { MatchRecord, TurnRecord } from "../models/types";
+import type { ReplayRecord } from "@shared";
 import { NakamaWrapper, createNakamaWrapper } from "./nakamaWrapper";
 
 export interface MatchStorageObject {
@@ -96,6 +98,19 @@ export class StorageService {
     ]);
   }
 
+  appendReplayTurn(replay: ReplayRecord): void {
+    this.nk.storageWrite([
+      {
+        collection: REPLAY_COLLECTION,
+        key: this.getReplayKey(replay.match_id, replay.turn),
+        userId: SERVER_USER_ID,
+        value: replay,
+        permissionRead: 2,
+        permissionWrite: 0,
+      },
+    ]);
+  }
+
   readTurns(matchId: string, start: number, end: number): TurnRecord[] {
     const turnReads: nkruntime.StorageReadRequest[] = [];
     for (let i = start; i <= end; i += 1) {
@@ -148,6 +163,10 @@ export class StorageService {
   }
 
   private getTurnKey(matchId: string, turnNumber: number): string {
+    return `${turnNumber}:${matchId}`;
+  }
+
+  private getReplayKey(matchId: string, turnNumber: number): string {
     return `${turnNumber}:${matchId}`;
   }
 }

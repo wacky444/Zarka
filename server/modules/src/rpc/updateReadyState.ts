@@ -52,7 +52,7 @@ export function updateReadyStateRpc(
   ) {
     throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
   }
-  turn: match.current_turn, (match.readyStates = match.readyStates ?? {});
+  match.readyStates = match.readyStates ?? {};
   match.readyStates[ctx.userId] = ready;
 
   let advanced = false;
@@ -64,9 +64,13 @@ export function updateReadyStateRpc(
         match.readyStates !== undefined && match.readyStates[playerId] === true
     );
 
+  let advanceResult: ReturnType<typeof advanceTurn> | null = null;
+  let resolvedTurnNumber: number | null = null;
+
   if (allReady) {
-    advanceTurn(match);
-    match.current_turn = (match.current_turn || 0) + 1;
+    resolvedTurnNumber = (match.current_turn || 0) + 1;
+    advanceResult = advanceTurn(match);
+    match.current_turn = resolvedTurnNumber;
     const resetStates: Record<string, boolean> = {};
     for (const playerId of players) {
       resetStates[playerId] = false;
@@ -83,6 +87,27 @@ export function updateReadyStateRpc(
       (e as Error).message
     );
     throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
+  }
+
+  if (
+    advanced &&
+    advanceResult &&
+    advanceResult.events.length > 0 &&
+    resolvedTurnNumber !== null
+  ) {
+    try {
+      storage.appendReplayTurn({
+        match_id: matchId,
+        turn: resolvedTurnNumber,
+        events: advanceResult.events,
+        created_at: Math.floor(Date.now() / 1000),
+      });
+    } catch (e) {
+      logger.warn(
+        "update_ready_state replay write failed: %s",
+        (e as Error).message
+      );
+    }
   }
 
   if (advanced) {

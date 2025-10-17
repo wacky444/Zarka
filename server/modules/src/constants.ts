@@ -1,5 +1,6 @@
 export const MATCH_COLLECTION = "async_turn_matches";
 export const TURN_COLLECTION = "async_turn_turns";
+export const REPLAY_COLLECTION = "async_turn_replays";
 export const MATCH_KEY_PREFIX = "match_";
 export const SERVER_USER_ID = "00000000-0000-0000-0000-000000000000";
 

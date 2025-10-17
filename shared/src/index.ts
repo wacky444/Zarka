@@ -7,3 +7,4 @@ export * from "./cellLibrary";
 export * from "./playerCharacter";
 export * from "./Action";
 export * from "./ActionLibrary";
+export * from "./Replay";

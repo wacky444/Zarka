@@ -1,6 +1,7 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import { ActionLibrary, type ActionDefinition } from "@shared";
+import { ActionLibrary } from "@shared";
+import type { ActionDefinition, ReplayEvent } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { executeMoveAction, type MoveParticipant } from "./actions/move";
 
@@ -19,19 +20,24 @@ function sortedActions(): ActionDefinition[] {
   return items;
 }
 
-export function advanceTurn(match: MatchRecord) {
+export interface AdvanceTurnResult {
+  events: ReplayEvent[];
+}
+
+export function advanceTurn(match: MatchRecord): AdvanceTurnResult {
   if (!Array.isArray(match.players) || !match.playerCharacters) {
-    return;
+    return { events: [] };
   }
   const players = match.players.filter(
     (playerId) => !!match.playerCharacters?.[playerId]
   );
   if (players.length === 0) {
-    return;
+    return { events: [] };
   }
   const actions = sortedActions();
+  const replayEvents: ReplayEvent[] = [];
   for (const action of actions) {
-    if (action.id !== "move") {
+    if (action.id !== ActionLibrary.move.id) {
       continue;
     }
     const participants: MoveParticipant[] = [];
@@ -52,6 +58,10 @@ export function advanceTurn(match: MatchRecord) {
     if (participants.length === 0) {
       continue;
     }
-    executeMoveAction(participants, match);
+    const moveEvents = executeMoveAction(participants, match);
+    if (moveEvents.length) {
+      replayEvents.push(...moveEvents);
+    }
   }
+  return { events: replayEvents };
 }

@@ -1,7 +1,13 @@
 /// <reference path="../../../node_modules/nakama-runtime/index.d.ts" />
 
 import type { MatchRecord } from "../../models/types";
-import type { PlayerCharacter, PlayerPlannedAction } from "@shared";
+import type {
+  ActionId,
+  PlayerCharacter,
+  PlayerPlannedAction,
+  ReplayActionDone,
+  ReplayPlayerEvent,
+} from "@shared";
 
 export interface MoveParticipant {
   playerId: string;
@@ -46,7 +52,8 @@ function clearMainPlan(character: PlayerCharacter) {
 export function executeMoveAction(
   participants: MoveParticipant[],
   match: MatchRecord
-) {
+): ReplayPlayerEvent[] {
+  const events: ReplayPlayerEvent[] = [];
   for (let i = participants.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
     const temp = participants[i];
@@ -59,10 +66,24 @@ export function executeMoveAction(
     if (!destination) {
       continue;
     }
+    const previousPosition = entry.character.position;
     entry.character.position = {
       tileId: destination.tileId,
       coord: destination.coord,
     };
+    const action: ReplayActionDone = {
+      actionId: entry.plan.actionId as ActionId,
+      targetLocation: destination.coord,
+    };
+    if (previousPosition?.coord) {
+      action.originLocation = previousPosition.coord;
+    }
+    events.push({
+      kind: "player",
+      actorId: entry.playerId,
+      action,
+    });
     clearMainPlan(entry.character);
   }
+  return events;
 }
