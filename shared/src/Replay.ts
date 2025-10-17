@@ -66,3 +66,5 @@ export interface ReplayRecord {
 export interface ReplayLog {
   turns: ReplayTurn[];
 }
+
+export const DEFAULT_REPLAY_VIEW_DISTANCE = 0;

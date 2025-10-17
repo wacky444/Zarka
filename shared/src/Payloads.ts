@@ -1,6 +1,7 @@
 import type { MatchRecord, TurnRecord } from "./match";
 import type { GameMap, Axial } from "./hexTile";
 import type { PlayerCharacter } from "./playerCharacter";
+import type { ReplayEvent } from "./Replay";
 
 export const OPCODE_SETTINGS_UPDATE = 100;
 export const OPCODE_MATCH_REMOVED = 101;
@@ -124,4 +125,6 @@ export type TurnAdvancedMessagePayload = {
   readyStates?: Record<string, boolean>;
   playerCharacters?: Record<string, PlayerCharacter>;
   advanced?: boolean;
+  replay?: ReplayEvent[];
+  viewDistance?: number;
 };

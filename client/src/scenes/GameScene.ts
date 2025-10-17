@@ -21,8 +21,13 @@ import {
   type UpdateMainActionPayload,
   type UpdateReadyStatePayload,
   type TurnAdvancedMessagePayload,
+  type ReplayEvent,
 } from "@shared";
 import { buildBoardIconUrl, deriveBoardIconKey } from "../ui/actionIcons";
+import {
+  playReplayEvents,
+  type MoveReplayContext,
+} from "../animation/moveReplay";
 
 export class GameScene extends Phaser.Scene {
   private static readonly TILE_WIDTH = 128;
@@ -32,8 +37,8 @@ export class GameScene extends Phaser.Scene {
   private uiCam!: Phaser.Cameras.Scene2D.Camera;
   private currentMatch: MatchRecord | null = null;
   private tilePositions: Record<string, { x: number; y: number }> = {};
-  private playerSprites: Phaser.GameObjects.Image[] = [];
-  private playerNameLabels: Phaser.GameObjects.Text[] = [];
+  private playerSprites = new Map<string, Phaser.GameObjects.Image>();
+  private playerNameLabels = new Map<string, Phaser.GameObjects.Text>();
   private playerNameMap: Record<string, string> = {};
   private characterPanel: CharacterPanel | null = null;
   private menuButton: UIButton | null = null;
@@ -47,6 +52,8 @@ export class GameScene extends Phaser.Scene {
   private pendingReadyState: boolean | undefined;
   private locationSelectionActive = false;
   private locationSelectionPointerId: number | null = null;
+  private replayQueue: ReplayEvent[][] = [];
+  private replayPlaying = false;
   private readonly turnAdvancedHandler = (
     payload: TurnAdvancedMessagePayload
   ) => {
@@ -323,52 +330,72 @@ export class GameScene extends Phaser.Scene {
   }
 
   private renderPlayerCharacters(match: MatchRecord) {
-    if (!match.playerCharacters || !this.textures.exists("char")) {
+    if (!this.textures.exists("char")) {
       return;
     }
 
-    for (const sprite of this.playerSprites) {
-      sprite.destroy();
-    }
-    this.playerSprites = [];
-    for (const label of this.playerNameLabels) {
-      label.destroy();
-    }
-    this.playerNameLabels = [];
-
-    for (const playerId in match.playerCharacters) {
-      if (
-        !Object.prototype.hasOwnProperty.call(match.playerCharacters, playerId)
-      ) {
-        continue;
-      }
-      const character = match.playerCharacters[playerId];
+    const seen = new Set<string>();
+    const characters = match.playerCharacters ?? {};
+    for (const playerId of Object.keys(characters)) {
+      const character = characters[playerId];
       if (!character || !character.position) {
         continue;
       }
       const { tileId, coord } = character.position;
       const world = this.getTileWorldPosition(tileId, coord);
-      const sprite = this.add.image(world.x, world.y, "char", "body_02.png");
-      sprite.setDepth(5);
-      sprite.setScale(2);
-      sprite.setData("playerId", playerId);
-      this.uiCam.ignore(sprite);
-      this.playerSprites.push(sprite);
+      let sprite = this.playerSprites.get(playerId);
+      if (!sprite) {
+        sprite = this.add.image(world.x, world.y, "char", "body_02.png");
+        sprite.setDepth(5);
+        sprite.setScale(2);
+        sprite.setData("playerId", playerId);
+        this.uiCam.ignore(sprite);
+        this.playerSprites.set(playerId, sprite);
+      } else {
+        sprite.setPosition(world.x, world.y);
+      }
+
       const name = this.playerNameMap[playerId] ?? playerId;
-      const label = this.add.text(world.x, world.y, name, {
-        fontFamily: "Arial",
-        fontSize: "10px",
-        color: "#ffffff",
-        stroke: "#000000",
-        strokeThickness: 4,
-      });
-      label.setOrigin(0.5, 0.5);
-      const offset = sprite.displayHeight / 2 + 12;
-      label.setPosition(world.x, world.y - offset);
-      label.setDepth(6);
-      this.uiCam.ignore(label);
-      this.playerNameLabels.push(label);
+      let label = this.playerNameLabels.get(playerId);
+      if (!label) {
+        label = this.add.text(world.x, world.y, name, {
+          fontFamily: "Arial",
+          fontSize: "10px",
+          color: "#ffffff",
+          stroke: "#000000",
+          strokeThickness: 4,
+        });
+        label.setOrigin(0.5, 0.5);
+        label.setDepth(6);
+        this.uiCam.ignore(label);
+        this.playerNameLabels.set(playerId, label);
+      } else {
+        label.setText(name);
+      }
+      this.positionNameLabel(label, sprite);
+      seen.add(playerId);
     }
+
+    for (const [playerId, sprite] of this.playerSprites) {
+      if (!seen.has(playerId)) {
+        sprite.destroy();
+        this.playerSprites.delete(playerId);
+      }
+    }
+    for (const [playerId, label] of this.playerNameLabels) {
+      if (!seen.has(playerId)) {
+        label.destroy();
+        this.playerNameLabels.delete(playerId);
+      }
+    }
+  }
+
+  private positionNameLabel(
+    label: Phaser.GameObjects.Text,
+    sprite: Phaser.GameObjects.Image
+  ) {
+    const offset = sprite.displayHeight / 2 + 12;
+    label.setPosition(sprite.x, sprite.y - offset);
   }
 
   private enableDragPan() {
@@ -665,9 +692,57 @@ export class GameScene extends Phaser.Scene {
     }
     if (payload.playerCharacters) {
       match.playerCharacters = payload.playerCharacters;
+    }
+
+    const replayEvents = Array.isArray(payload.replay)
+      ? (payload.replay as ReplayEvent[])
+      : [];
+    if (replayEvents.length > 0) {
+      this.enqueueReplay(replayEvents);
+    } else if (payload.playerCharacters) {
       this.renderPlayerCharacters(match);
     }
+
     this.updateCharacterPanel(match);
+  }
+
+  private enqueueReplay(events: ReplayEvent[]) {
+    if (!Array.isArray(events) || events.length === 0) {
+      if (this.currentMatch) {
+        this.renderPlayerCharacters(this.currentMatch);
+      }
+      return;
+    }
+    this.replayQueue.push(events);
+    if (!this.replayPlaying) {
+      void this.flushReplayQueue();
+    }
+  }
+
+  private async flushReplayQueue(): Promise<void> {
+    this.replayPlaying = true;
+    while (this.replayQueue.length > 0) {
+      const events = this.replayQueue.shift();
+      if (!events || events.length === 0) {
+        continue;
+      }
+      await playReplayEvents(this.createMoveReplayContext(), events);
+      if (this.currentMatch) {
+        this.renderPlayerCharacters(this.currentMatch);
+      }
+    }
+    this.replayPlaying = false;
+  }
+
+  private createMoveReplayContext(): MoveReplayContext {
+    return {
+      tweens: this.tweens,
+      axialToWorld: (coord) => this.axialToWorld(coord),
+      getSprite: (playerId) => this.playerSprites.get(playerId),
+      getLabel: (playerId) => this.playerNameLabels.get(playerId),
+      positionLabel: (label, sprite) => this.positionNameLabel(label, sprite),
+      currentMatch: this.currentMatch,
+    };
   }
 
   private beginMainActionLocationPick() {

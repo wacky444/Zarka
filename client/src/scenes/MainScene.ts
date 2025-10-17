@@ -44,6 +44,10 @@ export class MainScene extends Phaser.Scene {
         await this.turnService.joinRealtimeMatch(matchId);
       } catch (e) {
         console.warn("Realtime join failed", e);
+        this.statusText.setText(
+          "Realtime connection failed. Please try again."
+        );
+        return;
       }
       // Track joined match
       this.setCurrentMatchId(matchId);

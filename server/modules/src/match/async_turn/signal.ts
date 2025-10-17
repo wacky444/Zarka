@@ -2,6 +2,7 @@
 
 import { DEFAULT_MATCH_NAME } from "../../constants";
 import {
+  DEFAULT_REPLAY_VIEW_DISTANCE,
   OPCODE_MATCH_REMOVED,
   OPCODE_SETTINGS_UPDATE,
   OPCODE_TURN_ADVANCED,
@@ -10,6 +11,7 @@ import { AsyncTurnState } from "../../models/types";
 import { buildMatchLabel } from "../../utils/label";
 import { normalizeMatchName } from "../../utils/normalize";
 import { clampNumber, validateTime } from "../../utils/validation";
+import { tailorReplayEvents } from "../replay/tailorReplay";
 
 export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState> =
   function (ctx, logger, nk, dispatcher, tick, state, data) {
@@ -103,20 +105,63 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
         }
       } else if (msg && msg.type === "turn_advanced") {
         try {
-          const payload = JSON.stringify({
+          const viewDistance =
+            typeof msg.viewDistance === "number"
+              ? msg.viewDistance
+              : DEFAULT_REPLAY_VIEW_DISTANCE;
+          const events = Array.isArray(msg.events) ? msg.events : [];
+          const payloadBase = {
             match_id: ctx.matchId,
             turn: msg.turn,
             readyStates: msg.readyStates,
             playerCharacters: msg.playerCharacters,
             advanced: true,
-          });
-          dispatcher.broadcastMessage(
-            OPCODE_TURN_ADVANCED,
-            payload,
-            null,
-            null,
-            true
-          );
+            viewDistance,
+          };
+          const entries: Array<[string, nkruntime.Presence]> = [];
+          const playerMap = state.players ?? {};
+          for (const playerId in playerMap) {
+            if (!Object.prototype.hasOwnProperty.call(playerMap, playerId)) {
+              continue;
+            }
+            const presence = playerMap[playerId];
+            if (presence) {
+              entries.push([playerId, presence]);
+            }
+          }
+          if (entries.length === 0) {
+            const payload = JSON.stringify({
+              ...payloadBase,
+              replay: events,
+            });
+            dispatcher.broadcastMessage(
+              OPCODE_TURN_ADVANCED,
+              payload,
+              null,
+              null,
+              true
+            );
+          } else {
+            for (const [playerId, presence] of entries) {
+              const tailored = tailorReplayEvents(
+                events,
+                playerId,
+                msg.playerCharacters,
+                viewDistance
+              );
+              const payload = JSON.stringify({
+                ...payloadBase,
+                replay: tailored,
+              });
+              dispatcher.broadcastMessage(
+                OPCODE_TURN_ADVANCED,
+                payload,
+                [presence],
+                null,
+                true
+              );
+            }
+          }
         } catch {}
       } else if (msg && msg.type === "match_removed") {
         try {

@@ -1,5 +1,6 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
+import { DEFAULT_REPLAY_VIEW_DISTANCE, OPCODE_TURN_ADVANCED } from "@shared";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
@@ -63,7 +64,6 @@ export function updateReadyStateRpc(
       (playerId) =>
         match.readyStates !== undefined && match.readyStates[playerId] === true
     );
-
   let advanceResult: ReturnType<typeof advanceTurn> | null = null;
   let resolvedTurnNumber: number | null = null;
 
@@ -111,15 +111,19 @@ export function updateReadyStateRpc(
   }
 
   if (advanced) {
+    const viewDistance = DEFAULT_REPLAY_VIEW_DISTANCE;
+    const events = advanceResult?.events ?? [];
     try {
       nkWrapper.matchSignal(
         matchId,
         JSON.stringify({
-          type: "turn_advanced",
+          type: OPCODE_TURN_ADVANCED,
+          turn: match.current_turn,
           match_id: matchId,
-          current_turn: match.current_turn,
           readyStates: match.readyStates,
           playerCharacters: match.playerCharacters,
+          events,
+          viewDistance,
         })
       );
     } catch (e) {
