@@ -344,7 +344,7 @@ export class GameScene extends Phaser.Scene {
       const { tileId, coord } = character.position;
       const world = this.getTileWorldPosition(tileId, coord);
       let sprite = this.playerSprites.get(playerId);
-      if (!sprite) {
+      if (!sprite || !sprite.active || sprite.scene !== this) {
         sprite = this.add.image(world.x, world.y, "char", "body_02.png");
         sprite.setDepth(5);
         sprite.setScale(2);
@@ -353,11 +353,12 @@ export class GameScene extends Phaser.Scene {
         this.playerSprites.set(playerId, sprite);
       } else {
         sprite.setPosition(world.x, world.y);
+        sprite.setVisible(true);
       }
 
       const name = this.playerNameMap[playerId] ?? playerId;
       let label = this.playerNameLabels.get(playerId);
-      if (!label) {
+      if (!label || !label.active || label.scene !== this) {
         label = this.add.text(world.x, world.y, name, {
           fontFamily: "Arial",
           fontSize: "10px",
@@ -369,9 +370,9 @@ export class GameScene extends Phaser.Scene {
         label.setDepth(6);
         this.uiCam.ignore(label);
         this.playerNameLabels.set(playerId, label);
-      } else {
-        label.setText(name);
       }
+      label.setText(name);
+      label.setVisible(true);
       this.positionNameLabel(label, sprite);
       seen.add(playerId);
     }
