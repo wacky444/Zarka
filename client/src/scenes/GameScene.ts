@@ -23,6 +23,7 @@ import {
   type TurnAdvancedMessagePayload,
   type ReplayEvent,
   type GetReplayPayload,
+  getHexTileOffsets,
 } from "@shared";
 import { buildBoardIconUrl, deriveBoardIconKey } from "../ui/actionIcons";
 import {
@@ -358,47 +359,71 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const seen = new Set<string>();
     const characters = match.playerCharacters ?? {};
-    for (const playerId of Object.keys(characters)) {
-      const character = characters[playerId];
+    const tileGroups = new Map<
+      string,
+      { world: { x: number; y: number }; members: string[] }
+    >();
+    for (const [playerId, character] of Object.entries(characters)) {
       if (!character || !character.position) {
         continue;
       }
       const { tileId, coord } = character.position;
       const world = this.getTileWorldPosition(tileId, coord);
-      let sprite = this.playerSprites.get(playerId);
-      if (!sprite || !sprite.active || sprite.scene !== this) {
-        sprite = this.add.image(world.x, world.y, "char", "body_02.png");
-        sprite.setDepth(5);
-        sprite.setScale(2);
-        sprite.setData("playerId", playerId);
-        this.uiCam.ignore(sprite);
-        this.playerSprites.set(playerId, sprite);
+      const key = tileId ?? `${coord.q}:${coord.r}`;
+      const group = tileGroups.get(key);
+      if (group) {
+        group.members.push(playerId);
       } else {
-        sprite.setPosition(world.x, world.y);
-        sprite.setVisible(true);
+        tileGroups.set(key, { world, members: [playerId] });
       }
+    }
 
-      const name = this.playerNameMap[playerId] ?? playerId;
-      let label = this.playerNameLabels.get(playerId);
-      if (!label || !label.active || label.scene !== this) {
-        label = this.add.text(world.x, world.y, name, {
-          fontFamily: "Arial",
-          fontSize: "10px",
-          color: "#ffffff",
-          stroke: "#000000",
-          strokeThickness: 4,
-        });
-        label.setOrigin(0.5, 0.5);
-        label.setDepth(6);
-        this.uiCam.ignore(label);
-        this.playerNameLabels.set(playerId, label);
+    const seen = new Set<string>();
+    for (const { world, members } of tileGroups.values()) {
+      const sorted = [...members].sort();
+      const offsets = getHexTileOffsets(
+        sorted.length,
+        GameScene.TILE_WIDTH / 4
+      );
+      for (let index = 0; index < sorted.length; index += 1) {
+        const playerId = sorted[index];
+        const offset = offsets[index] ?? { x: 0, y: 0 };
+        const x = world.x + offset.x;
+        const y = world.y + offset.y;
+        let sprite = this.playerSprites.get(playerId);
+        if (!sprite || !sprite.active || sprite.scene !== this) {
+          sprite = this.add.image(x, y, "char", "body_02.png");
+          sprite.setScale(2);
+          sprite.setData("playerId", playerId);
+          this.uiCam.ignore(sprite);
+          this.playerSprites.set(playerId, sprite);
+        }
+        sprite.setPosition(x, y);
+        sprite.setVisible(true);
+        sprite.setDepth(5 + y / 1000);
+
+        const name = this.playerNameMap[playerId] ?? playerId;
+        let label = this.playerNameLabels.get(playerId);
+        if (!label || !label.active || label.scene !== this) {
+          label = this.add.text(x, y, name, {
+            fontFamily: "Arial",
+            fontSize: "10px",
+            color: "#ffffff",
+            stroke: "#000000",
+            strokeThickness: 4,
+          });
+          label.setOrigin(0.5, 0.5);
+          label.setDepth(6);
+          this.uiCam.ignore(label);
+          this.playerNameLabels.set(playerId, label);
+        }
+        label.setText(name);
+        label.setPosition(x, y);
+        label.setVisible(true);
+        this.positionNameLabel(label, sprite);
+        seen.add(playerId);
       }
-      label.setText(name);
-      label.setVisible(true);
-      this.positionNameLabel(label, sprite);
-      seen.add(playerId);
     }
 
     for (const [playerId, sprite] of this.playerSprites) {

@@ -106,3 +106,27 @@ export interface GameMap {
   seed: string;
   tiles: HexTileSnapshot[];
 }
+
+const HEX_OFFSET_ANGLES = [-90, -30, 30, 90, 150, -150];
+
+export function getHexTileOffsets(
+  count: number,
+  radius: number
+): { x: number; y: number }[] {
+  const safeRadius = radius > 0 ? radius : 1;
+  if (count <= 1) {
+    return [{ x: 0, y: 0 }];
+  }
+  const offsets: { x: number; y: number }[] = [];
+  const maxSlots = HEX_OFFSET_ANGLES.length;
+  for (let index = 0; index < count; index += 1) {
+    const angle = HEX_OFFSET_ANGLES[index % maxSlots];
+    const scale = 1 + Math.floor(index / maxSlots) * 0.5;
+    const rad = (angle * Math.PI) / 180;
+    offsets.push({
+      x: Math.cos(rad) * safeRadius * scale,
+      y: Math.sin(rad) * safeRadius * scale,
+    });
+  }
+  return offsets;
+}
