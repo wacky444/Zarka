@@ -7,11 +7,18 @@ import {
   type MatchRecord,
   type PlayerCharacter,
   ActionCategory,
+  type ReplayEvent,
 } from "@shared";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
 import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
 import { ProgressBar } from "./ProgressBar";
 import { LocationSelector } from "./LocationSelector";
+import {
+  CharacterPanelTabs,
+  type CharacterPanelTabEntry,
+  type TabKey,
+} from "./CharacterPanelTabs";
+import { CharacterPanelLogView } from "./CharacterPanelLogView";
 
 const DEFAULT_WIDTH = 420;
 const TAB_HEIGHT = 40;
@@ -30,12 +37,17 @@ export type MainActionSelection = {
 };
 
 export class CharacterPanel extends Phaser.GameObjects.Container {
+  private readonly tabConfigs: Array<{ key: TabKey; label: string }> = [
+    { key: "character", label: "Character" },
+    { key: "players", label: "Players" },
+    { key: "chat", label: "Chat" },
+    { key: "log", label: "Log" },
+  ];
   private background: Phaser.GameObjects.Rectangle;
-  private tabs: Array<{
-    key: string;
-    rect: Phaser.GameObjects.Rectangle;
-    text: Phaser.GameObjects.Text;
-  }> = [];
+  private tabs: CharacterPanelTabEntry[] = [];
+  private characterElements: Phaser.GameObjects.GameObject[] = [];
+  private tabsController!: CharacterPanelTabs;
+  private logView!: CharacterPanelLogView;
   private portrait: Phaser.GameObjects.Image;
   private nameText: Phaser.GameObjects.Text;
   private healthLabel: Phaser.GameObjects.Text;
@@ -103,31 +115,35 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       .rectangle(0, 0, width, height, 0x151a2f, 0.92)
       .setOrigin(0, 0);
     this.add(this.background);
-    const tabsConfig = [
-      { key: "character", label: "Character" },
-      { key: "players", label: "Players" },
-      { key: "chat", label: "Chat" },
-    ];
-    const tabWidth = width / tabsConfig.length;
-    tabsConfig.forEach((tab, index) => {
+    const tabWidth = width / this.tabConfigs.length;
+    this.tabConfigs.forEach((tab, index) => {
+      const isDefaultTab = tab.key === this.tabConfigs[0]?.key;
       const rect = scene.add
         .rectangle(
           index * tabWidth,
           0,
           tabWidth,
           TAB_HEIGHT,
-          index === 0 ? 0x253055 : 0x1c233f
+          isDefaultTab ? 0x253055 : 0x1c233f
         )
-        .setOrigin(0, 0);
+        .setOrigin(0, 0)
+        .setInteractive({ useHandCursor: true });
       const text = scene.add
         .text(index * tabWidth + 12, 10, tab.label, {
           fontSize: "16px",
           color: "#ffffff",
         })
-        .setOrigin(0, 0);
+        .setOrigin(0, 0)
+        .setInteractive({ useHandCursor: true });
+      rect.on(Phaser.Input.Events.POINTER_UP, () => {
+        this.handleTabRequest(tab.key as TabKey);
+      });
+      text.on(Phaser.Input.Events.POINTER_UP, () => {
+        this.handleTabRequest(tab.key as TabKey);
+      });
       this.add(rect);
       this.add(text);
-      this.tabs.push({ key: tab.key, rect, text });
+      this.tabs.push({ key: tab.key as TabKey, rect, text });
     });
     const contentTop = TAB_HEIGHT + MARGIN;
     this.portrait = scene.add
@@ -242,6 +258,145 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       })
       .setOrigin(0, 0);
     this.add(this.secondaryActionText);
+    const logControlY = contentTop;
+    const baseX = MARGIN + 12;
+    const logPrevButton = scene.add
+      .text(baseX, logControlY, "◀", {
+        fontSize: "18px",
+        color: "#a0b7ff",
+      })
+      .setOrigin(0, 0)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    const logTurnLabel = scene.add
+      .text(baseX + 32, logControlY, "Turn 0 / 0", {
+        fontSize: "16px",
+        color: "#ffffff",
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    const logNextButton = scene.add
+      .text(baseX + 160, logControlY, "▶", {
+        fontSize: "18px",
+        color: "#a0b7ff",
+      })
+      .setOrigin(0, 0)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    const logPlayButton = scene.add
+      .text(baseX + 200, logControlY, "Play", {
+        fontSize: "16px",
+        color: "#4ade80",
+      })
+      .setOrigin(0, 0)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    const logBoxY = contentTop + 48;
+    const logBoxHeight = Math.max(BOX_HEIGHT, height - logBoxY - MARGIN);
+    const logEventsBox = scene.add
+      .rectangle(MARGIN, logBoxY, boxWidth, logBoxHeight, 0x1b2440)
+      .setOrigin(0, 0)
+      .setVisible(false);
+    const logStatusText = scene.add
+      .text(MARGIN + 16, logBoxY + 16, "No replays yet.", {
+        fontSize: "15px",
+        color: "#cbd5f5",
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    const logEventsText = scene.add
+      .text(MARGIN + 16, logBoxY + 16, "", {
+        fontSize: "15px",
+        color: "#cbd5f5",
+        wordWrap: {
+          width: boxWidth - 32,
+          useAdvancedWrap: true,
+        },
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    this.add(logPrevButton);
+    this.add(logTurnLabel);
+    this.add(logNextButton);
+    this.add(logPlayButton);
+    this.add(logEventsBox);
+    this.add(logStatusText);
+    this.add(logEventsText);
+    this.logView = new CharacterPanelLogView({
+      panel: this,
+      elements: {
+        prevButton: logPrevButton,
+        nextButton: logNextButton,
+        playButton: logPlayButton,
+        turnLabel: logTurnLabel,
+        statusText: logStatusText,
+        eventsBox: logEventsBox,
+        eventsText: logEventsText,
+      },
+      onRequestReplay: (turn) => {
+        this.emit("log-turn-request", turn);
+      },
+      onPlay: (turn) => {
+        this.emit("log-play", turn);
+      },
+      formatActionName: (id) => this.formatActionName(id),
+    });
+    this.logView.handleVisibilityChange({ visible: false, forceEnsure: false });
+    this.logView.setTurnInfo(0);
+    this.logView.layout({
+      margin: MARGIN,
+      tabHeight: TAB_HEIGHT,
+      contentTop,
+      boxWidth,
+      panelHeight: this.panelHeight,
+    });
+    this.characterElements = [
+      this.portrait,
+      this.nameText,
+      this.healthLabel,
+      this.energyLabel,
+      this.healthBar,
+      this.energyBar,
+      this.readyToggle,
+      this.mainActionBox,
+      this.mainActionLabel,
+      this.mainActionDropdown,
+      this.locationSelector,
+      this.secondaryActionBox,
+      this.secondaryActionLabel,
+      this.secondaryActionText,
+    ];
+    this.tabsController = new CharacterPanelTabs({
+      tabs: this.tabs,
+      defaultKey: "character",
+      characterElements: this.characterElements,
+      onCharacterTabShow: () => {
+        this.mainActionDropdown.setVisible(true);
+        this.mainActionDropdown.setActive(true);
+        this.refreshLocationSelectorState();
+        this.setReadyEnabled(this.readyEnabled);
+      },
+      onCharacterTabHide: () => {
+        this.mainActionDropdown.setVisible(false);
+        this.mainActionDropdown.setActive(false);
+        this.locationSelector.setVisible(false);
+        this.locationSelector.setActive(false);
+        this.readyToggle.disableInteractive();
+      },
+      onLogVisibilityChange: ({ visible, forceEnsure }) => {
+        this.logView.handleVisibilityChange({ visible, forceEnsure });
+      },
+      onTabChange: (key, previous) => {
+        this.emit("tab-change", key, previous);
+      },
+      onLogTabOpened: () => {
+        this.emit("log-tab-opened");
+      },
+      onLogTabClosed: () => {
+        this.emit("log-tab-closed");
+      },
+    });
+    this.tabsController.refresh();
     this.bringToTop(this.mainActionDropdown);
   }
 
@@ -250,6 +405,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.locationSelector.off("pick-request", this.handleLocationPickRequest);
     this.locationSelector.off("clear-request", this.handleLocationClear);
     this.readyToggle?.off("pointerup", this.handleReadyToggle);
+    this.logView?.destroy();
     super.destroy(fromScene);
   }
 
@@ -281,6 +437,15 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (this.readyToggle) {
       this.readyToggle.setPosition(barX, contentTop + 80);
     }
+    if (this.logView) {
+      this.logView.layout({
+        margin: MARGIN,
+        tabHeight: TAB_HEIGHT,
+        contentTop,
+        boxWidth,
+        panelHeight: height,
+      });
+    }
   }
 
   getPanelWidth() {
@@ -292,13 +457,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     currentUserId: string | null,
     usernames?: Record<string, string>
   ) {
+    const userMap = usernames ? { ...usernames } : {};
+    this.logView.setUsernames(userMap);
     if (!match || !currentUserId) {
       this.applyCharacter(null, null, false);
+      this.setLogTurnInfo(0);
       return;
     }
     const characters = match.playerCharacters ?? {};
     const character = characters[currentUserId] ?? null;
-    const name = usernames?.[currentUserId] ?? null;
+    const name = userMap[currentUserId] ?? null;
     const ready = match.readyStates?.[currentUserId] ?? false;
     this.applyCharacter(character, name, ready);
   }
@@ -372,7 +540,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (!this.readyToggle) {
       return;
     }
-    if (enabled) {
+    const showReady =
+      enabled && (this.tabsController?.isActive("character") ?? false);
+    if (showReady) {
       this.readyToggle.setAlpha(1);
       this.readyToggle.setInteractive({ useHandCursor: true });
     } else {
@@ -586,5 +756,29 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       return { texture: deriveBoardIconKey(definition.frame) };
     }
     return { texture: definition.texture, frame: definition.frame };
+  }
+
+  private handleTabRequest(key: TabKey) {
+    this.tabsController.setActiveTab(key);
+  }
+
+  setLogTurnInfo(maxTurn: number) {
+    this.logView.setTurnInfo(maxTurn);
+  }
+
+  setLogReplay(turn: number, maxTurn: number, events: ReplayEvent[]) {
+    this.logView.setReplay(turn, maxTurn, events);
+  }
+
+  setLogError(message: string) {
+    this.logView.setError(message);
+  }
+
+  setLogLoading(active: boolean) {
+    this.logView.setLoading(active);
+  }
+
+  setLogPlaybackState(active: boolean) {
+    this.logView.setPlaybackState(active);
   }
 }

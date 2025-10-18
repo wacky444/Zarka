@@ -22,6 +22,7 @@ import {
   type UpdateReadyStatePayload,
   type TurnAdvancedMessagePayload,
   type ReplayEvent,
+  type GetReplayPayload,
 } from "@shared";
 import { buildBoardIconUrl, deriveBoardIconKey } from "../ui/actionIcons";
 import {
@@ -54,6 +55,11 @@ export class GameScene extends Phaser.Scene {
   private locationSelectionPointerId: number | null = null;
   private replayQueue: ReplayEvent[][] = [];
   private replayPlaying = false;
+  private logReplayCache = new Map<number, ReplayEvent[]>();
+  private logTabActive = false;
+  private logFetchRunning = false;
+  private logPendingTurn: number | null = null;
+  private manualReplayPlaying = false;
   private readonly turnAdvancedHandler = (
     payload: TurnAdvancedMessagePayload
   ) => {
@@ -132,6 +138,11 @@ export class GameScene extends Phaser.Scene {
       this
     );
     this.characterPanel.on("ready-change", this.handleReadyStateChange, this);
+    this.characterPanel.on("tab-change", this.handleTabChange, this);
+    this.characterPanel.on("log-tab-opened", this.handleLogTabOpened, this);
+    this.characterPanel.on("log-tab-closed", this.handleLogTabClosed, this);
+    this.characterPanel.on("log-turn-request", this.handleLogTurnRequest, this);
+    this.characterPanel.on("log-play", this.handleLogPlayRequest, this);
 
     this.menuButton = makeButton(this, 0, 0, "☰", () => {
       this.scene.stop("GameScene");
@@ -141,6 +152,10 @@ export class GameScene extends Phaser.Scene {
 
     const match = await this.fetchMatchFromServer();
     this.currentMatch = match;
+    this.logReplayCache.clear();
+    if (this.characterPanel) {
+      this.characterPanel.setLogTurnInfo(match?.current_turn ?? 0);
+    }
 
     const map = this.resolveMap(match);
 
@@ -178,6 +193,15 @@ export class GameScene extends Phaser.Scene {
         this.handleReadyStateChange,
         this
       );
+      this.characterPanel?.off("tab-change", this.handleTabChange, this);
+      this.characterPanel?.off("log-tab-opened", this.handleLogTabOpened, this);
+      this.characterPanel?.off("log-tab-closed", this.handleLogTabClosed, this);
+      this.characterPanel?.off(
+        "log-turn-request",
+        this.handleLogTurnRequest,
+        this
+      );
+      this.characterPanel?.off("log-play", this.handleLogPlayRequest, this);
       this.cancelMainActionLocationPick();
       if (this.turnService) {
         this.turnService.setOnTurnAdvanced();
@@ -475,6 +499,11 @@ export class GameScene extends Phaser.Scene {
         ? this.playerNameMap
         : undefined;
     this.characterPanel.updateFromMatch(match, this.currentUserId, nameMap);
+    const turns = match?.current_turn ?? 0;
+    this.characterPanel.setLogTurnInfo(turns);
+    if (!match) {
+      this.logReplayCache.clear();
+    }
   }
 
   private async resolvePlayerNames(match: MatchRecord | null) {
@@ -695,16 +724,30 @@ export class GameScene extends Phaser.Scene {
       match.playerCharacters = payload.playerCharacters;
     }
 
-    const replayEvents = Array.isArray(payload.replay)
+    const eventsFromField = Array.isArray(payload.replay)
       ? (payload.replay as ReplayEvent[])
       : [];
+    const alternateEvents = Array.isArray(
+      (payload as { events?: unknown }).events
+    )
+      ? (payload as { events?: ReplayEvent[] }).events ?? []
+      : [];
+    const replayEvents =
+      eventsFromField.length > 0 ? eventsFromField : alternateEvents;
+    const turnNumber =
+      typeof payload.turn === "number" ? payload.turn : match.current_turn ?? 0;
     if (replayEvents.length > 0) {
+      this.logReplayCache.set(turnNumber, replayEvents);
       this.enqueueReplay(replayEvents);
     } else if (payload.playerCharacters) {
       this.renderPlayerCharacters(match);
+      this.logReplayCache.set(turnNumber, []);
     }
 
     this.updateCharacterPanel(match);
+    if (this.characterPanel) {
+      this.characterPanel.setLogTurnInfo(match.current_turn ?? 0);
+    }
   }
 
   private enqueueReplay(events: ReplayEvent[]) {
@@ -715,7 +758,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.replayQueue.push(events);
-    if (!this.replayPlaying) {
+    if (!this.replayPlaying && !this.manualReplayPlaying) {
       void this.flushReplayQueue();
     }
   }
@@ -838,5 +881,121 @@ export class GameScene extends Phaser.Scene {
       pointer.y >= panelY &&
       pointer.y <= panelY + height
     );
+  }
+
+  private handleTabChange(key: string) {
+    this.logTabActive = key === "log";
+  }
+
+  private handleLogTabOpened() {
+    this.logTabActive = true;
+    const turns = this.currentMatch?.current_turn ?? 0;
+    if (turns === 0) {
+      this.characterPanel?.setLogTurnInfo(0);
+    }
+  }
+
+  private handleLogTabClosed() {
+    this.logTabActive = false;
+    this.manualReplayPlaying = false;
+    this.characterPanel?.setLogPlaybackState(false);
+    if (this.currentMatch) {
+      this.renderPlayerCharacters(this.currentMatch);
+    }
+    if (this.replayQueue.length > 0 && !this.replayPlaying) {
+      void this.flushReplayQueue();
+    }
+  }
+
+  private handleLogTurnRequest(turn: number) {
+    const maxTurn = this.currentMatch?.current_turn ?? 0;
+    if (!this.characterPanel) {
+      return;
+    }
+    if (maxTurn === 0) {
+      this.characterPanel.setLogTurnInfo(0);
+      this.characterPanel.setLogError("No replays yet.");
+      return;
+    }
+    let targetTurn = turn;
+    if (targetTurn <= 0) {
+      targetTurn = maxTurn;
+    }
+    const cached = this.logReplayCache.get(targetTurn);
+    if (cached !== undefined) {
+      this.characterPanel.setLogReplay(targetTurn, maxTurn, cached);
+      return;
+    }
+    void this.fetchReplayForTurn(targetTurn);
+  }
+
+  private async fetchReplayForTurn(turn: number) {
+    const panel = this.characterPanel;
+    const service = this.turnService;
+    const matchId = this.registry.get("currentMatchId") as string | null;
+    if (!panel || !service || !matchId) {
+      panel?.setLogError("Replay not available.");
+      return;
+    }
+    if (this.logFetchRunning) {
+      this.logPendingTurn = turn;
+      return;
+    }
+    this.logFetchRunning = true;
+    this.logPendingTurn = null;
+    panel.setLogLoading(true);
+    try {
+      const res = await service.getReplay(matchId, turn);
+      const payload = this.parseRpcPayload<GetReplayPayload>(res);
+      if (payload.error) {
+        throw new Error(payload.error);
+      }
+      const resolvedTurn = payload.turn ?? turn;
+      const maxTurn =
+        payload.max_turn ?? this.currentMatch?.current_turn ?? resolvedTurn;
+      const events = Array.isArray(payload.events) ? payload.events : [];
+      this.logReplayCache.set(resolvedTurn, events);
+      panel.setLogReplay(resolvedTurn, maxTurn, events);
+    } catch (error) {
+      console.warn("get_replay failed", error);
+      panel.setLogError("Replay not available.");
+    } finally {
+      this.logFetchRunning = false;
+      panel.setLogLoading(false);
+      if (this.logPendingTurn !== null) {
+        const next = this.logPendingTurn;
+        this.logPendingTurn = null;
+        this.handleLogTurnRequest(next);
+      }
+    }
+  }
+
+  private async handleLogPlayRequest(turn: number) {
+    if (!this.logTabActive) {
+      return;
+    }
+    if (this.replayPlaying || this.manualReplayPlaying) {
+      return;
+    }
+    const events = this.logReplayCache.get(turn);
+    if (!events || events.length === 0) {
+      return;
+    }
+    this.manualReplayPlaying = true;
+    this.characterPanel?.setLogPlaybackState(true);
+    try {
+      await playReplayEvents(this.createMoveReplayContext(), events);
+    } catch (error) {
+      console.warn("log replay failed", error);
+    } finally {
+      this.manualReplayPlaying = false;
+      this.characterPanel?.setLogPlaybackState(false);
+      if (this.currentMatch) {
+        this.renderPlayerCharacters(this.currentMatch);
+      }
+      if (this.replayQueue.length > 0 && !this.replayPlaying) {
+        void this.flushReplayQueue();
+      }
+    }
   }
 }

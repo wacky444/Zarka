@@ -59,6 +59,15 @@ export type GetStatePayload = {
   turns?: TurnRecord[];
 };
 
+export type GetReplayPayload = {
+  ok?: boolean;
+  match_id?: string;
+  turn?: number;
+  max_turn?: number;
+  events?: ReplayEvent[];
+  error?: string;
+};
+
 export type LeaveMatchPayload = {
   ok?: boolean;
   players?: string[];

@@ -13,6 +13,7 @@ import {
   updateMainActionRpc,
   updateReadyStateRpc,
   updateSettingsRpc,
+  getReplayRpc,
 } from "./rpc";
 import { asyncTurnMatchHandler } from "./match/async_turn";
 import { restoreMatchesFromStorage } from "./services/matchRestoration";
@@ -44,6 +45,14 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register get_state: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("get_replay", getReplayRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register get_replay: %s",
       (error && (error as Error).message) || String(error)
     );
   }

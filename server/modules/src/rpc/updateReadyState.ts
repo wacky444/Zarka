@@ -117,7 +117,7 @@ export function updateReadyStateRpc(
       nkWrapper.matchSignal(
         matchId,
         JSON.stringify({
-          type: OPCODE_TURN_ADVANCED,
+          type: "turn_advanced",
           turn: match.current_turn,
           match_id: matchId,
           readyStates: match.readyStates,

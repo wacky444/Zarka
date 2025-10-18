@@ -131,6 +131,15 @@ export class TurnService {
     return res;
   }
 
+  async getReplay(match_id: string, turn?: number) {
+    const payload: { match_id: string; turn?: number } = { match_id };
+    if (typeof turn === "number") {
+      payload.turn = turn;
+    }
+    const res = await this.client.rpc(this.session, "get_replay", payload);
+    return res;
+  }
+
   async joinMatch(match_id: string) {
     const res = await this.client.rpc(this.session, "join_match", { match_id });
     return res;

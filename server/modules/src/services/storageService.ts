@@ -116,6 +116,21 @@ export class StorageService {
     ]);
   }
 
+  readReplay(matchId: string, turnNumber: number): ReplayRecord | null {
+    const key = this.getReplayKey(matchId, turnNumber);
+    const reads = this.nk.storageRead([
+      {
+        collection: REPLAY_COLLECTION,
+        key,
+        userId: SERVER_USER_ID,
+      },
+    ]);
+    if (!reads || reads.length === 0 || !reads[0] || !reads[0].value) {
+      return null;
+    }
+    return reads[0].value as ReplayRecord;
+  }
+
   listReplaysForMatch(matchId: string): ReplayStorageObject[] {
     const items: ReplayStorageObject[] = [];
     let cursor = "";
