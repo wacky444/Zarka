@@ -1,10 +1,16 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
+import { ActionLibrary, type ActionId } from "@shared";
 import { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import type { ActionSubmission, Axial, PlayerPlannedAction } from "@shared";
+import {
+  getActionCooldownRemaining,
+  isActionOnCooldown,
+  updateCharacterCooldowns,
+} from "../match/actions/cooldowns";
 
 export function updateMainActionRpc(
   ctx: nkruntime.Context,
@@ -39,6 +45,7 @@ export function updateMainActionRpc(
   const normalizeActionId = (raw: unknown) =>
     typeof raw === "string" ? raw.trim() : "";
   let actionId = "";
+  let normalizedActionId: ActionId | null = null;
   let targetLocation: Axial | undefined;
   if (submission) {
     actionId = normalizeActionId(submission.actionId);
@@ -48,6 +55,11 @@ export function updateMainActionRpc(
         nkruntime.Codes.INVALID_ARGUMENT
       );
     }
+    const candidate = actionId as ActionId;
+    if (!ActionLibrary[candidate]) {
+      throw makeNakamaError("invalid_action", nkruntime.Codes.INVALID_ARGUMENT);
+    }
+    normalizedActionId = candidate;
     const locationCandidate = submission.targetLocationId as Axial | undefined;
     if (locationCandidate) {
       const { q, r } = locationCandidate as Record<string, unknown>;
@@ -80,6 +92,8 @@ export function updateMainActionRpc(
   if (!character) {
     throw makeNakamaError("no_character", nkruntime.Codes.FAILED_PRECONDITION);
   }
+  const currentTurn = match.current_turn ?? 0;
+  updateCharacterCooldowns(character, currentTurn);
   character.actionPlan = character.actionPlan ?? {};
   if (clearAction) {
     if (character.actionPlan.main) {
@@ -96,6 +110,23 @@ export function updateMainActionRpc(
     const previous: PlayerPlannedAction =
       character.actionPlan.main ?? ({ actionId } as PlayerPlannedAction);
     const nextPlan: PlayerPlannedAction = { ...previous, actionId };
+    if (
+      normalizedActionId &&
+      isActionOnCooldown(character, normalizedActionId, currentTurn)
+    ) {
+      const remaining = getActionCooldownRemaining(
+        character,
+        normalizedActionId,
+        currentTurn
+      );
+      throw makeNakamaError(
+        `action_on_cooldown:${remaining}`,
+        nkruntime.Codes.FAILED_PRECONDITION
+      );
+    }
+    if (normalizedActionId) {
+      nextPlan.actionId = normalizedActionId;
+    }
     if (targetLocation) {
       nextPlan.targetLocationId = targetLocation;
     } else if (nextPlan.targetLocationId) {

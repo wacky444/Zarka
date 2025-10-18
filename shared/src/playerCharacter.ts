@@ -102,6 +102,7 @@ export interface PlayerFireStatus {
 export interface PlayerActionCooldown {
   actionId: string;
   remainingTurns: number;
+  availableOnTurn?: number;
 }
 
 export interface PlayerActionPlan {

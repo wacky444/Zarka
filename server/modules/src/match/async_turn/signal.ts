@@ -42,7 +42,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
           const label = buildMatchLabel({
             name: state.name,
             size: state.size,
-            players: Object.keys(state.players).length,
+            players: state.order.length,
             started: state.started,
             creator: state.creator,
           });
@@ -59,7 +59,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             botPlayers: state.botPlayers,
             name: state.name,
             started: state.started,
-            players: Object.keys(state.players),
+            players: state.order,
           });
           dispatcher.broadcastMessage(
             OPCODE_SETTINGS_UPDATE,
@@ -76,7 +76,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             const label = buildMatchLabel({
               name: state.name,
               size: state.size,
-              players: Object.keys(state.players).length,
+              players: state.order.length,
               started: state.started,
               creator: state.creator,
             });
@@ -92,7 +92,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
               botPlayers: state.botPlayers,
               name: state.name,
               started: state.started,
-              players: Object.keys(state.players),
+              players: state.order,
             });
             dispatcher.broadcastMessage(
               OPCODE_SETTINGS_UPDATE,
@@ -103,6 +103,68 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             );
           } catch {}
         }
+      } else if (msg && msg.type === "sync_players") {
+        if (Array.isArray(msg.players)) {
+          const nextOrder: string[] = [];
+          for (const entry of msg.players) {
+            if (typeof entry !== "string") {
+              continue;
+            }
+            const trimmed = entry.trim();
+            if (!trimmed.length) {
+              continue;
+            }
+            if (nextOrder.indexOf(trimmed) !== -1) {
+              continue;
+            }
+            nextOrder.push(trimmed);
+          }
+          state.order = nextOrder;
+        } else {
+          state.order = [];
+        }
+        if (typeof msg.size === "number") {
+          state.size = msg.size;
+        }
+        if (typeof msg.name === "string") {
+          state.name = normalizeMatchName(
+            msg.name,
+            state.name ?? DEFAULT_MATCH_NAME
+          );
+        }
+        if (typeof msg.started === "boolean") {
+          state.started = msg.started;
+        }
+        try {
+          const label = buildMatchLabel({
+            name: state.name,
+            size: state.size,
+            players: state.order.length,
+            started: state.started,
+            creator: state.creator,
+          });
+          dispatcher.matchLabelUpdate(label);
+        } catch {}
+        try {
+          const payload = JSON.stringify({
+            size: state.size,
+            cols: state.cols,
+            rows: state.rows,
+            roundTime: state.roundTime,
+            autoSkip: state.autoSkip,
+            botPlayers: state.botPlayers,
+            name: state.name,
+            started: state.started,
+            players: state.order,
+          });
+          dispatcher.broadcastMessage(
+            OPCODE_SETTINGS_UPDATE,
+            payload,
+            null,
+            null,
+            true
+          );
+        } catch {}
       } else if (msg && msg.type === "turn_advanced") {
         try {
           const viewDistance =

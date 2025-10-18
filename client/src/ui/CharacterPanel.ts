@@ -67,6 +67,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private panelHeight: number;
   private barWidth: number;
   private mainActionSelection: string | null = null;
+  private currentTurn = 0;
   private mainActionTarget: Axial | null = null;
   private lastMainActionItem: GridSelectItem | null = null;
   private readyState = false;
@@ -460,10 +461,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const userMap = usernames ? { ...usernames } : {};
     this.logView.setUsernames(userMap);
     if (!match || !currentUserId) {
+      this.currentTurn = 0;
       this.applyCharacter(null, null, false);
       this.setLogTurnInfo(0);
       return;
     }
+    this.currentTurn = match.current_turn ?? 0;
     const characters = match.playerCharacters ?? {};
     const character = characters[currentUserId] ?? null;
     const name = userMap[currentUserId] ?? null;
@@ -480,7 +483,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.nameText.setText("No character");
       this.useBarValue(this.healthBar, 0);
       this.useBarValue(this.energyBar, 0);
-      this.applyMainActions([], null);
+      this.applyMainActions([], null, null);
       this.setMainActionTarget(null, false);
       this.setLocationSelectionPending(false);
       this.secondaryActionText.setText("None selected");
@@ -501,7 +504,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     );
     const actions = this.collectMainActions(character);
     const mainActionId = character.actionPlan?.main?.actionId ?? null;
-    this.applyMainActions(actions, mainActionId);
+    this.applyMainActions(actions, mainActionId, character);
     const targetLocation = character.actionPlan?.main?.targetLocationId ?? null;
     this.setMainActionTarget(targetLocation ?? null, false);
     this.setLocationSelectionPending(false);
@@ -551,8 +554,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
   }
 
-  private applyMainActions(actions: ActionId[], preferredId: string | null) {
-    const items = this.buildMainActionItems(actions);
+  private applyMainActions(
+    actions: ActionId[],
+    preferredId: string | null,
+    character: PlayerCharacter | null
+  ) {
+    const items = this.buildMainActionItems(
+      actions,
+      character,
+      this.currentTurn
+    );
     this.mainActionDropdown.setItems(items);
     if (preferredId) {
       this.mainActionDropdown.setValue(preferredId, false);
@@ -578,7 +589,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     return Array.from(set);
   }
 
-  private buildMainActionItems(actionIds: ActionId[]): GridSelectItem[] {
+  private buildMainActionItems(
+    actionIds: ActionId[],
+    character: PlayerCharacter | null,
+    currentTurn: number
+  ): GridSelectItem[] {
+    const cooldowns = this.buildActionCooldownMap(character, currentTurn);
     const fallback: (ActionId | string)[] =
       PRIMARY_ACTION_IDS.length > 0
         ? PRIMARY_ACTION_IDS
@@ -587,10 +603,53 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       actionIds.length > 0
         ? Array.from(new Set([...actionIds, ...fallback]))
         : fallback;
-    return sourceIds.map((id) => this.resolveActionMetadata(id));
+    const seen = new Set<string>();
+    const items: GridSelectItem[] = [];
+    for (const id of sourceIds) {
+      if (seen.has(id)) {
+        continue;
+      }
+      seen.add(id);
+      const remaining = cooldowns.get(id) ?? 0;
+      items.push(this.resolveActionMetadata(id, remaining));
+    }
+    return items;
   }
 
-  private resolveActionMetadata(actionId: ActionId | string): GridSelectItem {
+  private buildActionCooldownMap(
+    character: PlayerCharacter | null,
+    currentTurn: number
+  ): Map<string, number> {
+    const map = new Map<string, number>();
+    if (!character?.statuses?.cooldowns) {
+      return map;
+    }
+    for (const entry of character.statuses.cooldowns) {
+      if (!entry || typeof entry.actionId !== "string") {
+        continue;
+      }
+      const availableOnTurn =
+        typeof entry.availableOnTurn === "number"
+          ? entry.availableOnTurn
+          : currentTurn + 1 + Math.max(0, entry.remainingTurns);
+      const remaining = Math.max(
+        0,
+        Math.ceil(availableOnTurn - (currentTurn + 1))
+      );
+      if (remaining > 0) {
+        const current = map.get(entry.actionId) ?? 0;
+        map.set(entry.actionId, Math.max(current, remaining));
+      }
+    }
+    return map;
+  }
+
+  private resolveActionMetadata(
+    actionId: ActionId | string,
+    cooldownRemaining: number
+  ): GridSelectItem {
+    const normalizedRemaining = Math.max(0, Math.ceil(cooldownRemaining));
+    const isDisabled = normalizedRemaining > 0;
     const definition = ActionLibrary[actionId as ActionId] ?? null;
     if (definition) {
       const { texture, frame } = this.resolveActionTexture(definition);
@@ -601,6 +660,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         texture,
         frame,
         tags: definition.tags,
+        cooldownRemaining: normalizedRemaining,
+        disabled: isDisabled,
       };
     }
     const fallbackName = this.formatActionName(actionId);
@@ -610,6 +671,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       description: "Description coming soon.",
       texture: "hex",
       frame: "grass_01.png",
+      cooldownRemaining: normalizedRemaining,
+      disabled: isDisabled,
     };
   }
 

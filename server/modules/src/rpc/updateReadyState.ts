@@ -1,6 +1,6 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import { DEFAULT_REPLAY_VIEW_DISTANCE, OPCODE_TURN_ADVANCED } from "@shared";
+import { DEFAULT_REPLAY_VIEW_DISTANCE } from "@shared";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
@@ -69,7 +69,7 @@ export function updateReadyStateRpc(
 
   if (allReady) {
     resolvedTurnNumber = (match.current_turn || 0) + 1;
-    advanceResult = advanceTurn(match);
+    advanceResult = advanceTurn(match, resolvedTurnNumber);
     match.current_turn = resolvedTurnNumber;
     const resetStates: Record<string, boolean> = {};
     for (const playerId of players) {

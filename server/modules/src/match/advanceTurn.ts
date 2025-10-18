@@ -4,6 +4,10 @@ import { ActionLibrary } from "@shared";
 import type { ActionDefinition, ReplayEvent } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { executeMoveAction, type MoveParticipant } from "./actions/move";
+import {
+  applyActionCooldown,
+  updateCooldownsForTurn,
+} from "./actions/cooldowns";
 
 function sortedActions(): ActionDefinition[] {
   const keys = Object.keys(ActionLibrary) as Array<keyof typeof ActionLibrary>;
@@ -24,7 +28,10 @@ export interface AdvanceTurnResult {
   events: ReplayEvent[];
 }
 
-export function advanceTurn(match: MatchRecord): AdvanceTurnResult {
+export function advanceTurn(
+  match: MatchRecord,
+  resolvedTurn: number
+): AdvanceTurnResult {
   if (!Array.isArray(match.players) || !match.playerCharacters) {
     return { events: [] };
   }
@@ -34,6 +41,7 @@ export function advanceTurn(match: MatchRecord): AdvanceTurnResult {
   if (players.length === 0) {
     return { events: [] };
   }
+  updateCooldownsForTurn(match, resolvedTurn);
   const actions = sortedActions();
   const replayEvents: ReplayEvent[] = [];
   for (const action of actions) {
@@ -59,6 +67,15 @@ export function advanceTurn(match: MatchRecord): AdvanceTurnResult {
       continue;
     }
     const moveEvents = executeMoveAction(participants, match);
+    for (const participant of participants) {
+      applyActionCooldown(
+        participant.character,
+        action.id,
+        action.cooldown,
+        resolvedTurn
+      );
+      match.playerCharacters[participant.playerId] = participant.character;
+    }
     if (moveEvents.length) {
       replayEvents.push(...moveEvents);
     }

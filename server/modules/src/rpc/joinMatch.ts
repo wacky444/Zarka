@@ -107,6 +107,23 @@ export function joinMatchRpc(
 
   if (shouldWrite) {
     storage.writeMatch(match, read.version);
+    try {
+      nkWrapper.matchSignal(
+        matchId,
+        JSON.stringify({
+          type: "sync_players",
+          players: match.players,
+          size: match.size,
+          name: match.name,
+          started: match.started,
+        })
+      );
+    } catch (signalError) {
+      logger.debug(
+        "join_match: matchSignal sync failed: %s",
+        (signalError as Error).message
+      );
+    }
   }
 
   const response: import("@shared").JoinMatchPayload = {

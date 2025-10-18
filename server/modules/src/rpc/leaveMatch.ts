@@ -56,6 +56,23 @@ export function leaveMatchRpc(
     }
     try {
       storage.writeMatch(match, read.version);
+      try {
+        nkWrapper.matchSignal(
+          matchId,
+          JSON.stringify({
+            type: "sync_players",
+            players: match.players,
+            size: match.size,
+            name: match.name,
+            started: match.started,
+          })
+        );
+      } catch (signalError) {
+        logger.debug(
+          "leave_match: matchSignal sync failed: %s",
+          (signalError as Error).message
+        );
+      }
     } catch (e) {
       throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
     }

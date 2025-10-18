@@ -30,6 +30,7 @@ export class LobbyView {
   private autoSkip = true;
   private botPlayers = 0;
   private matchName = LobbyView.DEFAULT_MATCH_NAME;
+  private maxPlayers = 2;
   private isHost = false;
   private playerNames: string[] = [];
   private playersStepper?: StepperHandle;
@@ -174,6 +175,7 @@ export class LobbyView {
       () => this.players,
       (v) => {
         this.players = Phaser.Math.Clamp(v, 1, 100);
+        this.maxPlayers = this.players;
         this.refreshPlayerList();
         this.emitSettings();
       },
@@ -368,6 +370,7 @@ export class LobbyView {
   }) {
     if (typeof partial.size === "number") {
       this.players = Phaser.Math.Clamp(partial.size, 1, 100);
+      this.maxPlayers = this.players;
       this.playersStepper?.setDisplayValue(this.players);
     }
     if (typeof partial.cols === "number") {
@@ -504,7 +507,8 @@ export class LobbyView {
   private refreshPlayerList() {
     if (!this.playerListTitle || !this.playerListText) return;
     const playerCount = this.playerNames.length;
-    this.playerListTitle.setText(`Players (${playerCount}/${this.players})`);
+    const capacity = Math.max(this.maxPlayers, 1);
+    this.playerListTitle.setText(`Players (${playerCount}/${capacity})`);
     if (playerCount === 0) {
       this.playerListText.setText("Waiting for players...");
       return;

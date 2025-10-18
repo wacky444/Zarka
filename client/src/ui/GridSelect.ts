@@ -9,6 +9,8 @@ export interface GridSelectItem {
   frame?: string;
   iconScale?: number;
   tags?: string[];
+  cooldownRemaining?: number;
+  disabled?: boolean;
 }
 
 interface GridSelectConfig {
@@ -66,8 +68,11 @@ const MODAL_HEADER_COLOR = "#ffffff";
 const MODAL_TEXT_COLOR = "#cbd5f5";
 const CARD_BACKGROUND_COLOR = 0x1b2440;
 const CARD_BACKGROUND_SELECTED = 0x2b3a6b;
+const CARD_BACKGROUND_DISABLED = 0x151e35;
 const COLLAPSED_BACKGROUND_COLOR = 0x101828;
 const COLLAPSED_BORDER_COLOR = 0x1f2a4a;
+const COOLDOWN_TEXT_COLOR = "#f87171";
+const DISABLED_TEXT_COLOR = "#94a3b8";
 
 export class GridSelect extends Phaser.GameObjects.Container {
   private readonly background: RexRoundRectangle;
@@ -178,18 +183,18 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
   setItems(items: GridSelectItem[]) {
     this.items = items.slice();
-    if (
-      !this.selectedItem ||
-      !this.items.find((it) => it.id === this.selectedItem?.id)
-    ) {
-      const first = this.items[0] ?? null;
-      if (first) {
-        this.applySelection(first, false);
+    const currentId = this.selectedItem?.id ?? null;
+    if (currentId) {
+      const current = this.items.find(
+        (it) => it.id === currentId && it.disabled !== true
+      );
+      if (current) {
+        this.applySelection(current, false);
       } else {
-        this.clearSelection();
+        this.selectFirstAvailable(false);
       }
     } else {
-      this.applySelection(this.selectedItem, false);
+      this.selectFirstAvailable(false);
     }
     this.gridTable?.setItems(this.items);
     this.gridTable?.refresh?.();
@@ -203,8 +208,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
       return this;
     }
     const match = this.items.find((it) => it.id === id);
-    if (!match) {
-      this.clearSelection();
+    if (!match || match.disabled) {
+      if (emit) {
+        this.clearSelection();
+      } else {
+        this.selectFirstAvailable(false);
+      }
       return this;
     }
     this.applySelection(match, emit);
@@ -235,7 +244,19 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.label.setText(this.placeholder);
   }
 
+  private selectFirstAvailable(emit: boolean) {
+    const first = this.items.find((it) => it.disabled !== true) ?? null;
+    if (first) {
+      this.applySelection(first, emit);
+    } else {
+      this.clearSelection();
+    }
+  }
+
   private applySelection(item: GridSelectItem, emit = false) {
+    if (item.disabled) {
+      return;
+    }
     this.selectedItem = item;
     this.updateCollapsedView(item);
     if (emit) {
@@ -471,7 +492,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
       "cell.click",
       (_cellContainer: Phaser.GameObjects.GameObject, cellIndex: number) => {
         const item = this.items[cellIndex];
-        if (!item) {
+        if (!item || item.disabled) {
+          this.tooltip?.hide();
           return;
         }
         this.applySelection(item, true);
@@ -484,7 +506,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
       "cell.up",
       (_cellContainer: Phaser.GameObjects.GameObject, cellIndex: number) => {
         const item = this.items[cellIndex];
-        if (!item) {
+        if (!item || item.disabled) {
+          this.tooltip?.hide();
           return;
         }
         this.applySelection(item, true);
@@ -602,6 +625,15 @@ export class GridSelect extends Phaser.GameObjects.Container {
         })
         .setOrigin(0.5, 0.5);
 
+      const cooldownText = scene.add
+        .text(0, 0, "", {
+          fontSize: "14px",
+          color: COOLDOWN_TEXT_COLOR,
+          fontStyle: "bold",
+        })
+        .setOrigin(1, 0)
+        .setVisible(false);
+
       const nameTruncated = this.applySingleLineText(
         nameText,
         item.name,
@@ -617,6 +649,13 @@ export class GridSelect extends Phaser.GameObjects.Container {
       container.add(icon, 0, "center", { bottom: 4 }, false);
       container.add(nameText, 0, "center", { bottom: 2 }, false);
       container.add(descText, 0, "center", 0, false);
+      container.add(
+        cooldownText,
+        0,
+        "right-top",
+        { right: 12, top: 12 },
+        false
+      );
 
       (container as unknown as Phaser.GameObjects.GameObject).setData("bg", bg);
       (container as unknown as Phaser.GameObjects.GameObject).setData(
@@ -639,13 +678,28 @@ export class GridSelect extends Phaser.GameObjects.Container {
         "showTooltip",
         nameTruncated || descTruncated
       );
+      (container as unknown as Phaser.GameObjects.GameObject).setData(
+        "cooldown",
+        cooldownText
+      );
 
       (
         container as unknown as { setMinSize?: (w: number, h: number) => void }
       ).setMinSize?.(cellWidth, cellHeight);
 
       container.layout();
-      return container as unknown as Phaser.GameObjects.GameObject;
+      const created = container as unknown as Phaser.GameObjects.GameObject;
+      this.updateCellAppearance(created, {
+        item,
+        bg,
+        icon,
+        nameText,
+        descText,
+        cellWidth,
+        cellHeight,
+        isSelected: this.selectedItem?.id === item.id,
+      });
+      return created;
     }
 
     const containerGO = container as unknown as Phaser.GameObjects.GameObject;
@@ -657,6 +711,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
       | Phaser.GameObjects.Text
       | undefined;
     const descText = containerGO.getData("desc") as
+      | Phaser.GameObjects.Text
+      | undefined;
+    const cooldownText = containerGO.getData("cooldown") as
       | Phaser.GameObjects.Text
       | undefined;
 
@@ -691,21 +748,78 @@ export class GridSelect extends Phaser.GameObjects.Container {
       : false;
     containerGO.setData("id", item.id);
     containerGO.setData("showTooltip", nameTruncated || descTruncated);
-
-    const isSelected = this.selectedItem?.id === item.id;
-    bg?.setFillStyle?.(
-      isSelected ? CARD_BACKGROUND_SELECTED : CARD_BACKGROUND_COLOR,
-      1
-    );
-    bg?.setSize?.(cellWidth, cellHeight);
-    bg?.setDisplaySize?.(cellWidth, cellHeight);
+    if (cooldownText) {
+      cooldownText.setVisible(false);
+    }
 
     (
       container as unknown as { setMinSize?: (w: number, h: number) => void }
     ).setMinSize?.(cellWidth, cellHeight);
 
+    this.updateCellAppearance(containerGO, {
+      item,
+      bg,
+      icon,
+      nameText,
+      descText,
+      cellWidth,
+      cellHeight,
+      isSelected: this.selectedItem?.id === item.id,
+    });
+
     container.layout();
     return containerGO;
+  }
+
+  private updateCellAppearance(
+    container: Phaser.GameObjects.GameObject,
+    config: {
+      item: GridSelectItem;
+      bg?: RexRoundRectangle;
+      icon?: Phaser.GameObjects.Image;
+      nameText?: Phaser.GameObjects.Text;
+      descText?: Phaser.GameObjects.Text;
+      cellWidth: number;
+      cellHeight: number;
+      isSelected: boolean;
+    }
+  ) {
+    const disabled = config.item.disabled === true;
+    const selected = config.isSelected && !disabled;
+    const baseColor = selected
+      ? CARD_BACKGROUND_SELECTED
+      : disabled
+      ? CARD_BACKGROUND_DISABLED
+      : CARD_BACKGROUND_COLOR;
+    config.bg?.setFillStyle?.(baseColor, 1);
+    config.bg?.setSize?.(config.cellWidth, config.cellHeight);
+    config.bg?.setDisplaySize?.(config.cellWidth, config.cellHeight);
+
+    if (config.icon) {
+      config.icon.setAlpha(disabled ? 0.5 : 1);
+    }
+    config.nameText?.setColor(disabled ? DISABLED_TEXT_COLOR : "#ffffff");
+    config.descText?.setColor(
+      disabled ? DISABLED_TEXT_COLOR : MODAL_TEXT_COLOR
+    );
+
+    const cooldownText = container.getData("cooldown") as
+      | Phaser.GameObjects.Text
+      | undefined;
+    if (cooldownText) {
+      const remaining = config.item.cooldownRemaining ?? 0;
+      if (disabled && remaining > 0) {
+        cooldownText.setText(`CD: ${remaining}`);
+        cooldownText.setVisible(true);
+      } else {
+        cooldownText.setVisible(false);
+      }
+    }
+
+    const typed = container as Phaser.GameObjects.GameObject & {
+      setAlpha?: (value: number) => Phaser.GameObjects.GameObject;
+    };
+    typed.setAlpha?.(disabled ? 0.9 : 1);
   }
 
   private ensureTooltip() {

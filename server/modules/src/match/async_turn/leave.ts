@@ -9,14 +9,10 @@ export const asyncTurnMatchLeave: nkruntime.MatchLeaveFunction<AsyncTurnState> =
     for (const p of presences) {
       if (state.players[p.userId]) {
         delete state.players[p.userId];
-        const idx = state.order.indexOf(p.userId);
-        if (idx !== -1) {
-          state.order.splice(idx, 1);
-        }
       }
     }
 
-    const playerCount = Object.keys(state.players).length;
+    const playerCount = state.order.length;
 
     try {
       const label = buildMatchLabel({
@@ -39,7 +35,7 @@ export const asyncTurnMatchLeave: nkruntime.MatchLeaveFunction<AsyncTurnState> =
         botPlayers: state.botPlayers,
         name: state.name,
         started: state.started,
-        players: Object.keys(state.players),
+        players: state.order,
       });
       dispatcher.broadcastMessage(
         OPCODE_SETTINGS_UPDATE,
