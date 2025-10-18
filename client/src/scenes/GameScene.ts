@@ -621,6 +621,11 @@ export class GameScene extends Phaser.Scene {
         } else if (nextPlan.targetLocationId) {
           delete nextPlan.targetLocationId;
         }
+        if (payload.targetPlayerIds && payload.targetPlayerIds.length > 0) {
+          nextPlan.targetPlayerIds = [...payload.targetPlayerIds];
+        } else if (nextPlan.targetPlayerIds) {
+          delete nextPlan.targetPlayerIds;
+        }
         target.actionPlan.main = nextPlan;
       }
       this.updateCharacterPanel(this.currentMatch);
@@ -786,6 +791,12 @@ export class GameScene extends Phaser.Scene {
       getLabel: (playerId) => this.playerNameLabels.get(playerId),
       positionLabel: (label, sprite) => this.positionNameLabel(label, sprite),
       currentMatch: this.currentMatch,
+      scene: this,
+      ignoreUI: (object) => {
+        if (this.uiCam) {
+          this.uiCam.ignore(object);
+        }
+      },
     };
   }
 

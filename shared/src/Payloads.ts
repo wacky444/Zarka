@@ -38,6 +38,7 @@ export type UpdateMainActionPayload = {
   user_id?: string;
   action_id?: string;
   targetLocationId?: Axial;
+  targetPlayerIds?: string[];
   error?: string;
 };
 

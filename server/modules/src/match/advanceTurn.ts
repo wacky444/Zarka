@@ -2,12 +2,16 @@
 
 import { ActionLibrary } from "@shared";
 import type { ActionDefinition, ReplayEvent } from "@shared";
+import type { PlayerCharacter } from "@shared";
 import type { MatchRecord } from "../models/types";
-import { executeMoveAction, type MoveParticipant } from "./actions/move";
+import { executeMoveAction } from "./actions/move";
+import { executeProtectAction } from "./actions/protect";
+import { executePunchAction } from "./actions/punch";
 import {
   applyActionCooldown,
   updateCooldownsForTurn,
 } from "./actions/cooldowns";
+import type { PlannedActionParticipant } from "./actions/utils";
 
 function sortedActions(): ActionDefinition[] {
   const keys = Object.keys(ActionLibrary) as Array<keyof typeof ActionLibrary>;
@@ -28,6 +32,62 @@ export interface AdvanceTurnResult {
   events: ReplayEvent[];
 }
 
+function collectParticipants(
+  players: string[],
+  match: MatchRecord,
+  actionId: string
+): PlannedActionParticipant[] {
+  const list: PlannedActionParticipant[] = [];
+  for (const playerId of players) {
+    const character = match.playerCharacters?.[playerId];
+    if (!character || !character.actionPlan || !character.actionPlan.main) {
+      continue;
+    }
+    if (character.actionPlan.main.actionId !== actionId) {
+      continue;
+    }
+    list.push({
+      playerId,
+      character,
+      plan: character.actionPlan.main,
+    });
+  }
+  return list;
+}
+
+function stripProtectedCondition(character: PlayerCharacter): void {
+  const statuses = character.statuses;
+  if (!statuses?.conditions) {
+    return;
+  }
+  const filtered = statuses.conditions.filter(
+    (condition) => condition !== "protected"
+  );
+  if (filtered.length === statuses.conditions.length) {
+    return;
+  }
+  statuses.conditions = filtered;
+}
+
+function removeProtectedState(match: MatchRecord): void {
+  if (!match.playerCharacters) {
+    return;
+  }
+  for (const playerId in match.playerCharacters) {
+    if (
+      !Object.prototype.hasOwnProperty.call(match.playerCharacters, playerId)
+    ) {
+      continue;
+    }
+    const character = match.playerCharacters[playerId];
+    if (!character) {
+      continue;
+    }
+    stripProtectedCondition(character);
+    match.playerCharacters[playerId] = character;
+  }
+}
+
 export function advanceTurn(
   match: MatchRecord,
   resolvedTurn: number
@@ -41,44 +101,69 @@ export function advanceTurn(
   if (players.length === 0) {
     return { events: [] };
   }
+  removeProtectedState(match);
   updateCooldownsForTurn(match, resolvedTurn);
   const actions = sortedActions();
   const replayEvents: ReplayEvent[] = [];
   for (const action of actions) {
-    if (action.id !== ActionLibrary.move.id) {
-      continue;
-    }
-    const participants: MoveParticipant[] = [];
-    for (const playerId of players) {
-      const character = match.playerCharacters[playerId];
-      if (!character || !character.actionPlan || !character.actionPlan.main) {
+    let handled = false;
+    let eventsForAction: ReplayEvent[] = [];
+    if (action.id === ActionLibrary.move.id) {
+      const participants = collectParticipants(players, match, action.id);
+      if (participants.length === 0) {
         continue;
       }
-      if (character.actionPlan.main.actionId !== action.id) {
+      eventsForAction = executeMoveAction(participants, match);
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn
+        );
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
+      handled = true;
+    } else if (action.id === ActionLibrary.protect.id) {
+      const participants = collectParticipants(players, match, action.id);
+      if (participants.length === 0) {
         continue;
       }
-      participants.push({
-        playerId,
-        character,
-        plan: character.actionPlan.main,
-      });
+      eventsForAction = executeProtectAction(participants, match);
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn
+        );
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
+      handled = true;
+    } else if (action.id === ActionLibrary.punch.id) {
+      const participants = collectParticipants(players, match, action.id);
+      if (participants.length === 0) {
+        continue;
+      }
+      eventsForAction = executePunchAction(participants, match);
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn
+        );
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
+      handled = true;
     }
-    if (participants.length === 0) {
+    if (!handled) {
       continue;
     }
-    const moveEvents = executeMoveAction(participants, match);
-    for (const participant of participants) {
-      applyActionCooldown(
-        participant.character,
-        action.id,
-        action.cooldown,
-        resolvedTurn
-      );
-      match.playerCharacters[participant.playerId] = participant.character;
-    }
-    if (moveEvents.length) {
-      replayEvents.push(...moveEvents);
+    if (eventsForAction.length) {
+      replayEvents.push(...eventsForAction);
     }
   }
+  removeProtectedState(match);
   return { events: replayEvents };
 }

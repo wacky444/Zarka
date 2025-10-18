@@ -116,6 +116,7 @@ export interface PlayerPlannedAction {
   extraEffort?: number;
   conditions?: Array<ActionCondition>;
   targetLocationId?: Axial;
+  targetPlayerIds?: string[];
 }
 
 export type PlayerConditionFlag =
@@ -125,7 +126,8 @@ export type PlayerConditionFlag =
   | "intoxicated"
   | "burned"
   | "infected"
-  | "dead";
+  | "dead"
+  | "protected";
 
 export type PlayerAbilityId =
   | "vitality"

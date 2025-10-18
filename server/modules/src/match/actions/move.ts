@@ -3,17 +3,12 @@
 import type { MatchRecord } from "../../models/types";
 import type {
   ActionId,
-  PlayerCharacter,
   PlayerPlannedAction,
   ReplayActionDone,
   ReplayPlayerEvent,
 } from "@shared";
-
-export interface MoveParticipant {
-  playerId: string;
-  character: PlayerCharacter;
-  plan: PlayerPlannedAction;
-}
+import type { PlannedActionParticipant } from "./utils";
+import { clearMainPlan } from "./utils";
 
 function findDestination(match: MatchRecord, plan: PlayerPlannedAction) {
   const target = plan.targetLocationId;
@@ -35,22 +30,8 @@ function findDestination(match: MatchRecord, plan: PlayerPlannedAction) {
   };
 }
 
-function clearMainPlan(character: PlayerCharacter) {
-  if (!character.actionPlan) {
-    return;
-  }
-  delete character.actionPlan.main;
-  if (
-    character.actionPlan.secondary === undefined &&
-    character.actionPlan.nextMain === undefined &&
-    character.actionPlan.main === undefined
-  ) {
-    delete character.actionPlan;
-  }
-}
-
 export function executeMoveAction(
-  participants: MoveParticipant[],
+  participants: PlannedActionParticipant[],
   match: MatchRecord
 ): ReplayPlayerEvent[] {
   const events: ReplayPlayerEvent[] = [];

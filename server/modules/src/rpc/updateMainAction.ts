@@ -47,6 +47,7 @@ export function updateMainActionRpc(
   let actionId = "";
   let normalizedActionId: ActionId | null = null;
   let targetLocation: Axial | undefined;
+  let targetPlayerIds: string[] | undefined;
   if (submission) {
     actionId = normalizeActionId(submission.actionId);
     if (actionId.length === 0) {
@@ -56,8 +57,15 @@ export function updateMainActionRpc(
       );
     }
     const candidate = actionId as ActionId;
-    if (!ActionLibrary[candidate]) {
+    const definition = ActionLibrary[candidate];
+    if (!definition) {
       throw makeNakamaError("invalid_action", nkruntime.Codes.INVALID_ARGUMENT);
+    }
+    if (!definition.developed) {
+      throw makeNakamaError(
+        "action_not_available",
+        nkruntime.Codes.FAILED_PRECONDITION
+      );
     }
     normalizedActionId = candidate;
     const locationCandidate = submission.targetLocationId as Axial | undefined;
@@ -72,6 +80,13 @@ export function updateMainActionRpc(
         );
       }
       targetLocation = { q: qNum, r: rNum };
+    }
+    const rawTargetPlayers = submission.targetPlayerIds;
+    if (Array.isArray(rawTargetPlayers)) {
+      const filtered = rawTargetPlayers
+        .map((value) => (typeof value === "string" ? value.trim() : ""))
+        .filter((value) => value.length > 0);
+      targetPlayerIds = filtered.length > 0 ? filtered : undefined;
     }
   }
   const clearAction = !submission;
@@ -132,6 +147,11 @@ export function updateMainActionRpc(
     } else if (nextPlan.targetLocationId) {
       delete nextPlan.targetLocationId;
     }
+    if (targetPlayerIds && targetPlayerIds.length > 0) {
+      nextPlan.targetPlayerIds = targetPlayerIds;
+    } else if (nextPlan.targetPlayerIds) {
+      delete nextPlan.targetPlayerIds;
+    }
     character.actionPlan.main = nextPlan;
   }
   storage.writeMatch(match, read.version);
@@ -141,6 +161,10 @@ export function updateMainActionRpc(
     user_id: ctx.userId,
     action_id: clearAction ? undefined : actionId,
     targetLocationId: clearAction ? undefined : targetLocation,
+    targetPlayerIds:
+      clearAction || !targetPlayerIds || targetPlayerIds.length === 0
+        ? undefined
+        : targetPlayerIds,
   };
   return JSON.stringify(response);
 }

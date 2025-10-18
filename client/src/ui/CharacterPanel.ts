@@ -649,14 +649,22 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     cooldownRemaining: number
   ): GridSelectItem {
     const normalizedRemaining = Math.max(0, Math.ceil(cooldownRemaining));
-    const isDisabled = normalizedRemaining > 0;
+    let isDisabled = normalizedRemaining > 0;
     const definition = ActionLibrary[actionId as ActionId] ?? null;
     if (definition) {
       const { texture, frame } = this.resolveActionTexture(definition);
+      const developed = definition.developed === true;
+      if (!developed) {
+        isDisabled = true;
+      }
+      const descriptionBase = this.describeAction(definition);
+      const description = developed
+        ? descriptionBase
+        : `${descriptionBase}\n\n(Not available in this build.)`;
       return {
         id: definition.id,
         name: definition.name,
-        description: this.describeAction(definition),
+        description,
         texture,
         frame,
         tags: definition.tags,

@@ -115,6 +115,7 @@ export interface ActionDefinition {
   frame: string;
   actionOrder: number;
   actionSubOrder: number;
+  developed?: boolean;
   experience?: ActionExperienceReward;
   requirements?: ActionRequirement[];
   extraExecution?: ActionExtraExecution;

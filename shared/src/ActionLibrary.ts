@@ -259,6 +259,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 2,
     cooldown: 3,
+    developed: true,
     experience: {
       base: 0,
       conditional: [{ value: 3, condition: "Si la protección evita daño." }],
@@ -333,6 +334,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 2,
     cooldown: 3,
+    developed: true,
     effects: [{ description: "Se mueve a una localización adyacente." }],
     extraExecution: {
       cost: 3,
@@ -809,6 +811,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 3,
     cooldown: 3,
+    developed: true,
     experience: {
       base: 1,
       conditional: [
