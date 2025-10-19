@@ -80,7 +80,8 @@ export type ActionTag =
   | "Ranged"
   | "Recon"
   | "Status"
-  | "Economy";
+  | "Economy"
+  | "SingleTarget";
 
 export interface ActionRequirement {
   description: string;

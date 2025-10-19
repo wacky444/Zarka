@@ -15,7 +15,7 @@ These instructions are automatically included in every Copilot conversation for 
 - When editing code, explain the reasoning, reference the files or symbols you touched, and call out risks or TODOs.
 - Run or describe the smallest useful validation (build, lint, targeted test) after code changes. Only promise checks you actually execute.
 - Prefer PowerShell-compatible commands (Windows host). Present commands in fenced `powershell` blocks and note that long-running tasks must finish—never cancel them early.
-- Don't write code comments
+- Avoid writting code comments and don't remove existing ones.
 
 ## Workspace orientation
 
@@ -58,9 +58,9 @@ Key files:
 
 ### Nakama TypeScript runtime
 
-- RPCs live in `server/modules/src/rpc/`; validate payloads using helpers in `utils/validation.ts` and standardize error responses via `utils/errors.ts`.
+- RPCs live in `server/modules/src/rpc/`; validate payloads using helpers in `server/modules/src/utils/validation.ts` and standardize error responses via `server/modules/src/utils/errors.ts`. Server reusable utils like calculate distance go in `server/modules/src/utils/`.
 - Storage interactions should go through `services/storageService.ts` to preserve collection naming and permissions.
-- When modifying match loop logic, update both the state machine in `match/async_turn/loop.ts` and any signal handlers (`join`, `leave`, `signal`).
+- When modifying match advance turn logic, update the server in `server/modules/src/match/advanceTurn.ts`, the signal handlers OPCODE_TURN_ADVANCED and the client `client/src/services/turnService.ts`.
 - After server code changes, rebuild and redeploy modules:
 
 ```powershell

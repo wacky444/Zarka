@@ -75,7 +75,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     notes: [
       "Si no se dispone de esfuerzo suficiente al ejecutar la acción se pierde 1 punto de vida adicional tras completarla.",
     ],
-    tags: ["Support", "Status"],
+    tags: ["Support", "Status", "SingleTarget"],
   },
   breakfast: {
     id: "breakfast",
@@ -123,7 +123,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       maxRepetitions: 1,
       description: "Permite gastar una segunda venda en la misma acción.",
     },
-    tags: ["Support", "Status"],
+    tags: ["Support", "Status", "SingleTarget"],
   },
   use_medicine: {
     id: "use_medicine",
@@ -149,7 +149,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       maxRepetitions: 1,
       description: "Permite emplear un segundo medicamento.",
     },
-    tags: ["Support", "Status"],
+    tags: ["Support", "Status", "SingleTarget"],
   },
   talk: {
     id: "talk",
@@ -198,7 +198,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "token.png",
     actionOrder: 2,
     actionSubOrder: 1,
-    tags: ["Recon", "Utility", "Ranged"],
+    tags: ["Recon", "Utility", "Ranged", "SingleTarget"],
   },
   place_c4: {
     id: "place_c4",
@@ -274,7 +274,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "shield.png",
     actionOrder: 3,
     actionSubOrder: 0,
-    tags: ["Support", "Status"],
+    tags: ["Support", "Status", "SingleTarget"],
   },
   dodge: {
     id: "dodge",
@@ -326,7 +326,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "hand_cross.png",
     actionOrder: 4,
     actionSubOrder: 0,
-    tags: ["Attack"],
+    tags: ["Attack", "SingleTarget"],
   },
   move: {
     id: "move",
@@ -435,7 +435,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "token_give.png",
     actionOrder: 6,
     actionSubOrder: 4,
-    tags: ["Support", "Logistics"],
+    tags: ["Support", "Logistics", "SingleTarget"],
   },
   poison_food: {
     id: "poison_food",
@@ -575,10 +575,10 @@ export const ActionLibrary: ActionLibraryDefinition = {
         "Permite seguir al objetivo o asustar a un segundo personaje.",
     },
     texture: "Board Game Icons",
-    frame: "flag_triangle.png",
+    frame: "character_lift.png",
     actionOrder: 10,
     actionSubOrder: 0,
-    tags: ["Attack", "Utility", "Ranged"],
+    tags: ["Attack", "Utility", "Ranged", "SingleTarget"],
   },
   detonate_c4: {
     id: "detonate_c4",
@@ -629,7 +629,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "sword.png",
     actionOrder: 11,
     actionSubOrder: 1,
-    tags: ["Attack"],
+    tags: ["Attack", "SingleTarget"],
   },
   bat_attack: {
     id: "bat_attack",
@@ -685,7 +685,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "sword.png",
     actionOrder: 11,
     actionSubOrder: 4,
-    tags: ["Attack"],
+    tags: ["Attack", "SingleTarget"],
   },
   start_chainsaw: {
     id: "start_chainsaw",
@@ -742,7 +742,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "dice_sword.png",
     actionOrder: 11,
     actionSubOrder: 5,
-    tags: ["Attack", "Ranged"],
+    tags: ["Attack", "Ranged", "SingleTarget"],
   },
   shoot_harpoon: {
     id: "shoot_harpoon",
@@ -775,7 +775,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "bow.png",
     actionOrder: 11,
     actionSubOrder: 6,
-    tags: ["Attack", "Ranged"],
+    tags: ["Attack", "Ranged", "SingleTarget"],
   },
   fire_rocket_launcher: {
     id: "fire_rocket_launcher",
@@ -829,7 +829,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "hand.png",
     actionOrder: 11,
     actionSubOrder: 8,
-    tags: ["Attack"],
+    tags: ["Attack", "SingleTarget"],
   },
   pick_lock: {
     id: "pick_lock",
@@ -880,7 +880,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "pouch_remove.png",
     actionOrder: 13,
     actionSubOrder: 0,
-    tags: ["Attack", "Economy"],
+    tags: ["Attack", "Economy", "SingleTarget"],
   },
   fabricate: {
     id: "fabricate",
@@ -946,7 +946,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "notepad.png",
     actionOrder: 14,
     actionSubOrder: 2,
-    tags: ["Recon", "Logistics"],
+    tags: ["Recon", "Logistics", "SingleTarget"],
   },
   focus: {
     id: "focus",
@@ -1100,7 +1100,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "flask_half.png",
     actionOrder: 17,
     actionSubOrder: 0,
-    tags: ["Support", "Status"],
+    tags: ["Support", "Status", "SingleTarget"],
   },
   inject_virus: {
     id: "inject_virus",
@@ -1124,7 +1124,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "flask_full.png",
     actionOrder: 17,
     actionSubOrder: 1,
-    tags: ["Attack", "Area", "Status"],
+    tags: ["Attack", "Area", "Status", "SingleTarget"],
   },
   inject_vaccine: {
     id: "inject_vaccine",
@@ -1145,7 +1145,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "flask_half.png",
     actionOrder: 17,
     actionSubOrder: 2,
-    tags: ["Support", "Status"],
+    tags: ["Support", "Status", "SingleTarget"],
   },
   sleep: {
     id: "sleep",

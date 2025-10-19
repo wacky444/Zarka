@@ -583,18 +583,29 @@ export class GameScene extends Phaser.Scene {
     if (!this.turnService || !this.currentUserId || !matchId) {
       return;
     }
+    const normalizedPlayers = this.normalizeTargetPlayers(
+      selection?.targetPlayerIds ?? undefined
+    );
     const normalizedSelection: MainActionSelection = {
       actionId: selection?.actionId ?? null,
       targetLocation: this.normalizeAxial(selection?.targetLocation),
+      targetPlayerIds: normalizedPlayers,
     };
     const character =
       this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
     const previousPlan = character?.actionPlan?.main ?? null;
     const previousActionId = previousPlan?.actionId ?? null;
     const previousTarget = this.normalizeAxial(previousPlan?.targetLocationId);
+    const previousPlayers = this.normalizeTargetPlayers(
+      previousPlan?.targetPlayerIds ?? undefined
+    );
     if (
       normalizedSelection.actionId === previousActionId &&
-      this.isSameAxial(normalizedSelection.targetLocation, previousTarget)
+      this.isSameAxial(normalizedSelection.targetLocation, previousTarget) &&
+      this.isSameTargetPlayers(
+        normalizedSelection.targetPlayerIds,
+        previousPlayers
+      )
     ) {
       return;
     }
@@ -608,7 +619,8 @@ export class GameScene extends Phaser.Scene {
       const submission = normalizedSelection.actionId
         ? this.buildMainActionSubmission(
             normalizedSelection.actionId,
-            normalizedSelection.targetLocation
+            normalizedSelection.targetLocation,
+            normalizedSelection.targetPlayerIds
           )
         : null;
       const res = await this.turnService.updateMainAction(matchId, submission);
@@ -865,7 +877,8 @@ export class GameScene extends Phaser.Scene {
 
   private buildMainActionSubmission(
     actionId: string,
-    target: Axial | null
+    target: Axial | null,
+    targetPlayerIds: string[] | undefined
   ): ActionSubmission {
     const typedId = actionId as ActionId;
     const definition = ActionLibrary[typedId] ?? null;
@@ -877,6 +890,10 @@ export class GameScene extends Phaser.Scene {
     };
     if (target) {
       submission.targetLocationId = { q: target.q, r: target.r };
+    }
+    if (targetPlayerIds !== undefined) {
+      submission.targetPlayerIds =
+        targetPlayerIds.length > 0 ? [...targetPlayerIds] : [];
     }
     return submission;
   }
@@ -893,6 +910,31 @@ export class GameScene extends Phaser.Scene {
     return { q, r };
   }
 
+  private normalizeTargetPlayers(
+    value: string[] | undefined | null
+  ): string[] | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (!Array.isArray(value) || value.length === 0) {
+      return [];
+    }
+    const seen = new Set<string>();
+    const normalized: string[] = [];
+    for (const entry of value) {
+      if (typeof entry !== "string") {
+        continue;
+      }
+      const trimmed = entry.trim();
+      if (!trimmed || seen.has(trimmed)) {
+        continue;
+      }
+      seen.add(trimmed);
+      normalized.push(trimmed);
+    }
+    return normalized;
+  }
+
   private isSameAxial(a: Axial | null, b: Axial | null) {
     if (!a && !b) {
       return true;
@@ -901,6 +943,33 @@ export class GameScene extends Phaser.Scene {
       return false;
     }
     return a.q === b.q && a.r === b.r;
+  }
+
+  private isSameTargetPlayers(
+    a: string[] | undefined | null,
+    b: string[] | undefined | null
+  ): boolean {
+    const normalize = (input: string[] | undefined | null) => {
+      if (!input || input.length === 0) {
+        return [] as string[];
+      }
+      return input
+        .filter((value) => typeof value === "string")
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0)
+        .sort();
+    };
+    const aNorm = normalize(a);
+    const bNorm = normalize(b);
+    if (aNorm.length !== bNorm.length) {
+      return false;
+    }
+    for (let i = 0; i < aNorm.length; i += 1) {
+      if (aNorm[i] !== bNorm[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private isPointerOverUI(pointer: Phaser.Input.Pointer) {

@@ -13,6 +13,7 @@ import { GridSelect, type GridSelectItem } from "./GridSelect";
 import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
 import { ProgressBar } from "./ProgressBar";
 import { LocationSelector } from "./LocationSelector";
+import { PlayerSelector, type PlayerOption } from "./PlayerSelector";
 import {
   CharacterPanelTabs,
   type CharacterPanelTabEntry,
@@ -34,6 +35,7 @@ const PRIMARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
 export type MainActionSelection = {
   actionId: string | null;
   targetLocation: Axial | null;
+  targetPlayerIds?: string[];
 };
 
 export class CharacterPanel extends Phaser.GameObjects.Container {
@@ -62,6 +64,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private mainActionDropdown: GridSelect;
   private mainActionDropdownWidth: number;
   private locationSelector: LocationSelector;
+  private playerSelector: PlayerSelector;
   private secondaryActionText: Phaser.GameObjects.Text;
   private panelWidth: number;
   private panelHeight: number;
@@ -69,16 +72,20 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private mainActionSelection: string | null = null;
   private currentTurn = 0;
   private mainActionTarget: Axial | null = null;
+  private mainActionTargetPlayerId: string | null = null;
   private lastMainActionItem: GridSelectItem | null = null;
   private readyState = false;
   private readyEnabled = false;
+  private playerOptions: PlayerOption[] = [];
   private readonly handleMainActionSelection = (actionId: string | null) => {
     this.mainActionSelection = actionId ?? null;
     this.lastMainActionItem = this.mainActionDropdown.getSelectedItem() ?? null;
     if (!this.mainActionSelection) {
       this.setMainActionTarget(null, false);
+      this.setMainActionTargetPlayer(null, false);
     }
     this.refreshLocationSelectorState();
+    this.refreshPlayerSelectorState();
     this.emitMainActionChange();
   };
   private readonly handleLocationPickRequest = () => {
@@ -89,6 +96,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   };
   private readonly handleLocationClear = () => {
     this.setMainActionTarget(null, true);
+  };
+  private readonly handlePlayerSelection = (playerId: string | null) => {
+    this.setMainActionTargetPlayer(playerId ?? null, true);
   };
   private readonly handleReadyToggle = () => {
     if (!this.readyEnabled) {
@@ -240,6 +250,18 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.locationSelector.on("pick-request", this.handleLocationPickRequest);
     this.locationSelector.on("clear-request", this.handleLocationClear);
     this.add(this.locationSelector);
+    this.playerSelector = new PlayerSelector(
+      scene,
+      MARGIN + 12,
+      locationY,
+      this.mainActionDropdownWidth
+    );
+    this.playerSelector.setEnabled(false);
+    this.playerSelector.setVisible(false);
+    this.playerSelector.setActive(false);
+    this.playerSelector.on("change", this.handlePlayerSelection);
+    this.add(this.playerSelector);
+    this.layoutMainActionSelectors();
     const secondaryBoxY = mainBoxY + BOX_HEIGHT + 16;
     this.secondaryActionBox = scene.add
       .rectangle(MARGIN, secondaryBoxY, boxWidth, BOX_HEIGHT, 0x1b2440)
@@ -363,6 +385,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.mainActionLabel,
       this.mainActionDropdown,
       this.locationSelector,
+      this.playerSelector,
       this.secondaryActionBox,
       this.secondaryActionLabel,
       this.secondaryActionText,
@@ -375,6 +398,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.mainActionDropdown.setVisible(true);
         this.mainActionDropdown.setActive(true);
         this.refreshLocationSelectorState();
+        this.refreshPlayerSelectorState();
         this.setReadyEnabled(this.readyEnabled);
       },
       onCharacterTabHide: () => {
@@ -382,6 +406,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.mainActionDropdown.setActive(false);
         this.locationSelector.setVisible(false);
         this.locationSelector.setActive(false);
+        this.playerSelector.hideDropdown();
+        this.playerSelector.setVisible(false);
+        this.playerSelector.setActive(false);
         this.readyToggle.disableInteractive();
       },
       onLogVisibilityChange: ({ visible, forceEnsure }) => {
@@ -399,12 +426,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     });
     this.tabsController.refresh();
     this.bringToTop(this.mainActionDropdown);
+    this.bringToTop(this.locationSelector);
+    this.bringToTop(this.playerSelector);
   }
 
   override destroy(fromScene?: boolean) {
     this.mainActionDropdown.off("change", this.handleMainActionSelection);
     this.locationSelector.off("pick-request", this.handleLocationPickRequest);
     this.locationSelector.off("clear-request", this.handleLocationClear);
+    this.playerSelector.off("change", this.handlePlayerSelection);
+    this.playerSelector.hideDropdown();
     this.readyToggle?.off("pointerup", this.handleReadyToggle);
     this.logView?.destroy();
     super.destroy(fromScene);
@@ -426,9 +457,18 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const dropdownY = this.nameText.y + this.nameText.height + 12 + 48;
     dropdown.setPosition(MARGIN + 12, dropdownY);
     dropdown.setDisplayWidth(this.mainActionDropdownWidth);
-    const locationY = dropdownY + dropdown.height + 12;
-    this.locationSelector.setPosition(MARGIN + 12, locationY);
+    const selectorsX = MARGIN + 12;
     this.locationSelector.setSelectorWidth(this.mainActionDropdownWidth);
+    this.playerSelector.setSelectorWidth(this.mainActionDropdownWidth);
+    this.locationSelector.setPosition(
+      selectorsX,
+      dropdownY + dropdown.height + 12
+    );
+    this.playerSelector.setPosition(
+      selectorsX,
+      dropdownY + dropdown.height + 12
+    );
+    this.layoutMainActionSelectors();
     const barX = MARGIN * 2 + PORTRAIT_SIZE;
     const contentTop = TAB_HEIGHT + MARGIN;
     this.healthBar.setPosition(barX, contentTop);
@@ -460,6 +500,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   ) {
     const userMap = usernames ? { ...usernames } : {};
     this.logView.setUsernames(userMap);
+    this.updatePlayerOptions(match ?? null, userMap, currentUserId);
     if (!match || !currentUserId) {
       this.currentTurn = 0;
       this.applyCharacter(null, null, false);
@@ -485,7 +526,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.useBarValue(this.energyBar, 0);
       this.applyMainActions([], null, null);
       this.setMainActionTarget(null, false);
+      this.setMainActionTargetPlayer(null, false);
       this.setLocationSelectionPending(false);
+      this.playerSelector.setPending(false);
+      this.playerSelector.setEnabled(false);
+      this.playerSelector.hideDropdown();
+      this.refreshPlayerSelectorState();
       this.secondaryActionText.setText("None selected");
       this.setReadyEnabled(false);
       this.setReadyState(false, false);
@@ -507,7 +553,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.applyMainActions(actions, mainActionId, character);
     const targetLocation = character.actionPlan?.main?.targetLocationId ?? null;
     this.setMainActionTarget(targetLocation ?? null, false);
+    const targetPlayers = character.actionPlan?.main?.targetPlayerIds ?? null;
+    const targetPlayerId =
+      Array.isArray(targetPlayers) && targetPlayers.length > 0
+        ? targetPlayers[0]
+        : null;
+    this.setMainActionTargetPlayer(targetPlayerId, false);
     this.setLocationSelectionPending(false);
+    this.playerSelector.setPending(false);
     const secondaryId = character.actionPlan?.secondary?.actionId ?? null;
     this.secondaryActionText.setText(
       this.resolveSecondaryActionLabel(secondaryId)
@@ -577,8 +630,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.mainActionSelection = this.mainActionDropdown.getValue();
     if (!this.mainActionSelection) {
       this.setMainActionTarget(null, false);
+      this.setMainActionTargetPlayer(null, false);
     }
     this.refreshLocationSelectorState();
+    this.refreshPlayerSelectorState();
   }
 
   private collectMainActions(character: PlayerCharacter) {
@@ -696,6 +751,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.locationSelector.setValue(null);
       this.locationSelector.setEnabled(false);
       this.locationSelector.setPending(false);
+      this.layoutMainActionSelectors();
       return;
     }
     const hasSelection = this.mainActionSelection !== null;
@@ -703,20 +759,158 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (!hasSelection) {
       this.locationSelector.setPending(false);
     }
+    this.layoutMainActionSelectors();
+  }
+
+  private refreshPlayerSelectorState() {
+    const supports = this.selectedActionSupportsSingleTarget();
+    const hasOptions = this.playerOptions.length > 0;
+    const shouldShow = supports && hasOptions;
+    this.playerSelector.setVisible(shouldShow);
+    this.playerSelector.setActive(shouldShow);
+    if (!shouldShow) {
+      if (this.mainActionTargetPlayerId !== null) {
+        this.mainActionTargetPlayerId = null;
+      }
+      this.playerSelector.setValue(null);
+      this.playerSelector.setEnabled(false);
+      this.playerSelector.setPending(false);
+      this.playerSelector.hideDropdown();
+      this.layoutMainActionSelectors();
+      return;
+    }
+    const hasSelection = this.mainActionSelection !== null;
+    this.playerSelector.setEnabled(hasSelection);
+    if (!hasSelection) {
+      this.playerSelector.setPending(false);
+      this.playerSelector.hideDropdown();
+    }
+    this.layoutMainActionSelectors();
+  }
+
+  private layoutMainActionSelectors() {
+    const dropdown = this.mainActionDropdown;
+    const baseX = dropdown.x;
+    const baseY = dropdown.y + dropdown.height + 12;
+    let cursorY = baseY;
+    if (this.locationSelector.visible) {
+      this.locationSelector.setPosition(baseX, cursorY);
+      cursorY += this.locationSelector.height + 8;
+    } else {
+      this.locationSelector.setPosition(baseX, baseY);
+    }
+    if (this.playerSelector.visible) {
+      this.playerSelector.setPosition(baseX, cursorY);
+      cursorY += this.playerSelector.height + 8;
+    } else {
+      this.playerSelector.setPosition(baseX, cursorY);
+    }
+  }
+
+  private setMainActionTargetPlayer(
+    targetId: string | null,
+    emit = false
+  ): boolean {
+    const supports = this.selectedActionSupportsSingleTarget();
+    if (!supports) {
+      const changed = this.mainActionTargetPlayerId !== null;
+      if (changed) {
+        this.mainActionTargetPlayerId = null;
+      }
+      this.playerSelector.setValue(null);
+      this.playerSelector.setPending(false);
+      this.playerSelector.hideDropdown();
+      if (emit && changed) {
+        this.emitMainActionChange();
+      }
+      return changed;
+    }
+    let normalized: string | null = null;
+    if (
+      targetId &&
+      this.playerOptions.some((option) => option.id === targetId)
+    ) {
+      normalized = targetId;
+    }
+    const changed = this.mainActionTargetPlayerId !== normalized;
+    if (!changed) {
+      return false;
+    }
+    this.mainActionTargetPlayerId = normalized;
+    this.playerSelector.setValue(normalized);
+    if (emit) {
+      this.emitMainActionChange();
+    }
+    return true;
+  }
+
+  private updatePlayerOptions(
+    match: MatchRecord | null,
+    usernames: Record<string, string>,
+    currentUserId: string | null
+  ) {
+    const options: PlayerOption[] = [];
+    if (match) {
+      const seen = new Set<string>();
+      const pushOption = (id: string | null | undefined) => {
+        if (!id || seen.has(id)) {
+          return;
+        }
+        seen.add(id);
+        const baseName =
+          usernames[id] ?? match.playerCharacters?.[id]?.name ?? id;
+        const displayName = baseName && baseName.length > 0 ? baseName : id;
+        const label =
+          currentUserId && id === currentUserId
+            ? `${displayName} (You)`
+            : displayName;
+        options.push({ id, label });
+      };
+      if (Array.isArray(match.players)) {
+        match.players.forEach((id) => pushOption(id));
+      }
+      if (match.playerCharacters) {
+        Object.keys(match.playerCharacters).forEach((id) => pushOption(id));
+      }
+    }
+    this.playerOptions = options;
+    if (
+      this.mainActionTargetPlayerId &&
+      !options.some((option) => option.id === this.mainActionTargetPlayerId)
+    ) {
+      this.mainActionTargetPlayerId = null;
+    }
+    this.playerSelector.setOptions(options);
+    if (this.mainActionTargetPlayerId) {
+      this.playerSelector.setValue(this.mainActionTargetPlayerId);
+    } else {
+      this.playerSelector.setValue(null);
+    }
+    this.refreshPlayerSelectorState();
   }
 
   private selectedActionSupportsLocation() {
     return this.lastMainActionItem?.tags?.includes("Ranged") ?? false;
   }
 
+  private selectedActionSupportsSingleTarget() {
+    return this.lastMainActionItem?.tags?.includes("SingleTarget") ?? false;
+  }
+
   private emitMainActionChange() {
-    const supports = this.selectedActionSupportsLocation();
+    const supportsLocation = this.selectedActionSupportsLocation();
+    const supportsPlayer = this.selectedActionSupportsSingleTarget();
     const payload: MainActionSelection = {
       actionId: this.mainActionSelection,
       targetLocation:
-        supports && this.mainActionTarget
+        supportsLocation && this.mainActionTarget
           ? { q: this.mainActionTarget.q, r: this.mainActionTarget.r }
           : null,
+      targetPlayerIds: supportsPlayer
+        ? this.mainActionTargetPlayerId
+          ? [this.mainActionTargetPlayerId]
+          : []
+        : undefined,
     };
     this.emit("main-action-change", payload);
   }
@@ -753,13 +947,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   getMainActionSelection(): MainActionSelection {
-    const supports = this.selectedActionSupportsLocation();
+    const supportsLocation = this.selectedActionSupportsLocation();
+    const supportsPlayer = this.selectedActionSupportsSingleTarget();
     return {
       actionId: this.mainActionSelection,
       targetLocation:
-        supports && this.mainActionTarget
+        supportsLocation && this.mainActionTarget
           ? { q: this.mainActionTarget.q, r: this.mainActionTarget.r }
           : null,
+      targetPlayerIds: supportsPlayer
+        ? this.mainActionTargetPlayerId
+          ? [this.mainActionTargetPlayerId]
+          : []
+        : undefined,
     };
   }
 
