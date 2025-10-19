@@ -552,13 +552,15 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const mainActionId = character.actionPlan?.main?.actionId ?? null;
     this.applyMainActions(actions, mainActionId, character);
     const targetLocation = character.actionPlan?.main?.targetLocationId ?? null;
-    this.setMainActionTarget(targetLocation ?? null, false);
+    const normalizedTargetLocation = this.normalizeAxial(targetLocation);
+    this.setMainActionTarget(normalizedTargetLocation, false);
     const targetPlayers = character.actionPlan?.main?.targetPlayerIds ?? null;
-    const targetPlayerId =
+    const serverTargetPlayerId = this.normalizePlayerId(
       Array.isArray(targetPlayers) && targetPlayers.length > 0
         ? targetPlayers[0]
-        : null;
-    this.setMainActionTargetPlayer(targetPlayerId, false);
+        : null
+    );
+    this.setMainActionTargetPlayer(serverTargetPlayerId, false);
     this.setLocationSelectionPending(false);
     this.playerSelector.setPending(false);
     const secondaryId = character.actionPlan?.secondary?.actionId ?? null;
@@ -567,6 +569,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     );
     this.setReadyEnabled(true);
     this.setReadyState(ready, false);
+    this.syncMainActionWithServer(
+      mainActionId,
+      normalizedTargetLocation,
+      serverTargetPlayerId
+    );
   }
 
   private useBarValue(bar: ProgressBar, ratio: number) {
@@ -915,6 +922,25 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.emit("main-action-change", payload);
   }
 
+  private syncMainActionWithServer(
+    serverActionId: string | null,
+    serverTargetLocation: Axial | null,
+    serverTargetPlayerId: string | null
+  ): void {
+    const matchesSelection =
+      (this.mainActionSelection ?? null) === (serverActionId ?? null);
+    const matchesLocation = this.isSameAxial(
+      this.mainActionTarget,
+      serverTargetLocation
+    );
+    const matchesPlayer =
+      (this.mainActionTargetPlayerId ?? null) ===
+      (serverTargetPlayerId ?? null);
+    if (!matchesSelection || !matchesLocation || !matchesPlayer) {
+      this.emitMainActionChange();
+    }
+  }
+
   setMainActionTarget(target: Axial | null, emit = false): boolean {
     const supports = this.selectedActionSupportsLocation();
     if (!supports) {
@@ -981,6 +1007,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       return null;
     }
     return { q, r };
+  }
+
+  private normalizePlayerId(value: string | null | undefined): string | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
   }
 
   private isSameAxial(a: Axial | null, b: Axial | null) {

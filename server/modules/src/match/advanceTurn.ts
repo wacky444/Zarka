@@ -12,7 +12,10 @@ import {
   applyActionCooldown,
   updateCooldownsForTurn,
 } from "./actions/cooldowns";
-import type { PlannedActionParticipant } from "./actions/utils";
+import {
+  applyActionEnergyCost,
+  type PlannedActionParticipant,
+} from "./actions/utils";
 
 function sortedActions(): ActionDefinition[] {
   const keys = Object.keys(ActionLibrary) as Array<keyof typeof ActionLibrary>;
@@ -114,6 +117,10 @@ export function advanceTurn(
       if (participants.length === 0) {
         continue;
       }
+      for (const participant of participants) {
+        applyActionEnergyCost(participant.character, action.energyCost);
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
       eventsForAction = executeMoveAction(participants, match);
       for (const participant of participants) {
         applyActionCooldown(
@@ -129,6 +136,10 @@ export function advanceTurn(
       const participants = collectParticipants(players, match, action.id);
       if (participants.length === 0) {
         continue;
+      }
+      for (const participant of participants) {
+        applyActionEnergyCost(participant.character, action.energyCost);
+        match.playerCharacters[participant.playerId] = participant.character;
       }
       eventsForAction = executeSleepAction(participants, match);
       for (const participant of participants) {
@@ -146,6 +157,10 @@ export function advanceTurn(
       if (participants.length === 0) {
         continue;
       }
+      for (const participant of participants) {
+        applyActionEnergyCost(participant.character, action.energyCost);
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
       eventsForAction = executeProtectAction(participants, match);
       for (const participant of participants) {
         applyActionCooldown(
@@ -161,6 +176,10 @@ export function advanceTurn(
       const participants = collectParticipants(players, match, action.id);
       if (participants.length === 0) {
         continue;
+      }
+      for (const participant of participants) {
+        applyActionEnergyCost(participant.character, action.energyCost);
+        match.playerCharacters[participant.playerId] = participant.character;
       }
       eventsForAction = executePunchAction(participants, match);
       for (const participant of participants) {
