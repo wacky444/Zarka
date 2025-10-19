@@ -379,6 +379,14 @@ export class CharacterPanelLogView {
         if (Array.isArray(event.targets)) {
           for (const target of event.targets) {
             const targetName = this.resolvePlayerName(target.targetId);
+            const healed =
+              typeof target?.metadata?.healed === "number"
+                ? target.metadata.healed
+                : null;
+            if (healed && healed > 0) {
+              lines.push(`${targetName} recovered ${healed} health`);
+              continue;
+            }
             if (
               typeof target.damageTaken === "number" &&
               target.damageTaken > 0

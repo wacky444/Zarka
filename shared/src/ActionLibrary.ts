@@ -1153,6 +1153,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 0,
     cooldown: 3,
+    developed: true,
     experience: {
       base: 0,
       conditional: [

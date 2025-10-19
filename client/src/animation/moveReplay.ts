@@ -25,6 +25,7 @@ export interface MoveReplayContext {
 }
 
 const SHIELD_TEXTURE_KEY = deriveBoardIconKey("shield.png");
+const HEAL_TEXTURE_KEY = deriveBoardIconKey("suit_hearts.png");
 
 export async function playReplayEvents(
   context: MoveReplayContext,
@@ -37,6 +38,8 @@ export async function playReplayEvents(
     const actionId = event.action.actionId;
     if (actionId === ActionLibrary.move.id) {
       await animateMoveEvent(context, event);
+    } else if (actionId === ActionLibrary.sleep.id) {
+      await animateSleepEvent(context, event);
     } else if (actionId === ActionLibrary.protect.id) {
       await animateProtectEvent(context, event);
     } else if (actionId === ActionLibrary.punch.id) {
@@ -105,7 +108,8 @@ function hasEffect(
 async function showGuardOverlay(
   context: MoveReplayContext,
   playerIds: string[],
-  duration = 520
+  duration = 520,
+  textureKey = SHIELD_TEXTURE_KEY
 ): Promise<void> {
   const overlays: Phaser.GameObjects.Image[] = [];
   const teardown: Array<() => void> = [];
@@ -115,7 +119,7 @@ async function showGuardOverlay(
     if (!sprite) {
       continue;
     }
-    const overlay = scene.add.image(sprite.x, sprite.y, SHIELD_TEXTURE_KEY);
+    const overlay = scene.add.image(sprite.x, sprite.y, textureKey);
     overlay.setOrigin(0.5, 0.5);
     overlay.setAlpha(0);
     overlay.setDepth(sprite.depth + 1);
@@ -177,6 +181,14 @@ async function animateProtectEvent(
 ): Promise<void> {
   const targets = collectTargetIds(event);
   await showGuardOverlay(context, targets);
+}
+
+async function animateSleepEvent(
+  context: MoveReplayContext,
+  event: ReplayPlayerEvent
+): Promise<void> {
+  const targets = collectTargetIds(event);
+  await showGuardOverlay(context, targets, 520, HEAL_TEXTURE_KEY);
 }
 
 async function animatePunchEvent(

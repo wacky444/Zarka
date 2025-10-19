@@ -7,6 +7,7 @@ import type { MatchRecord } from "../models/types";
 import { executeMoveAction } from "./actions/move";
 import { executeProtectAction } from "./actions/protect";
 import { executePunchAction } from "./actions/punch";
+import { executeSleepAction } from "./actions/sleep";
 import {
   applyActionCooldown,
   updateCooldownsForTurn,
@@ -114,6 +115,22 @@ export function advanceTurn(
         continue;
       }
       eventsForAction = executeMoveAction(participants, match);
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn
+        );
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
+      handled = true;
+    } else if (action.id === ActionLibrary.sleep.id) {
+      const participants = collectParticipants(players, match, action.id);
+      if (participants.length === 0) {
+        continue;
+      }
+      eventsForAction = executeSleepAction(participants, match);
       for (const participant of participants) {
         applyActionCooldown(
           participant.character,

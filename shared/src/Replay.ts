@@ -50,8 +50,9 @@ export type ReplayVisibility =
 export enum ReplayActionEffect {
   Hit = 1,
   Dodged = 2,
-  Guard = 4,
-  Armored = 8,
+  Guard = 3,
+  Armored = 4,
+  Heal = 5,
 }
 
 export type ReplayActionEffectMask = number;
