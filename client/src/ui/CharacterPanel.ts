@@ -158,7 +158,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     });
     const contentTop = TAB_HEIGHT + MARGIN;
     this.portrait = scene.add
-      .image(MARGIN, contentTop, "char", "body_02.png")
+      .image(MARGIN, contentTop, "char", "body_human_tan_01.png")
       .setOrigin(0, 0);
     this.portrait.setDisplaySize(PORTRAIT_SIZE, PORTRAIT_SIZE);
     this.add(this.portrait);

@@ -11,6 +11,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "fire.png",
     actionOrder: 0,
     actionSubOrder: 0,
+    requiredItems: ["fuel"],
     requirements: [
       { description: "Consume 2 combustibles.", consumesResource: true },
     ],
@@ -106,6 +107,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "pouch_add.png",
     actionOrder: 1,
     actionSubOrder: 3,
+    requiredItems: ["bandage"],
     requirements: [
       {
         description: "Requiere tener una venda disponible.",
@@ -135,6 +137,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "flask_full.png",
     actionOrder: 1,
     actionSubOrder: 4,
+    requiredItems: ["medicine"],
     requirements: [
       { description: "Requiere tener un medicamento.", consumesResource: true },
     ],
@@ -178,6 +181,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 1,
     cooldown: 3,
+    requiredItems: ["tracker"],
     requirements: [
       {
         description: "Requiere disponer de un localizador.",
@@ -206,6 +210,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 2,
     cooldown: 3,
+    requiredItems: ["c4"],
     requirements: [
       {
         description: "Requiere tener una carga de C4.",
@@ -234,6 +239,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 2,
     cooldown: 3,
+    requiredItems: ["trap"],
     requirements: [
       { description: "Requiere tener una trampa.", consumesResource: true },
     ],
@@ -315,6 +321,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         { value: 5, condition: "Si mata al objetivo." },
       ],
     },
+    requiredItems: ["knife"],
     requirements: [{ description: "Requiere portar un cuchillo." }],
     effects: [{ description: "Inflige 4 puntos de vida al objetivo." }],
     extraExecution: {
@@ -447,6 +454,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       base: 0,
       conditional: [{ value: 3, condition: "Si alguien resulta intoxicado." }],
     },
+    requiredItems: ["poison"],
     requirements: [
       {
         description: "Requiere veneno y un objetivo con alimento.",
@@ -541,6 +549,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         { value: 5, condition: "Si alguna víctima muere." },
       ],
     },
+    requiredItems: ["chemical_weapon"],
     requirements: [
       { description: "Requiere un arma química.", consumesResource: true },
     ],
@@ -586,6 +595,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 1,
     cooldown: 3,
+    requiredItems: ["detonator"],
     requirements: [
       { description: "Requiere portar el detonador vinculado al C4." },
     ],
@@ -618,6 +628,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         { value: 5, condition: "Si mata." },
       ],
     },
+    requiredItems: ["axe"],
     requirements: [{ description: "Requiere tener un hacha." }],
     effects: [{ description: "Inflige 8 de vida al objetivo." }],
     extraExecution: {
@@ -644,6 +655,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         { value: 5, condition: "Si mata." },
       ],
     },
+    requiredItems: ["bat"],
     requirements: [{ description: "Requiere tener un bate." }],
     effects: [
       {
@@ -675,6 +687,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         { value: 5, condition: "Si mata." },
       ],
     },
+    requiredItems: ["chainsaw"],
     requirements: [
       {
         description: "Requiere una motosierra encendida durante el turno.",
@@ -693,6 +706,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 1,
     cooldown: 3,
+    requiredItems: ["chainsaw", "fuel"],
     requirements: [
       {
         description: "Requiere motosierra y 1 unidad de combustible.",
@@ -724,6 +738,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         { value: 5, condition: "Si mata." },
       ],
     },
+    requiredItems: ["pistol", "bullet"],
     requirements: [
       { description: "Requiere pistola y bala.", consumesResource: true },
     ],
@@ -757,6 +772,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         { value: 5, condition: "Si mata." },
       ],
     },
+    requiredItems: ["harpoon", "arrow"],
     requirements: [
       { description: "Requiere arpón y flecha.", consumesResource: true },
     ],
@@ -790,6 +806,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         { value: 5, condition: "Si mata." },
       ],
     },
+    requiredItems: ["rocket_launcher"],
     requirements: [
       { description: "Requiere un lanzacohetes.", consumesResource: true },
     ],
@@ -1037,6 +1054,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 1,
     cooldown: 3,
+    requiredItems: ["binoculars"],
     requirements: [{ description: "Requiere tener prismáticos." }],
     effects: [
       {
@@ -1086,6 +1104,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requirements: [
       { description: "Requiere poseer un antídoto.", consumesResource: true },
     ],
+    requiredItems: ["antidote"],
     effects: [
       {
         description:
@@ -1114,6 +1133,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         consumesResource: true,
       },
     ],
+    requiredItems: ["virus"],
     effects: [
       {
         description:
@@ -1135,6 +1155,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requirements: [
       { description: "Requiere tener una vacuna.", consumesResource: true },
     ],
+    requiredItems: ["vaccine"],
     effects: [
       {
         description:

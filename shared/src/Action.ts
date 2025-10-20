@@ -1,4 +1,5 @@
 import { Axial } from "./hexTile";
+import type { ItemId } from "./Item";
 
 export enum ActionCategory {
   Primary = "Primary",
@@ -119,6 +120,7 @@ export interface ActionDefinition {
   developed?: boolean;
   experience?: ActionExperienceReward;
   requirements?: ActionRequirement[];
+  requiredItems?: ItemId[];
   extraExecution?: ActionExtraExecution;
   effects?: ActionEffect[];
   notes?: string[];

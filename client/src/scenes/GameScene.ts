@@ -393,7 +393,7 @@ export class GameScene extends Phaser.Scene {
         const y = world.y + offset.y;
         let sprite = this.playerSprites.get(playerId);
         if (!sprite || !sprite.active || sprite.scene !== this) {
-          sprite = this.add.image(x, y, "char", "body_02.png");
+          sprite = this.add.image(x, y, "char", "body_human_tan_01.png");
           sprite.setScale(2);
           sprite.setData("playerId", playerId);
           this.uiCam.ignore(sprite);
