@@ -8,12 +8,14 @@ import { executeMoveAction } from "./actions/move";
 import { executeProtectAction } from "./actions/protect";
 import { executePunchAction } from "./actions/punch";
 import { executeSleepAction } from "./actions/sleep";
+import { executeFeedAction, hasFeedConsumable } from "./actions/feed";
 import {
   applyActionCooldown,
   updateCooldownsForTurn,
 } from "./actions/cooldowns";
 import {
   applyActionEnergyCost,
+  clearPlanByKey,
   type PlannedActionParticipant,
 } from "./actions/utils";
 
@@ -44,17 +46,26 @@ function collectParticipants(
   const list: PlannedActionParticipant[] = [];
   for (const playerId of players) {
     const character = match.playerCharacters?.[playerId];
-    if (!character || !character.actionPlan || !character.actionPlan.main) {
+    if (!character || !character.actionPlan) {
       continue;
     }
-    if (character.actionPlan.main.actionId !== actionId) {
-      continue;
+    const { main, secondary } = character.actionPlan;
+    if (main && main.actionId === actionId) {
+      list.push({
+        playerId,
+        character,
+        plan: main,
+        planKey: "main",
+      });
     }
-    list.push({
-      playerId,
-      character,
-      plan: character.actionPlan.main,
-    });
+    if (secondary && secondary.actionId === actionId) {
+      list.push({
+        playerId,
+        character,
+        plan: secondary,
+        planKey: "secondary",
+      });
+    }
   }
   return list;
 }
@@ -143,6 +154,38 @@ export function advanceTurn(
       }
       eventsForAction = executeSleepAction(participants, match);
       for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn
+        );
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
+      handled = true;
+    } else if (action.id === ActionLibrary.feed.id) {
+      const participants = collectParticipants(players, match, action.id);
+      if (participants.length === 0) {
+        continue;
+      }
+      const eligible: PlannedActionParticipant[] = [];
+      for (const participant of participants) {
+        if (hasFeedConsumable(participant.character)) {
+          eligible.push(participant);
+        } else {
+          clearPlanByKey(participant.character, participant.planKey);
+          match.playerCharacters[participant.playerId] = participant.character;
+        }
+      }
+      if (eligible.length === 0) {
+        continue;
+      }
+      for (const participant of eligible) {
+        applyActionEnergyCost(participant.character, action.energyCost);
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
+      eventsForAction = executeFeedAction(eligible, match);
+      for (const participant of eligible) {
         applyActionCooldown(
           participant.character,
           action.id,

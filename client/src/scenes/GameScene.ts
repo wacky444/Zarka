@@ -1,7 +1,11 @@
 import Phaser from "phaser";
 import type { RpcResponse } from "@heroiclabs/nakama-js";
 import { makeButton, type UIButton } from "../ui/button";
-import { CharacterPanel, type MainActionSelection } from "../ui/CharacterPanel";
+import {
+  CharacterPanel,
+  type MainActionSelection,
+  type SecondaryActionSelection,
+} from "../ui/CharacterPanel";
 import type { TurnService } from "../services/turnService";
 import {
   ActionLibrary,
@@ -19,6 +23,7 @@ import {
   type GetStatePayload,
   type MatchRecord,
   type UpdateMainActionPayload,
+  type UpdateSecondaryActionPayload,
   type UpdateReadyStatePayload,
   type TurnAdvancedMessagePayload,
   type ReplayEvent,
@@ -52,6 +57,8 @@ export class GameScene extends Phaser.Scene {
   private pointerDownInUI = false;
   private mainActionUpdateRunning = false;
   private pendingMainActionSelection: MainActionSelection | undefined;
+  private secondaryActionUpdateRunning = false;
+  private pendingSecondaryActionSelection: SecondaryActionSelection | undefined;
   private readyUpdateRunning = false;
   private pendingReadyState: boolean | undefined;
   private locationSelectionActive = false;
@@ -146,6 +153,11 @@ export class GameScene extends Phaser.Scene {
       this
     );
     this.characterPanel.on(
+      "secondary-action-change",
+      this.handleSecondaryActionSelection,
+      this
+    );
+    this.characterPanel.on(
       "main-action-location-request",
       this.beginMainActionLocationPick,
       this
@@ -194,6 +206,11 @@ export class GameScene extends Phaser.Scene {
       this.characterPanel?.off(
         "main-action-change",
         this.handleMainActionSelection,
+        this
+      );
+      this.characterPanel?.off(
+        "secondary-action-change",
+        this.handleSecondaryActionSelection,
         this
       );
       this.characterPanel?.off(
@@ -691,6 +708,114 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private async handleSecondaryActionSelection(
+    selection: SecondaryActionSelection | null | undefined
+  ) {
+    const matchId = this.registry.get("currentMatchId") as string | null;
+    if (!this.turnService || !this.currentUserId || !matchId) {
+      return;
+    }
+    const normalizedPlayers = this.normalizeTargetPlayers(
+      selection?.targetPlayerIds ?? undefined
+    );
+    const normalizedSelection: SecondaryActionSelection = {
+      actionId: selection?.actionId ?? null,
+      targetLocation: this.normalizeAxial(selection?.targetLocation),
+      targetPlayerIds: normalizedPlayers,
+    };
+    const character =
+      this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
+    const previousPlan = character?.actionPlan?.secondary ?? null;
+    const previousActionId = previousPlan?.actionId ?? null;
+    const previousTarget = this.normalizeAxial(
+      previousPlan?.targetLocationId ?? null
+    );
+    const previousPlayers = this.normalizeTargetPlayers(
+      previousPlan?.targetPlayerIds ?? undefined
+    );
+    if (
+      normalizedSelection.actionId === previousActionId &&
+      this.isSameAxial(normalizedSelection.targetLocation, previousTarget) &&
+      this.isSameTargetPlayers(
+        normalizedSelection.targetPlayerIds,
+        previousPlayers
+      )
+    ) {
+      return;
+    }
+    if (this.secondaryActionUpdateRunning) {
+      this.pendingSecondaryActionSelection = normalizedSelection;
+      return;
+    }
+    this.secondaryActionUpdateRunning = true;
+    this.pendingSecondaryActionSelection = undefined;
+    try {
+      const submission = normalizedSelection.actionId
+        ? this.buildSecondaryActionSubmission(
+            normalizedSelection.actionId,
+            normalizedSelection.targetLocation,
+            normalizedSelection.targetPlayerIds
+          )
+        : null;
+      const res = await this.turnService.updateSecondaryAction(
+        matchId,
+        submission
+      );
+      const payload = this.parseRpcPayload<UpdateSecondaryActionPayload>(res);
+      if (payload.error) {
+        throw new Error(payload.error);
+      }
+      if (!this.currentMatch) {
+        return;
+      }
+      const target =
+        this.currentMatch.playerCharacters?.[this.currentUserId] ?? null;
+      if (!target) {
+        return;
+      }
+      target.actionPlan = target.actionPlan ?? {};
+      if (!submission) {
+        if (target.actionPlan.secondary) {
+          delete target.actionPlan.secondary;
+        }
+        if (
+          target.actionPlan.secondary === undefined &&
+          target.actionPlan.nextMain === undefined &&
+          target.actionPlan.main === undefined
+        ) {
+          delete target.actionPlan;
+        }
+      } else {
+        const nextPlan: PlayerPlannedAction = {
+          ...(target.actionPlan.secondary ?? {}),
+          actionId: submission.actionId,
+        };
+        if (payload.targetLocationId) {
+          nextPlan.targetLocationId = payload.targetLocationId;
+        } else if (nextPlan.targetLocationId) {
+          delete nextPlan.targetLocationId;
+        }
+        if (payload.targetPlayerIds && payload.targetPlayerIds.length > 0) {
+          nextPlan.targetPlayerIds = [...payload.targetPlayerIds];
+        } else if (nextPlan.targetPlayerIds) {
+          delete nextPlan.targetPlayerIds;
+        }
+        target.actionPlan.secondary = nextPlan;
+      }
+      this.updateCharacterPanel(this.currentMatch);
+    } catch (error) {
+      console.warn("update_secondary_action failed", error);
+      this.updateCharacterPanel(this.currentMatch);
+    } finally {
+      this.secondaryActionUpdateRunning = false;
+      if (this.pendingSecondaryActionSelection) {
+        const nextSelection = this.pendingSecondaryActionSelection;
+        this.pendingSecondaryActionSelection = undefined;
+        void this.handleSecondaryActionSelection(nextSelection);
+      }
+    }
+  }
+
   private async handleReadyStateChange(ready: boolean) {
     const matchId = this.registry.get("currentMatchId") as string | null;
     if (!this.turnService || !this.currentUserId || !matchId) {
@@ -895,6 +1020,29 @@ export class GameScene extends Phaser.Scene {
     const typedId = actionId as ActionId;
     const definition = ActionLibrary[typedId] ?? null;
     const category = definition?.category ?? ActionCategory.Primary;
+    const submission: ActionSubmission = {
+      playerId: this.currentUserId!,
+      actionId: definition ? definition.id : typedId,
+      category,
+    };
+    if (target) {
+      submission.targetLocationId = { q: target.q, r: target.r };
+    }
+    if (targetPlayerIds !== undefined) {
+      submission.targetPlayerIds =
+        targetPlayerIds.length > 0 ? [...targetPlayerIds] : [];
+    }
+    return submission;
+  }
+
+  private buildSecondaryActionSubmission(
+    actionId: string,
+    target: Axial | null,
+    targetPlayerIds: string[] | undefined
+  ): ActionSubmission {
+    const typedId = actionId as ActionId;
+    const definition = ActionLibrary[typedId] ?? null;
+    const category = definition?.category ?? ActionCategory.Secondary;
     const submission: ActionSubmission = {
       playerId: this.currentUserId!,
       actionId: definition ? definition.id : typedId,

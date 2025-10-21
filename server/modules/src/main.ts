@@ -11,6 +11,7 @@ import {
   startMatchRpc,
   submitTurnRpc,
   updateMainActionRpc,
+  updateSecondaryActionRpc,
   updateReadyStateRpc,
   updateSettingsRpc,
   getReplayRpc,
@@ -109,6 +110,17 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register update_main_action: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc(
+      "update_secondary_action",
+      updateSecondaryActionRpc
+    );
+  } catch (error) {
+    logger.error(
+      "Failed to register update_secondary_action: %s",
       (error && (error as Error).message) || String(error)
     );
   }

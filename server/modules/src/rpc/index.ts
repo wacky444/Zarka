@@ -9,4 +9,5 @@ export { listMyMatchesRpc } from "./listMyMatches";
 export { removeMatchRpc } from "./removeMatch";
 export { updateMainActionRpc } from "./updateMainAction";
 export { updateReadyStateRpc } from "./updateReadyState";
+export { updateSecondaryActionRpc } from "./updateSecondaryAction";
 export { getReplayRpc } from "./getReplay";

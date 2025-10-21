@@ -2,10 +2,13 @@
 
 import type { PlayerCharacter, PlayerPlannedAction } from "@shared";
 
+export type PlannedActionKey = "main" | "secondary";
+
 export interface PlannedActionParticipant {
   playerId: string;
   character: PlayerCharacter;
   plan: PlayerPlannedAction;
+  planKey: PlannedActionKey;
 }
 
 export interface ActionEnergyOutcome {
@@ -62,5 +65,30 @@ export function clearMainPlan(character: PlayerCharacter): void {
     character.actionPlan.main === undefined
   ) {
     delete character.actionPlan;
+  }
+}
+
+export function clearSecondaryPlan(character: PlayerCharacter): void {
+  if (!character.actionPlan) {
+    return;
+  }
+  delete character.actionPlan.secondary;
+  if (
+    character.actionPlan.secondary === undefined &&
+    character.actionPlan.nextMain === undefined &&
+    character.actionPlan.main === undefined
+  ) {
+    delete character.actionPlan;
+  }
+}
+
+export function clearPlanByKey(
+  character: PlayerCharacter,
+  key: PlannedActionKey
+): void {
+  if (key === "secondary") {
+    clearSecondaryPlan(character);
+  } else {
+    clearMainPlan(character);
   }
 }

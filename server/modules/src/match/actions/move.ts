@@ -8,7 +8,7 @@ import type {
   ReplayPlayerEvent,
 } from "@shared";
 import type { PlannedActionParticipant } from "./utils";
-import { clearMainPlan } from "./utils";
+import { clearPlanByKey } from "./utils";
 
 function findDestination(match: MatchRecord, plan: PlayerPlannedAction) {
   const target = plan.targetLocationId;
@@ -64,7 +64,7 @@ export function executeMoveAction(
       actorId: entry.playerId,
       action,
     });
-    clearMainPlan(entry.character);
+    clearPlanByKey(entry.character, entry.planKey);
   }
   return events;
 }

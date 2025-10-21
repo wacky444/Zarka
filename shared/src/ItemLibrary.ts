@@ -479,7 +479,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     id: "zarkans",
     name: "Zarkans",
     category: ItemCategory.Special,
-    sprite: "Board Game Icons/dollar.png",
+    sprite: "Items/zarkan.png",
     weapon: false,
     consumable: false,
     weight: 0,

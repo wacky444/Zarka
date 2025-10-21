@@ -42,6 +42,16 @@ export type UpdateMainActionPayload = {
   error?: string;
 };
 
+export type UpdateSecondaryActionPayload = {
+  ok?: boolean;
+  match_id?: string;
+  user_id?: string;
+  action_id?: string;
+  targetLocationId?: Axial;
+  targetPlayerIds?: string[];
+  error?: string;
+};
+
 export type UpdateReadyStatePayload = {
   ok?: boolean;
   match_id?: string;

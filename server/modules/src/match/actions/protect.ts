@@ -12,7 +12,7 @@ import type {
   ReplayPlayerEvent,
 } from "@shared";
 import { ReplayActionEffect } from "@shared";
-import { clearMainPlan, type PlannedActionParticipant } from "./utils";
+import { clearPlanByKey, type PlannedActionParticipant } from "./utils";
 
 function ensureStatusState(character: PlayerCharacter): PlayerStatusState {
   if (!character.statuses) {
@@ -79,7 +79,7 @@ export function executeProtectAction(
   for (const participant of roster) {
     const actionId = participant.plan.actionId as ActionId;
     if (!actionId) {
-      clearMainPlan(participant.character);
+      clearPlanByKey(participant.character, participant.planKey);
       continue;
     }
     const targets = resolveTargets(participant, match);
@@ -96,7 +96,7 @@ export function executeProtectAction(
         effects: guardEffectMask(),
       });
     }
-    clearMainPlan(participant.character);
+    clearPlanByKey(participant.character, participant.planKey);
     if (appliedTargets.length === 0) {
       continue;
     }

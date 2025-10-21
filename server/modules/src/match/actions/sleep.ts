@@ -9,7 +9,7 @@ import type {
   ReplayPlayerEvent,
 } from "@shared";
 import { ReplayActionEffect } from "@shared";
-import { clearMainPlan, type PlannedActionParticipant } from "./utils";
+import { clearPlanByKey, type PlannedActionParticipant } from "./utils";
 
 function shuffle<T>(items: T[]): T[] {
   for (let i = items.length - 1; i > 0; i -= 1) {
@@ -42,7 +42,7 @@ export function executeSleepAction(
   for (const participant of roster) {
     const actionId = participant.plan.actionId as ActionId;
     if (!actionId) {
-      clearMainPlan(participant.character);
+      clearPlanByKey(participant.character, participant.planKey);
       continue;
     }
     const restored = applyHealing(participant.character, 2);
@@ -59,7 +59,7 @@ export function executeSleepAction(
       effects: ReplayActionEffect.Heal,
       metadata: { healed: restored },
     };
-    clearMainPlan(participant.character);
+    clearPlanByKey(participant.character, participant.planKey);
     if (match.playerCharacters) {
       match.playerCharacters[participant.playerId] = participant.character;
     }

@@ -170,6 +170,17 @@ export class TurnService {
     return res;
   }
 
+  async updateSecondaryAction(
+    match_id: string,
+    submission: ActionSubmission | null
+  ) {
+    const res = await this.client.rpc(this.session, "update_secondary_action", {
+      match_id,
+      submission,
+    });
+    return res;
+  }
+
   async updateReadyState(match_id: string, ready: boolean) {
     const res = await this.client.rpc(this.session, "update_ready_state", {
       match_id,

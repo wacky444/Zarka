@@ -11,6 +11,7 @@ export interface GridSelectItem {
   tags?: string[];
   cooldownRemaining?: number;
   disabled?: boolean;
+  isEmptyOption?: boolean;
 }
 
 interface GridSelectConfig {
@@ -22,6 +23,9 @@ interface GridSelectConfig {
   emptyLabel?: string;
   modalWidth?: number;
   modalHeight?: number;
+  includeEmptyOption?: boolean;
+  emptyOptionLabel?: string;
+  emptyOptionDescription?: string;
 }
 
 type RexSizer = Phaser.GameObjects.GameObject & {
@@ -87,6 +91,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private readonly modalWidth: number;
   private readonly modalHeight: number;
   private readonly hitAreaZone: Phaser.GameObjects.Zone;
+  private readonly emptyOptionItem: GridSelectItem | null;
   private items: GridSelectItem[] = [];
   private selectedItem: GridSelectItem | null = null;
   private overlay: Phaser.GameObjects.Container | null = null;
@@ -113,6 +118,18 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.modalHeight =
       config.modalHeight ?? Math.min(scene.scale.height - 80, 480);
     this.iconTargetSize = Math.min(this.collapsedHeight - 12, 52);
+    const includeEmptyOption = config.includeEmptyOption === true;
+    this.emptyOptionItem = includeEmptyOption
+      ? {
+          id: "__grid_select_empty_option__",
+          name: config.emptyOptionLabel ?? "No action",
+          description:
+            config.emptyOptionDescription ?? "Clears the current selection.",
+          texture: "hex",
+          frame: "grass_01.png",
+          isEmptyOption: true,
+        }
+      : null;
 
     this.setSize(config.width, this.collapsedHeight);
 
@@ -182,7 +199,15 @@ export class GridSelect extends Phaser.GameObjects.Container {
   }
 
   setItems(items: GridSelectItem[]) {
-    this.items = items.slice();
+    const cloned = items.slice();
+    this.items = this.emptyOptionItem
+      ? [
+          {
+            ...this.emptyOptionItem,
+          },
+          ...cloned,
+        ]
+      : cloned;
     const currentId = this.selectedItem?.id ?? null;
     if (currentId) {
       const current = this.items.find(
@@ -202,7 +227,19 @@ export class GridSelect extends Phaser.GameObjects.Container {
     return this;
   }
 
-  setValue(id: string | null, emit = false) {
+  setValue(id: string | null, emit = false): this {
+    if (id === null) {
+      const empty = this.items.find((it) => it.isEmptyOption === true);
+      if (empty) {
+        this.applySelection(empty, emit);
+      } else {
+        this.clearSelection();
+      }
+      return this;
+    }
+    if (id === "") {
+      return this.setValue(null, emit);
+    }
     if (!id) {
       this.clearSelection();
       return this;
@@ -221,7 +258,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
   }
 
   getValue() {
-    return this.selectedItem?.id ?? null;
+    if (!this.selectedItem) {
+      return null;
+    }
+    return this.selectedItem.isEmptyOption ? null : this.selectedItem.id;
   }
 
   getSelectedItem() {
@@ -245,7 +285,15 @@ export class GridSelect extends Phaser.GameObjects.Container {
   }
 
   private selectFirstAvailable(emit: boolean) {
-    const first = this.items.find((it) => it.disabled !== true) ?? null;
+    let first =
+      this.items.find(
+        (it) => it.disabled !== true && it.isEmptyOption !== true
+      ) ?? null;
+    if (!first) {
+      first =
+        this.items.find((it) => it.disabled !== true && it.isEmptyOption) ??
+        null;
+    }
     if (first) {
       this.applySelection(first, emit);
     } else {
@@ -260,12 +308,17 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.selectedItem = item;
     this.updateCollapsedView(item);
     if (emit) {
-      this.emit("change", item.id, item);
+      this.emit("change", item.isEmptyOption ? null : item.id, item);
     }
     this.gridTable?.refresh?.();
   }
 
   private updateCollapsedView(item: GridSelectItem) {
+    if (item.isEmptyOption) {
+      this.icon.setVisible(false);
+      this.label.setText(item.name.length > 0 ? item.name : this.emptyLabel);
+      return;
+    }
     const textureManager = this.scene.textures;
     const hasTexture = textureManager.exists(item.texture);
     const texture = hasTexture ? textureManager.get(item.texture) : null;
@@ -607,7 +660,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
       const icon = scene.add
         .image(0, 0, item.texture, item.frame)
         .setOrigin(0.5, 0.5);
-      icon.setDisplaySize(56, 56);
+      if (item.isEmptyOption) {
+        icon.setVisible(false);
+      } else {
+        icon.setDisplaySize(56, 56);
+      }
 
       const nameText = scene.add
         .text(0, 0, item.name, {
@@ -722,7 +779,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
       const hasTexture = textureManager.exists(item.texture);
       const texture = hasTexture ? textureManager.get(item.texture) : null;
       const hasFrame = item.frame ? texture?.has(item.frame) : true;
-      if (hasTexture && hasFrame) {
+      if (item.isEmptyOption) {
+        icon.setVisible(false);
+      } else if (hasTexture && hasFrame) {
         if (item.frame) {
           icon.setTexture(item.texture, item.frame);
         } else {

@@ -10,7 +10,7 @@ import type {
   ReplayPlayerEvent,
 } from "@shared";
 import { ReplayActionEffect } from "@shared";
-import { clearMainPlan, type PlannedActionParticipant } from "./utils";
+import { clearPlanByKey, type PlannedActionParticipant } from "./utils";
 
 function sameCoord(
   a: { q: number; r: number } | undefined,
@@ -141,7 +141,7 @@ export function executePunchAction(
   for (const participant of roster) {
     const actionId = participant.plan.actionId as ActionId;
     if (!actionId) {
-      clearMainPlan(participant.character);
+      clearPlanByKey(participant.character, participant.planKey);
       continue;
     }
     const targets = collectTargets(participant, match);
@@ -169,7 +169,7 @@ export function executePunchAction(
       }
       targetEntries.push(targetEntry);
     }
-    clearMainPlan(participant.character);
+    clearPlanByKey(participant.character, participant.planKey);
     if (targetEntries.length === 0) {
       continue;
     }

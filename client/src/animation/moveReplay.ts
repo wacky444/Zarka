@@ -26,6 +26,7 @@ export interface MoveReplayContext {
 
 const SHIELD_TEXTURE_KEY = deriveBoardIconKey("shield.png");
 const HEAL_TEXTURE_KEY = deriveBoardIconKey("suit_hearts.png");
+const FEED_TEXTURE_KEY = deriveBoardIconKey("resource_apple.png");
 
 export async function playReplayEvents(
   context: MoveReplayContext,
@@ -40,6 +41,8 @@ export async function playReplayEvents(
       await animateMoveEvent(context, event);
     } else if (actionId === ActionLibrary.sleep.id) {
       await animateSleepEvent(context, event);
+    } else if (actionId === ActionLibrary.feed.id) {
+      await animateFeedEvent(context, event);
     } else if (actionId === ActionLibrary.protect.id) {
       await animateProtectEvent(context, event);
     } else if (actionId === ActionLibrary.punch.id) {
@@ -189,6 +192,14 @@ async function animateSleepEvent(
 ): Promise<void> {
   const targets = collectTargetIds(event);
   await showGuardOverlay(context, targets, 520, HEAL_TEXTURE_KEY);
+}
+
+async function animateFeedEvent(
+  context: MoveReplayContext,
+  event: ReplayPlayerEvent
+): Promise<void> {
+  const targets = collectTargetIds(event);
+  await showGuardOverlay(context, targets, 520, FEED_TEXTURE_KEY);
 }
 
 async function animatePunchEvent(

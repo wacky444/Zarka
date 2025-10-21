@@ -169,18 +169,27 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
   }
 
   private rebuildOptions(): void {
-    for (const button of this.optionsButtons) {
-      button.removeAllListeners?.();
-      button.destroy();
-    }
-    this.optionsButtons = [];
     if (this.disposed) {
       return;
     }
+    for (const button of this.optionsButtons) {
+      button.removeAllListeners?.();
+      if (button.parentContainer === this.optionsContainer) {
+        this.optionsContainer.remove(button, true);
+      } else {
+        button.destroy();
+      }
+    }
+    this.optionsButtons = [];
     const scene = this.scene;
     const buttons: Phaser.GameObjects.Text[] = [];
     const rowHeight = 26;
     let maxWidth = this.preferredWidth;
+    if (this.optionsBackground.parentContainer !== this.optionsContainer) {
+      this.optionsContainer.addAt(this.optionsBackground, 0);
+    } else {
+      this.optionsContainer.sendToBack(this.optionsBackground);
+    }
     this.options.forEach((option, index) => {
       const txt = scene.add
         .text(0, index * rowHeight, option.label, {
@@ -207,8 +216,6 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
       }
     });
     this.optionsButtons = buttons;
-    this.optionsContainer.removeAll(false);
-    this.optionsContainer.add(this.optionsBackground);
     if (buttons.length > 0) {
       this.optionsContainer.add(buttons);
     }
