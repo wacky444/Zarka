@@ -23,6 +23,12 @@ declare module "phaser3-rex-plugins/templates/ui/ui-plugin" {
       ): Phaser.GameObjects.GameObject;
       sizer(config: Record<string, unknown>): Phaser.GameObjects.GameObject;
       gridTable(config: Record<string, unknown>): Phaser.GameObjects.GameObject;
+      BBCodeText(
+        x: number,
+        y: number,
+        text: string,
+        style?: Record<string, unknown>
+      ): Phaser.GameObjects.GameObject;
     };
   }
 }
@@ -53,6 +59,12 @@ declare global {
           sizer(config: Record<string, unknown>): Phaser.GameObjects.GameObject;
           gridTable(
             config: Record<string, unknown>
+          ): Phaser.GameObjects.GameObject;
+          BBCodeText(
+            x: number,
+            y: number,
+            text: string,
+            style?: Record<string, unknown>
           ): Phaser.GameObjects.GameObject;
         };
       };

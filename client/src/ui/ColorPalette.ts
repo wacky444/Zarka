@@ -1,0 +1,14 @@
+export const MODAL_BACKGROUND_COLOR = 0x0f172a;
+export const MODAL_HEADER_COLOR = "#ffffff";
+export const MODAL_TEXT_COLOR = "#cbd5f5";
+export const CARD_BACKGROUND_COLOR = 0x1b2440;
+export const CARD_BACKGROUND_SELECTED = 0x2b3a6b;
+export const CARD_BACKGROUND_DISABLED = 0x151e35;
+export const COLLAPSED_BACKGROUND_COLOR = 0x101828;
+export const COLLAPSED_BORDER_COLOR = 0x1f2a4a;
+export const COOLDOWN_TEXT_COLOR = "#f87171";
+export const DISABLED_TEXT_COLOR = "#94a3b8";
+export const ENERGY_COST_TEXT_COLOR = "#facc15";
+export const ENERGY_ACCENT_COLOR = 0xfacc15;
+export const HEALTH_ACCENT_COLOR = 0x4ade80;
+export const HEALTH_DAMAGE_COLOR = "#f97373";

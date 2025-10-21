@@ -1,5 +1,18 @@
 import Phaser from "phaser";
 import { HoverTooltip } from "./HoverTooltip";
+import {
+  MODAL_BACKGROUND_COLOR,
+  MODAL_HEADER_COLOR,
+  MODAL_TEXT_COLOR,
+  CARD_BACKGROUND_COLOR,
+  CARD_BACKGROUND_SELECTED,
+  CARD_BACKGROUND_DISABLED,
+  COLLAPSED_BACKGROUND_COLOR,
+  COLLAPSED_BORDER_COLOR,
+  COOLDOWN_TEXT_COLOR,
+  DISABLED_TEXT_COLOR,
+  ENERGY_COST_TEXT_COLOR,
+} from "./ColorPalette";
 
 export interface GridSelectItem {
   id: string;
@@ -10,6 +23,7 @@ export interface GridSelectItem {
   iconScale?: number;
   tags?: string[];
   cooldownRemaining?: number;
+  energyCost?: number;
   disabled?: boolean;
   isEmptyOption?: boolean;
 }
@@ -67,17 +81,6 @@ type RexRoundRectangle = Phaser.GameObjects.GameObject & {
   setOrigin?: (x: number, y?: number) => unknown;
 };
 
-const MODAL_BACKGROUND_COLOR = 0x0f172a;
-const MODAL_HEADER_COLOR = "#ffffff";
-const MODAL_TEXT_COLOR = "#cbd5f5";
-const CARD_BACKGROUND_COLOR = 0x1b2440;
-const CARD_BACKGROUND_SELECTED = 0x2b3a6b;
-const CARD_BACKGROUND_DISABLED = 0x151e35;
-const COLLAPSED_BACKGROUND_COLOR = 0x101828;
-const COLLAPSED_BORDER_COLOR = 0x1f2a4a;
-const COOLDOWN_TEXT_COLOR = "#f87171";
-const DISABLED_TEXT_COLOR = "#94a3b8";
-
 export class GridSelect extends Phaser.GameObjects.Container {
   private readonly background: RexRoundRectangle;
   private readonly icon: Phaser.GameObjects.Image;
@@ -117,7 +120,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       config.modalWidth ?? Math.min(scene.scale.width - 80, 600);
     this.modalHeight =
       config.modalHeight ?? Math.min(scene.scale.height - 80, 480);
-    this.iconTargetSize = Math.min(this.collapsedHeight - 12, 52);
+    this.iconTargetSize = Math.min(this.collapsedHeight - 12, 48);
     const includeEmptyOption = config.includeEmptyOption === true;
     this.emptyOptionItem = includeEmptyOption
       ? {
@@ -663,7 +666,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       if (item.isEmptyOption) {
         icon.setVisible(false);
       } else {
-        icon.setDisplaySize(56, 56);
+        icon.setDisplaySize(48, 48);
       }
 
       const nameText = scene.add
@@ -674,13 +677,27 @@ export class GridSelect extends Phaser.GameObjects.Container {
         })
         .setOrigin(0.5, 0.5);
 
-      const descText = scene.add
-        .text(0, 0, item.description, {
-          fontSize: "13px",
-          color: MODAL_TEXT_COLOR,
+      const energyText = scene.add
+        .text(0, 0, "", {
+          fontSize: "14px",
+          color: ENERGY_COST_TEXT_COLOR,
           align: "center",
         })
-        .setOrigin(0.5, 0.5);
+        .setOrigin(0.5, 0.5)
+        .setVisible(false);
+      energyText.setFixedSize(0, 0);
+
+      const descText = scene.rexUI.add.BBCodeText(0, 0, item.description, {
+        fontSize: "13px",
+        color: MODAL_TEXT_COLOR,
+        align: "center",
+        wrap: {
+          mode: "word",
+          width: usableTextWidth,
+        },
+        maxLines: maxDescriptionLines,
+      }) as Phaser.GameObjects.Text;
+      descText.setOrigin(0.5, 0.5);
 
       const cooldownText = scene.add
         .text(0, 0, "", {
@@ -696,7 +713,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         item.name,
         usableTextWidth
       );
-      const descTruncated = this.applyMultilineText(
+      const descTruncated = this.applyDescriptionText(
         descText,
         item.description,
         usableTextWidth,
@@ -705,6 +722,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
       container.add(icon, 0, "center", { bottom: 4 }, false);
       container.add(nameText, 0, "center", { bottom: 2 }, false);
+      container.add(energyText, 0, "center", { bottom: 2 }, false);
       container.add(descText, 0, "center", 0, false);
       container.add(
         cooldownText,
@@ -726,6 +744,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
       (container as unknown as Phaser.GameObjects.GameObject).setData(
         "desc",
         descText
+      );
+      (container as unknown as Phaser.GameObjects.GameObject).setData(
+        "energy",
+        energyText
       );
       (container as unknown as Phaser.GameObjects.GameObject).setData(
         "id",
@@ -751,9 +773,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
         bg,
         icon,
         nameText,
+        energyText,
         descText,
         cellWidth,
         cellHeight,
+        textWidth: usableTextWidth,
         isSelected: this.selectedItem?.id === item.id,
       });
       return created;
@@ -768,6 +792,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
       | Phaser.GameObjects.Text
       | undefined;
     const descText = containerGO.getData("desc") as
+      | Phaser.GameObjects.Text
+      | undefined;
+    const energyText = containerGO.getData("energy") as
       | Phaser.GameObjects.Text
       | undefined;
     const cooldownText = containerGO.getData("cooldown") as
@@ -798,7 +825,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       ? this.applySingleLineText(nameText, item.name, usableTextWidth)
       : false;
     const descTruncated = descText
-      ? this.applyMultilineText(
+      ? this.applyDescriptionText(
           descText,
           item.description,
           usableTextWidth,
@@ -821,8 +848,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
       icon,
       nameText,
       descText,
+      energyText,
       cellWidth,
       cellHeight,
+      textWidth: usableTextWidth,
       isSelected: this.selectedItem?.id === item.id,
     });
 
@@ -838,8 +867,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
       icon?: Phaser.GameObjects.Image;
       nameText?: Phaser.GameObjects.Text;
       descText?: Phaser.GameObjects.Text;
+      energyText?: Phaser.GameObjects.Text;
       cellWidth: number;
       cellHeight: number;
+      textWidth: number;
       isSelected: boolean;
     }
   ) {
@@ -861,6 +892,24 @@ export class GridSelect extends Phaser.GameObjects.Container {
     config.descText?.setColor(
       disabled ? DISABLED_TEXT_COLOR : MODAL_TEXT_COLOR
     );
+    if (config.energyText) {
+      const hasCost =
+        typeof config.item.energyCost === "number" &&
+        Number.isFinite(config.item.energyCost);
+      const shouldShow = hasCost && config.item.isEmptyOption !== true;
+      if (shouldShow) {
+        const label = `Energy: ${config.item.energyCost}`;
+        this.applySingleLineText(config.energyText, label, config.textWidth);
+        config.energyText.setColor(
+          disabled ? DISABLED_TEXT_COLOR : ENERGY_COST_TEXT_COLOR
+        );
+        config.energyText.setVisible(true);
+      } else {
+        config.energyText.setText("");
+        config.energyText.setFixedSize(0, 0);
+        config.energyText.setVisible(false);
+      }
+    }
 
     const cooldownText = container.getData("cooldown") as
       | Phaser.GameObjects.Text
@@ -879,6 +928,49 @@ export class GridSelect extends Phaser.GameObjects.Container {
       setAlpha?: (value: number) => Phaser.GameObjects.GameObject;
     };
     typed.setAlpha?.(disabled ? 0.9 : 1);
+  }
+
+  private applyDescriptionText(
+    target: Phaser.GameObjects.Text,
+    content: string,
+    maxWidth: number,
+    maxLines: number
+  ): boolean {
+    const rich = /\[.+\]/.test(content) || /<.+>/.test(content);
+    const bbcodeTarget = target as unknown as {
+      setWrapWidth?: (width: number) => unknown;
+      setWordWrapWidth?: (width: number, useAdvancedWrap?: boolean) => unknown;
+      setMaxLines?: (lines: number) => unknown;
+      style?: { [key: string]: unknown };
+      getWrappedText?: (text?: string) => string[];
+    };
+    if (!rich) {
+      if (typeof bbcodeTarget.setWrapWidth === "function") {
+        bbcodeTarget.setWrapWidth(maxWidth);
+      } else {
+        target.setWordWrapWidth(maxWidth, true);
+      }
+      return this.applyMultilineText(target, content, maxWidth, maxLines);
+    }
+    if (typeof bbcodeTarget.setWrapWidth === "function") {
+      bbcodeTarget.setWrapWidth(maxWidth);
+    } else {
+      target.setWordWrapWidth(maxWidth, true);
+    }
+    if (typeof bbcodeTarget.setMaxLines === "function") {
+      bbcodeTarget.setMaxLines(maxLines);
+    } else if (bbcodeTarget.style) {
+      bbcodeTarget.style.maxLines = maxLines;
+    }
+    target.setText(content);
+    const wrapped = bbcodeTarget.getWrappedText
+      ? bbcodeTarget.getWrappedText(content)
+      : target.getWrappedText();
+    const truncated =
+      maxLines > 0 && Array.isArray(wrapped) && wrapped.length > maxLines;
+    const bounds = target.getBounds();
+    target.setFixedSize(maxWidth, bounds.height);
+    return truncated;
   }
 
   private ensureTooltip() {

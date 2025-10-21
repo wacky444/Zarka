@@ -25,6 +25,7 @@ import {
 import { CharacterPanelLogView } from "./CharacterPanelLogView";
 import { InventoryGrid, type InventoryGridItem } from "./InventoryGrid";
 import { resolveItemTexture } from "./itemIcons";
+import { ENERGY_ACCENT_COLOR, HEALTH_ACCENT_COLOR } from "./ColorPalette";
 
 const DEFAULT_WIDTH = 420;
 const TAB_HEIGHT = 40;
@@ -239,7 +240,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       width: this.barWidth,
       height: BAR_HEIGHT,
       trackColor: 0x25304c,
-      barColor: 0x4ade80,
+      barColor: HEALTH_ACCENT_COLOR,
     });
     this.add(this.healthBar);
     this.energyLabel = scene.add
@@ -253,7 +254,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       width: this.barWidth,
       height: BAR_HEIGHT,
       trackColor: 0x25304c,
-      barColor: 0xfacc15,
+      barColor: ENERGY_ACCENT_COLOR,
     });
     this.add(this.energyBar);
     const readyY = contentTop + 80;
@@ -1178,6 +1179,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         texture,
         frame,
         tags: definition.tags,
+        energyCost: definition.energyCost,
         cooldownRemaining: normalizedRemaining,
         disabled: isDisabled,
       };
