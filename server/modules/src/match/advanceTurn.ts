@@ -9,6 +9,7 @@ import { executeProtectAction } from "./actions/protect";
 import { executePunchAction } from "./actions/punch";
 import { executeSleepAction } from "./actions/sleep";
 import { executeFeedAction, hasFeedConsumable } from "./actions/feed";
+import { executeFocusAction } from "./actions/focus";
 import {
   applyActionCooldown,
   updateCooldownsForTurn,
@@ -70,6 +71,33 @@ function collectParticipants(
   return list;
 }
 
+function activateTemporaryEnergy(match: MatchRecord): void {
+  if (!match.playerCharacters) {
+    return;
+  }
+  for (const playerId in match.playerCharacters) {
+    if (
+      !Object.prototype.hasOwnProperty.call(match.playerCharacters, playerId)
+    ) {
+      continue;
+    }
+    const character = match.playerCharacters[playerId];
+    if (!character?.stats?.energy) {
+      continue;
+    }
+    const energy = character.stats.energy as typeof character.stats.energy & {
+      activeTemporary?: number;
+    };
+    const stored =
+      typeof energy.temporary === "number" && energy.temporary > 0
+        ? energy.temporary
+        : 0;
+    energy.activeTemporary = stored;
+    energy.temporary = 0;
+    match.playerCharacters[playerId] = character;
+  }
+}
+
 function stripProtectedCondition(character: PlayerCharacter): void {
   const statuses = character.statuses;
   if (!statuses?.conditions) {
@@ -116,6 +144,7 @@ export function advanceTurn(
   if (players.length === 0) {
     return { events: [] };
   }
+  activateTemporaryEnergy(match);
   removeProtectedState(match);
   updateCooldownsForTurn(match, resolvedTurn);
   const actions = sortedActions();
@@ -186,6 +215,26 @@ export function advanceTurn(
       }
       eventsForAction = executeFeedAction(eligible, match);
       for (const participant of eligible) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn
+        );
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
+      handled = true;
+    } else if (action.id === ActionLibrary.focus.id) {
+      const participants = collectParticipants(players, match, action.id);
+      if (participants.length === 0) {
+        continue;
+      }
+      for (const participant of participants) {
+        applyActionEnergyCost(participant.character, action.energyCost);
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
+      eventsForAction = executeFocusAction(participants, match);
+      for (const participant of participants) {
         applyActionCooldown(
           participant.character,
           action.id,

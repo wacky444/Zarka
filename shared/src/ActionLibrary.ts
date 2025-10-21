@@ -972,6 +972,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 0,
     cooldown: 3,
+    developed: true,
     effects: [
       {
         description:

@@ -30,20 +30,35 @@ export function applyActionEnergyCost(
   if (!stats) {
     return outcome;
   }
-  const energy = stats.energy;
+  const energy = stats.energy as typeof stats.energy & {
+    activeTemporary?: number;
+  };
   const health = stats.health;
   const effectiveCost = cost > 0 ? cost : 0;
-  const previousEnergy =
-    typeof energy?.current === "number" ? energy.current : 0;
-  const nextEnergy = Math.max(0, previousEnergy - effectiveCost);
-  if (energy) {
-    energy.current = nextEnergy;
+  if (!energy) {
+    return outcome;
   }
-  outcome.energySpent = previousEnergy - nextEnergy;
+  const tempAvailable =
+    typeof energy.activeTemporary === "number" && energy.activeTemporary > 0
+      ? energy.activeTemporary
+      : 0;
+  let remainingCost = effectiveCost;
+  let tempConsumed = 0;
+  if (tempAvailable > 0 && remainingCost > 0) {
+    tempConsumed = Math.min(tempAvailable, remainingCost);
+    energy.activeTemporary = Math.max(0, tempAvailable - tempConsumed);
+    remainingCost -= tempConsumed;
+  }
+  const previousEnergy =
+    typeof energy.current === "number" ? energy.current : 0;
+  const nextEnergy = Math.max(0, previousEnergy - remainingCost);
+  energy.current = nextEnergy;
+  outcome.energySpent = tempConsumed + (previousEnergy - nextEnergy);
+  const totalAvailableBefore = tempAvailable + previousEnergy;
   const exhausted =
-    previousEnergy <= 0 ||
-    previousEnergy < effectiveCost ||
-    (effectiveCost === 0 && previousEnergy <= 0);
+    totalAvailableBefore <= 0 ||
+    totalAvailableBefore < effectiveCost ||
+    (effectiveCost === 0 && totalAvailableBefore <= 0);
   outcome.exhausted = exhausted;
   if (!exhausted || !health || typeof health.current !== "number") {
     return outcome;

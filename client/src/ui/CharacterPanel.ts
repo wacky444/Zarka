@@ -749,6 +749,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.nameText.setText("No character");
       this.useBarValue(this.healthBar, 0);
       this.useBarValue(this.energyBar, 0);
+      this.energyLabel.setText("Energy");
       this.applyMainActions([], null, null);
       this.setMainActionTarget(null, false);
       this.setMainActionTargetPlayer(null, false);
@@ -773,6 +774,21 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.nameText.setText(playerName ?? character.name);
     const health = character.stats.health;
     const energy = character.stats.energy;
+
+    const upcomingTemporary =
+      typeof energy.temporary === "number" && energy.temporary > 0
+        ? energy.temporary
+        : 0;
+    let energyLabel = `Energy ${energy.current}/${energy.max}`;
+    const extraSegments: string[] = [];
+
+    if (upcomingTemporary > 0) {
+      extraSegments.push(`+${upcomingTemporary} extra`);
+    }
+    if (extraSegments.length > 0) {
+      energyLabel += ` (${extraSegments.join(", ")})`;
+    }
+    this.energyLabel.setText(energyLabel);
     this.useBarValue(
       this.healthBar,
       health.max === 0 ? 0 : health.current / health.max

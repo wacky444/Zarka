@@ -34,6 +34,7 @@ export interface PlayerHealthTrack {
 export interface PlayerEnergyTrack {
   current: number;
   max: number;
+  temporary?: number;
 }
 
 export interface PlayerLoadTrack {
