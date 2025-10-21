@@ -53,6 +53,11 @@ export function createDefaultCharacter(userId: string): PlayerCharacter {
           quantity: 2,
           weight: 3,
         },
+        {
+          itemId: "drink",
+          quantity: 1,
+          weight: 3,
+        },
       ],
       stash: [],
     },

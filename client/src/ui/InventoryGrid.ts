@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { HoverTooltip } from "./HoverTooltip";
 
 export interface InventoryGridItem {
   id: string;
@@ -37,6 +38,7 @@ export class InventoryGrid extends Phaser.GameObjects.Container {
   private containerWidth: number;
   private containerHeight: number;
   private emptyLabel: Phaser.GameObjects.Text;
+  private tooltip: HoverTooltip | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -71,6 +73,8 @@ export class InventoryGrid extends Phaser.GameObjects.Container {
 
   override destroy(fromScene?: boolean) {
     this.clearCards();
+    this.tooltip?.destroy();
+    this.tooltip = null;
     super.destroy(fromScene);
   }
 
@@ -183,12 +187,37 @@ export class InventoryGrid extends Phaser.GameObjects.Container {
         }
       )
       .setOrigin(0, 0);
-    bodyText.setText(this.truncateText(bodyText, description, textMaxWidth, 6));
+    const truncated = this.truncateText(bodyText, description, textMaxWidth, 6);
+    bodyText.setText(truncated.text);
     card.add(bg);
     card.add(icon);
     card.add(nameText);
     card.add(metaText);
     card.add(bodyText);
+    card.setSize(cardWidth, cardHeight);
+    const showTooltip = truncated.truncated === true;
+    if (showTooltip) {
+      bodyText.setInteractive();
+      bodyText.on(
+        Phaser.Input.Events.POINTER_UP,
+        (pointer: Phaser.Input.Pointer) => {
+          this.ensureTooltip();
+          this.tooltip?.show(pointer.worldX, pointer.worldY, {
+            title: item.name,
+            body: description,
+          });
+        }
+      );
+      bodyText.on(Phaser.Input.Events.POINTER_OVER, () => {
+        this.scene.input.setDefaultCursor("pointer");
+      });
+      bodyText.on(Phaser.Input.Events.POINTER_OUT, () => {
+        this.scene.input.setDefaultCursor("default");
+        this.tooltip?.hide();
+      });
+    } else {
+      bodyText.disableInteractive();
+    }
     return card;
   }
 
@@ -233,12 +262,12 @@ export class InventoryGrid extends Phaser.GameObjects.Container {
     text.setText(content);
     const wrapped = text.getWrappedText();
     if (wrapped.length <= maxLines) {
-      return wrapped.join("\n");
+      return { text: wrapped.join("\n"), truncated: false };
     }
     const trimmed = wrapped.slice(0, maxLines);
     const lastIndex = trimmed.length - 1;
     trimmed[lastIndex] = this.ellipsize(trimmed[lastIndex], text, maxWidth);
-    return trimmed.join("\n");
+    return { text: trimmed.join("\n"), truncated: true };
   }
 
   private ellipsize(
@@ -289,5 +318,14 @@ export class InventoryGrid extends Phaser.GameObjects.Container {
       return `Weight: ${normalizedTotal} (${normalizedPerItem} ea)`;
     }
     return `Weight: ${normalizedTotal}`;
+  }
+
+  private ensureTooltip() {
+    if (!this.tooltip) {
+      this.tooltip = new HoverTooltip(this.scene);
+    }
+    const tooltipGO = this.tooltip.getGameObject();
+    tooltipGO.setDepth(10002);
+    this.scene.children.bringToTop(tooltipGO);
   }
 }
