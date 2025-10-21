@@ -18,7 +18,7 @@ export function createDefaultCharacter(userId: string): PlayerCharacter {
         max: 20,
       },
       load: {
-        current: 0,
+        current: 14,
         max: 25,
       },
       speed: 0,
@@ -37,8 +37,23 @@ export function createDefaultCharacter(userId: string): PlayerCharacter {
       incomeInterval: 5,
     },
     inventory: {
-      carriedItems: [],
-      equippedItems: [],
+      carriedItems: [
+        {
+          itemId: "bandage",
+          quantity: 2,
+          weight: 1,
+        },
+        {
+          itemId: "food",
+          quantity: 2,
+          weight: 3,
+        },
+        {
+          itemId: "knife",
+          quantity: 2,
+          weight: 3,
+        },
+      ],
       stash: [],
     },
     abilities: [],

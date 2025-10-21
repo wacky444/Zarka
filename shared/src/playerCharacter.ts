@@ -57,7 +57,6 @@ export interface PlayerEconomy {
 
 export interface PlayerInventory {
   carriedItems: PlayerItemStack[];
-  equippedItems: PlayerItemStack[];
   stash?: PlayerItemStack[];
 }
 

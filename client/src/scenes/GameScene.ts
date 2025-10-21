@@ -24,12 +24,14 @@ import {
   type ReplayEvent,
   type GetReplayPayload,
   getHexTileOffsets,
+  ItemLibrary,
 } from "@shared";
 import { buildBoardIconUrl, deriveBoardIconKey } from "../ui/actionIcons";
 import {
   playReplayEvents,
   type MoveReplayContext,
 } from "../animation/moveReplay";
+import { collectItemSpriteInfos } from "../ui/itemIcons";
 
 export class GameScene extends Phaser.Scene {
   private static readonly TILE_WIDTH = 128;
@@ -105,6 +107,16 @@ export class GameScene extends Phaser.Scene {
     for (const definition of Object.values(ActionLibrary)) {
       if (definition.texture === "Board Game Icons" && definition.frame) {
         boardIconFrames.add(definition.frame);
+      }
+    }
+    const itemSpriteInfos = collectItemSpriteInfos(Object.values(ItemLibrary));
+    for (const info of itemSpriteInfos) {
+      if (info.type === "board" && info.frame) {
+        boardIconFrames.add(info.frame);
+        continue;
+      }
+      if (!this.textures.exists(info.key)) {
+        this.load.image(info.key, info.url);
       }
     }
     for (const frame of boardIconFrames) {

@@ -1,6 +1,6 @@
 import type Phaser from "phaser";
 
-export type TabKey = "character" | "players" | "chat" | "log";
+export type TabKey = "character" | "items" | "players" | "chat" | "log";
 
 export interface CharacterPanelTabEntry {
   key: TabKey;
@@ -12,8 +12,11 @@ interface CharacterPanelTabsOptions {
   tabs: CharacterPanelTabEntry[];
   defaultKey: TabKey;
   characterElements: Phaser.GameObjects.GameObject[];
+  itemsElements: Phaser.GameObjects.GameObject[];
   onCharacterTabShow: () => void;
   onCharacterTabHide: () => void;
+  onItemsTabShow: () => void;
+  onItemsTabHide: () => void;
   onLogVisibilityChange: (options: {
     visible: boolean;
     forceEnsure: boolean;
@@ -76,19 +79,34 @@ export class CharacterPanelTabs {
 
   private updateVisibility(forceEnsure: boolean): void {
     const showCharacter = this.activeKey === "character";
-    for (const obj of this.options.characterElements) {
-      (
-        obj as Phaser.GameObjects.GameObject & {
-          setVisible?: (value: boolean) => void;
-        }
-      ).setVisible?.(showCharacter);
-    }
+    this.toggleElements(this.options.characterElements, showCharacter);
     if (showCharacter) {
       this.options.onCharacterTabShow();
     } else {
       this.options.onCharacterTabHide();
     }
+    const showItems = this.activeKey === "items";
+    this.toggleElements(this.options.itemsElements, showItems);
+    if (showItems) {
+      this.options.onItemsTabShow();
+    } else {
+      this.options.onItemsTabHide();
+    }
     const showLog = this.activeKey === "log";
     this.options.onLogVisibilityChange({ visible: showLog, forceEnsure });
+  }
+
+  private toggleElements(
+    elements: Phaser.GameObjects.GameObject[],
+    visible: boolean
+  ) {
+    for (const obj of elements) {
+      const target = obj as Phaser.GameObjects.GameObject & {
+        setVisible?: (value: boolean) => void;
+        setActive?: (value: boolean) => void;
+      };
+      target.setVisible?.(visible);
+      target.setActive?.(visible);
+    }
   }
 }

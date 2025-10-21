@@ -8,6 +8,9 @@ import {
   type PlayerCharacter,
   ActionCategory,
   type ReplayEvent,
+  ItemLibrary,
+  type ItemId,
+  type ItemDefinition,
 } from "@shared";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
 import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
@@ -20,6 +23,8 @@ import {
   type TabKey,
 } from "./CharacterPanelTabs";
 import { CharacterPanelLogView } from "./CharacterPanelLogView";
+import { InventoryGrid, type InventoryGridItem } from "./InventoryGrid";
+import { resolveItemTexture } from "./itemIcons";
 
 const DEFAULT_WIDTH = 420;
 const TAB_HEIGHT = 40;
@@ -41,6 +46,7 @@ export type MainActionSelection = {
 export class CharacterPanel extends Phaser.GameObjects.Container {
   private readonly tabConfigs: Array<{ key: TabKey; label: string }> = [
     { key: "character", label: "Character" },
+    { key: "items", label: "Items" },
     { key: "players", label: "Players" },
     { key: "chat", label: "Chat" },
     { key: "log", label: "Log" },
@@ -48,6 +54,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private background: Phaser.GameObjects.Rectangle;
   private tabs: CharacterPanelTabEntry[] = [];
   private characterElements: Phaser.GameObjects.GameObject[] = [];
+  private itemsElements: Phaser.GameObjects.GameObject[] = [];
   private tabsController!: CharacterPanelTabs;
   private logView!: CharacterPanelLogView;
   private portrait: Phaser.GameObjects.Image;
@@ -66,6 +73,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private locationSelector: LocationSelector;
   private playerSelector: PlayerSelector;
   private secondaryActionText: Phaser.GameObjects.Text;
+  private itemsBackground!: Phaser.GameObjects.Rectangle;
+  private itemsTitle!: Phaser.GameObjects.Text;
+  private inventoryGrid!: InventoryGrid;
   private panelWidth: number;
   private panelHeight: number;
   private barWidth: number;
@@ -281,6 +291,43 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       })
       .setOrigin(0, 0);
     this.add(this.secondaryActionText);
+    const itemsBoxY = contentTop;
+    const itemsBoxHeight = Math.max(
+      BOX_HEIGHT * 2,
+      height - itemsBoxY - MARGIN
+    );
+    const itemsBoxWidth = boxWidth;
+    this.itemsBackground = scene.add
+      .rectangle(MARGIN, itemsBoxY, itemsBoxWidth, itemsBoxHeight, 0x1b2440)
+      .setOrigin(0, 0)
+      .setVisible(false);
+    this.itemsBackground.setStrokeStyle?.(1, 0x253055, 0.8);
+    this.add(this.itemsBackground);
+    this.itemsTitle = scene.add
+      .text(MARGIN + 12, itemsBoxY + 12, "Inventory", {
+        fontSize: "16px",
+        color: "#ffffff",
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    this.add(this.itemsTitle);
+    this.inventoryGrid = new InventoryGrid(
+      scene,
+      MARGIN + 12,
+      itemsBoxY + 48,
+      itemsBoxWidth - 24,
+      Math.max(0, itemsBoxHeight - 60),
+      { columns: 2, iconSize: 32 }
+    );
+    this.inventoryGrid.setVisible(false);
+    this.inventoryGrid.setActive(false);
+    this.add(this.inventoryGrid);
+    this.inventoryGrid.setItems([]);
+    this.itemsElements = [
+      this.itemsBackground,
+      this.itemsTitle,
+      this.inventoryGrid,
+    ];
     const logControlY = contentTop;
     const baseX = MARGIN + 12;
     const logPrevButton = scene.add
@@ -394,6 +441,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       tabs: this.tabs,
       defaultKey: "character",
       characterElements: this.characterElements,
+      itemsElements: this.itemsElements,
       onCharacterTabShow: () => {
         this.mainActionDropdown.setVisible(true);
         this.mainActionDropdown.setActive(true);
@@ -410,6 +458,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.playerSelector.setVisible(false);
         this.playerSelector.setActive(false);
         this.readyToggle.disableInteractive();
+      },
+      onItemsTabShow: () => {
+        this.inventoryGrid.setActive(true);
+        this.inventoryGrid.refreshLayout();
+      },
+      onItemsTabHide: () => {
+        this.inventoryGrid.setActive(false);
       },
       onLogVisibilityChange: ({ visible, forceEnsure }) => {
         this.logView.handleVisibilityChange({ visible, forceEnsure });
@@ -478,6 +533,21 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (this.readyToggle) {
       this.readyToggle.setPosition(barX, contentTop + 80);
     }
+    const itemsBoxY = contentTop;
+    const itemsBoxWidth = boxWidth;
+    const itemsBoxHeight = Math.max(
+      BOX_HEIGHT * 2,
+      height - itemsBoxY - MARGIN
+    );
+    this.itemsBackground.setPosition(MARGIN, itemsBoxY);
+    this.itemsBackground.setSize(itemsBoxWidth, itemsBoxHeight);
+    this.itemsBackground.setDisplaySize(itemsBoxWidth, itemsBoxHeight);
+    this.itemsTitle.setPosition(MARGIN + 12, itemsBoxY + 12);
+    this.inventoryGrid.setPosition(MARGIN + 12, itemsBoxY + 48);
+    this.inventoryGrid.setDimensions(
+      itemsBoxWidth - 24,
+      Math.max(0, itemsBoxHeight - 60)
+    );
     if (this.logView) {
       this.logView.layout({
         margin: MARGIN,
@@ -535,6 +605,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.secondaryActionText.setText("None selected");
       this.setReadyEnabled(false);
       this.setReadyState(false, false);
+      this.updateInventoryPanel(null);
       return;
     }
     this.nameText.setText(playerName ?? character.name);
@@ -574,11 +645,123 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       normalizedTargetLocation,
       serverTargetPlayerId
     );
+    this.updateInventoryPanel(character);
   }
 
   private useBarValue(bar: ProgressBar, ratio: number) {
     const clamped = Phaser.Math.Clamp(ratio, 0, 1);
     bar.setValue(clamped);
+  }
+
+  private updateInventoryPanel(character: PlayerCharacter | null) {
+    if (!this.itemsTitle || !this.inventoryGrid) {
+      return;
+    }
+    if (!character) {
+      this.itemsTitle.setText("Inventory");
+      this.inventoryGrid.setItems([]);
+      this.inventoryGrid.refreshLayout();
+      return;
+    }
+    const load = character.stats?.load;
+    if (load) {
+      const current = this.normalizeWeight(load.current);
+      const max = this.normalizeWeight(load.max);
+      this.itemsTitle.setText(`Inventory (Load ${current}/${max})`);
+    } else {
+      this.itemsTitle.setText("Inventory");
+    }
+    const carried = Array.isArray(character.inventory?.carriedItems)
+      ? character.inventory.carriedItems
+      : [];
+    const items = this.buildInventoryItems(carried);
+    this.inventoryGrid.setItems(items);
+    this.inventoryGrid.refreshLayout();
+  }
+
+  private buildInventoryItems(
+    stacks: Array<{ itemId?: string; quantity?: number; weight?: number }>
+  ): InventoryGridItem[] {
+    const aggregated = new Map<
+      string,
+      { quantity: number; totalWeight: number }
+    >();
+    for (const stack of stacks) {
+      if (!stack || typeof stack.itemId !== "string") {
+        continue;
+      }
+      const id = stack.itemId;
+      const quantity = this.normalizeQuantity(stack.quantity);
+      const weight = this.normalizeWeightRaw(stack.weight);
+      const entry = aggregated.get(id) ?? { quantity: 0, totalWeight: 0 };
+      entry.quantity += quantity;
+      entry.totalWeight += weight;
+      aggregated.set(id, entry);
+    }
+    const items: InventoryGridItem[] = [];
+    for (const [itemId, entry] of aggregated) {
+      const definition = this.resolveItemDefinition(itemId);
+      const quantity = entry.quantity;
+      const totalWeightRaw = entry.totalWeight;
+      const fallbackPerWeight = definition?.weight ?? 0;
+      const computedWeight =
+        totalWeightRaw > 0 ? totalWeightRaw : quantity * fallbackPerWeight;
+      const perItemWeight =
+        fallbackPerWeight > 0
+          ? fallbackPerWeight
+          : quantity > 0
+          ? computedWeight / quantity
+          : 0;
+      if (quantity <= 0 && computedWeight <= 0) {
+        continue;
+      }
+      const normalizedTotalWeight = this.normalizeWeight(computedWeight);
+      const normalizedPerItem = this.normalizeWeight(perItemWeight);
+      const textureInfo = definition
+        ? resolveItemTexture(definition)
+        : { texture: "hex", frame: "grass_01.png" as const };
+      items.push({
+        id: definition?.id ?? itemId,
+        name: definition?.name ?? this.formatActionName(itemId),
+        category: definition?.category ?? undefined,
+        description:
+          definition?.description ?? "Description not available yet.",
+        notes: definition?.notes ?? undefined,
+        quantity,
+        totalWeight: normalizedTotalWeight,
+        weightPerItem: normalizedPerItem,
+        texture: textureInfo.texture,
+        frame: textureInfo.frame,
+      });
+    }
+    items.sort((a, b) => a.name.localeCompare(b.name));
+    return items;
+  }
+
+  private resolveItemDefinition(itemId: string): ItemDefinition | null {
+    const candidate = ItemLibrary[itemId as ItemId];
+    return candidate ?? null;
+  }
+
+  private normalizeQuantity(value: number | null | undefined): number {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      return 0;
+    }
+    return Math.max(0, Math.floor(value));
+  }
+
+  private normalizeWeight(value: number | null | undefined): number {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      return 0;
+    }
+    return Math.max(0, Math.round(value * 100) / 100);
+  }
+
+  private normalizeWeightRaw(value: number | null | undefined): number {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      return 0;
+    }
+    return Math.max(0, value);
   }
 
   setReadyState(ready: boolean, emit = false): boolean {
