@@ -41,6 +41,18 @@ const SECONDARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
   .filter((definition) => definition.category === ActionCategory.Secondary)
   .map((definition) => definition.id)
   .sort((a, b) => ActionLibrary[a].name.localeCompare(ActionLibrary[b].name));
+const PLAYER_SPRITE_FRAMES = [
+  "body_human_light_01.png",
+  "body_human_tan_01.png",
+  "body_orc_green_01.png",
+  "body_elf_pale_01.png",
+  "body_dwarf_ruddy_01.png",
+  "body_human_dark_01.png",
+  "body_human_brown_01.png",
+  "body_human_red_01.png",
+  "body_human_olive_01.png",
+  "body_human_peach_01.png",
+];
 
 export type MainActionSelection = {
   actionId: string | null;
@@ -1420,14 +1432,21 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
           return;
         }
         seen.add(id);
-        const baseName =
-          usernames[id] ?? match.playerCharacters?.[id]?.name ?? id;
+        const character = match.playerCharacters?.[id] ?? null;
+        const baseName = usernames[id] ?? character?.name ?? id;
         const displayName = baseName && baseName.length > 0 ? baseName : id;
         const label =
           currentUserId && id === currentUserId
             ? `${displayName} (You)`
             : displayName;
-        options.push({ id, label });
+        const sprite = this.resolvePlayerSpriteInfo(id, character, 1);
+        options.push({
+          id,
+          label,
+          texture: sprite.texture,
+          frame: sprite.frame,
+          iconScale: sprite.iconScale,
+        });
       };
       if (Array.isArray(match.players)) {
         match.players.forEach((id) => pushOption(id));
@@ -1465,6 +1484,49 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     this.refreshPlayerSelectorState();
     this.refreshSecondaryPlayerSelectorState();
+  }
+
+  private resolvePlayerSpriteInfo(
+    playerId: string,
+    character: PlayerCharacter | null,
+    scale: number
+  ) {
+    const appearance = (
+      character as unknown as {
+        appearance?: { texture?: string; frame?: string; body?: string };
+      } | null
+    )?.appearance;
+    let texture =
+      typeof appearance?.texture === "string" ? appearance.texture : "char";
+    let frame =
+      typeof appearance?.frame === "string"
+        ? appearance.frame
+        : typeof appearance?.body === "string"
+        ? appearance.body
+        : undefined;
+    const textures = this.scene.textures;
+    if (
+      !frame ||
+      !textures.exists(texture) ||
+      !textures.get(texture).has(frame)
+    ) {
+      texture = "char";
+      const index =
+        PLAYER_SPRITE_FRAMES.length > 0
+          ? this.hashString(playerId) % PLAYER_SPRITE_FRAMES.length
+          : 0;
+      frame = PLAYER_SPRITE_FRAMES[index] ?? "body_human_tan_01.png";
+    }
+    const resolvedFrame = frame ?? "body_human_tan_01.png";
+    return { texture, frame: resolvedFrame, iconScale: scale };
+  }
+
+  private hashString(value: string) {
+    let hash = 0;
+    for (let i = 0; i < value.length; i += 1) {
+      hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+    }
+    return hash >>> 0;
   }
 
   private selectedActionSupportsLocation() {

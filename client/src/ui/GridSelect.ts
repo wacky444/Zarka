@@ -17,7 +17,7 @@ import {
 export interface GridSelectItem {
   id: string;
   name: string;
-  description: string;
+  description?: string | null;
   texture: string;
   frame?: string;
   iconScale?: number;
@@ -33,13 +33,16 @@ interface GridSelectConfig {
   height?: number;
   columns?: number;
   title?: string;
+  subtitle?: string;
   placeholder?: string;
   emptyLabel?: string;
   modalWidth?: number;
   modalHeight?: number;
+  cellHeight?: number;
   includeEmptyOption?: boolean;
   emptyOptionLabel?: string;
   emptyOptionDescription?: string;
+  autoSelectFirst?: boolean;
 }
 
 type RexSizer = Phaser.GameObjects.GameObject & {
@@ -87,20 +90,26 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private readonly label: Phaser.GameObjects.Text;
   private readonly collapsedHeight: number;
   private readonly modalTitle: string;
-  private readonly placeholder: string;
+  private readonly modalSubtitle: string;
+  private placeholder: string;
   private readonly emptyLabel: string;
   private readonly columns: number;
   private readonly iconTargetSize: number;
   private readonly modalWidth: number;
   private readonly modalHeight: number;
+  private readonly cellHeight: number;
   private readonly hitAreaZone: Phaser.GameObjects.Zone;
   private readonly emptyOptionItem: GridSelectItem | null;
+  private readonly autoSelectFirst: boolean;
   private items: GridSelectItem[] = [];
   private selectedItem: GridSelectItem | null = null;
   private overlay: Phaser.GameObjects.Container | null = null;
   private modalCover: Phaser.GameObjects.Rectangle | null = null;
   private gridTable: RexGridTable | null = null;
   private tooltip: HoverTooltip | null = null;
+  private enabled = true;
+  private readonly labelActiveColor: string;
+  private currentWidth: number;
 
   constructor(
     scene: Phaser.Scene,
@@ -114,6 +123,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.collapsedHeight = config.height ?? 64;
     this.columns = Math.max(1, config.columns ?? 3);
     this.modalTitle = config.title ?? "Select";
+    this.modalSubtitle = config.subtitle ?? "Tap an action to select it";
     this.placeholder = config.placeholder ?? "Select";
     this.emptyLabel = config.emptyLabel ?? "Unknown";
     this.modalWidth =
@@ -121,6 +131,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.modalHeight =
       config.modalHeight ?? Math.min(scene.scale.height - 80, 480);
     this.iconTargetSize = Math.min(this.collapsedHeight - 12, 48);
+    this.cellHeight = Math.max(96, config.cellHeight ?? 240);
+    this.autoSelectFirst = config.autoSelectFirst !== false;
+    this.labelActiveColor = "#e2e8f0";
+    this.currentWidth = config.width;
     const includeEmptyOption = config.includeEmptyOption === true;
     this.emptyOptionItem = includeEmptyOption
       ? {
@@ -171,7 +185,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         this.placeholder,
         {
           fontSize: "17px",
-          color: "#e2e8f0",
+          color: this.labelActiveColor,
         }
       )
       .setOrigin(0, 0.5);
@@ -185,6 +199,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
     this.hitAreaZone.on(Phaser.Input.Events.POINTER_UP, this.openModal, this);
     this.hitAreaZone.on(Phaser.Input.Events.POINTER_OVER, () => {
+      if (!this.enabled) {
+        this.scene.input.setDefaultCursor("default");
+        this.background.setStrokeStyle?.(2, COLLAPSED_BORDER_COLOR, 1);
+        return;
+      }
       this.scene.input.setDefaultCursor("pointer");
       this.background.setStrokeStyle?.(2, 0x3b82f6, 1);
     });
@@ -192,6 +211,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.scene.input.setDefaultCursor("default");
       this.background.setStrokeStyle?.(2, COLLAPSED_BORDER_COLOR, 1);
     });
+
+    this.applyEnabledState();
   }
 
   override destroy(fromScene?: boolean) {
@@ -219,10 +240,18 @@ export class GridSelect extends Phaser.GameObjects.Container {
       if (current) {
         this.applySelection(current, false);
       } else {
-        this.selectFirstAvailable(false);
+        if (this.autoSelectFirst) {
+          this.selectFirstAvailable(false);
+        } else {
+          this.clearSelection();
+        }
       }
     } else {
-      this.selectFirstAvailable(false);
+      if (this.autoSelectFirst) {
+        this.selectFirstAvailable(false);
+      } else {
+        this.clearSelection();
+      }
     }
     this.gridTable?.setItems(this.items);
     this.gridTable?.refresh?.();
@@ -249,7 +278,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     }
     const match = this.items.find((it) => it.id === id);
     if (!match || match.disabled) {
-      if (emit) {
+      if (emit || !this.autoSelectFirst) {
         this.clearSelection();
       } else {
         this.selectFirstAvailable(false);
@@ -278,6 +307,34 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.background.setSize?.(width, this.collapsedHeight);
     this.background.setDisplaySize?.(width, this.collapsedHeight);
     this.label.setX(this.icon.x + this.iconTargetSize + 12);
+    this.currentWidth = width;
+    this.applyEnabledState();
+    return this;
+  }
+
+  setPlaceholder(text: string) {
+    this.placeholder = text;
+    if (!this.selectedItem) {
+      this.label.setText(text);
+    }
+    return this;
+  }
+
+  setEnabled(enabled: boolean) {
+    if (this.enabled === enabled) {
+      return this;
+    }
+    this.enabled = enabled;
+    if (!enabled) {
+      this.closeModal();
+      this.tooltip?.hide();
+    }
+    this.applyEnabledState();
+    return this;
+  }
+
+  hideModal() {
+    this.closeModal();
     return this;
   }
 
@@ -285,6 +342,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.selectedItem = null;
     this.icon.setVisible(false);
     this.label.setText(this.placeholder);
+    this.applyEnabledState();
   }
 
   private selectFirstAvailable(emit: boolean) {
@@ -343,10 +401,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.icon.setVisible(false);
     }
     this.label.setText(item.name.length > 0 ? item.name : this.emptyLabel);
+    this.applyEnabledState();
   }
 
   private openModal() {
-    if (this.items.length === 0) {
+    if (!this.enabled || this.items.length === 0) {
       return;
     }
     if (this.overlay) {
@@ -454,7 +513,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     modal.add(header, 0, "center", { bottom: 4 }, false);
 
     const subtitle = scene.add
-      .text(0, 0, "Tap an action to select it", {
+      .text(0, 0, this.modalSubtitle, {
         fontSize: "15px",
         color: MODAL_TEXT_COLOR,
       })
@@ -501,7 +560,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     const scene = this.scene;
     const cellWidth =
       (this.modalWidth - 48 - (this.columns - 1) * 12) / this.columns;
-    const cellHeight = 240;
+    const cellHeight = this.cellHeight;
 
     const gridTable = scene.rexUI.add.gridTable({
       width: this.modalWidth - 48,
@@ -603,12 +662,22 @@ export class GridSelect extends Phaser.GameObjects.Container {
         if (!tooltipInstance) {
           return;
         }
+        const tooltipBody =
+          typeof item.description === "string" &&
+          item.description.trim().length > 0
+            ? item.description
+            : undefined;
+        const tooltipTitle = item.name?.length ? item.name : undefined;
+        if (!tooltipTitle && !tooltipBody) {
+          tooltipInstance.hide();
+          return;
+        }
         const tooltipGO = tooltipInstance.getGameObject();
         tooltipGO.setDepth(10002);
         this.scene.children.bringToTop(tooltipGO);
         tooltipInstance.show(pointer.worldX, pointer.worldY, {
-          title: item.name,
-          body: item.description,
+          title: tooltipTitle,
+          body: tooltipBody,
         });
       },
       this
@@ -640,7 +709,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     const cellWidth = cell.width;
     const cellHeight = cell.height;
     const usableTextWidth = cellWidth - 24;
-    const maxDescriptionLines = 10;
+    const maxDescriptionLines = this.resolveMaxDescriptionLines(cellHeight);
 
     if (!container) {
       container = scene.rexUI.add.sizer({
@@ -666,7 +735,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
       if (item.isEmptyOption) {
         icon.setVisible(false);
       } else {
-        icon.setDisplaySize(48, 48);
+        const baseIconSize = this.resolveIconSize(cellHeight);
+        icon.setDisplaySize(baseIconSize, baseIconSize);
       }
 
       const nameText = scene.add
@@ -687,7 +757,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         .setVisible(false);
       energyText.setFixedSize(0, 0);
 
-      const descText = scene.rexUI.add.BBCodeText(0, 0, item.description, {
+      const descText = scene.rexUI.add.BBCodeText(0, 0, "", {
         fontSize: "13px",
         color: MODAL_TEXT_COLOR,
         align: "center",
@@ -815,7 +885,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
           icon.setTexture(item.texture);
         }
         const scale = Phaser.Math.Clamp(item.iconScale ?? 1, 0.1, 4);
-        icon.setDisplaySize(56 * scale, 56 * scale);
+        const baseIconSize = this.resolveIconSize(config.cellHeight);
+        icon.setDisplaySize(baseIconSize * scale, baseIconSize * scale);
         icon.setVisible(true);
       } else {
         icon.setVisible(false);
@@ -932,11 +1003,24 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
   private applyDescriptionText(
     target: Phaser.GameObjects.Text,
-    content: string,
+    content: string | null | undefined,
     maxWidth: number,
     maxLines: number
   ): boolean {
-    const rich = /\[.+\]/.test(content) || /<.+>/.test(content);
+    const textValue = typeof content === "string" ? content : "";
+    const hasContent = textValue.trim().length > 0;
+    if (!hasContent) {
+      target.setText("");
+      target.setVisible(false);
+      target.setActive(false);
+      target.setFixedSize(maxWidth, 0);
+      return false;
+    }
+
+    target.setVisible(true);
+    target.setActive(true);
+
+    const rich = /\[.+\]/.test(textValue) || /<.+>/.test(textValue);
     const bbcodeTarget = target as unknown as {
       setWrapWidth?: (width: number) => unknown;
       setWordWrapWidth?: (width: number, useAdvancedWrap?: boolean) => unknown;
@@ -950,7 +1034,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       } else {
         target.setWordWrapWidth(maxWidth, true);
       }
-      return this.applyMultilineText(target, content, maxWidth, maxLines);
+      return this.applyMultilineText(target, textValue, maxWidth, maxLines);
     }
     if (typeof bbcodeTarget.setWrapWidth === "function") {
       bbcodeTarget.setWrapWidth(maxWidth);
@@ -962,9 +1046,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
     } else if (bbcodeTarget.style) {
       bbcodeTarget.style.maxLines = maxLines;
     }
-    target.setText(content);
+    target.setText(textValue);
     const wrapped = bbcodeTarget.getWrappedText
-      ? bbcodeTarget.getWrappedText(content)
+      ? bbcodeTarget.getWrappedText(textValue)
       : target.getWrappedText();
     const truncated =
       maxLines > 0 && Array.isArray(wrapped) && wrapped.length > maxLines;
@@ -981,6 +1065,35 @@ export class GridSelect extends Phaser.GameObjects.Container {
     tooltipGO.setDepth(10002);
     this.scene.children.bringToTop(tooltipGO);
     this.tooltip.hide();
+  }
+
+  private resolveMaxDescriptionLines(cellHeight: number) {
+    if (cellHeight >= 220) {
+      return 10;
+    }
+    if (cellHeight >= 160) {
+      return 6;
+    }
+    return 4;
+  }
+
+  private resolveIconSize(cellHeight: number) {
+    return Math.max(28, Math.min(56, Math.floor(cellHeight * 0.4)));
+  }
+
+  private applyEnabledState() {
+    const bg = this.background as unknown as {
+      setAlpha?: (value: number) => unknown;
+    };
+    bg.setAlpha?.(this.enabled ? 1 : 0.75);
+    this.background.setStrokeStyle?.(2, COLLAPSED_BORDER_COLOR, 1);
+    this.icon.setAlpha(this.enabled ? 1 : 0.6);
+    this.label.setColor(
+      this.enabled ? this.labelActiveColor : DISABLED_TEXT_COLOR
+    );
+    if (!this.enabled) {
+      this.scene.input.setDefaultCursor("default");
+    }
   }
 
   private syncTextFont(target: Phaser.GameObjects.Text) {

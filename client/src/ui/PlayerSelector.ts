@@ -1,30 +1,32 @@
 import Phaser from "phaser";
-import { makeButton, type UIButton } from "./button";
+import { GridSelect, type GridSelectItem } from "./GridSelect";
 
 export type PlayerOption = {
   id: string;
   label: string;
+  description?: string;
+  texture?: string;
+  frame?: string;
+  iconScale?: number;
+  disabled?: boolean;
 };
 
 const SELECT_LABEL = "[ Select player ]";
 const SELECT_PENDING_LABEL = "[ Selecting... ]";
-const CLEAR_LABEL = "[ Clear ]";
+const CLEAR_OPTION_LABEL = "[ Clear target ]";
+const CLEAR_OPTION_DESCRIPTION = "Removes the current target.";
+const NO_OPTIONS_PLACEHOLDER = "No available players";
 
 export class PlayerSelector extends Phaser.GameObjects.Container {
   private readonly label: Phaser.GameObjects.Text;
-  private readonly valueText: Phaser.GameObjects.Text;
-  private readonly selectButton: UIButton;
-  private readonly clearButton: UIButton;
-  private readonly optionsContainer: Phaser.GameObjects.Container;
-  private readonly optionsBackground: Phaser.GameObjects.Rectangle;
-  private optionsButtons: Phaser.GameObjects.Text[] = [];
+  private readonly grid: GridSelect;
   private options: PlayerOption[] = [];
   private current: string | null = null;
   private enabled = true;
   private pending = false;
-  private dropdownOpen = false;
-  private preferredWidth: number;
   private disposed = false;
+  private preferredWidth: number;
+  private syncing = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, width: number) {
     super(scene, x, y);
@@ -38,97 +40,74 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
       })
       .setOrigin(0, 0);
 
-    this.valueText = scene.add
-      .text(0, this.label.height + 6, "None selected", {
-        fontSize: "14px",
-        color: "#cbd5f5",
-      })
-      .setOrigin(0, 0);
-    this.valueText.setWordWrapWidth(width, true);
-
-    this.selectButton = makeButton(scene, 0, 0, "Select player", () => {
-      if (!this.enabled || this.pending) {
-        return;
-      }
-      this.toggleDropdown(!this.dropdownOpen);
+    this.grid = new GridSelect(scene, 0, 0, {
+      width,
+      title: "Select Target Player",
+      subtitle: "Tap a player to target them",
+      placeholder: SELECT_LABEL,
+      includeEmptyOption: true,
+      emptyOptionLabel: CLEAR_OPTION_LABEL,
+      emptyOptionDescription: CLEAR_OPTION_DESCRIPTION,
+      columns: 3,
+      cellHeight: 120,
+      autoSelectFirst: false,
     });
-
-    this.clearButton = makeButton(scene, 0, 0, "Clear", () => {
-      if (!this.current || this.pending) {
-        return;
-      }
-      this.setValue(null, true);
-    });
-
-    this.optionsBackground = scene.add
-      .rectangle(0, 0, width, 10, 0x121735, 0.92)
-      .setOrigin(0, 0)
-      .setVisible(false)
-      .setActive(false);
-
-    this.optionsContainer = scene.add
-      .container(0, 0)
-      .setVisible(false)
-      .setActive(false);
-    this.optionsContainer.add(this.optionsBackground);
+    this.grid.setPosition(0, this.label.height + 6);
+    this.grid.on("change", this.handleSelection);
 
     this.add(this.label);
-    this.add(this.valueText);
-    this.add(this.selectButton);
-    this.add(this.clearButton);
-    this.add(this.optionsContainer);
+    this.add(this.grid);
 
-    this.updateButtons();
-    this.layoutChildren();
+    this.refreshSize();
+    this.updateState();
   }
 
   setOptions(options: PlayerOption[]): void {
     if (this.disposed) {
       return;
     }
-    const normalized = options.map((option) => ({
-      id: option.id,
-      label: option.label,
-    }));
+    const normalized = options.map((option) => ({ ...option }));
     this.options = normalized;
-    const stillValid = this.current
-      ? normalized.some((option) => option.id === this.current)
-      : true;
-    if (!stillValid) {
+    if (
+      this.current &&
+      !this.options.some(
+        (option) => option.id === this.current && option.disabled !== true
+      )
+    ) {
       this.current = null;
-      this.valueText.setText("None selected");
     }
-    this.rebuildOptions();
-    this.toggleDropdown(false);
-    this.updateButtons();
+    this.grid.setItems(this.buildGridItems());
+    if (this.current) {
+      this.syncing = true;
+      this.grid.setValue(this.current, false);
+      this.syncing = false;
+    } else {
+      this.syncing = true;
+      this.grid.setValue(null, false);
+      this.syncing = false;
+    }
+    this.grid.hideModal();
+    this.updateState();
   }
 
   setValue(value: string | null, emit = false): void {
     if (this.disposed) {
       return;
     }
-    const normalized = value ?? null;
     if (
-      normalized &&
-      !this.options.some((option) => option.id === normalized)
+      value &&
+      !this.options.some(
+        (option) => option.id === value && option.disabled !== true
+      )
     ) {
       return;
     }
-    if (normalized === this.current) {
-      return;
-    }
-    this.current = normalized;
-    if (!normalized) {
-      this.valueText.setText("None selected");
-    } else {
-      const option = this.options.find(
-        (candidate) => candidate.id === normalized
-      );
-      this.valueText.setText(option ? option.label : normalized);
-    }
-    this.updateButtons();
-    if (emit) {
-      this.emit("change", this.current);
+    this.current = value ?? null;
+    this.syncing = true;
+    this.grid.setValue(this.current, emit);
+    this.syncing = false;
+    if (!emit) {
+      this.updateState();
     }
   }
 
@@ -136,19 +115,22 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
     if (this.disposed) {
       return;
     }
-    this.enabled = enabled;
-    if (!enabled && this.dropdownOpen) {
-      this.toggleDropdown(false);
+    if (this.enabled === enabled) {
+      return;
     }
-    this.updateButtons();
+    this.enabled = enabled;
+    this.updateState();
   }
 
   setPending(active: boolean): void {
     if (this.disposed) {
       return;
     }
+    if (this.pending === active) {
+      return;
+    }
     this.pending = active;
-    this.updateButtons();
+    this.updateState();
   }
 
   setSelectorWidth(width: number): void {
@@ -156,151 +138,17 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
       return;
     }
     this.preferredWidth = width;
-    this.valueText.setWordWrapWidth(width, true);
-    this.optionsBackground.setSize(width, this.optionsBackground.height);
-    this.layoutChildren();
-    this.repositionOptions();
+    this.label.setWordWrapWidth(width, true);
+    this.grid.setDisplayWidth(width);
+    this.grid.setPosition(0, this.label.height + 6);
+    this.refreshSize();
   }
 
   hideDropdown(): void {
-    if (this.dropdownOpen) {
-      this.toggleDropdown(false);
-    }
-  }
-
-  private rebuildOptions(): void {
     if (this.disposed) {
       return;
     }
-    for (const button of this.optionsButtons) {
-      button.removeAllListeners?.();
-      if (button.parentContainer === this.optionsContainer) {
-        this.optionsContainer.remove(button, true);
-      } else {
-        button.destroy();
-      }
-    }
-    this.optionsButtons = [];
-    const scene = this.scene;
-    const buttons: Phaser.GameObjects.Text[] = [];
-    const rowHeight = 26;
-    let maxWidth = this.preferredWidth;
-    if (this.optionsBackground.parentContainer !== this.optionsContainer) {
-      this.optionsContainer.addAt(this.optionsBackground, 0);
-    } else {
-      this.optionsContainer.sendToBack(this.optionsBackground);
-    }
-    this.options.forEach((option, index) => {
-      const txt = scene.add
-        .text(0, index * rowHeight, option.label, {
-          fontSize: "14px",
-          color: "#ffffff",
-          backgroundColor: "#1b2440",
-          padding: { x: 6, y: 4 },
-        })
-        .setOrigin(0, 0)
-        .setInteractive({ useHandCursor: true })
-        .on("pointerover", () => txt.setStyle({ backgroundColor: "#28345d" }))
-        .on("pointerout", () => txt.setStyle({ backgroundColor: "#1b2440" }))
-        .on("pointerup", () => {
-          if (!this.enabled || this.pending) {
-            return;
-          }
-          this.setValue(option.id, true);
-          this.toggleDropdown(false);
-        });
-      buttons.push(txt);
-      const width = txt.width + 12;
-      if (width > maxWidth) {
-        maxWidth = width;
-      }
-    });
-    this.optionsButtons = buttons;
-    if (buttons.length > 0) {
-      this.optionsContainer.add(buttons);
-    }
-    const backgroundWidth = Math.max(this.preferredWidth, maxWidth);
-    const height = buttons.length > 0 ? buttons.length * rowHeight : rowHeight;
-    this.optionsBackground.setSize(backgroundWidth, height);
-    buttons.forEach((button, index) => {
-      button.setFixedSize(backgroundWidth, rowHeight);
-      button.setPosition(0, index * rowHeight);
-    });
-    this.repositionOptions();
-  }
-
-  private updateButtons(): void {
-    if (this.disposed) {
-      return;
-    }
-    const selectEnabled =
-      this.enabled && !this.pending && this.options.length > 0;
-    if (selectEnabled) {
-      this.selectButton.setAlpha(1);
-      this.selectButton.setText(SELECT_LABEL);
-      this.selectButton.setInteractive({ useHandCursor: true });
-    } else {
-      this.selectButton.setAlpha(this.pending ? 0.8 : 0.5);
-      this.selectButton.setText(
-        this.pending ? SELECT_PENDING_LABEL : SELECT_LABEL
-      );
-      this.selectButton.disableInteractive();
-    }
-
-    const clearEnabled = !!this.current && !this.pending;
-    if (clearEnabled) {
-      this.clearButton.setAlpha(1);
-      this.clearButton.setText(CLEAR_LABEL);
-      this.clearButton.setInteractive({ useHandCursor: true });
-    } else {
-      this.clearButton.setAlpha(0.5);
-      this.clearButton.setText(CLEAR_LABEL);
-      this.clearButton.disableInteractive();
-    }
-  }
-
-  private toggleDropdown(visible: boolean): void {
-    if (this.disposed) {
-      return;
-    }
-    if (visible && this.options.length === 0) {
-      visible = false;
-    }
-    this.dropdownOpen = visible;
-    this.optionsContainer.setVisible(visible);
-    this.optionsContainer.setActive(visible);
-    this.optionsBackground.setVisible(visible);
-    this.optionsBackground.setActive(visible);
-    this.optionsButtons.forEach((button) => {
-      button.setVisible(visible);
-      button.setActive(visible);
-    });
-  }
-
-  private layoutChildren(): void {
-    if (this.disposed) {
-      return;
-    }
-    this.label.setPosition(0, 0);
-    this.valueText.setPosition(0, this.label.height + 6);
-    const buttonY = this.valueText.y + this.valueText.height + 10;
-    this.selectButton.setPosition(0, buttonY);
-    const clearX = Math.min(
-      this.selectButton.x + this.selectButton.width + 12,
-      Math.max(this.preferredWidth - this.clearButton.width, 0)
-    );
-    this.clearButton.setPosition(clearX, buttonY);
-    const height = buttonY + this.selectButton.height;
-    this.setSize(this.preferredWidth, height);
-    this.repositionOptions();
-  }
-
-  private repositionOptions(): void {
-    if (this.disposed) {
-      return;
-    }
-    const dropdownY = this.selectButton.y + this.selectButton.height + 6;
-    this.optionsContainer.setPosition(0, dropdownY);
+    this.grid.hideModal();
   }
 
   override destroy(fromScene?: boolean): void {
@@ -308,12 +156,59 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
       return;
     }
     this.disposed = true;
-    this.selectButton.removeAllListeners?.();
-    this.clearButton.removeAllListeners?.();
-    this.optionsButtons.forEach((button) => button.removeAllListeners?.());
-    this.optionsButtons.forEach((button) => button.destroy());
-    this.optionsContainer.destroy();
-    this.optionsBackground.destroy();
+    this.grid.off("change", this.handleSelection);
+    this.grid.destroy();
+    this.label.destroy();
     super.destroy(fromScene);
+  }
+
+  private readonly handleSelection = (value: string | null) => {
+    if (this.disposed) {
+      return;
+    }
+    if (this.syncing) {
+      return;
+    }
+    this.current = value ?? null;
+    this.emit("change", this.current);
+    this.updateState();
+  };
+
+  private buildGridItems(): GridSelectItem[] {
+    return this.options.map((option) => ({
+      id: option.id,
+      name: option.label,
+      description: option.description,
+      texture: option.texture ?? "char",
+      frame: option.frame,
+      iconScale: option.iconScale,
+      disabled: option.disabled,
+    }));
+  }
+
+  private refreshSize(): void {
+    const height = this.grid.y + this.grid.height;
+    this.setSize(this.preferredWidth, height);
+  }
+
+  private updateState(): void {
+    const hasSelectable = this.options.some(
+      (option) => option.disabled !== true
+    );
+    const placeholder = this.pending
+      ? SELECT_PENDING_LABEL
+      : hasSelectable
+      ? SELECT_LABEL
+      : NO_OPTIONS_PLACEHOLDER;
+    this.grid.setPlaceholder(placeholder);
+    const canInteract = this.enabled && !this.pending && hasSelectable;
+    this.grid.setEnabled(canInteract);
+    if (!hasSelectable) {
+      this.current = null;
+      this.syncing = true;
+      this.grid.setValue(null, false);
+      this.syncing = false;
+    }
+    this.refreshSize();
   }
 }
