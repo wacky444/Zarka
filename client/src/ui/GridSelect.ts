@@ -708,13 +708,21 @@ export class GridSelect extends Phaser.GameObjects.Container {
     let container = existing as unknown as RexSizer | undefined;
     const cellWidth = cell.width;
     const cellHeight = cell.height;
-    const usableTextWidth = cellWidth - 24;
+    const layoutSpace = this.resolveLayoutSpace(cellHeight);
+    const usableTextWidth =
+      cellWidth - layoutSpace.padding.left - layoutSpace.padding.right;
     const maxDescriptionLines = this.resolveMaxDescriptionLines(cellHeight);
 
     if (!container) {
       container = scene.rexUI.add.sizer({
         orientation: 1,
-        space: { item: 6, left: 12, right: 12, top: 12, bottom: 12 },
+        space: {
+          item: 0,
+          left: layoutSpace.padding.left,
+          right: layoutSpace.padding.right,
+          top: layoutSpace.padding.top,
+          bottom: layoutSpace.padding.bottom,
+        },
       }) as RexSizer;
 
       const bg = scene.rexUI.add.roundRectangle(
@@ -734,9 +742,18 @@ export class GridSelect extends Phaser.GameObjects.Container {
         .setOrigin(0.5, 0.5);
       if (item.isEmptyOption) {
         icon.setVisible(false);
+        icon.setActive(false);
+        icon.setDisplaySize(0, 0);
       } else {
         const baseIconSize = this.resolveIconSize(cellHeight);
-        icon.setDisplaySize(baseIconSize, baseIconSize);
+        const iconScale = Phaser.Math.Clamp(item.iconScale ?? 1, 0.1, 4);
+        const maxIconSize = this.resolveMaxIconDimension(cellHeight);
+        const resolvedIconSize = Math.min(
+          baseIconSize * iconScale,
+          maxIconSize
+        );
+        icon.setDisplaySize(resolvedIconSize, resolvedIconSize);
+        icon.setActive(true);
       }
 
       const nameText = scene.add
@@ -790,9 +807,22 @@ export class GridSelect extends Phaser.GameObjects.Container {
         maxDescriptionLines
       );
 
-      container.add(icon, 0, "center", { bottom: 4 }, false);
-      container.add(nameText, 0, "center", { bottom: 2 }, false);
-      container.add(energyText, 0, "center", { bottom: 2 }, false);
+      const iconMarginBottom = item.isEmptyOption ? 0 : layoutSpace.iconGap;
+      container.add(icon, 0, "center", { bottom: iconMarginBottom }, false);
+      container.add(
+        nameText,
+        0,
+        "center",
+        { bottom: layoutSpace.labelGap },
+        false
+      );
+      container.add(
+        energyText,
+        0,
+        "center",
+        { bottom: layoutSpace.labelGap },
+        false
+      );
       container.add(descText, 0, "center", 0, false);
       container.add(
         cooldownText,
@@ -871,6 +901,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
       | Phaser.GameObjects.Text
       | undefined;
 
+    const layoutSpaceExisting = this.resolveLayoutSpace(cellHeight);
+
     if (icon) {
       const textureManager = scene.textures;
       const hasTexture = textureManager.exists(item.texture);
@@ -878,6 +910,17 @@ export class GridSelect extends Phaser.GameObjects.Container {
       const hasFrame = item.frame ? texture?.has(item.frame) : true;
       if (item.isEmptyOption) {
         icon.setVisible(false);
+        icon.setActive(false);
+        icon.setDisplaySize(0, 0);
+        const iconSizerConfig = (
+          icon as unknown as {
+            sizerConfig?: { margin?: { bottom?: number } };
+          }
+        ).sizerConfig;
+        if (iconSizerConfig) {
+          iconSizerConfig.margin = iconSizerConfig.margin ?? {};
+          iconSizerConfig.margin.bottom = 0;
+        }
       } else if (hasTexture && hasFrame) {
         if (item.frame) {
           icon.setTexture(item.texture, item.frame);
@@ -885,11 +928,34 @@ export class GridSelect extends Phaser.GameObjects.Container {
           icon.setTexture(item.texture);
         }
         const scale = Phaser.Math.Clamp(item.iconScale ?? 1, 0.1, 4);
-        const baseIconSize = this.resolveIconSize(config.cellHeight);
-        icon.setDisplaySize(baseIconSize * scale, baseIconSize * scale);
+        const baseIconSize = this.resolveIconSize(cellHeight);
+        const maxIconSize = this.resolveMaxIconDimension(cellHeight);
+        const resolvedIconSize = Math.min(baseIconSize * scale, maxIconSize);
+        icon.setDisplaySize(resolvedIconSize, resolvedIconSize);
         icon.setVisible(true);
+        icon.setActive(true);
+        const iconSizerConfig = (
+          icon as unknown as {
+            sizerConfig?: { margin?: { bottom?: number } };
+          }
+        ).sizerConfig;
+        if (iconSizerConfig) {
+          iconSizerConfig.margin = iconSizerConfig.margin ?? {};
+          iconSizerConfig.margin.bottom = layoutSpaceExisting.iconGap;
+        }
       } else {
         icon.setVisible(false);
+        icon.setActive(false);
+        icon.setDisplaySize(0, 0);
+        const iconSizerConfig = (
+          icon as unknown as {
+            sizerConfig?: { margin?: { bottom?: number } };
+          }
+        ).sizerConfig;
+        if (iconSizerConfig) {
+          iconSizerConfig.margin = iconSizerConfig.margin ?? {};
+          iconSizerConfig.margin.bottom = 0;
+        }
       }
     }
     const nameTruncated = nameText
@@ -1071,14 +1137,52 @@ export class GridSelect extends Phaser.GameObjects.Container {
     if (cellHeight >= 220) {
       return 10;
     }
-    if (cellHeight >= 160) {
-      return 6;
+    if (cellHeight >= 180) {
+      return 7;
     }
-    return 4;
+    if (cellHeight >= 150) {
+      return 5;
+    }
+    if (cellHeight >= 132) {
+      return 3;
+    }
+    return 2;
+  }
+
+  private resolveLayoutSpace(cellHeight: number) {
+    if (cellHeight <= 132) {
+      return {
+        padding: { left: 10, right: 10, top: 10, bottom: 10 },
+        iconGap: 2,
+        labelGap: 1,
+      } as const;
+    }
+    if (cellHeight <= 180) {
+      return {
+        padding: { left: 12, right: 12, top: 12, bottom: 12 },
+        iconGap: 4,
+        labelGap: 3,
+      } as const;
+    }
+    return {
+      padding: { left: 14, right: 14, top: 14, bottom: 14 },
+      iconGap: 5,
+      labelGap: 4,
+    } as const;
   }
 
   private resolveIconSize(cellHeight: number) {
-    return Math.max(28, Math.min(56, Math.floor(cellHeight * 0.4)));
+    if (cellHeight <= 132) {
+      return Math.max(26, Math.floor(cellHeight * 0.32));
+    }
+    if (cellHeight <= 180) {
+      return Math.max(28, Math.floor(cellHeight * 0.36));
+    }
+    return Math.max(32, Math.min(64, Math.floor(cellHeight * 0.4)));
+  }
+
+  private resolveMaxIconDimension(cellHeight: number) {
+    return Math.max(28, Math.floor(cellHeight * 0.55));
   }
 
   private applyEnabledState() {

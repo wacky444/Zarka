@@ -305,6 +305,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         placeholder: "Choose action",
         emptyLabel: "Unknown",
         columns: 3,
+        cellHeight: 260,
       }
     );
     this.add(this.mainActionDropdown);
@@ -357,6 +358,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         placeholder: "Choose action",
         emptyLabel: "Unknown",
         columns: 3,
+        cellHeight: 260,
         includeEmptyOption: true,
         emptyOptionLabel: "No secondary action",
         emptyOptionDescription: "Removes the planned secondary action.",

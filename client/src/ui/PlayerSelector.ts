@@ -13,8 +13,8 @@ export type PlayerOption = {
 
 const SELECT_LABEL = "[ Select player ]";
 const SELECT_PENDING_LABEL = "[ Selecting... ]";
-const CLEAR_OPTION_LABEL = "[ Clear target ]";
-const CLEAR_OPTION_DESCRIPTION = "Removes the current target.";
+const CLEAR_OPTION_LABEL = "No target";
+const CLEAR_OPTION_DESCRIPTION = "Removes the current priority target.";
 const NO_OPTIONS_PLACEHOLDER = "No available players";
 
 export class PlayerSelector extends Phaser.GameObjects.Container {
