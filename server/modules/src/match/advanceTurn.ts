@@ -5,6 +5,7 @@ import type { ActionDefinition, ReplayEvent } from "@shared";
 import type { PlayerCharacter } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { executeMoveAction } from "./actions/move";
+import { executeScareAction } from "./actions/scare";
 import { executeProtectAction } from "./actions/protect";
 import { executePunchAction } from "./actions/punch";
 import { executeSleepAction } from "./actions/sleep";
@@ -162,6 +163,26 @@ export function advanceTurn(
         match.playerCharacters[participant.playerId] = participant.character;
       }
       eventsForAction = executeMoveAction(participants, match);
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn
+        );
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
+      handled = true;
+    } else if (action.id === ActionLibrary.scare.id) {
+      const participants = collectParticipants(players, match, action.id);
+      if (participants.length === 0) {
+        continue;
+      }
+      for (const participant of participants) {
+        applyActionEnergyCost(participant.character, action.energyCost);
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
+      eventsForAction = executeScareAction(participants, match);
       for (const participant of participants) {
         applyActionCooldown(
           participant.character,

@@ -582,6 +582,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 3,
     cooldown: 3,
+    developed: true,
     effects: [
       {
         description:
@@ -592,7 +593,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       cost: 3,
       maxRepetitions: 1,
       description:
-        "Permite seguir al objetivo o asustar a un segundo personaje.",
+        "Permite elegir la dirección o asustar a un segundo personaje.",
     },
     texture: "Board Game Icons",
     frame: "character_lift.png",

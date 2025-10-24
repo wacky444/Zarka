@@ -1108,7 +1108,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const fallback: (ActionId | string)[] =
       PRIMARY_ACTION_IDS.length > 0
         ? PRIMARY_ACTION_IDS
-        : ["move", "punch", "protect"];
+        : ["move", "punch", "protect", "scare"];
     const sourceIds =
       actionIds.length > 0
         ? Array.from(new Set([...actionIds, ...fallback]))

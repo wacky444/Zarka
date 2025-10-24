@@ -1,5 +1,21 @@
 import Phaser from "phaser";
-import { ActionLibrary, type ActionId, type ReplayEvent } from "@shared";
+import {
+  ActionLibrary,
+  type ActionId,
+  type Axial,
+  type ReplayEvent,
+} from "@shared";
+
+function readAxialMetadata(value: unknown): Axial | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const candidate = value as { q?: unknown; r?: unknown };
+  if (typeof candidate.q !== "number" || typeof candidate.r !== "number") {
+    return null;
+  }
+  return { q: candidate.q, r: candidate.r };
+}
 
 export interface CharacterPanelLogElements {
   prevButton: Phaser.GameObjects.Text;
@@ -383,6 +399,18 @@ export class CharacterPanelLogView {
               typeof target?.metadata?.healed === "number"
                 ? target.metadata.healed
                 : null;
+            const metadata = target.metadata as
+              | undefined
+              | {
+                  movedTo?: unknown;
+                  movedFrom?: unknown;
+                  energyLost?: unknown;
+                };
+            const movedTo = readAxialMetadata(metadata?.movedTo);
+            const energyLost =
+              typeof metadata?.energyLost === "number"
+                ? metadata.energyLost
+                : null;
             if (healed && healed > 0) {
               lines.push(`${targetName} recovered ${healed} health`);
               continue;
@@ -394,6 +422,11 @@ export class CharacterPanelLogView {
               lines.push(`${targetName} took ${target.damageTaken} damage`);
             } else if (target.eliminated) {
               lines.push(`${targetName} was eliminated`);
+            } else if (movedTo) {
+              lines.push(`${targetName} fled to (${movedTo.q}, ${movedTo.r})`);
+              if (energyLost && energyLost > 0) {
+                lines.push(`${targetName} lost ${energyLost} energy`);
+              }
             } else {
               lines.push(`${targetName} was affected`);
             }
