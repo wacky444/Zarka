@@ -110,6 +110,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private enabled = true;
   private readonly labelActiveColor: string;
   private currentWidth: number;
+  private modalVisible = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -408,6 +409,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
     if (!this.enabled || this.items.length === 0) {
       return;
     }
+    if (!this.modalVisible) {
+      this.modalVisible = true;
+      this.emit("modal-open");
+    }
     if (this.overlay) {
       this.overlay.setVisible(true);
       this.overlay.setActive(true);
@@ -538,7 +543,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
   }
 
   private closeModal(forceDestroy = false) {
+    const wasVisible = this.modalVisible;
     if (!this.overlay) {
+      if (wasVisible) {
+        this.modalVisible = false;
+        this.emit("modal-close");
+      }
       return;
     }
     if (forceDestroy) {
@@ -548,12 +558,20 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.gridTable = null;
       this.tooltip?.destroy();
       this.tooltip = null;
-      return;
+    } else {
+      this.overlay.setVisible(false);
+      this.overlay.setActive(false);
+      this.modalCover?.disableInteractive();
+      this.tooltip?.hide();
     }
-    this.overlay.setVisible(false);
-    this.overlay.setActive(false);
-    this.modalCover?.disableInteractive();
-    this.tooltip?.hide();
+    if (wasVisible) {
+      this.modalVisible = false;
+      this.emit("modal-close");
+    }
+  }
+
+  isModalOpen() {
+    return this.modalVisible;
   }
 
   private createGridTable() {

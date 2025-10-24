@@ -70,6 +70,7 @@ export class GameScene extends Phaser.Scene {
   private logFetchRunning = false;
   private logPendingTurn: number | null = null;
   private manualReplayPlaying = false;
+  private gridModalActive = false;
   private readonly turnAdvancedHandler = (
     payload: TurnAdvancedMessagePayload
   ) => {
@@ -91,6 +92,12 @@ export class GameScene extends Phaser.Scene {
       this.locationSelectionPointerId = null;
     }
     this.pointerDownInUI = false;
+  };
+  private readonly gridModalOpenHandler = () => {
+    this.gridModalActive = true;
+  };
+  private readonly gridModalCloseHandler = () => {
+    this.gridModalActive = false;
   };
 
   constructor() {
@@ -168,6 +175,8 @@ export class GameScene extends Phaser.Scene {
     this.characterPanel.on("log-tab-closed", this.handleLogTabClosed, this);
     this.characterPanel.on("log-turn-request", this.handleLogTurnRequest, this);
     this.characterPanel.on("log-play", this.handleLogPlayRequest, this);
+    this.characterPanel.on("grid-modal-open", this.gridModalOpenHandler);
+    this.characterPanel.on("grid-modal-close", this.gridModalCloseHandler);
 
     this.menuButton = makeButton(this, 0, 0, "☰", () => {
       this.scene.stop("GameScene");
@@ -232,6 +241,9 @@ export class GameScene extends Phaser.Scene {
         this
       );
       this.characterPanel?.off("log-play", this.handleLogPlayRequest, this);
+      this.characterPanel?.off("grid-modal-open", this.gridModalOpenHandler);
+      this.characterPanel?.off("grid-modal-close", this.gridModalCloseHandler);
+      this.gridModalActive = false;
       this.cancelMainActionLocationPick();
       if (this.turnService) {
         this.turnService.setOnTurnAdvanced();
@@ -510,6 +522,9 @@ export class GameScene extends Phaser.Scene {
         _dx: number,
         dy: number
       ) => {
+        if (this.gridModalActive || this.isPointerOverUI(pointer)) {
+          return;
+        }
         const worldPointBefore = cam.getWorldPoint(pointer.x, pointer.y);
         const zoomFactor = dy > 0 ? 0.9 : 1.1;
         cam.setZoom(Phaser.Math.Clamp(cam.zoom * zoomFactor, minZoom, maxZoom));

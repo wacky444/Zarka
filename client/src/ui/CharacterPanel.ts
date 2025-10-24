@@ -27,6 +27,14 @@ import { InventoryGrid, type InventoryGridItem } from "./InventoryGrid";
 import { resolveItemTexture } from "./itemIcons";
 import { ENERGY_ACCENT_COLOR, HEALTH_ACCENT_COLOR } from "./ColorPalette";
 
+type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
+  layout?: () => void;
+  setMinSize?: (width: number, height: number) => void;
+  setSize?: (width: number, height: number) => void;
+  setOrigin?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
+  setPosition?: (x: number, y: number) => Phaser.GameObjects.GameObject;
+};
+
 const DEFAULT_WIDTH = 420;
 const TAB_HEIGHT = 40;
 const MARGIN = 16;
@@ -102,6 +110,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private itemsBackground!: Phaser.GameObjects.Rectangle;
   private itemsTitle!: Phaser.GameObjects.Text;
   private inventoryGrid!: InventoryGrid;
+  private scrollPanel: ScrollablePanelInstance | null = null;
+  private scrollContent: Phaser.GameObjects.Container;
+  private scrollContentWidth = 0;
   private panelWidth: number;
   private panelHeight: number;
   private barWidth: number;
@@ -177,6 +188,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   ) => {
     this.setSecondaryActionTargetPlayer(playerId ?? null, true);
   };
+  private readonly handleActionModalOpen = () => {
+    this.emit("grid-modal-open");
+  };
+  private readonly handleActionModalClose = () => {
+    this.emit("grid-modal-close");
+  };
 
   constructor(
     scene: Phaser.Scene,
@@ -186,6 +203,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     height: number = scene.scale.height
   ) {
     super(scene, x, y);
+
     this.panelWidth = width;
     this.panelHeight = height;
     this.barWidth = width - (PORTRAIT_SIZE + MARGIN * 3);
@@ -280,41 +298,71 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.readyToggle.on("pointerup", this.handleReadyToggle);
     this.add(this.readyToggle);
     this.setReadyEnabled(false);
-    const mainBoxY =
-      this.portrait.y + this.portrait.height * this.portrait.scaleY + 12;
-    const boxWidth = width - MARGIN * 2;
+
+    this.scrollContent = scene.add.container(0, 0);
+    const initialScrollWidth = Math.max(120, width - MARGIN * 2);
+    this.scrollContentWidth = initialScrollWidth;
+    const estimatedScrollTop = readyY + this.readyToggle.height + 24;
+    const estimatedScrollHeight = Math.max(
+      200,
+      height - estimatedScrollTop - MARGIN
+    );
+
+    this.scrollPanel = scene.rexUI.add.scrollablePanel({
+      x: MARGIN,
+      y: estimatedScrollTop,
+      width: initialScrollWidth,
+      height: estimatedScrollHeight,
+      scrollMode: 0,
+      panel: {
+        child: this.scrollContent,
+        mask: { padding: 1 },
+      },
+      slider: false,
+      scroller: {
+        threshold: 10,
+        slidingDeceleration: 5000,
+        backDeceleration: 2000,
+        pointerOutRelease: true,
+      },
+      mouseWheelScroller: {
+        focus: false,
+        speed: 0.35,
+      },
+      space: { left: 0, right: 0, top: 0, bottom: 0 },
+    }) as ScrollablePanelInstance;
+    this.scrollPanel?.setOrigin?.(0, 0);
+    this.add(this.scrollPanel);
+
+    const boxWidth = initialScrollWidth;
     this.mainActionBox = scene.add
-      .rectangle(MARGIN, mainBoxY, boxWidth, BOX_HEIGHT, 0x1b2440)
+      .rectangle(0, 0, boxWidth, BOX_HEIGHT, 0x1b2440)
       .setOrigin(0, 0);
-    this.add(this.mainActionBox);
+    this.scrollContent.add(this.mainActionBox);
     this.mainActionLabel = scene.add
-      .text(MARGIN + 12, mainBoxY + 12, "Main Action", {
+      .text(0, 0, "Main Action", {
         fontSize: "16px",
         color: "#ffffff",
       })
       .setOrigin(0, 0);
-    this.add(this.mainActionLabel);
+    this.scrollContent.add(this.mainActionLabel);
     this.mainActionDropdownWidth = boxWidth - 24;
-    this.mainActionDropdown = new GridSelect(
-      scene,
-      MARGIN + 12,
-      mainBoxY + 48,
-      {
-        width: this.mainActionDropdownWidth,
-        title: "Select Main Action",
-        placeholder: "Choose action",
-        emptyLabel: "Unknown",
-        columns: 3,
-        cellHeight: 260,
-      }
-    );
-    this.add(this.mainActionDropdown);
+    this.mainActionDropdown = new GridSelect(scene, 0, 0, {
+      width: this.mainActionDropdownWidth,
+      title: "Select Main Action",
+      placeholder: "Choose action",
+      emptyLabel: "Unknown",
+      columns: 3,
+      cellHeight: 260,
+    });
+    this.scrollContent.add(this.mainActionDropdown);
     this.mainActionDropdown.on("change", this.handleMainActionSelection);
-    const locationY = mainBoxY + 48 + this.mainActionDropdown.height + 12;
+    this.mainActionDropdown.on("modal-open", this.handleActionModalOpen);
+    this.mainActionDropdown.on("modal-close", this.handleActionModalClose);
     this.locationSelector = new LocationSelector(
       scene,
-      MARGIN + 12,
-      locationY,
+      0,
+      0,
       this.mainActionDropdownWidth
     );
     this.locationSelector.setEnabled(false);
@@ -322,59 +370,52 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.locationSelector.setActive(false);
     this.locationSelector.on("pick-request", this.handleLocationPickRequest);
     this.locationSelector.on("clear-request", this.handleLocationClear);
-    this.add(this.locationSelector);
+    this.scrollContent.add(this.locationSelector);
     this.playerSelector = new PlayerSelector(
       scene,
-      MARGIN + 12,
-      locationY,
+      0,
+      0,
       this.mainActionDropdownWidth
     );
     this.playerSelector.setEnabled(false);
     this.playerSelector.setVisible(false);
     this.playerSelector.setActive(false);
     this.playerSelector.on("change", this.handlePlayerSelection);
-    this.add(this.playerSelector);
-    this.layoutMainActionSelectors();
-    const secondaryBoxY = mainBoxY + BOX_HEIGHT + 16;
+    this.scrollContent.add(this.playerSelector);
     this.secondaryActionBox = scene.add
-      .rectangle(MARGIN, secondaryBoxY, boxWidth, BOX_HEIGHT, 0x1b2440)
+      .rectangle(0, 0, boxWidth, BOX_HEIGHT, 0x1b2440)
       .setOrigin(0, 0);
-    this.add(this.secondaryActionBox);
+    this.scrollContent.add(this.secondaryActionBox);
     this.secondaryActionLabel = scene.add
-      .text(MARGIN + 12, secondaryBoxY + 12, "Secondary Action", {
+      .text(0, 0, "Secondary Action", {
         fontSize: "16px",
         color: "#ffffff",
       })
       .setOrigin(0, 0);
-    this.add(this.secondaryActionLabel);
+    this.scrollContent.add(this.secondaryActionLabel);
     this.secondaryActionDropdownWidth = boxWidth - 24;
-    this.secondaryActionDropdown = new GridSelect(
-      scene,
-      MARGIN + 12,
-      secondaryBoxY + 48,
-      {
-        width: this.secondaryActionDropdownWidth,
-        title: "Select Secondary Action",
-        placeholder: "Choose action",
-        emptyLabel: "Unknown",
-        columns: 3,
-        cellHeight: 260,
-        includeEmptyOption: true,
-        emptyOptionLabel: "No secondary action",
-        emptyOptionDescription: "Removes the planned secondary action.",
-      }
-    );
-    this.add(this.secondaryActionDropdown);
+    this.secondaryActionDropdown = new GridSelect(scene, 0, 0, {
+      width: this.secondaryActionDropdownWidth,
+      title: "Select Secondary Action",
+      placeholder: "Choose action",
+      emptyLabel: "Unknown",
+      columns: 3,
+      cellHeight: 260,
+      includeEmptyOption: true,
+      emptyOptionLabel: "No secondary action",
+      emptyOptionDescription: "Removes the planned secondary action.",
+    });
+    this.scrollContent.add(this.secondaryActionDropdown);
     this.secondaryActionDropdown.on(
       "change",
       this.handleSecondaryActionSelection
     );
-    const secondarySelectorsY =
-      secondaryBoxY + 48 + this.secondaryActionDropdown.height + 12;
+    this.secondaryActionDropdown.on("modal-open", this.handleActionModalOpen);
+    this.secondaryActionDropdown.on("modal-close", this.handleActionModalClose);
     this.secondaryLocationSelector = new LocationSelector(
       scene,
-      MARGIN + 12,
-      secondarySelectorsY,
+      0,
+      0,
       this.secondaryActionDropdownWidth
     );
     this.secondaryLocationSelector.setEnabled(false);
@@ -388,11 +429,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       "clear-request",
       this.handleSecondaryLocationClear
     );
-    this.add(this.secondaryLocationSelector);
+    this.scrollContent.add(this.secondaryLocationSelector);
     this.secondaryPlayerSelector = new PlayerSelector(
       scene,
-      MARGIN + 12,
-      secondarySelectorsY,
+      0,
+      0,
       this.secondaryActionDropdownWidth
     );
     this.secondaryPlayerSelector.setEnabled(false);
@@ -402,8 +443,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       "change",
       this.handleSecondaryPlayerSelection
     );
-    this.add(this.secondaryPlayerSelector);
-    this.layoutSecondaryActionSelectors();
+    this.scrollContent.add(this.secondaryPlayerSelector);
+    this.updateScrollLayout();
     const itemsBoxY = contentTop;
     const itemsBoxHeight = Math.max(
       BOX_HEIGHT * 2,
@@ -541,17 +582,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.healthBar,
       this.energyBar,
       this.readyToggle,
-      this.mainActionBox,
-      this.mainActionLabel,
-      this.mainActionDropdown,
-      this.locationSelector,
-      this.playerSelector,
-      this.secondaryActionBox,
-      this.secondaryActionLabel,
-      this.secondaryActionDropdown,
-      this.secondaryLocationSelector,
-      this.secondaryPlayerSelector,
     ];
+    if (this.scrollPanel) {
+      this.characterElements.push(this.scrollPanel);
+    }
     this.tabsController = new CharacterPanelTabs({
       tabs: this.tabs,
       defaultKey: "character",
@@ -616,6 +650,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   override destroy(fromScene?: boolean) {
     this.mainActionDropdown.off("change", this.handleMainActionSelection);
+    this.mainActionDropdown.off("modal-open", this.handleActionModalOpen);
+    this.mainActionDropdown.off("modal-close", this.handleActionModalClose);
     this.locationSelector.off("pick-request", this.handleLocationPickRequest);
     this.locationSelector.off("clear-request", this.handleLocationClear);
     this.playerSelector.off("change", this.handlePlayerSelection);
@@ -623,6 +659,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.secondaryActionDropdown.off(
       "change",
       this.handleSecondaryActionSelection
+    );
+    this.secondaryActionDropdown.off("modal-open", this.handleActionModalOpen);
+    this.secondaryActionDropdown.off(
+      "modal-close",
+      this.handleActionModalClose
     );
     this.secondaryLocationSelector.off(
       "pick-request",
@@ -648,52 +689,6 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.barWidth = width - (PORTRAIT_SIZE + MARGIN * 3);
     this.setSize(width, height);
     this.background.setSize(width, height);
-    const boxWidth = width - MARGIN * 2;
-    const mainBoxY =
-      this.portrait.y + this.portrait.height * this.portrait.scaleY + 12;
-    const secondaryBoxY = mainBoxY + BOX_HEIGHT + 16;
-    this.mainActionBox.setSize(boxWidth, BOX_HEIGHT);
-    this.mainActionBox.setDisplaySize(boxWidth, BOX_HEIGHT);
-    this.secondaryActionBox.setSize(boxWidth, BOX_HEIGHT);
-    this.secondaryActionBox.setDisplaySize(boxWidth, BOX_HEIGHT);
-    this.mainActionDropdownWidth = boxWidth - 24;
-    this.secondaryActionDropdownWidth = boxWidth - 24;
-    const dropdown = this.mainActionDropdown;
-    const dropdownY =
-      this.portrait.y + this.portrait.height * this.portrait.scaleY + 12 + 36;
-    dropdown.setPosition(MARGIN + 12, dropdownY);
-    dropdown.setDisplayWidth(this.mainActionDropdownWidth);
-    const selectorsX = MARGIN + 12;
-    this.locationSelector.setSelectorWidth(this.mainActionDropdownWidth);
-    this.playerSelector.setSelectorWidth(this.mainActionDropdownWidth);
-    this.locationSelector.setPosition(
-      selectorsX,
-      dropdownY + dropdown.height + 12
-    );
-    this.playerSelector.setPosition(
-      selectorsX,
-      dropdownY + dropdown.height + 12
-    );
-    this.layoutMainActionSelectors();
-    const secondaryDropdown = this.secondaryActionDropdown;
-    const secondaryDropdownY = secondaryBoxY + 48;
-    secondaryDropdown.setPosition(MARGIN + 12, secondaryDropdownY);
-    secondaryDropdown.setDisplayWidth(this.secondaryActionDropdownWidth);
-    this.secondaryLocationSelector.setSelectorWidth(
-      this.secondaryActionDropdownWidth
-    );
-    this.secondaryPlayerSelector.setSelectorWidth(
-      this.secondaryActionDropdownWidth
-    );
-    this.secondaryLocationSelector.setPosition(
-      selectorsX,
-      secondaryDropdownY + secondaryDropdown.height + 12
-    );
-    this.secondaryPlayerSelector.setPosition(
-      selectorsX,
-      secondaryDropdownY + secondaryDropdown.height + 12
-    );
-    this.layoutSecondaryActionSelectors();
     const barX = MARGIN * 2 + PORTRAIT_SIZE;
     const contentTop = TAB_HEIGHT + MARGIN;
     this.healthBar.setPosition(barX, contentTop);
@@ -703,6 +698,21 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (this.readyToggle) {
       this.readyToggle.setPosition(barX, contentTop + 80);
     }
+    const scrollWidth = Math.max(120, width - MARGIN * 2);
+    this.mainActionDropdownWidth = Math.max(0, scrollWidth - 24);
+    this.secondaryActionDropdownWidth = Math.max(0, scrollWidth - 24);
+    const readyHeight = this.readyToggle ? this.readyToggle.height : 0;
+    const readyBottom = contentTop + 80 + readyHeight + 24;
+    const scrollTop = readyBottom;
+    const scrollHeight = Math.max(160, height - scrollTop - MARGIN);
+    this.scrollContentWidth = scrollWidth;
+    if (this.scrollPanel) {
+      this.scrollPanel.setPosition?.(MARGIN, scrollTop);
+      this.scrollPanel.setSize?.(scrollWidth, scrollHeight);
+      this.scrollPanel.setMinSize?.(scrollWidth, scrollHeight);
+    }
+    this.updateScrollLayout();
+    const boxWidth = width - MARGIN * 2;
     const itemsBoxY = contentTop;
     const itemsBoxWidth = boxWidth;
     const itemsBoxHeight = Math.max(
@@ -784,6 +794,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.setReadyEnabled(false);
       this.setReadyState(false, false);
       this.updateInventoryPanel(null);
+      this.updateScrollLayout();
       return;
     }
     this.nameText.setText(playerName ?? character.name);
@@ -859,6 +870,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       secondaryServerTargetPlayerId
     );
     this.updateInventoryPanel(character);
+    this.updateScrollLayout();
   }
 
   private useBarValue(bar: ProgressBar, ratio: number) {
@@ -1222,7 +1234,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.locationSelector.setValue(null);
       this.locationSelector.setEnabled(false);
       this.locationSelector.setPending(false);
-      this.layoutMainActionSelectors();
+      this.updateScrollLayout();
       return;
     }
     const hasSelection = this.mainActionSelection !== null;
@@ -1230,7 +1242,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (!hasSelection) {
       this.locationSelector.setPending(false);
     }
-    this.layoutMainActionSelectors();
+    this.updateScrollLayout();
   }
 
   private refreshPlayerSelectorState() {
@@ -1247,7 +1259,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.playerSelector.setEnabled(false);
       this.playerSelector.setPending(false);
       this.playerSelector.hideDropdown();
-      this.layoutMainActionSelectors();
+      this.updateScrollLayout();
       return;
     }
     const hasSelection = this.mainActionSelection !== null;
@@ -1256,7 +1268,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.playerSelector.setPending(false);
       this.playerSelector.hideDropdown();
     }
-    this.layoutMainActionSelectors();
+    this.updateScrollLayout();
   }
 
   private refreshSecondaryLocationSelectorState() {
@@ -1272,7 +1284,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.secondaryLocationSelector.setValue(null);
       this.secondaryLocationSelector.setEnabled(false);
       this.secondaryLocationSelector.setPending(false);
-      this.layoutSecondaryActionSelectors();
+      this.updateScrollLayout();
       return;
     }
     const hasSelection = this.secondaryActionSelection !== null;
@@ -1280,7 +1292,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (!hasSelection) {
       this.secondaryLocationSelector.setPending(false);
     }
-    this.layoutSecondaryActionSelectors();
+    this.updateScrollLayout();
   }
 
   private refreshSecondaryPlayerSelectorState() {
@@ -1297,7 +1309,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.secondaryPlayerSelector.setEnabled(false);
       this.secondaryPlayerSelector.setPending(false);
       this.secondaryPlayerSelector.hideDropdown();
-      this.layoutSecondaryActionSelectors();
+      this.updateScrollLayout();
       return;
     }
     const hasSelection = this.secondaryActionSelection !== null;
@@ -1306,45 +1318,68 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.secondaryPlayerSelector.setPending(false);
       this.secondaryPlayerSelector.hideDropdown();
     }
-    this.layoutSecondaryActionSelectors();
+    this.updateScrollLayout();
   }
 
-  private layoutMainActionSelectors() {
-    const dropdown = this.mainActionDropdown;
-    const baseX = dropdown.x;
-    const baseY = dropdown.y + dropdown.height + 12;
-    let cursorY = baseY;
-    if (this.locationSelector.visible) {
-      this.locationSelector.setPosition(baseX, cursorY);
-      cursorY += this.locationSelector.height + 8;
-    } else {
-      this.locationSelector.setPosition(baseX, baseY);
+  private updateScrollLayout() {
+    if (!this.scrollPanel) {
+      return;
     }
-    if (this.playerSelector.visible) {
-      this.playerSelector.setPosition(baseX, cursorY);
-      cursorY += this.playerSelector.height + 8;
-    } else {
-      this.playerSelector.setPosition(baseX, cursorY);
+    const width = this.scrollContentWidth;
+    if (width <= 0) {
+      return;
     }
-  }
+    const horizontalPadding = 12;
+    let cursorY = 0;
+    const layoutActionBlock = (
+      box: Phaser.GameObjects.Rectangle,
+      label: Phaser.GameObjects.Text,
+      dropdown: GridSelect,
+      locationSelector: LocationSelector,
+      playerSelector: PlayerSelector
+    ) => {
+      box.setPosition(0, cursorY);
+      box.setSize(width, BOX_HEIGHT);
+      box.setDisplaySize(width, BOX_HEIGHT);
+      label.setPosition(horizontalPadding, cursorY + 12);
+      dropdown.setPosition(horizontalPadding, cursorY + 48);
+      dropdown.setDisplayWidth(width - horizontalPadding * 2);
+      let innerCursor = cursorY + 48 + dropdown.height + 12;
+      locationSelector.setSelectorWidth(width - horizontalPadding * 2);
+      locationSelector.setPosition(horizontalPadding, innerCursor);
+      if (locationSelector.visible) {
+        innerCursor += locationSelector.height + 8;
+      }
+      playerSelector.setSelectorWidth(width - horizontalPadding * 2);
+      playerSelector.setPosition(horizontalPadding, innerCursor);
+      if (playerSelector.visible) {
+        innerCursor += playerSelector.height + 8;
+      }
+      const blockHeight = Math.max(BOX_HEIGHT, innerCursor - cursorY + 16);
+      box.setSize(width, blockHeight);
+      box.setDisplaySize(width, blockHeight);
+      cursorY += blockHeight;
+    };
 
-  private layoutSecondaryActionSelectors() {
-    const dropdown = this.secondaryActionDropdown;
-    const baseX = dropdown.x;
-    const baseY = dropdown.y + dropdown.height + 12;
-    let cursorY = baseY;
-    if (this.secondaryLocationSelector.visible) {
-      this.secondaryLocationSelector.setPosition(baseX, cursorY);
-      cursorY += this.secondaryLocationSelector.height + 8;
-    } else {
-      this.secondaryLocationSelector.setPosition(baseX, baseY);
-    }
-    if (this.secondaryPlayerSelector.visible) {
-      this.secondaryPlayerSelector.setPosition(baseX, cursorY);
-      cursorY += this.secondaryPlayerSelector.height + 8;
-    } else {
-      this.secondaryPlayerSelector.setPosition(baseX, cursorY);
-    }
+    layoutActionBlock(
+      this.mainActionBox,
+      this.mainActionLabel,
+      this.mainActionDropdown,
+      this.locationSelector,
+      this.playerSelector
+    );
+    cursorY += 16;
+    layoutActionBlock(
+      this.secondaryActionBox,
+      this.secondaryActionLabel,
+      this.secondaryActionDropdown,
+      this.secondaryLocationSelector,
+      this.secondaryPlayerSelector
+    );
+    cursorY += 16;
+    this.scrollContent.setPosition(0, 0);
+    this.scrollContent.setSize(width, cursorY);
+    this.scrollPanel.layout?.();
   }
 
   private setMainActionTargetPlayer(
