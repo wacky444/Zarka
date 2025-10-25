@@ -1,7 +1,12 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import { ActionLibrary } from "@shared";
-import type { ActionDefinition, ReplayEvent } from "@shared";
+import { ActionLibrary, CellLibrary } from "@shared";
+import type {
+  ActionDefinition,
+  ActionId,
+  HexTileSnapshot,
+  ReplayEvent,
+} from "@shared";
 import type { PlayerCharacter } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { executeMoveAction } from "./actions/move";
@@ -9,6 +14,7 @@ import { executeScareAction } from "./actions/scare";
 import { executeProtectAction } from "./actions/protect";
 import { executePunchAction } from "./actions/punch";
 import { executeSleepAction } from "./actions/sleep";
+import { executeRecoverAction } from "./actions/recover";
 import { executeFeedAction, hasFeedConsumable } from "./actions/feed";
 import { executeFocusAction } from "./actions/focus";
 import { executeUseBandageAction } from "./actions/useBandage";
@@ -35,6 +41,47 @@ function sortedActions(): ActionDefinition[] {
     return a.actionOrder - b.actionOrder;
   });
   return items;
+}
+
+type TileLookup = Record<string, HexTileSnapshot>;
+
+function buildTileLookup(match: MatchRecord): TileLookup {
+  const lookup: TileLookup = {};
+  const tiles = match.map?.tiles;
+  if (!Array.isArray(tiles)) {
+    return lookup;
+  }
+  for (const tile of tiles) {
+    if (!tile || typeof tile.id !== "string") {
+      continue;
+    }
+    lookup[tile.id] = tile;
+  }
+  return lookup;
+}
+
+function isActionAllowedAtLocation(
+  lookup: TileLookup,
+  character: PlayerCharacter,
+  actionId: ActionId
+): boolean {
+  const tileId = character.position?.tileId;
+  if (!tileId) {
+    return false;
+  }
+  const tile = lookup[tileId];
+  if (!tile) {
+    return false;
+  }
+  const definition = CellLibrary[tile.localizationType];
+  if (!definition) {
+    return false;
+  }
+  const allowed = definition.specialActionIds;
+  if (!Array.isArray(allowed)) {
+    return false;
+  }
+  return allowed.indexOf(actionId) !== -1;
 }
 
 export interface AdvanceTurnResult {
@@ -146,6 +193,7 @@ export function advanceTurn(
   if (players.length === 0) {
     return { events: [] };
   }
+  const tileLookup = buildTileLookup(match);
   activateTemporaryEnergy(match);
   removeProtectedState(match);
   updateCooldownsForTurn(match, resolvedTurn);
@@ -245,6 +293,44 @@ export function advanceTurn(
       }
       eventsForAction = executeSleepAction(participants, match);
       for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn
+        );
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
+      handled = true;
+    } else if (action.id === ActionLibrary.recover.id) {
+      const participants = collectParticipants(players, match, action.id);
+      if (participants.length === 0) {
+        continue;
+      }
+      const eligible: PlannedActionParticipant[] = [];
+      for (const participant of participants) {
+        if (
+          isActionAllowedAtLocation(
+            tileLookup,
+            participant.character,
+            action.id
+          )
+        ) {
+          eligible.push(participant);
+        } else {
+          clearPlanByKey(participant.character, participant.planKey);
+          match.playerCharacters[participant.playerId] = participant.character;
+        }
+      }
+      if (eligible.length === 0) {
+        continue;
+      }
+      for (const participant of eligible) {
+        applyActionEnergyCost(participant.character, action.energyCost);
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
+      eventsForAction = executeRecoverAction(eligible, match);
+      for (const participant of eligible) {
         applyActionCooldown(
           participant.character,
           action.id,
