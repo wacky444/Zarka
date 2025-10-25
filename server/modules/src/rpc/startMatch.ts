@@ -72,10 +72,15 @@ export function startMatchRpc(
       CellLibrary,
       existingMap?.seed
     );
-    match.map = generated;
-    match.cols = generated.cols;
-    match.rows = generated.rows;
+    match.map = generated.map;
+    match.cols = generated.map.cols;
+    match.rows = generated.map.rows;
+    match.items = generated.items;
     mapUpdated = true;
+  }
+
+  if (!Array.isArray(match.items)) {
+    match.items = [];
   }
 
   if (!match.creator || match.creator !== ctx.userId) {

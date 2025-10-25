@@ -1,6 +1,11 @@
 import { ActionId } from "./Action";
 import type { ItemId } from "./Item";
 
+export interface Axial {
+  q: number;
+  r: number;
+}
+
 export enum LocalizationType {
   House = "House",
   Pharmacy = "Pharmacy",
@@ -33,14 +38,12 @@ export interface CellItemStock {
   quantity: number;
 }
 
-export type Axial = { q: number; r: number };
-
 export interface HexTileOptions {
   id?: string;
   frame?: string; // optional sprite frame name for client usage
   walkable?: boolean;
   meta?: Record<string, unknown>;
-  currentItems?: CellItemStock[];
+  itemIds?: string[];
 }
 
 export interface HexTileSnapshot {
@@ -50,7 +53,7 @@ export interface HexTileSnapshot {
   walkable: boolean;
   frame?: string;
   meta?: Record<string, unknown>;
-  currentItems: CellItemStock[];
+  itemIds: string[];
 }
 
 export type CellLibraryDefinition = Record<LocalizationType, CellType>;
@@ -61,7 +64,7 @@ export class HexTile {
   cellType: CellType;
   frame?: string;
   meta: Record<string, unknown>;
-  currentItems: CellItemStock[];
+  itemIds: string[];
 
   constructor(coord: Axial, cellType: CellType, opts: HexTileOptions = {}) {
     this.id = opts.id ?? `hex_${coord.q}_${coord.r}`;
@@ -70,11 +73,7 @@ export class HexTile {
     this.cellType = { ...cellType, walkable };
     this.frame = opts.frame ?? cellType.sprite;
     this.meta = opts.meta ? { ...opts.meta } : {};
-    const baseItems = Array.isArray(cellType.startingItems)
-      ? cellType.startingItems
-      : [];
-    const initialItems = opts.currentItems ?? baseItems;
-    this.currentItems = initialItems.map((stock) => ({ ...stock }));
+    this.itemIds = Array.isArray(opts.itemIds) ? [...opts.itemIds] : [];
   }
 
   toSnapshot(): HexTileSnapshot {
@@ -85,7 +84,7 @@ export class HexTile {
       walkable: this.cellType.walkable,
       frame: this.frame,
       meta: { ...this.meta },
-      currentItems: this.currentItems.map((stock) => ({ ...stock })),
+      itemIds: [...this.itemIds],
     };
   }
 
@@ -97,16 +96,14 @@ export class HexTile {
     if (!base) {
       throw new Error(`Missing cell type for ${snapshot.localizationType}`);
     }
-    const incoming = snapshot.currentItems as unknown;
-    const items = Array.isArray(incoming)
-      ? (incoming as CellItemStock[])
-      : base.startingItems ?? [];
+    const incoming = snapshot.itemIds as unknown;
+    const items = Array.isArray(incoming) ? (incoming as string[]) : [];
     return new HexTile(snapshot.coord, base, {
       id: snapshot.id,
       frame: snapshot.frame ?? base.sprite,
       walkable: snapshot.walkable,
       meta: snapshot.meta ? { ...snapshot.meta } : {},
-      currentItems: items,
+      itemIds: items,
     });
   }
 }

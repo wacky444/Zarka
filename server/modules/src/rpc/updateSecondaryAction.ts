@@ -77,9 +77,18 @@ export function updateSecondaryActionRpc(
     normalizedActionId = candidate;
     const locationCandidate = submission.targetLocationId as Axial | undefined;
     if (locationCandidate) {
-      const { q, r } = locationCandidate as Record<string, unknown>;
-      const qNum = typeof q === "number" ? q : Number(q);
-      const rNum = typeof r === "number" ? r : Number(r);
+      const rawCandidate = locationCandidate as unknown as {
+        q?: unknown;
+        r?: unknown;
+      };
+      const qNum =
+        typeof rawCandidate.q === "number"
+          ? rawCandidate.q
+          : Number(rawCandidate.q);
+      const rNum =
+        typeof rawCandidate.r === "number"
+          ? rawCandidate.r
+          : Number(rawCandidate.r);
       if (isNaN(qNum) || isNaN(rNum)) {
         throw makeNakamaError(
           "invalid_target_location",

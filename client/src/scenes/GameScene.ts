@@ -307,7 +307,8 @@ export class GameScene extends Phaser.Scene {
     const cols = match?.cols && match.cols > 0 ? match.cols : DEFAULT_MAP_COLS;
     const rows = match?.rows && match.rows > 0 ? match.rows : DEFAULT_MAP_ROWS;
     const seed = match?.map?.seed;
-    return generateGameMap(cols, rows, CellLibrary, seed);
+    const generated = generateGameMap(cols, rows, CellLibrary, seed);
+    return generated.map;
   }
 
   private renderMap(map: GameMap) {
@@ -378,7 +379,6 @@ export class GameScene extends Phaser.Scene {
     this.cam.centerOn(gridWidth / 2, gridHeight / 2);
     this.registry.set("currentMatchMap", map);
     this.renderItems(map);
-    1;
   }
 
   private getTileWorldPosition(
@@ -509,25 +509,35 @@ export class GameScene extends Phaser.Scene {
     const iconsPerRow = 3;
     const spacing = 28;
     const verticalOffset = GameScene.TILE_HEIGHT * 0.35;
+    const matchItemsRaw = this.currentMatch?.items;
+    const matchItems = Array.isArray(matchItemsRaw) ? matchItemsRaw : [];
+    const itemTypeById = new Map<string, string>();
+    for (const entry of matchItems) {
+      if (!entry || typeof entry.item_id !== "string") {
+        continue;
+      }
+      if (typeof entry.item_type !== "string") {
+        continue;
+      }
+      itemTypeById.set(entry.item_id, entry.item_type);
+    }
 
     for (const snapshot of map.tiles) {
-      const stacks = Array.isArray(snapshot.currentItems)
-        ? snapshot.currentItems
-        : [];
-      if (stacks.length === 0) {
+      const itemIds = Array.isArray(snapshot.itemIds) ? snapshot.itemIds : [];
+      if (itemIds.length === 0) {
         continue;
       }
       const aggregated = new Map<string, number>();
-      for (const stack of stacks) {
-        if (!stack || typeof stack.itemId !== "string") {
+      for (const id of itemIds) {
+        if (typeof id !== "string") {
           continue;
         }
-        const quantity = Math.floor(stack.quantity ?? 0);
-        if (quantity <= 0) {
+        const type = itemTypeById.get(id);
+        if (!type) {
           continue;
         }
-        const previous = aggregated.get(stack.itemId) ?? 0;
-        aggregated.set(stack.itemId, previous + quantity);
+        const previous = aggregated.get(type) ?? 0;
+        aggregated.set(type, previous + 1);
       }
       if (aggregated.size === 0) {
         continue;
@@ -535,7 +545,11 @@ export class GameScene extends Phaser.Scene {
       const entries = Array.from(aggregated.entries());
       entries.sort((a, b) => {
         if (b[1] === a[1]) {
-          return a[0].localeCompare(b[0]);
+          const defA = ItemLibrary[a[0] as keyof typeof ItemLibrary];
+          const defB = ItemLibrary[b[0] as keyof typeof ItemLibrary];
+          const nameA = defA?.name ?? a[0];
+          const nameB = defB?.name ?? b[0];
+          return nameA.localeCompare(nameB);
         }
         return b[1] - a[1];
       });
@@ -551,10 +565,10 @@ export class GameScene extends Phaser.Scene {
         const y = (row - (rows - 1) / 2) * spacing;
         for (let col = 0; col < rowCount; col += 1) {
           const index = rowStart + col;
-          const [itemId, quantity] = limited[index];
+          const [itemType, quantity] = limited[index];
           const x = (col - (rowCount - 1) / 2) * spacing;
           const definition =
-            ItemLibrary[itemId as keyof typeof ItemLibrary] ?? null;
+            ItemLibrary[itemType as keyof typeof ItemLibrary] ?? null;
           if (!definition) {
             continue;
           }

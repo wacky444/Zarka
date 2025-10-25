@@ -76,12 +76,16 @@ export function joinMatchRpc(
     const needsMap =
       !existing || existing.cols !== cols || existing.rows !== rows;
     if (!needsMap) {
+      if (!Array.isArray(match.items)) {
+        match.items = [];
+      }
       return false;
     }
     const generated = generateGameMap(cols, rows, CellLibrary, existing?.seed);
-    match.map = generated;
-    match.cols = generated.cols;
-    match.rows = generated.rows;
+    match.map = generated.map;
+    match.cols = generated.map.cols;
+    match.rows = generated.map.rows;
+    match.items = generated.items;
     return true;
   };
 

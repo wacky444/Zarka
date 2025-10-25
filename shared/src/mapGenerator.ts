@@ -5,6 +5,7 @@ import {
   type CellType,
   type GameMap,
 } from "./hexTile";
+import type { MatchItemRecord } from "./match";
 
 export const DEFAULT_MAP_COLS = 5;
 export const DEFAULT_MAP_ROWS = 4;
@@ -55,12 +56,17 @@ function nextType(
   return chosen[0];
 }
 
+export interface GeneratedGameMap {
+  map: GameMap;
+  items: MatchItemRecord[];
+}
+
 export function generateGameMap(
   cols: number,
   rows: number,
   library: CellLibraryDefinition,
   seed?: string
-): GameMap {
+): GeneratedGameMap {
   const width = toDimension(cols, DEFAULT_MAP_COLS);
   const height = toDimension(rows, DEFAULT_MAP_ROWS);
   const total = width * height;
@@ -100,23 +106,47 @@ export function generateGameMap(
   }
 
   const tiles = [];
+  const items: MatchItemRecord[] = [];
+  let itemSequence = 0;
   let index = 0;
   for (let r = 0; r < height; r += 1) {
     for (let c = 0; c < width; c += 1) {
       const loc = allocation[index++] ?? allocation[0];
       const base = library[loc];
+      const tileId = `hex_${c}_${r}`;
+      const tileItemIds: string[] = [];
+      const starting = Array.isArray(base.startingItems)
+        ? base.startingItems
+        : [];
+      for (const stock of starting) {
+        if (!stock) {
+          continue;
+        }
+        const quantity = Math.max(0, Math.floor(stock.quantity ?? 0));
+        for (let count = 0; count < quantity; count += 1) {
+          const itemId = `itm_${finalSeed}_${itemSequence.toString(36)}`;
+          itemSequence += 1;
+          items.push({ item_id: itemId, item_type: stock.itemId });
+          tileItemIds.push(itemId);
+        }
+      }
       const tile = new HexTile({ q: c, r }, base, {
+        id: tileId,
         frame: base.sprite,
         walkable: base.walkable,
+        itemIds: tileItemIds,
       });
       tiles.push(tile.toSnapshot());
     }
   }
 
   return {
-    cols: width,
-    rows: height,
-    seed: finalSeed,
-    tiles,
+    map: {
+      cols: width,
+      rows: height,
+      seed: finalSeed,
+      tiles,
+    },
+    items,
   };
 }

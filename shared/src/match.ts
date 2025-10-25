@@ -1,5 +1,11 @@
 import type { GameMap } from "./hexTile";
 import type { PlayerCharacter } from "./playerCharacter";
+import type { ItemId } from "./Item";
+
+export interface MatchItemRecord {
+  item_id: string;
+  item_type: ItemId;
+}
 
 export interface MatchRecord {
   match_id: string;
@@ -19,6 +25,7 @@ export interface MatchRecord {
   started: boolean;
   removed: number;
   map?: GameMap;
+  items?: MatchItemRecord[];
 }
 
 export interface TurnRecord {
