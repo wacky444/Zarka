@@ -36,7 +36,8 @@ import {
   playReplayEvents,
   type MoveReplayContext,
 } from "../animation/moveReplay";
-import { collectItemSpriteInfos } from "../ui/itemIcons";
+import { collectItemSpriteInfos, resolveItemTexture } from "../ui/itemIcons";
+import { ItemTooltipManager, composeItemDescription } from "../ui/ItemTooltip";
 
 export class GameScene extends Phaser.Scene {
   private static readonly TILE_WIDTH = 128;
@@ -71,6 +72,8 @@ export class GameScene extends Phaser.Scene {
   private logPendingTurn: number | null = null;
   private manualReplayPlaying = false;
   private gridModalActive = false;
+  private tileItemContainers = new Map<string, Phaser.GameObjects.Container>();
+  private itemTooltip: ItemTooltipManager | null = null;
   private readonly turnAdvancedHandler = (
     payload: TurnAdvancedMessagePayload
   ) => {
@@ -79,6 +82,7 @@ export class GameScene extends Phaser.Scene {
   private readonly pointerDownHandler = (pointer: Phaser.Input.Pointer) => {
     const overUI = this.isPointerOverUI(pointer);
     this.pointerDownInUI = overUI;
+    this.itemTooltip?.hide();
     if (this.locationSelectionActive) {
       this.locationSelectionPointerId = overUI ? null : pointer.id;
     }
@@ -146,6 +150,7 @@ export class GameScene extends Phaser.Scene {
     this.uiCam = this.cameras.add(0, 0, this.cam.width, this.cam.height);
     this.uiCam.setScroll(0, 0);
     this.uiCam.setZoom(1);
+    this.itemTooltip = new ItemTooltipManager(this);
     this.turnService = this.registry.get("turnService") as TurnService | null;
     this.currentUserId = this.registry.get("currentUserId") as string | null;
     if (this.turnService) {
@@ -245,6 +250,13 @@ export class GameScene extends Phaser.Scene {
       this.characterPanel?.off("grid-modal-close", this.gridModalCloseHandler);
       this.gridModalActive = false;
       this.cancelMainActionLocationPick();
+      this.itemTooltip?.hide();
+      for (const container of this.tileItemContainers.values()) {
+        container.destroy(true);
+      }
+      this.tileItemContainers.clear();
+      this.itemTooltip?.destroy();
+      this.itemTooltip = null;
       if (this.turnService) {
         this.turnService.setOnTurnAdvanced();
       }
@@ -365,6 +377,7 @@ export class GameScene extends Phaser.Scene {
     );
     this.cam.centerOn(gridWidth / 2, gridHeight / 2);
     this.registry.set("currentMatchMap", map);
+    this.renderItems(map);
     1;
   }
 
@@ -479,6 +492,154 @@ export class GameScene extends Phaser.Scene {
         this.playerNameLabels.delete(playerId);
       }
     }
+  }
+
+  private renderItems(map: GameMap) {
+    this.itemTooltip?.hide();
+    for (const container of this.tileItemContainers.values()) {
+      container.destroy(true);
+    }
+    this.tileItemContainers.clear();
+
+    if (!Array.isArray(map.tiles) || map.tiles.length === 0) {
+      return;
+    }
+
+    const maxIcons = 6;
+    const iconsPerRow = 3;
+    const spacing = 28;
+    const verticalOffset = GameScene.TILE_HEIGHT * 0.35;
+
+    for (const snapshot of map.tiles) {
+      const stacks = Array.isArray(snapshot.currentItems)
+        ? snapshot.currentItems
+        : [];
+      if (stacks.length === 0) {
+        continue;
+      }
+      const aggregated = new Map<string, number>();
+      for (const stack of stacks) {
+        if (!stack || typeof stack.itemId !== "string") {
+          continue;
+        }
+        const quantity = Math.floor(stack.quantity ?? 0);
+        if (quantity <= 0) {
+          continue;
+        }
+        const previous = aggregated.get(stack.itemId) ?? 0;
+        aggregated.set(stack.itemId, previous + quantity);
+      }
+      if (aggregated.size === 0) {
+        continue;
+      }
+      const entries = Array.from(aggregated.entries());
+      entries.sort((a, b) => {
+        if (b[1] === a[1]) {
+          return a[0].localeCompare(b[0]);
+        }
+        return b[1] - a[1];
+      });
+      const limited = entries.slice(0, maxIcons);
+      const world = this.getTileWorldPosition(snapshot.id, snapshot.coord);
+      const container = this.add.container(world.x, world.y + verticalOffset);
+      container.setDepth(4 + world.y / 1000);
+
+      const rows = Math.ceil(limited.length / iconsPerRow);
+      for (let row = 0; row < rows; row += 1) {
+        const rowStart = row * iconsPerRow;
+        const rowCount = Math.min(iconsPerRow, limited.length - rowStart);
+        const y = (row - (rows - 1) / 2) * spacing;
+        for (let col = 0; col < rowCount; col += 1) {
+          const index = rowStart + col;
+          const [itemId, quantity] = limited[index];
+          const x = (col - (rowCount - 1) / 2) * spacing;
+          const definition =
+            ItemLibrary[itemId as keyof typeof ItemLibrary] ?? null;
+          if (!definition) {
+            continue;
+          }
+          const textureInfo = resolveItemTexture(definition);
+          if (!this.textures.exists(textureInfo.texture)) {
+            continue;
+          }
+          const tooltipBody = composeItemDescription(
+            definition.description,
+            definition.notes
+          );
+          const showTooltip = (pointer: Phaser.Input.Pointer) => {
+            if (pointer.button !== 0) {
+              return;
+            }
+            if (this.locationSelectionActive) {
+              return;
+            }
+            const tooltipManager = this.itemTooltip;
+            tooltipManager?.show(
+              pointer.x,
+              pointer.y,
+              definition.name,
+              tooltipBody
+            );
+          };
+          const sprite = this.add.image(
+            x,
+            y,
+            textureInfo.texture,
+            textureInfo.frame
+          );
+          sprite.setScale(0.5);
+          sprite.setInteractive({ useHandCursor: true });
+          sprite.on(Phaser.Input.Events.POINTER_UP, showTooltip);
+          sprite.on(Phaser.Input.Events.POINTER_OVER, () => {
+            if (!this.locationSelectionActive) {
+              this.input.setDefaultCursor("pointer");
+            }
+          });
+          sprite.on(Phaser.Input.Events.POINTER_OUT, () => {
+            this.resetDefaultCursor();
+            this.itemTooltip?.hide();
+          });
+          container.add(sprite);
+          const capped =
+            quantity > 999 ? "999+" : quantity > 99 ? "99+" : `${quantity}`;
+          const label = this.add.text(x, y + 14, capped, {
+            fontFamily: "Arial",
+            fontSize: "12px",
+            color: "#ffffff",
+            stroke: "#000000",
+            strokeThickness: 3,
+          });
+          label.setOrigin(0.5, 0);
+          label.setInteractive({ useHandCursor: true });
+          label.on(Phaser.Input.Events.POINTER_UP, showTooltip);
+          label.on(Phaser.Input.Events.POINTER_OVER, () => {
+            if (!this.locationSelectionActive) {
+              this.input.setDefaultCursor("pointer");
+            }
+          });
+          label.on(Phaser.Input.Events.POINTER_OUT, () => {
+            this.resetDefaultCursor();
+            this.itemTooltip?.hide();
+          });
+          container.add(label);
+        }
+      }
+
+      if (container.list.length === 0) {
+        container.destroy(true);
+        continue;
+      }
+
+      if (this.uiCam) {
+        this.uiCam.ignore(container);
+      }
+      this.tileItemContainers.set(snapshot.id, container);
+    }
+  }
+
+  private resetDefaultCursor() {
+    const cursor = this.locationSelectionActive ? "crosshair" : "default";
+    this.input.setDefaultCursor(cursor);
   }
 
   private positionNameLabel(

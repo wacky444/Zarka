@@ -40,6 +40,7 @@ export interface HexTileOptions {
   frame?: string; // optional sprite frame name for client usage
   walkable?: boolean;
   meta?: Record<string, unknown>;
+  currentItems?: CellItemStock[];
 }
 
 export interface HexTileSnapshot {
@@ -49,6 +50,7 @@ export interface HexTileSnapshot {
   walkable: boolean;
   frame?: string;
   meta?: Record<string, unknown>;
+  currentItems: CellItemStock[];
 }
 
 export type CellLibraryDefinition = Record<LocalizationType, CellType>;
@@ -59,6 +61,7 @@ export class HexTile {
   cellType: CellType;
   frame?: string;
   meta: Record<string, unknown>;
+  currentItems: CellItemStock[];
 
   constructor(coord: Axial, cellType: CellType, opts: HexTileOptions = {}) {
     this.id = opts.id ?? `hex_${coord.q}_${coord.r}`;
@@ -67,6 +70,11 @@ export class HexTile {
     this.cellType = { ...cellType, walkable };
     this.frame = opts.frame ?? cellType.sprite;
     this.meta = opts.meta ? { ...opts.meta } : {};
+    const baseItems = Array.isArray(cellType.startingItems)
+      ? cellType.startingItems
+      : [];
+    const initialItems = opts.currentItems ?? baseItems;
+    this.currentItems = initialItems.map((stock) => ({ ...stock }));
   }
 
   toSnapshot(): HexTileSnapshot {
@@ -77,6 +85,7 @@ export class HexTile {
       walkable: this.cellType.walkable,
       frame: this.frame,
       meta: { ...this.meta },
+      currentItems: this.currentItems.map((stock) => ({ ...stock })),
     };
   }
 
@@ -88,11 +97,16 @@ export class HexTile {
     if (!base) {
       throw new Error(`Missing cell type for ${snapshot.localizationType}`);
     }
+    const incoming = snapshot.currentItems as unknown;
+    const items = Array.isArray(incoming)
+      ? (incoming as CellItemStock[])
+      : base.startingItems ?? [];
     return new HexTile(snapshot.coord, base, {
       id: snapshot.id,
       frame: snapshot.frame ?? base.sprite,
       walkable: snapshot.walkable,
       meta: snapshot.meta ? { ...snapshot.meta } : {},
+      currentItems: items,
     });
   }
 }
