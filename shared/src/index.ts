@@ -3,7 +3,7 @@ export * from "./inMatch";
 export * from "./Payloads";
 export * from "./mapGenerator";
 export * from "./match";
-export * from "./cellLibrary";
+export * from "./CellLibrary";
 export * from "./playerCharacter";
 export * from "./Action";
 export * from "./ActionLibrary";

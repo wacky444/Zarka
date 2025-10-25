@@ -1,3 +1,6 @@
+import { ActionId } from "./Action";
+import type { ItemId } from "./Item";
+
 export enum LocalizationType {
   House = "House",
   Pharmacy = "Pharmacy",
@@ -18,9 +21,16 @@ export enum LocalizationType {
 export interface CellType {
   sprite: string;
   localizationType: LocalizationType;
+  specialActionIds?: ActionId[];
   walkable: boolean;
   numberMin: number; // Minimum number of this cell type per map
   numberMax: number;
+  startingItems?: CellItemStock[];
+}
+
+export interface CellItemStock {
+  itemId: ItemId;
+  quantity: number;
 }
 
 export type Axial = { q: number; r: number };

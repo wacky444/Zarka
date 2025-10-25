@@ -1105,14 +1105,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     currentTurn: number
   ): GridSelectItem[] {
     const cooldowns = this.buildActionCooldownMap(character, currentTurn);
-    const fallback: (ActionId | string)[] =
-      PRIMARY_ACTION_IDS.length > 0
-        ? PRIMARY_ACTION_IDS
-        : ["move", "punch", "protect", "scare"];
+    const baseList: (ActionId | string)[] = PRIMARY_ACTION_IDS;
     const sourceIds =
       actionIds.length > 0
-        ? Array.from(new Set([...actionIds, ...fallback]))
-        : fallback;
+        ? Array.from(new Set([...actionIds, ...baseList]))
+        : baseList;
     const seen = new Set<string>();
     const items: GridSelectItem[] = [];
     for (const id of sourceIds) {
@@ -1132,14 +1129,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     currentTurn: number
   ): GridSelectItem[] {
     const cooldowns = this.buildActionCooldownMap(character, currentTurn);
-    const fallback: (ActionId | string)[] =
-      SECONDARY_ACTION_IDS.length > 0
-        ? SECONDARY_ACTION_IDS
-        : ["focus", "recover", "drop"];
+    const baseList: (ActionId | string)[] = SECONDARY_ACTION_IDS;
     const sourceIds =
       actionIds.length > 0
-        ? Array.from(new Set([...actionIds, ...fallback]))
-        : fallback;
+        ? Array.from(new Set([...actionIds, ...baseList]))
+        : baseList;
     const seen = new Set<string>();
     const items: GridSelectItem[] = [];
     for (const id of sourceIds) {

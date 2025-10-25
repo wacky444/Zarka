@@ -41,6 +41,8 @@ export async function playReplayEvents(
       await animateMoveEvent(context, event);
     } else if (actionId === ActionLibrary.scare.id) {
       await animateScareEvent(context, event);
+    } else if (actionId === ActionLibrary.use_bandage.id) {
+      await animateUseBandageEvent(context, event);
     } else if (actionId === ActionLibrary.sleep.id) {
       await animateSleepEvent(context, event);
     } else if (actionId === ActionLibrary.feed.id) {
@@ -267,6 +269,17 @@ async function animateSleepEvent(
   event: ReplayPlayerEvent
 ): Promise<void> {
   const targets = collectTargetIds(event);
+  await showGuardOverlay(context, targets, 520, HEAL_TEXTURE_KEY);
+}
+
+async function animateUseBandageEvent(
+  context: MoveReplayContext,
+  event: ReplayPlayerEvent
+): Promise<void> {
+  const targets = collectTargetIds(event);
+  if (targets.length === 0) {
+    return;
+  }
   await showGuardOverlay(context, targets, 520, HEAL_TEXTURE_KEY);
 }
 

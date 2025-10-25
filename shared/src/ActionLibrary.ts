@@ -1,4 +1,7 @@
-import { ActionCategory, type ActionLibraryDefinition } from "./Action";
+import {
+  ActionCategory,
+  type ActionLibraryDefinition,
+} from "./Action";
 
 export const ActionLibrary: ActionLibraryDefinition = {
   create_fire: {
@@ -108,6 +111,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 2,
     cooldown: 3,
+    developed: true,
     texture: "Board Game Icons",
     frame: "pouch_add.png",
     actionOrder: 1,
