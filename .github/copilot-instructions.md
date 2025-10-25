@@ -77,6 +77,13 @@ docker compose up -d --build nakama
 - Keep type-only imports when possible (`import type { Foo } from ...`).
 - Bump both client and server code when payload contracts change, and document breaking changes in the final response.
 
+### Developing or editing character actions
+
+- Actions are defined in `shared/src/ActionLibrary.ts`. Implemented actions has developed=true.
+- In the server there is a file for each action in `server/modules/src/match/actions/`. Each action has an execute function that will be called from `server/modules/src/match/advanceTurn.ts` when processing player turns.
+- In the client there is a file that shows the log to the player, formatReplayEvents in `client/src/ui/CharacterPanelLogView.ts`.
+- In the client there is a file that plays the action animation, ActionAnimator in `client/src/animation/moveReplay.ts`.
+
 ## Build & validation workflow
 
 ### Server environment (Docker + Nakama)
