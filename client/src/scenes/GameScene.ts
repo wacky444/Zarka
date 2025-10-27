@@ -38,6 +38,7 @@ import {
 } from "../animation/moveReplay";
 import { collectItemSpriteInfos, resolveItemTexture } from "../ui/itemIcons";
 import { ItemTooltipManager, composeItemDescription } from "../ui/ItemTooltip";
+import { assetPath } from "../utils/assetPath";
 
 export class GameScene extends Phaser.Scene {
   private static readonly TILE_WIDTH = 128;
@@ -112,13 +113,13 @@ export class GameScene extends Phaser.Scene {
     // Load the texture atlas (PNG + XML) from the public assets folder
     this.load.atlasXML(
       "hex",
-      "/assets/spritesheets/hexagonAll_sheet.png",
-      "/assets/spritesheets/hexagonAll_sheet.xml"
+      assetPath("assets/spritesheets/hexagonAll_sheet.png"),
+      assetPath("assets/spritesheets/hexagonAll_sheet.xml")
     );
     this.load.atlasXML(
       "char",
-      "/assets/spritesheets/roguelikeChar_transparent.png",
-      "/assets/spritesheets/roguelikeChar_transparent.xml"
+      assetPath("assets/spritesheets/roguelikeChar_transparent.png"),
+      assetPath("assets/spritesheets/roguelikeChar_transparent.xml")
     );
 
     const boardIconFrames = new Set<string>();
