@@ -1,8 +1,9 @@
 import type { ItemDefinition } from "@shared";
 import { deriveBoardIconKey, buildBoardIconUrl } from "./actionIcons";
+import { assetPath } from "../utils/assetPath";
 
 const ITEM_TEXTURE_PREFIX = "item_icon_";
-const ASSETS_ROOT = "/assets/images";
+const ASSETS_ROOT = "assets/images";
 
 export interface ItemSpriteInfo {
   key: string;
@@ -46,7 +47,7 @@ export function deriveItemSpriteInfo(
     .join("/");
   return {
     key,
-    url: `${ASSETS_ROOT}/${encodedPath}`,
+    url: assetPath(`${ASSETS_ROOT}/${encodedPath}`),
     type: "image",
   };
 }
