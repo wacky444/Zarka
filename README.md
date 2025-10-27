@@ -3,7 +3,7 @@
 This repository provides a starter environment for an asynchronous turn-based game using:
 
 - **Client**: Phaser 3 (TypeScript, Vite)
-- **Server**: Nakama (Docker, Postgres) with Lua runtime modules
+- **Server**: Nakama (Docker, Postgres) with Typescript runtime modules
 
 ## Structure
 
@@ -12,7 +12,8 @@ client/           # Phaser + TS source
 server/           # Docker + Nakama config
   docker-compose.yml
   local.yml       # Nakama console/runtime config
-  modules/        # Lua modules (async_turn.lua)
+  modules/        # Typescript modules (async_turn.ts)
+shared/           # Shared types between client/server
 ```
 
 ## Prerequisites
@@ -80,7 +81,7 @@ Once authenticated, users can:
 
 The game scene will authenticate with the stored session and call the `get_state` RPC. Email and Facebook auth provide persistent user accounts, while guest mode uses device ID for quick access.
 
-### Turn Flow (Current Lua Prototype)
+### Turn Flow (Current Typescript Prototype)
 
 1. Client calls `create_match` => returns `{ match_id, size }`.
 2. Players submit moves via `submit_turn` with `{ match_id, move }`.
@@ -97,9 +98,9 @@ Use Nakama console (http://localhost:9100) or a script to call:
 - `submit_turn` (payload: `{ "match_id": "<id>", "move": {"example": 1} }` )
 - `get_state` (payload: `{ "match_id": "<id>" }`)
 
-## Lua Module Overview
+## Typescript Module Overview
 
-`async_turn.lua` implements three RPC endpoints storing match metadata and turns in Nakama storage collections:
+`async_turn.ts` implements three RPC endpoints storing match metadata and turns in Nakama storage collections:
 
 Collections:
 
@@ -123,14 +124,17 @@ Scaling Considerations:
   - [x] Autoskip if someone has moved and the time limit has passed (default ON)
   - [x] Number of bot players (default 0, range 0-10)
 - [x] **Auth Upgrade**: Implemented comprehensive login system with email/Facebook authentication and session management
-- [ ] Enhanced match management with spectator mode and player profiles
-- [ ] Advanced filtering and search capabilities for active matches
-- [ ] Real-time move validation and anti-cheat mechanisms
-- [ ] Migrate to authoritative matches for instant turn notifications
-- [ ] Comprehensive integration test suite for authentication and game flows
+- [ ] Spectator mode, see with infinite viewDistance
+- [ ] Player profiles
+  - [ ] View and edit profile information
+  - [ ] Track player statistics and match history
+- [ ] Chat
+  - [ ] In-game and lobby text chat
+  - [ ] In-game private direct messages
+  - [ ] Game global chat
+- [ ] Automated tests
 - [ ] **Facebook Configuration**: Set up Facebook App ID in `client/index.html` for production Facebook authentication
 - [ ] **Social Features**: Friend lists, private matches, and in-game messaging
-- [ ] Validation: Enforce player order (all submitted before advancing) and reject moves out of turn
 
 ## Deployment
 
