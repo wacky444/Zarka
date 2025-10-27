@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   // Set base path for GitHub Pages deployment
   // base: process.env.NODE_ENV === "production" ? "/Zarka/" : "/",
+  base: "",
   server: {
     port: 5173,
     open: true,
