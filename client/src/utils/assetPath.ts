@@ -6,6 +6,7 @@ export function assetPath(path: string): string {
   const base = import.meta.env.BASE_URL;
   // Remove leading slash from path if present to avoid double slashes
   const cleanPath = path.startsWith("/") ? path.slice(1) : path;
-  // Combine base and path, ensuring no double slashes
+  // Combine base and path. The replace is a safety measure to handle
+  // any edge cases where duplicate slashes might occur.
   return `${base}${cleanPath}`.replace(/\/+/g, "/");
 }
