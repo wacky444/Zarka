@@ -9,7 +9,12 @@ import {
   type ReplayActionTarget,
   type ReplayPlayerEvent,
 } from "@shared";
-import { clearPlanByKey, type PlannedActionParticipant } from "./utils";
+import {
+  applyHealthDelta,
+  clearPlanByKey,
+  mergeCharacterState,
+  type PlannedActionParticipant,
+} from "./utils";
 
 function hasBandage(character: PlayerCharacter): number {
   const stacks = character.inventory?.carriedItems;
@@ -85,18 +90,6 @@ function consumeBandage(character: PlayerCharacter): boolean {
   return true;
 }
 
-function applyHealing(target: PlayerCharacter, amount: number): number {
-  if (!target.stats?.health) {
-    return 0;
-  }
-  const health = target.stats.health;
-  const current = typeof health.current === "number" ? health.current : 0;
-  const max = typeof health.max === "number" ? health.max : current;
-  const next = Math.min(max, current + amount);
-  health.current = next;
-  return next - current;
-}
-
 function resolveTargets(
   participant: PlannedActionParticipant,
   match: MatchRecord
@@ -148,7 +141,10 @@ export function executeUseBandageAction(
       if (!target) {
         continue;
       }
-      const healed = applyHealing(target, 5);
+      const { result: healthChange, character: updatedTarget } =
+        applyHealthDelta(target, 5);
+      mergeCharacterState(target, updatedTarget);
+      const healed = Math.max(0, healthChange.delta);
       match.playerCharacters[targetId] = target;
       appliedTargets.push({
         targetId,

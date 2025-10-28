@@ -382,6 +382,10 @@ export class CharacterPanelLogView {
       if (event.kind === "player") {
         const actor = this.resolvePlayerName(event.actorId);
         const actionId = event.action.actionId;
+        if (actionId === "status_unconscious") {
+          lines.push(`${actor} fell unconscious`);
+          continue;
+        }
         const definition = ActionLibrary[actionId as ActionId] ?? null;
         const actionName = definition
           ? definition.name

@@ -9,7 +9,12 @@ import type {
   ReplayPlayerEvent,
 } from "@shared";
 import { ReplayActionEffect } from "@shared";
-import { clearPlanByKey, type PlannedActionParticipant } from "./utils";
+import {
+  applyHealthDelta,
+  clearPlanByKey,
+  mergeCharacterState,
+  type PlannedActionParticipant,
+} from "./utils";
 
 function shuffle<T>(items: T[]): T[] {
   for (let i = items.length - 1; i > 0; i -= 1) {
@@ -19,18 +24,6 @@ function shuffle<T>(items: T[]): T[] {
     items[j] = tmp;
   }
   return items;
-}
-
-function applyHealing(character: PlayerCharacter, amount: number): number {
-  const health = character.stats?.health;
-  if (!health) {
-    return 0;
-  }
-  const max = typeof health.max === "number" ? health.max : health.current;
-  const previous = typeof health.current === "number" ? health.current : 0;
-  const next = Math.min(max, previous + amount);
-  health.current = next;
-  return next - previous;
 }
 
 export function executeRecoverAction(
@@ -45,7 +38,10 @@ export function executeRecoverAction(
       clearPlanByKey(participant.character, participant.planKey);
       continue;
     }
-    const restored = applyHealing(participant.character, 5);
+    const { result: healthChange, character: updatedCharacter } =
+      applyHealthDelta(participant.character, 5);
+    mergeCharacterState(participant.character, updatedCharacter);
+    const restored = Math.max(0, healthChange.delta);
     const action: ReplayActionDone = {
       actionId,
       effects: ReplayActionEffect.Heal,

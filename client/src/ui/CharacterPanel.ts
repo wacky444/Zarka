@@ -42,11 +42,17 @@ const PORTRAIT_SIZE = 96;
 const BAR_HEIGHT = 20;
 const BOX_HEIGHT = 180;
 const PRIMARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
-  .filter((definition) => definition.category === ActionCategory.Primary)
+  .filter(
+    (definition) =>
+      definition.category === ActionCategory.Primary && !definition.hidden
+  )
   .map((definition) => definition.id)
   .sort((a, b) => ActionLibrary[a].name.localeCompare(ActionLibrary[b].name));
 const SECONDARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
-  .filter((definition) => definition.category === ActionCategory.Secondary)
+  .filter(
+    (definition) =>
+      definition.category === ActionCategory.Secondary && !definition.hidden
+  )
   .map((definition) => definition.id)
   .sort((a, b) => ActionLibrary[a].name.localeCompare(ActionLibrary[b].name));
 const PLAYER_SPRITE_FRAMES = [
@@ -819,6 +825,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.healthBar,
       health.max === 0 ? 0 : health.current / health.max
     );
+    this.healthLabel.setText(`Health ${health.current}/${health.max}`);
     this.useBarValue(
       this.energyBar,
       energy.max === 0 ? 0 : energy.current / energy.max

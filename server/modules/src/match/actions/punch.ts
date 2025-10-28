@@ -10,7 +10,12 @@ import type {
   ReplayPlayerEvent,
 } from "@shared";
 import { ReplayActionEffect } from "@shared";
-import { clearPlanByKey, type PlannedActionParticipant } from "./utils";
+import {
+  applyHealthDelta,
+  clearPlanByKey,
+  mergeCharacterState,
+  type PlannedActionParticipant,
+} from "./utils";
 
 function sameCoord(
   a: { q: number; r: number } | undefined,
@@ -106,17 +111,6 @@ function computeDamage(baseDamage: number, guarded: boolean): number {
   return dealt > 0 ? dealt : 0;
 }
 
-function applyDamage(target: PlayerCharacter, amount: number): number {
-  const health = target.stats?.health;
-  if (!health) {
-    return 0;
-  }
-  const previous = health.current;
-  const next = Math.max(0, previous - amount);
-  health.current = next;
-  return previous - next;
-}
-
 function buildTargetEffects(guarded: boolean): ReplayActionEffectMask {
   let mask = ReplayActionEffect.Hit;
   if (guarded) {
@@ -147,6 +141,7 @@ export function executePunchAction(
     const targets = collectTargets(participant, match);
     const targetEntries: ReplayActionTarget[] = [];
     let totalDamage = 0;
+    const postEvents: ReplayPlayerEvent[] = [];
     for (const targetId of targets) {
       const target = match.playerCharacters?.[targetId];
       if (!target) {
@@ -155,10 +150,23 @@ export function executePunchAction(
       const guarded = hasProtection(target);
       const baseDamage = 2;
       const dealtAmount = computeDamage(baseDamage, guarded);
-      const applied = applyDamage(target, dealtAmount);
-      totalDamage += applied;
-      const eliminated = target.stats?.health?.current === 0;
+      const {
+        result: healthChange,
+        character: updatedTarget,
+        event,
+      } = applyHealthDelta(target, -dealtAmount);
+      mergeCharacterState(target, updatedTarget);
       match.playerCharacters[targetId] = target;
+      if (event) {
+        postEvents.push(event);
+      }
+      const applied = Math.max(0, -healthChange.delta);
+      if (applied <= 0) {
+        continue;
+      }
+      totalDamage += applied;
+      const eliminated =
+        healthChange.current === 0 && healthChange.previous > 0;
       const targetEntry: ReplayActionTarget = {
         targetId,
         damageTaken: applied,
@@ -190,6 +198,9 @@ export function executePunchAction(
       action,
       targets: targetEntries,
     });
+    if (postEvents.length > 0) {
+      events.push(...postEvents);
+    }
   }
   return events;
 }

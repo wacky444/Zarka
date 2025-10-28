@@ -69,7 +69,7 @@ export function updateReadyStateRpc(
 
   if (allReady) {
     resolvedTurnNumber = (match.current_turn || 0) + 1;
-    advanceResult = advanceTurn(match, resolvedTurnNumber);
+    advanceResult = advanceTurn(match, resolvedTurnNumber, logger);
     match.current_turn = resolvedTurnNumber;
     const resetStates: Record<string, boolean> = {};
     for (const playerId of players) {

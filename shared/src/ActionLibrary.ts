@@ -1224,4 +1224,21 @@ export const ActionLibrary: ActionLibraryDefinition = {
     actionSubOrder: 3,
     tags: ["Support", "Status"],
   },
+  status_unconscious: {
+    id: "status_unconscious",
+    name: "Queda inconsciente",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "skull.png",
+    actionOrder: 99,
+    actionSubOrder: 0,
+    notes: [
+      "Evento automático cuando un personaje desciende a 5 puntos de vida o menos y no muere.",
+    ],
+    tags: ["Status"],
+  },
 };

@@ -68,7 +68,8 @@ export type ActionId =
   | "use_antidote"
   | "inject_virus"
   | "inject_vaccine"
-  | "sleep";
+  | "sleep"
+  | "status_unconscious";
 
 export type ActionTag =
   | "Attack"
@@ -118,6 +119,7 @@ export interface ActionDefinition {
   actionOrder: number;
   actionSubOrder: number;
   developed?: boolean;
+  hidden?: boolean;
   experience?: ActionExperienceReward;
   requirements?: ActionRequirement[];
   requiredItems?: ItemId[];

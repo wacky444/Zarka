@@ -147,21 +147,23 @@ function activateTemporaryEnergy(match: MatchRecord): void {
   }
 }
 
-function stripProtectedCondition(character: PlayerCharacter): void {
+function stripCondition(character: PlayerCharacter, condition: string): void {
   const statuses = character.statuses;
   if (!statuses?.conditions) {
     return;
   }
-  const filtered = statuses.conditions.filter(
-    (condition) => condition !== "protected"
-  );
+
+  const filtered = statuses.conditions.filter((c) => c !== condition);
   if (filtered.length === statuses.conditions.length) {
     return;
   }
   statuses.conditions = filtered;
 }
 
-function removeProtectedState(match: MatchRecord): void {
+function removeStateFromAllCharacters(
+  match: MatchRecord,
+  condition: string
+): void {
   if (!match.playerCharacters) {
     return;
   }
@@ -175,14 +177,15 @@ function removeProtectedState(match: MatchRecord): void {
     if (!character) {
       continue;
     }
-    stripProtectedCondition(character);
+    stripCondition(character, condition);
     match.playerCharacters[playerId] = character;
   }
 }
 
 export function advanceTurn(
   match: MatchRecord,
-  resolvedTurn: number
+  resolvedTurn: number,
+  logger: any
 ): AdvanceTurnResult {
   if (!Array.isArray(match.players) || !match.playerCharacters) {
     return { events: [] };
@@ -195,7 +198,8 @@ export function advanceTurn(
   }
   const tileLookup = buildTileLookup(match);
   activateTemporaryEnergy(match);
-  removeProtectedState(match);
+  removeStateFromAllCharacters(match, "protected");
+  removeStateFromAllCharacters(match, "unconscious");
   updateCooldownsForTurn(match, resolvedTurn);
   const actions = sortedActions();
   const replayEvents: ReplayEvent[] = [];
@@ -208,7 +212,7 @@ export function advanceTurn(
         continue;
       }
       for (const participant of participants) {
-        applyActionEnergyCost(participant.character, action.energyCost);
+        applyActionEnergyCost(participant.character, action.energyCost, logger);
         match.playerCharacters[participant.playerId] = participant.character;
       }
       eventsForAction = executeMoveAction(participants, match);
@@ -228,7 +232,7 @@ export function advanceTurn(
         continue;
       }
       for (const participant of participants) {
-        applyActionEnergyCost(participant.character, action.energyCost);
+        applyActionEnergyCost(participant.character, action.energyCost, logger);
         match.playerCharacters[participant.playerId] = participant.character;
       }
       eventsForAction = executeScareAction(participants, match);
@@ -268,7 +272,7 @@ export function advanceTurn(
         continue;
       }
       for (const participant of eligible) {
-        applyActionEnergyCost(participant.character, action.energyCost);
+        applyActionEnergyCost(participant.character, action.energyCost, logger);
         match.playerCharacters[participant.playerId] = participant.character;
       }
       eventsForAction = executeUseBandageAction(eligible, match);
@@ -288,7 +292,7 @@ export function advanceTurn(
         continue;
       }
       for (const participant of participants) {
-        applyActionEnergyCost(participant.character, action.energyCost);
+        applyActionEnergyCost(participant.character, action.energyCost, logger);
         match.playerCharacters[participant.playerId] = participant.character;
       }
       eventsForAction = executeSleepAction(participants, match);
@@ -326,7 +330,7 @@ export function advanceTurn(
         continue;
       }
       for (const participant of eligible) {
-        applyActionEnergyCost(participant.character, action.energyCost);
+        applyActionEnergyCost(participant.character, action.energyCost, logger);
         match.playerCharacters[participant.playerId] = participant.character;
       }
       eventsForAction = executeRecoverAction(eligible, match);
@@ -358,7 +362,7 @@ export function advanceTurn(
         continue;
       }
       for (const participant of eligible) {
-        applyActionEnergyCost(participant.character, action.energyCost);
+        applyActionEnergyCost(participant.character, action.energyCost, logger);
         match.playerCharacters[participant.playerId] = participant.character;
       }
       eventsForAction = executeFeedAction(eligible, match);
@@ -378,7 +382,7 @@ export function advanceTurn(
         continue;
       }
       for (const participant of participants) {
-        applyActionEnergyCost(participant.character, action.energyCost);
+        applyActionEnergyCost(participant.character, action.energyCost, logger);
         match.playerCharacters[participant.playerId] = participant.character;
       }
       eventsForAction = executeFocusAction(participants, match);
@@ -398,7 +402,7 @@ export function advanceTurn(
         continue;
       }
       for (const participant of participants) {
-        applyActionEnergyCost(participant.character, action.energyCost);
+        applyActionEnergyCost(participant.character, action.energyCost, logger);
         match.playerCharacters[participant.playerId] = participant.character;
       }
       eventsForAction = executeProtectAction(participants, match);
@@ -418,7 +422,7 @@ export function advanceTurn(
         continue;
       }
       for (const participant of participants) {
-        applyActionEnergyCost(participant.character, action.energyCost);
+        applyActionEnergyCost(participant.character, action.energyCost, logger);
         match.playerCharacters[participant.playerId] = participant.character;
       }
       eventsForAction = executePunchAction(participants, match);
@@ -440,6 +444,6 @@ export function advanceTurn(
       replayEvents.push(...eventsForAction);
     }
   }
-  removeProtectedState(match);
+  // removeProtectedState(match);
   return { events: replayEvents };
 }
