@@ -602,7 +602,7 @@ export class GameScene extends Phaser.Scene {
             textureInfo.texture,
             textureInfo.frame
           );
-          sprite.setScale(0.5);
+          sprite.setScale(1);
           sprite.setInteractive({ useHandCursor: true });
           sprite.on(Phaser.Input.Events.POINTER_UP, showTooltip);
           sprite.on(Phaser.Input.Events.POINTER_OVER, () => {
@@ -617,7 +617,7 @@ export class GameScene extends Phaser.Scene {
           container.add(sprite);
           const capped =
             quantity > 999 ? "999+" : quantity > 99 ? "99+" : `${quantity}`;
-          const label = this.add.text(x, y + 14, capped, {
+          const label = this.add.text(x, y + 6, capped, {
             fontFamily: "Arial",
             fontSize: "12px",
             color: "#ffffff",
