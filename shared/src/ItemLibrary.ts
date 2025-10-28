@@ -81,7 +81,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     id: "bulletproof_vest",
     name: "Chaleco antibalas",
     category: ItemCategory.Equipment,
-    sprite: "Board Game Icons/shield.png",
+    sprite: "Items/vest.png",
     weapon: false,
     consumable: false,
     weight: 5,
