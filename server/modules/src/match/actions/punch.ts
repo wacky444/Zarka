@@ -16,83 +16,7 @@ import {
   mergeCharacterState,
   type PlannedActionParticipant,
 } from "./utils";
-
-function sameCoord(
-  a: { q: number; r: number } | undefined,
-  b: { q: number; r: number } | undefined
-): boolean {
-  if (!a || !b) {
-    return false;
-  }
-  return a.q === b.q && a.r === b.r;
-}
-
-function collectTargets(
-  participant: PlannedActionParticipant,
-  match: MatchRecord
-): string[] {
-  const map = match.playerCharacters ?? {};
-  const selected: string[] = [];
-  const rawTargets = participant.plan.targetPlayerIds ?? [];
-  for (const candidate of rawTargets) {
-    if (typeof candidate !== "string" || candidate.trim().length === 0) {
-      continue;
-    }
-    if (!map[candidate]) {
-      continue;
-    }
-    if (selected.indexOf(candidate) === -1) {
-      selected.push(candidate);
-    }
-  }
-  if (selected.length > 0) {
-    return selected;
-  }
-  const targetCoord = participant.plan.targetLocationId;
-  if (targetCoord) {
-    for (const playerId in map) {
-      if (!Object.prototype.hasOwnProperty.call(map, playerId)) {
-        continue;
-      }
-      if (playerId === participant.playerId) {
-        continue;
-      }
-      const character = map[playerId];
-      if (!character?.position?.coord) {
-        continue;
-      }
-      if (sameCoord(character.position.coord, targetCoord)) {
-        if (selected.indexOf(playerId) === -1) {
-          selected.push(playerId);
-        }
-      }
-    }
-  }
-  if (selected.length > 0) {
-    return selected;
-  }
-  const actorCoord = participant.character.position?.coord;
-  if (actorCoord) {
-    for (const playerId in map) {
-      if (!Object.prototype.hasOwnProperty.call(map, playerId)) {
-        continue;
-      }
-      if (playerId === participant.playerId) {
-        continue;
-      }
-      const character = map[playerId];
-      if (!character?.position?.coord) {
-        continue;
-      }
-      if (sameCoord(character.position.coord, actorCoord)) {
-        if (selected.indexOf(playerId) === -1) {
-          selected.push(playerId);
-        }
-      }
-    }
-  }
-  return selected;
-}
+import { collectTargets } from "./targeting";
 
 function hasProtection(target: PlayerCharacter): boolean {
   const statuses = target.statuses;
@@ -138,11 +62,12 @@ export function executePunchAction(
       clearPlanByKey(participant.character, participant.planKey);
       continue;
     }
-    const targets = collectTargets(participant, match);
+    const targets = collectTargets(actionId, participant, match);
     const targetEntries: ReplayActionTarget[] = [];
     let totalDamage = 0;
     const postEvents: ReplayPlayerEvent[] = [];
-    for (const targetId of targets) {
+    for (const targetCandidate of targets) {
+      const targetId = targetCandidate.id;
       const target = match.playerCharacters?.[targetId];
       if (!target) {
         continue;

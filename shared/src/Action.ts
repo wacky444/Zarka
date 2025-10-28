@@ -127,6 +127,7 @@ export interface ActionDefinition {
   effects?: ActionEffect[];
   notes?: string[];
   tags?: ActionTag[];
+  range?: number[];
 }
 
 export type ActionLibraryDefinition = Record<ActionId, ActionDefinition>;

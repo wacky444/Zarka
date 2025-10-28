@@ -8,20 +8,11 @@ import type {
   ReplayPlayerEvent,
 } from "@shared";
 import { clearPlanByKey, type PlannedActionParticipant } from "./utils";
+import { collectTargets } from "./targeting";
 
 interface Destination {
   tileId: string;
   coord: { q: number; r: number };
-}
-
-function sameCoord(
-  a: { q: number; r: number } | undefined,
-  b: { q: number; r: number } | undefined
-): boolean {
-  if (!a || !b) {
-    return false;
-  }
-  return a.q === b.q && a.r === b.r;
 }
 
 function hasProtection(character: PlayerCharacter | undefined): boolean {
@@ -66,56 +57,6 @@ function reduceEnergy(character: PlayerCharacter, amount: number): number {
   return spent;
 }
 
-function pickTarget(
-  participant: PlannedActionParticipant,
-  match: MatchRecord,
-  originCoord: { q: number; r: number }
-): { id: string; character: PlayerCharacter } | undefined {
-  const map = match.playerCharacters ?? {};
-  const requested = participant.plan.targetPlayerIds ?? [];
-  for (const candidateId of requested) {
-    if (!candidateId || candidateId === participant.playerId) {
-      continue;
-    }
-    const candidate = map[candidateId];
-    if (!candidate?.position?.coord) {
-      continue;
-    }
-    if (!sameCoord(candidate.position.coord, originCoord)) {
-      continue;
-    }
-    if (hasProtection(candidate)) {
-      continue;
-    }
-    return { id: candidateId, character: candidate };
-  }
-  const alternatives: Array<{ id: string; character: PlayerCharacter }> = [];
-  for (const playerId in map) {
-    if (!Object.prototype.hasOwnProperty.call(map, playerId)) {
-      continue;
-    }
-    if (playerId === participant.playerId) {
-      continue;
-    }
-    const character = map[playerId];
-    if (!character?.position?.coord) {
-      continue;
-    }
-    if (!sameCoord(character.position.coord, originCoord)) {
-      continue;
-    }
-    if (hasProtection(character)) {
-      continue;
-    }
-    alternatives.push({ id: playerId, character });
-  }
-  if (alternatives.length === 0) {
-    return undefined;
-  }
-  const index = Math.floor(Math.random() * alternatives.length);
-  return alternatives[index];
-}
-
 export function executeScareAction(
   participants: PlannedActionParticipant[],
   match: MatchRecord
@@ -137,14 +78,21 @@ export function executeScareAction(
     }
     const destination = resolveDestination(match, participant.plan);
     const origin = participant.character.position?.coord;
-    const targetSelection = origin
-      ? pickTarget(participant, match, origin)
-      : undefined;
+    const selection = origin
+      ? collectTargets(actionId, participant, match, {
+          allowMultiple: false,
+          filter: (candidate) => !hasProtection(candidate.character),
+        })
+      : [];
     clearPlanByKey(participant.character, participant.planKey);
+    const targetSelection = selection[0];
     if (!destination || !origin || !targetSelection) {
       continue;
     }
-    const target = targetSelection.character;
+    const target = match.playerCharacters?.[targetSelection.id];
+    if (!target) {
+      continue;
+    }
     const previous = target.position;
     target.position = {
       tileId: destination.tileId,

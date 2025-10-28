@@ -81,6 +81,7 @@ docker compose up -d --build nakama
 
 - Actions are defined in `shared/src/ActionLibrary.ts`. Implemented actions has developed=true.
 - In the server there is a file for each action in `server/modules/src/match/actions/`. Each action has an execute function that will be called from `server/modules/src/match/advanceTurn.ts` when processing player turns.
+- In the server `server/modules/src/match/actions/targeting.ts` there is the logic for target collection
 - In the client there is a file that shows the log to the player, formatReplayEvents in `client/src/ui/CharacterPanelLogView.ts`.
 - In the client there is a file that plays the action animation, ActionAnimator in `client/src/animation/moveReplay.ts`.
 

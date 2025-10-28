@@ -1,4 +1,8 @@
-import { ActionCategory, type ActionLibraryDefinition } from "./Action";
+import {
+  ActionCategory,
+  type ActionId,
+  type ActionLibraryDefinition,
+} from "./Action";
 
 export const ActionLibrary: ActionLibraryDefinition = {
   create_fire: {
@@ -7,6 +11,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 2,
     cooldown: 3,
+    range: [0, 1],
     texture: "Board Game Icons",
     frame: "fire.png",
     actionOrder: 0,
@@ -188,6 +193,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 1,
     cooldown: 3,
+    range: [0, 1],
     requiredItems: ["tracker"],
     requirements: [
       {
@@ -354,6 +360,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 2,
     cooldown: 3,
+    range: [1],
     developed: true,
     effects: [{ description: "Se mueve a una localización adyacente." }],
     extraExecution: {
@@ -524,6 +531,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 2,
     cooldown: 3,
+    range: [0, 1],
     experience: {
       base: 1,
       conditional: [
@@ -751,6 +759,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 2,
     cooldown: 3,
+    range: [0, 1],
     experience: {
       base: 1,
       conditional: [
@@ -785,6 +794,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 2,
     cooldown: 3,
+    range: [0, 1],
     experience: {
       base: 1,
       conditional: [
@@ -819,6 +829,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 3,
     cooldown: 3,
+    range: [0, 1],
     experience: {
       base: 1,
       conditional: [
@@ -1061,6 +1072,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 1,
     cooldown: 1,
+    range: [1],
     requirements: [{ description: "Debe encontrarse en una casa." }],
     effects: [
       {
@@ -1080,6 +1092,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 1,
     cooldown: 3,
+    range: [1, 2],
     requiredItems: ["binoculars"],
     requirements: [{ description: "Requiere tener prismáticos." }],
     effects: [
@@ -1105,6 +1118,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 3,
     cooldown: 3,
+    range: [0, 1, 2],
     effects: [
       {
         description:
@@ -1242,3 +1256,14 @@ export const ActionLibrary: ActionLibraryDefinition = {
     tags: ["Status"],
   },
 };
+
+for (const actionId in ActionLibrary) {
+  if (!Object.prototype.hasOwnProperty.call(ActionLibrary, actionId)) {
+    continue;
+  }
+  const id = actionId as ActionId;
+  const action = ActionLibrary[id];
+  if (!action.range || action.range.length === 0) {
+    action.range = [0];
+  }
+}
