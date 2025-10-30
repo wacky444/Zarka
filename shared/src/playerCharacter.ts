@@ -14,6 +14,7 @@ export interface PlayerCharacter {
   statuses: PlayerStatusState;
   position?: PlayerPosition;
   actionPlan?: PlayerActionPlan;
+  foundItems?: string[];
 }
 
 export interface PlayerCharacterStats {

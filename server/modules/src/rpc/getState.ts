@@ -3,6 +3,7 @@
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { MatchRecord } from "../models/types";
+import { tailorMatchForPlayer } from "../utils/matchView";
 
 export function getStateRpc(
   ctx: nkruntime.Context,
@@ -43,8 +44,11 @@ export function getStateRpc(
   const start = Math.max(1, (match.current_turn || 0) - limit + 1);
   const turns = storage.readTurns(matchId, start, match.current_turn || 0);
 
+  const viewerId = ctx?.userId ?? null;
+  const tailoredMatch = tailorMatchForPlayer(match, viewerId);
+
   const response: import("@shared").GetStatePayload = {
-    match,
+    match: tailoredMatch,
     turns,
   };
 

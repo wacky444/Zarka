@@ -6,6 +6,10 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { MatchRecord } from "../models/types";
 import { advanceTurn } from "../match/advanceTurn";
+import {
+  tailorMapForCharacter,
+  tailorMatchItemsForCharacter,
+} from "../utils/matchView";
 
 export function updateReadyStateRpc(
   ctx: nkruntime.Context,
@@ -124,6 +128,8 @@ export function updateReadyStateRpc(
           playerCharacters: match.playerCharacters,
           events,
           viewDistance,
+          map: match.map,
+          items: match.items,
         })
       );
     } catch (e) {
@@ -134,6 +140,8 @@ export function updateReadyStateRpc(
     }
   }
 
+  const viewerCharacter = match.playerCharacters?.[ctx.userId] ?? null;
+
   const response: import("@shared").UpdateReadyStatePayload = {
     ok: true,
     match_id: matchId,
@@ -143,6 +151,8 @@ export function updateReadyStateRpc(
     readyStates: match.readyStates,
     advanced,
     playerCharacters: match.playerCharacters,
+    map: tailorMapForCharacter(match.map, viewerCharacter),
+    items: tailorMatchItemsForCharacter(match.items, viewerCharacter),
   };
 
   return JSON.stringify(response);

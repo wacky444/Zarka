@@ -1043,6 +1043,15 @@ export class GameScene extends Phaser.Scene {
           this.currentMatch.playerCharacters = payload.playerCharacters;
           this.renderPlayerCharacters(this.currentMatch);
         }
+        if (Array.isArray(payload.items)) {
+          this.currentMatch.items = payload.items;
+        }
+        if (payload.map) {
+          this.currentMatch.map = payload.map;
+          this.renderItems(payload.map);
+        } else if (this.currentMatch.map) {
+          this.renderItems(this.currentMatch.map);
+        }
       }
       const appliedReady =
         (nextStates && this.currentUserId
@@ -1092,6 +1101,15 @@ export class GameScene extends Phaser.Scene {
     }
     if (payload.playerCharacters) {
       match.playerCharacters = payload.playerCharacters;
+    }
+    if (Array.isArray(payload.items)) {
+      match.items = payload.items;
+    }
+    if (payload.map) {
+      match.map = payload.map;
+      this.renderItems(payload.map);
+    } else if (match.map) {
+      this.renderItems(match.map);
     }
 
     const eventsFromField = Array.isArray(payload.replay)

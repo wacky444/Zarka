@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import {
   ActionLibrary,
+  ItemLibrary,
   type ActionId,
   type Axial,
   type ReplayEvent,
@@ -395,6 +396,16 @@ export class CharacterPanelLogView {
           lines.push(`${actor} moved to (${q}, ${r})`);
         } else {
           lines.push(`${actor} used ${actionName}`);
+          if (actionId === "search") {
+            const foundItems = this.extractSearchItemNames(
+              event.action.metadata
+            );
+            if (foundItems.length > 0) {
+              lines.push(`${actor} found ${foundItems.join(", ")}`);
+            } else if (this.didSearchFindNothing(event.action.metadata)) {
+              lines.push(`${actor} found nothing`);
+            }
+          }
         }
         if (Array.isArray(event.targets)) {
           for (const target of event.targets) {
@@ -457,5 +468,77 @@ export class CharacterPanelLogView {
       return "Unknown";
     }
     return this.usernames[playerId] ?? playerId;
+  }
+
+  private extractSearchItemNames(metadata: unknown): string[] {
+    if (!metadata || typeof metadata !== "object") {
+      return [];
+    }
+    const container = metadata as {
+      discoveredItems?: unknown;
+      discoveredItemIds?: unknown;
+      foundAny?: unknown;
+    };
+    const seen: Record<string, true> = {};
+    const result: string[] = [];
+    if (Array.isArray(container.discoveredItems)) {
+      for (const entry of container.discoveredItems) {
+        if (!entry || typeof entry !== "object") {
+          continue;
+        }
+        const record = entry as { itemType?: unknown };
+        if (typeof record.itemType !== "string") {
+          continue;
+        }
+        const name = this.resolveItemName(record.itemType);
+        if (!seen[name]) {
+          seen[name] = true;
+          result.push(name);
+        }
+      }
+    }
+    if (result.length === 0 && Array.isArray(container.discoveredItemIds)) {
+      for (const entry of container.discoveredItemIds) {
+        if (typeof entry !== "string") {
+          continue;
+        }
+        const name = this.resolveItemName(entry);
+        if (!seen[name]) {
+          seen[name] = true;
+          result.push(name);
+        }
+      }
+    }
+    return result;
+  }
+
+  private resolveItemName(itemType: string): string {
+    const definition = (ItemLibrary as Record<string, { name?: string }>)[
+      itemType
+    ];
+    if (definition?.name) {
+      return definition.name;
+    }
+    return itemType;
+  }
+
+  private didSearchFindNothing(metadata: unknown): boolean {
+    if (!metadata || typeof metadata !== "object") {
+      return false;
+    }
+    const container = metadata as {
+      foundAny?: unknown;
+      discoveredItems?: unknown;
+      discoveredItemIds?: unknown;
+    };
+    if (typeof container.foundAny === "boolean") {
+      return container.foundAny === false;
+    }
+    const hasItems = Array.isArray(container.discoveredItems)
+      ? container.discoveredItems.length > 0
+      : Array.isArray(container.discoveredItemIds)
+      ? container.discoveredItemIds.length > 0
+      : false;
+    return !hasItems;
   }
 }

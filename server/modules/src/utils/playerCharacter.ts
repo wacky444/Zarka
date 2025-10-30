@@ -70,6 +70,7 @@ export function createDefaultCharacter(userId: string): PlayerCharacter {
     statuses: {
       conditions: [],
     },
+    foundItems: [],
   };
 }
 

@@ -1,4 +1,4 @@
-import type { MatchRecord, TurnRecord } from "./match";
+import type { MatchItemRecord, MatchRecord, TurnRecord } from "./match";
 import type { GameMap, Axial } from "./hexTile";
 import type { PlayerCharacter } from "./playerCharacter";
 import type { ReplayEvent } from "./Replay";
@@ -61,6 +61,8 @@ export type UpdateReadyStatePayload = {
   readyStates?: Record<string, boolean>;
   advanced?: boolean;
   playerCharacters?: Record<string, PlayerCharacter>;
+  map?: GameMap;
+  items?: MatchItemRecord[];
   error?: string;
 };
 
@@ -147,4 +149,6 @@ export type TurnAdvancedMessagePayload = {
   advanced?: boolean;
   replay?: ReplayEvent[];
   viewDistance?: number;
+  map?: GameMap;
+  items?: MatchItemRecord[];
 };

@@ -29,7 +29,7 @@ export function updateSecondaryActionRpc(
   try {
     json = JSON.parse(payload);
   } catch {
-    throw makeNakamaError("bad_json", nkruntime.Codes.INVALID_ARGUMENT);
+    throw makeNakamaError("bad_json", 3);
   }
   const matchId: string | undefined = json.match_id;
   const submissionRaw: unknown = json.submission;
@@ -40,7 +40,7 @@ export function updateSecondaryActionRpc(
   if (!matchId) {
     throw makeNakamaError(
       "match_id required",
-      nkruntime.Codes.INVALID_ARGUMENT
+      3
     );
   }
   const normalizeActionId = (raw: unknown) =>
@@ -54,24 +54,24 @@ export function updateSecondaryActionRpc(
     if (actionId.length === 0) {
       throw makeNakamaError(
         "action_id required",
-        nkruntime.Codes.INVALID_ARGUMENT
+        3
       );
     }
     const candidate = actionId as ActionId;
     const definition = ActionLibrary[candidate];
     if (!definition) {
-      throw makeNakamaError("invalid_action", nkruntime.Codes.INVALID_ARGUMENT);
+      throw makeNakamaError("invalid_action", 3);
     }
     if (!definition.developed) {
       throw makeNakamaError(
         "action_not_available",
-        nkruntime.Codes.FAILED_PRECONDITION
+        9
       );
     }
     if (definition.category !== ActionCategory.Secondary) {
       throw makeNakamaError(
         "invalid_action_category",
-        nkruntime.Codes.INVALID_ARGUMENT
+        3
       );
     }
     normalizedActionId = candidate;
@@ -110,18 +110,18 @@ export function updateSecondaryActionRpc(
   const storage = new StorageService(nkWrapper);
   const read = storage.getMatch(matchId);
   if (!read) {
-    throw makeNakamaError("not_found", nkruntime.Codes.NOT_FOUND);
+    throw makeNakamaError("not_found", 5);
   }
   const match: MatchRecord = read.match;
   if (!match.players || match.players.indexOf(ctx.userId) === -1) {
-    throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
+    throw makeNakamaError("not_in_match", 7);
   }
   if (!match.playerCharacters) {
-    throw makeNakamaError("no_character", nkruntime.Codes.FAILED_PRECONDITION);
+    throw makeNakamaError("no_character", 9);
   }
   const character = match.playerCharacters[ctx.userId];
   if (!character) {
-    throw makeNakamaError("no_character", nkruntime.Codes.FAILED_PRECONDITION);
+    throw makeNakamaError("no_character", 9);
   }
   const currentTurn = match.current_turn ?? 0;
   updateCharacterCooldowns(character, currentTurn);

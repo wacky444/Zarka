@@ -12,6 +12,10 @@ import { buildMatchLabel } from "../../utils/label";
 import { normalizeMatchName } from "../../utils/normalize";
 import { clampNumber, validateTime } from "../../utils/validation";
 import { tailorReplayEvents } from "../replay/tailorReplay";
+import {
+  tailorMapForCharacter,
+  tailorMatchItemsForCharacter,
+} from "../../utils/matchView";
 
 export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState> =
   function (ctx, logger, nk, dispatcher, tick, state, data) {
@@ -195,6 +199,8 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             const payload = JSON.stringify({
               ...payloadBase,
               replay: events,
+              map: tailorMapForCharacter(msg.map, null),
+              items: tailorMatchItemsForCharacter(msg.items, null),
             });
             dispatcher.broadcastMessage(
               OPCODE_TURN_ADVANCED,
@@ -214,6 +220,14 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
               const payload = JSON.stringify({
                 ...payloadBase,
                 replay: tailored,
+                map: tailorMapForCharacter(
+                  msg.map,
+                  msg.playerCharacters?.[playerId] ?? null
+                ),
+                items: tailorMatchItemsForCharacter(
+                  msg.items,
+                  msg.playerCharacters?.[playerId] ?? null
+                ),
               });
               dispatcher.broadcastMessage(
                 OPCODE_TURN_ADVANCED,

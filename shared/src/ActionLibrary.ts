@@ -414,6 +414,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 3,
     cooldown: 2,
+    developed: true,
     effects: [{ description: "Revela 5 objetos ocultos en la localización." }],
     extraExecution: {
       cost: 1,

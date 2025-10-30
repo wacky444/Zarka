@@ -11,6 +11,7 @@ import {
   DEFAULT_MAP_ROWS,
   generateGameMap,
 } from "@shared";
+import { tailorMapForCharacter } from "../utils/matchView";
 
 export function startMatchRpc(
   ctx: nkruntime.Context,
@@ -95,12 +96,14 @@ export function startMatchRpc(
         throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
       }
     }
+    const viewerCharacter = match.playerCharacters?.[ctx.userId] ?? null;
+    const tailored = tailorMapForCharacter(match.map, viewerCharacter);
     const already: import("@shared").StartMatchPayload = {
       ok: true,
       match_id: matchId,
       started: true,
       already_started: true,
-      map: match.map,
+      map: tailored,
     };
     return JSON.stringify(already);
   }
@@ -126,11 +129,13 @@ export function startMatchRpc(
     logger.warn("start_match: matchSignal failed: %s", (e as Error).message);
   }
 
+  const viewerCharacter = match.playerCharacters?.[ctx.userId] ?? null;
+  const tailored = tailorMapForCharacter(match.map, viewerCharacter);
   const response: import("@shared").StartMatchPayload = {
     ok: true,
     match_id: matchId,
     started: true,
-    map: match.map,
+    map: tailored,
   };
 
   return JSON.stringify(response);
