@@ -18,6 +18,10 @@ import { ProgressBar } from "./ProgressBar";
 import { LocationSelector } from "./LocationSelector";
 import { PlayerSelector, type PlayerOption } from "./PlayerSelector";
 import {
+  ItemPrioritySelector,
+  type ItemPriorityOption,
+} from "./ItemPrioritySelector";
+import {
   CharacterPanelTabs,
   type CharacterPanelTabEntry,
   type TabKey,
@@ -72,12 +76,14 @@ export type MainActionSelection = {
   actionId: string | null;
   targetLocation: Axial | null;
   targetPlayerIds?: string[];
+  targetItemIds?: string[];
 };
 
 export type SecondaryActionSelection = {
   actionId: string | null;
   targetLocation: Axial | null;
   targetPlayerIds?: string[];
+  targetItemIds?: string[];
 };
 
 export class CharacterPanel extends Phaser.GameObjects.Container {
@@ -111,8 +117,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private secondaryActionDropdownWidth: number;
   private locationSelector: LocationSelector;
   private playerSelector: PlayerSelector;
+  private itemSelector: ItemPrioritySelector;
   private secondaryLocationSelector: LocationSelector;
   private secondaryPlayerSelector: PlayerSelector;
+  private secondaryItemSelector: ItemPrioritySelector;
   private itemsBackground!: Phaser.GameObjects.Rectangle;
   private itemsTitle!: Phaser.GameObjects.Text;
   private inventoryGrid!: InventoryGrid;
@@ -129,17 +137,22 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private secondaryActionTarget: Axial | null = null;
   private mainActionTargetPlayerId: string | null = null;
   private secondaryActionTargetPlayerId: string | null = null;
+  private mainActionPriorityItems: string[] = [];
+  private secondaryActionPriorityItems: string[] = [];
   private lastMainActionItem: GridSelectItem | null = null;
   private lastSecondaryActionItem: GridSelectItem | null = null;
   private readyState = false;
   private readyEnabled = false;
   private playerOptions: PlayerOption[] = [];
+  private itemOptions: ItemPriorityOption[] = [];
+  private currentMatch: MatchRecord | null = null;
   private readonly handleMainActionSelection = (actionId: string | null) => {
     this.mainActionSelection = actionId ?? null;
     this.lastMainActionItem = this.mainActionDropdown.getSelectedItem() ?? null;
     if (!this.mainActionSelection) {
       this.setMainActionTarget(null, false);
       this.setMainActionTargetPlayer(null, false);
+      this.setMainActionPriorityItems([], false);
     }
     this.refreshLocationSelectorState();
     this.refreshPlayerSelectorState();
@@ -157,6 +170,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private readonly handlePlayerSelection = (playerId: string | null) => {
     this.setMainActionTargetPlayer(playerId ?? null, true);
   };
+  private readonly handleItemPriorityChange = (itemIds: string[]) => {
+    this.setMainActionPriorityItems(itemIds ?? [], true);
+  };
   private readonly handleReadyToggle = () => {
     if (!this.readyEnabled) {
       return;
@@ -172,6 +188,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (!this.secondaryActionSelection) {
       this.setSecondaryActionTarget(null, false);
       this.setSecondaryActionTargetPlayer(null, false);
+      this.setSecondaryActionPriorityItems([], false);
     }
     this.refreshSecondaryLocationSelectorState();
     this.refreshSecondaryPlayerSelectorState();
@@ -193,6 +210,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     playerId: string | null
   ) => {
     this.setSecondaryActionTargetPlayer(playerId ?? null, true);
+  };
+  private readonly handleSecondaryItemPriorityChange = (itemIds: string[]) => {
+    this.setSecondaryActionPriorityItems(itemIds ?? [], true);
   };
   private readonly handleActionModalOpen = () => {
     this.emit("grid-modal-open");
@@ -388,6 +408,17 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.playerSelector.setActive(false);
     this.playerSelector.on("change", this.handlePlayerSelection);
     this.scrollContent.add(this.playerSelector);
+    this.itemSelector = new ItemPrioritySelector(
+      scene,
+      0,
+      0,
+      this.mainActionDropdownWidth
+    );
+    this.itemSelector.setEnabled(false);
+    this.itemSelector.setVisible(false);
+    this.itemSelector.setActive(false);
+    this.itemSelector.on("change", this.handleItemPriorityChange);
+    this.scrollContent.add(this.itemSelector);
     this.secondaryActionBox = scene.add
       .rectangle(0, 0, boxWidth, BOX_HEIGHT, 0x1b2440)
       .setOrigin(0, 0);
@@ -450,6 +481,20 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.handleSecondaryPlayerSelection
     );
     this.scrollContent.add(this.secondaryPlayerSelector);
+    this.secondaryItemSelector = new ItemPrioritySelector(
+      scene,
+      0,
+      0,
+      this.secondaryActionDropdownWidth
+    );
+    this.secondaryItemSelector.setEnabled(false);
+    this.secondaryItemSelector.setVisible(false);
+    this.secondaryItemSelector.setActive(false);
+    this.secondaryItemSelector.on(
+      "change",
+      this.handleSecondaryItemPriorityChange
+    );
+    this.scrollContent.add(this.secondaryItemSelector);
     this.updateScrollLayout();
     const itemsBoxY = contentTop;
     const itemsBoxHeight = Math.max(
@@ -756,7 +801,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   ) {
     const userMap = usernames ? { ...usernames } : {};
     this.logView.setUsernames(userMap);
+    this.currentMatch = match ?? null;
     this.updatePlayerOptions(match ?? null, userMap, currentUserId);
+    this.updateItemOptions(match ?? null, currentUserId);
     if (!match || !currentUserId) {
       this.currentTurn = 0;
       this.applyCharacter(null, null, false);
@@ -788,6 +835,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.playerSelector.setPending(false);
       this.playerSelector.setEnabled(false);
       this.playerSelector.hideDropdown();
+      this.mainActionPriorityItems = [];
+      this.itemSelector.setValue([], false);
+      this.itemSelector.setEnabled(false);
+      this.itemSelector.setVisible(false);
+      this.itemSelector.setActive(false);
+      this.itemSelector.setPending(false);
+      this.itemSelector.hideDropdown();
       this.refreshPlayerSelectorState();
       this.applySecondaryActions([], null, null);
       this.setSecondaryActionTarget(null, false);
@@ -796,7 +850,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.secondaryPlayerSelector.setPending(false);
       this.secondaryPlayerSelector.setEnabled(false);
       this.secondaryPlayerSelector.hideDropdown();
+      this.secondaryActionPriorityItems = [];
+      this.secondaryItemSelector.setValue([], false);
+      this.secondaryItemSelector.setEnabled(false);
+      this.secondaryItemSelector.setVisible(false);
+      this.secondaryItemSelector.setActive(false);
+      this.secondaryItemSelector.setPending(false);
+      this.secondaryItemSelector.hideDropdown();
       this.refreshSecondaryPlayerSelectorState();
+      this.refreshItemSelectorState();
+      this.refreshSecondaryItemSelectorState();
       this.setReadyEnabled(false);
       this.setReadyState(false, false);
       this.updateInventoryPanel(null);
@@ -843,6 +906,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         : null
     );
     this.setMainActionTargetPlayer(serverTargetPlayerId, false);
+    const targetItems = Array.isArray(character.actionPlan?.main?.targetItemIds)
+      ? (character.actionPlan?.main?.targetItemIds as string[])
+      : [];
+    this.setMainActionPriorityItems(targetItems, false);
     this.setLocationSelectionPending(false);
     this.playerSelector.setPending(false);
     const secondaryActions = this.collectSecondaryActions(character);
@@ -862,6 +929,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         : null
     );
     this.setSecondaryActionTargetPlayer(secondaryServerTargetPlayerId, false);
+    const secondaryTargetItems = Array.isArray(
+      character.actionPlan?.secondary?.targetItemIds
+    )
+      ? (character.actionPlan?.secondary?.targetItemIds as string[])
+      : [];
+    this.setSecondaryActionPriorityItems(secondaryTargetItems, false);
     this.setSecondaryLocationSelectionPending(false);
     this.secondaryPlayerSelector.setPending(false);
     this.setReadyEnabled(true);
@@ -869,12 +942,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.syncMainActionWithServer(
       mainActionId,
       normalizedTargetLocation,
-      serverTargetPlayerId
+      serverTargetPlayerId,
+      targetItems
     );
     this.syncSecondaryActionWithServer(
       secondaryId,
       normalizedSecondaryTargetLocation,
-      secondaryServerTargetPlayerId
+      secondaryServerTargetPlayerId,
+      secondaryTargetItems
     );
     this.updateInventoryPanel(character);
     this.updateScrollLayout();
@@ -1056,6 +1131,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     this.refreshLocationSelectorState();
     this.refreshPlayerSelectorState();
+    this.refreshItemSelectorState();
   }
 
   private applySecondaryActions(
@@ -1089,6 +1165,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     this.refreshSecondaryLocationSelectorState();
     this.refreshSecondaryPlayerSelectorState();
+    this.refreshSecondaryItemSelectorState();
   }
 
   private collectMainActions(character: PlayerCharacter) {
@@ -1272,6 +1349,32 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.updateScrollLayout();
   }
 
+  private refreshItemSelectorState() {
+    const supports = this.selectedActionSupportsItemPriority();
+    const hasOptions = this.itemOptions.length > 0;
+    const shouldShow = supports && hasOptions;
+    this.itemSelector.setVisible(shouldShow);
+    this.itemSelector.setActive(shouldShow);
+    if (!shouldShow) {
+      if (this.mainActionPriorityItems.length > 0) {
+        this.mainActionPriorityItems = [];
+      }
+      this.itemSelector.setValue([], false);
+      this.itemSelector.setEnabled(false);
+      this.itemSelector.setPending(false);
+      this.itemSelector.hideDropdown();
+      this.updateScrollLayout();
+      return;
+    }
+    const hasSelection = this.mainActionSelection !== null;
+    this.itemSelector.setEnabled(hasSelection);
+    if (!hasSelection) {
+      this.itemSelector.setPending(false);
+      this.itemSelector.hideDropdown();
+    }
+    this.updateScrollLayout();
+  }
+
   private refreshSecondaryLocationSelectorState() {
     this.lastSecondaryActionItem =
       this.secondaryActionDropdown.getSelectedItem() ?? null;
@@ -1322,6 +1425,32 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.updateScrollLayout();
   }
 
+  private refreshSecondaryItemSelectorState() {
+    const supports = this.selectedSecondaryActionSupportsItemPriority();
+    const hasOptions = this.itemOptions.length > 0;
+    const shouldShow = supports && hasOptions;
+    this.secondaryItemSelector.setVisible(shouldShow);
+    this.secondaryItemSelector.setActive(shouldShow);
+    if (!shouldShow) {
+      if (this.secondaryActionPriorityItems.length > 0) {
+        this.secondaryActionPriorityItems = [];
+      }
+      this.secondaryItemSelector.setValue([], false);
+      this.secondaryItemSelector.setEnabled(false);
+      this.secondaryItemSelector.setPending(false);
+      this.secondaryItemSelector.hideDropdown();
+      this.updateScrollLayout();
+      return;
+    }
+    const hasSelection = this.secondaryActionSelection !== null;
+    this.secondaryItemSelector.setEnabled(hasSelection);
+    if (!hasSelection) {
+      this.secondaryItemSelector.setPending(false);
+      this.secondaryItemSelector.hideDropdown();
+    }
+    this.updateScrollLayout();
+  }
+
   private updateScrollLayout() {
     if (!this.scrollPanel) {
       return;
@@ -1337,7 +1466,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       label: Phaser.GameObjects.Text,
       dropdown: GridSelect,
       locationSelector: LocationSelector,
-      playerSelector: PlayerSelector
+      playerSelector: PlayerSelector,
+      itemSelector: ItemPrioritySelector
     ) => {
       box.setPosition(0, cursorY);
       box.setSize(width, BOX_HEIGHT);
@@ -1356,6 +1486,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       if (playerSelector.visible) {
         innerCursor += playerSelector.height + 8;
       }
+      itemSelector.setSelectorWidth(width - horizontalPadding * 2);
+      itemSelector.setPosition(horizontalPadding, innerCursor);
+      if (itemSelector.visible) {
+        innerCursor += itemSelector.height + 8;
+      }
       const blockHeight = Math.max(BOX_HEIGHT, innerCursor - cursorY + 16);
       box.setSize(width, blockHeight);
       box.setDisplaySize(width, blockHeight);
@@ -1367,7 +1502,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.mainActionLabel,
       this.mainActionDropdown,
       this.locationSelector,
-      this.playerSelector
+      this.playerSelector,
+      this.itemSelector
     );
     cursorY += 16;
     layoutActionBlock(
@@ -1375,7 +1511,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.secondaryActionLabel,
       this.secondaryActionDropdown,
       this.secondaryLocationSelector,
-      this.secondaryPlayerSelector
+      this.secondaryPlayerSelector,
+      this.secondaryItemSelector
     );
     cursorY += 16;
     this.scrollContent.setPosition(0, 0);
@@ -1524,6 +1661,162 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.refreshSecondaryPlayerSelectorState();
   }
 
+  private filterPriorityIds(ids: string[]): string[] {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return [];
+    }
+    const seen = new Set<string>();
+    const filtered: string[] = [];
+    for (const value of ids) {
+      if (typeof value !== "string") {
+        continue;
+      }
+      const trimmed = value.trim();
+      if (!trimmed || seen.has(trimmed)) {
+        continue;
+      }
+      const option = this.itemOptions.find((entry) => entry.id === trimmed);
+      if (!option || option.disabled) {
+        continue;
+      }
+      seen.add(trimmed);
+      filtered.push(trimmed);
+    }
+    return filtered;
+  }
+
+  private setMainActionPriorityItems(ids: string[], emit = false): boolean {
+    const supports = this.selectedActionSupportsItemPriority();
+    if (!supports) {
+      const hadValues = this.mainActionPriorityItems.length > 0;
+      if (hadValues) {
+        this.mainActionPriorityItems = [];
+      }
+      this.itemSelector.setValue([], false);
+      if (emit && hadValues) {
+        this.emitMainActionChange();
+      }
+      return hadValues;
+    }
+    const filtered = this.filterPriorityIds(ids);
+    if (this.isSameTargetItems(this.mainActionPriorityItems, filtered)) {
+      this.itemSelector.setValue(filtered, false);
+      return false;
+    }
+    this.mainActionPriorityItems = filtered;
+    this.itemSelector.setValue(filtered, false);
+    if (emit) {
+      this.emitMainActionChange();
+    }
+    return true;
+  }
+
+  private setSecondaryActionPriorityItems(
+    ids: string[],
+    emit = false
+  ): boolean {
+    const supports = this.selectedSecondaryActionSupportsItemPriority();
+    if (!supports) {
+      const hadValues = this.secondaryActionPriorityItems.length > 0;
+      if (hadValues) {
+        this.secondaryActionPriorityItems = [];
+      }
+      this.secondaryItemSelector.setValue([], false);
+      if (emit && hadValues) {
+        this.emitSecondaryActionChange();
+      }
+      return hadValues;
+    }
+    const filtered = this.filterPriorityIds(ids);
+    if (this.isSameTargetItems(this.secondaryActionPriorityItems, filtered)) {
+      this.secondaryItemSelector.setValue(filtered, false);
+      return false;
+    }
+    this.secondaryActionPriorityItems = filtered;
+    this.secondaryItemSelector.setValue(filtered, false);
+    if (emit) {
+      this.emitSecondaryActionChange();
+    }
+    return true;
+  }
+
+  private updateItemOptions(
+    match: MatchRecord | null,
+    currentUserId: string | null
+  ) {
+    const options: ItemPriorityOption[] = [];
+    if (match && currentUserId) {
+      const character = match.playerCharacters?.[currentUserId] ?? null;
+      const tileId = character?.position?.tileId ?? null;
+      if (tileId) {
+        const tiles = Array.isArray(match.map?.tiles) ? match.map!.tiles : [];
+        const tile = tiles.find((entry) => entry && entry.id === tileId);
+        const matchItems = Array.isArray(match.items) ? match.items : [];
+        const lookup = new Map<string, (typeof matchItems)[number]>();
+        for (const record of matchItems) {
+          if (!record || typeof record.item_id !== "string") {
+            continue;
+          }
+          lookup.set(record.item_id, record);
+        }
+        const itemIds = Array.isArray(tile?.itemIds) ? tile!.itemIds : [];
+        for (const rawId of itemIds) {
+          if (typeof rawId !== "string" || rawId.length === 0) {
+            continue;
+          }
+          const record = lookup.get(rawId);
+          const itemType = record?.item_type;
+          let label = rawId;
+          let description: string | undefined;
+          let texture = "hex";
+          let frame: string | undefined = "grass_01.png";
+          let iconScale: number | undefined;
+          if (
+            itemType &&
+            (ItemLibrary as Record<string, ItemDefinition>)[itemType]
+          ) {
+            const definition =
+              ItemLibrary[itemType as keyof typeof ItemLibrary];
+            label = definition.name ?? label;
+            description = definition.description ?? description;
+            const visual = resolveItemTexture(definition);
+            texture = visual.texture;
+            frame = visual.frame;
+          }
+          options.push({
+            id: rawId,
+            label,
+            description,
+            texture,
+            frame,
+            iconScale,
+          });
+        }
+      }
+    }
+    this.itemOptions = options;
+    this.itemSelector.setOptions(options);
+    this.secondaryItemSelector.setOptions(options);
+    const normalizedMain = this.filterPriorityIds(this.mainActionPriorityItems);
+    this.mainActionPriorityItems = normalizedMain;
+    const normalizedSecondary = this.filterPriorityIds(
+      this.secondaryActionPriorityItems
+    );
+    this.secondaryActionPriorityItems = normalizedSecondary;
+    if (this.selectedActionSupportsItemPriority()) {
+      this.itemSelector.setValue(normalizedMain, false);
+    } else {
+      this.itemSelector.setValue([], false);
+    }
+    if (this.selectedSecondaryActionSupportsItemPriority()) {
+      this.secondaryItemSelector.setValue(normalizedSecondary, false);
+    } else {
+      this.secondaryItemSelector.setValue([], false);
+    }
+    this.refreshItemSelectorState();
+    this.refreshSecondaryItemSelectorState();
+  }
+
   private resolvePlayerSpriteInfo(
     playerId: string,
     character: PlayerCharacter | null,
@@ -1575,6 +1868,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     return this.lastMainActionItem?.tags?.includes("SingleTarget") ?? false;
   }
 
+  private selectedActionSupportsItemPriority() {
+    return this.lastMainActionItem?.tags?.includes("TargetItems") ?? false;
+  }
+
   private selectedSecondaryActionSupportsLocation() {
     return this.lastSecondaryActionItem?.tags?.includes("Ranged") ?? false;
   }
@@ -1585,9 +1882,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     );
   }
 
+  private selectedSecondaryActionSupportsItemPriority() {
+    return this.lastSecondaryActionItem?.tags?.includes("TargetItems") ?? false;
+  }
+
   private emitMainActionChange() {
     const supportsLocation = this.selectedActionSupportsLocation();
     const supportsPlayer = this.selectedActionSupportsSingleTarget();
+    const supportsItems = this.selectedActionSupportsItemPriority();
     const payload: MainActionSelection = {
       actionId: this.mainActionSelection,
       targetLocation:
@@ -1599,6 +1901,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
           ? [this.mainActionTargetPlayerId]
           : []
         : undefined,
+      targetItemIds: supportsItems
+        ? [...this.mainActionPriorityItems]
+        : undefined,
     };
     this.emit("main-action-change", payload);
   }
@@ -1606,6 +1911,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private emitSecondaryActionChange() {
     const supportsLocation = this.selectedSecondaryActionSupportsLocation();
     const supportsPlayer = this.selectedSecondaryActionSupportsSingleTarget();
+    const supportsItems = this.selectedSecondaryActionSupportsItemPriority();
     const payload: SecondaryActionSelection = {
       actionId: this.secondaryActionSelection,
       targetLocation:
@@ -1620,6 +1926,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
           ? [this.secondaryActionTargetPlayerId]
           : []
         : undefined,
+      targetItemIds: supportsItems
+        ? [...this.secondaryActionPriorityItems]
+        : undefined,
     };
     this.emit("secondary-action-change", payload);
   }
@@ -1627,7 +1936,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private syncMainActionWithServer(
     serverActionId: string | null,
     serverTargetLocation: Axial | null,
-    serverTargetPlayerId: string | null
+    serverTargetPlayerId: string | null,
+    serverTargetItems: string[] | null
   ): void {
     const matchesSelection =
       (this.mainActionSelection ?? null) === (serverActionId ?? null);
@@ -1638,7 +1948,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const matchesPlayer =
       (this.mainActionTargetPlayerId ?? null) ===
       (serverTargetPlayerId ?? null);
-    if (!matchesSelection || !matchesLocation || !matchesPlayer) {
+    const matchesItems = this.isSameTargetItems(
+      this.mainActionPriorityItems,
+      serverTargetItems
+    );
+    if (
+      !matchesSelection ||
+      !matchesLocation ||
+      !matchesPlayer ||
+      !matchesItems
+    ) {
       this.emitMainActionChange();
     }
   }
@@ -1646,7 +1965,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private syncSecondaryActionWithServer(
     serverActionId: string | null,
     serverTargetLocation: Axial | null,
-    serverTargetPlayerId: string | null
+    serverTargetPlayerId: string | null,
+    serverTargetItems: string[] | null
   ): void {
     const matchesSelection =
       (this.secondaryActionSelection ?? null) === (serverActionId ?? null);
@@ -1657,7 +1977,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const matchesPlayer =
       (this.secondaryActionTargetPlayerId ?? null) ===
       (serverTargetPlayerId ?? null);
-    if (!matchesSelection || !matchesLocation || !matchesPlayer) {
+    const matchesItems = this.isSameTargetItems(
+      this.secondaryActionPriorityItems,
+      serverTargetItems
+    );
+    if (
+      !matchesSelection ||
+      !matchesLocation ||
+      !matchesPlayer ||
+      !matchesItems
+    ) {
       this.emitSecondaryActionChange();
     }
   }
@@ -1805,6 +2134,40 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       return false;
     }
     return a.q === b.q && a.r === b.r;
+  }
+
+  private isSameTargetItems(
+    local: string[] | undefined | null,
+    remote: string[] | undefined | null
+  ): boolean {
+    const normalize = (input: string[] | undefined | null) => {
+      if (!input || input.length === 0) {
+        return [] as string[];
+      }
+      const result: string[] = [];
+      for (const value of input) {
+        if (typeof value !== "string") {
+          continue;
+        }
+        const trimmed = value.trim();
+        if (!trimmed) {
+          continue;
+        }
+        result.push(trimmed);
+      }
+      return result;
+    };
+    const a = normalize(local);
+    const b = normalize(remote);
+    if (a.length !== b.length) {
+      return false;
+    }
+    for (let index = 0; index < a.length; index += 1) {
+      if (a[index] !== b[index]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private formatActionName(id: string) {

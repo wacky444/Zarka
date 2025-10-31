@@ -83,7 +83,8 @@ export type ActionTag =
   | "Recon"
   | "Status"
   | "Economy"
-  | "SingleTarget";
+  | "SingleTarget"
+  | "TargetItems";
 
 export interface ActionRequirement {
   description: string;
@@ -148,4 +149,5 @@ export interface ActionSubmission {
   targetLocationId?: Axial;
   conditions?: ActionCondition[];
   notes?: string;
+  targetItemIds?: string[];
 }

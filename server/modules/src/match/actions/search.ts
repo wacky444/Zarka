@@ -20,7 +20,7 @@ type FoundTracking = {
   lookup: Record<string, true>;
 };
 
-function buildItemLookup(match: MatchRecord): ItemLookup {
+export function buildItemLookup(match: MatchRecord): ItemLookup {
   const lookup: ItemLookup = {};
   const items = Array.isArray(match.items) ? match.items : [];
   for (const entry of items) {
@@ -32,7 +32,7 @@ function buildItemLookup(match: MatchRecord): ItemLookup {
   return lookup;
 }
 
-function findTileById(
+export function findTileById(
   match: MatchRecord,
   tileId: string
 ): HexTileSnapshot | null {

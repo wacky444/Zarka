@@ -39,6 +39,7 @@ export type UpdateMainActionPayload = {
   action_id?: string;
   targetLocationId?: Axial;
   targetPlayerIds?: string[];
+  targetItemIds?: string[];
   error?: string;
 };
 
@@ -49,6 +50,7 @@ export type UpdateSecondaryActionPayload = {
   action_id?: string;
   targetLocationId?: Axial;
   targetPlayerIds?: string[];
+  targetItemIds?: string[];
   error?: string;
 };
 

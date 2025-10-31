@@ -806,10 +806,14 @@ export class GameScene extends Phaser.Scene {
     const normalizedPlayers = this.normalizeTargetPlayers(
       selection?.targetPlayerIds ?? undefined
     );
+    const normalizedItems = this.normalizeTargetItems(
+      selection?.targetItemIds ?? undefined
+    );
     const normalizedSelection: MainActionSelection = {
       actionId: selection?.actionId ?? null,
       targetLocation: this.normalizeAxial(selection?.targetLocation),
       targetPlayerIds: normalizedPlayers,
+      targetItemIds: normalizedItems,
     };
     const character =
       this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
@@ -819,13 +823,17 @@ export class GameScene extends Phaser.Scene {
     const previousPlayers = this.normalizeTargetPlayers(
       previousPlan?.targetPlayerIds ?? undefined
     );
+    const previousItems = this.normalizeTargetItems(
+      previousPlan?.targetItemIds ?? undefined
+    );
     if (
       normalizedSelection.actionId === previousActionId &&
       this.isSameAxial(normalizedSelection.targetLocation, previousTarget) &&
       this.isSameTargetPlayers(
         normalizedSelection.targetPlayerIds,
         previousPlayers
-      )
+      ) &&
+      this.isSameTargetItems(normalizedSelection.targetItemIds, previousItems)
     ) {
       return;
     }
@@ -840,7 +848,8 @@ export class GameScene extends Phaser.Scene {
         ? this.buildMainActionSubmission(
             normalizedSelection.actionId,
             normalizedSelection.targetLocation,
-            normalizedSelection.targetPlayerIds
+            normalizedSelection.targetPlayerIds,
+            normalizedSelection.targetItemIds
           )
         : null;
       const res = await this.turnService.updateMainAction(matchId, submission);
@@ -883,6 +892,11 @@ export class GameScene extends Phaser.Scene {
         } else if (nextPlan.targetPlayerIds) {
           delete nextPlan.targetPlayerIds;
         }
+        if (payload.targetItemIds && payload.targetItemIds.length > 0) {
+          nextPlan.targetItemIds = [...payload.targetItemIds];
+        } else if (nextPlan.targetItemIds) {
+          delete nextPlan.targetItemIds;
+        }
         target.actionPlan.main = nextPlan;
       }
       this.updateCharacterPanel(this.currentMatch);
@@ -909,10 +923,14 @@ export class GameScene extends Phaser.Scene {
     const normalizedPlayers = this.normalizeTargetPlayers(
       selection?.targetPlayerIds ?? undefined
     );
+    const normalizedItems = this.normalizeTargetItems(
+      selection?.targetItemIds ?? undefined
+    );
     const normalizedSelection: SecondaryActionSelection = {
       actionId: selection?.actionId ?? null,
       targetLocation: this.normalizeAxial(selection?.targetLocation),
       targetPlayerIds: normalizedPlayers,
+      targetItemIds: normalizedItems,
     };
     const character =
       this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
@@ -924,13 +942,17 @@ export class GameScene extends Phaser.Scene {
     const previousPlayers = this.normalizeTargetPlayers(
       previousPlan?.targetPlayerIds ?? undefined
     );
+    const previousItems = this.normalizeTargetItems(
+      previousPlan?.targetItemIds ?? undefined
+    );
     if (
       normalizedSelection.actionId === previousActionId &&
       this.isSameAxial(normalizedSelection.targetLocation, previousTarget) &&
       this.isSameTargetPlayers(
         normalizedSelection.targetPlayerIds,
         previousPlayers
-      )
+      ) &&
+      this.isSameTargetItems(normalizedSelection.targetItemIds, previousItems)
     ) {
       return;
     }
@@ -945,7 +967,8 @@ export class GameScene extends Phaser.Scene {
         ? this.buildSecondaryActionSubmission(
             normalizedSelection.actionId,
             normalizedSelection.targetLocation,
-            normalizedSelection.targetPlayerIds
+            normalizedSelection.targetPlayerIds,
+            normalizedSelection.targetItemIds
           )
         : null;
       const res = await this.turnService.updateSecondaryAction(
@@ -990,6 +1013,11 @@ export class GameScene extends Phaser.Scene {
           nextPlan.targetPlayerIds = [...payload.targetPlayerIds];
         } else if (nextPlan.targetPlayerIds) {
           delete nextPlan.targetPlayerIds;
+        }
+        if (payload.targetItemIds && payload.targetItemIds.length > 0) {
+          nextPlan.targetItemIds = [...payload.targetItemIds];
+        } else if (nextPlan.targetItemIds) {
+          delete nextPlan.targetItemIds;
         }
         target.actionPlan.secondary = nextPlan;
       }
@@ -1224,7 +1252,8 @@ export class GameScene extends Phaser.Scene {
   private buildMainActionSubmission(
     actionId: string,
     target: Axial | null,
-    targetPlayerIds: string[] | undefined
+    targetPlayerIds: string[] | undefined,
+    targetItemIds: string[] | undefined
   ): ActionSubmission {
     const typedId = actionId as ActionId;
     const definition = ActionLibrary[typedId] ?? null;
@@ -1241,13 +1270,18 @@ export class GameScene extends Phaser.Scene {
       submission.targetPlayerIds =
         targetPlayerIds.length > 0 ? [...targetPlayerIds] : [];
     }
+    if (targetItemIds !== undefined) {
+      submission.targetItemIds =
+        targetItemIds.length > 0 ? [...targetItemIds] : [];
+    }
     return submission;
   }
 
   private buildSecondaryActionSubmission(
     actionId: string,
     target: Axial | null,
-    targetPlayerIds: string[] | undefined
+    targetPlayerIds: string[] | undefined,
+    targetItemIds: string[] | undefined
   ): ActionSubmission {
     const typedId = actionId as ActionId;
     const definition = ActionLibrary[typedId] ?? null;
@@ -1263,6 +1297,10 @@ export class GameScene extends Phaser.Scene {
     if (targetPlayerIds !== undefined) {
       submission.targetPlayerIds =
         targetPlayerIds.length > 0 ? [...targetPlayerIds] : [];
+    }
+    if (targetItemIds !== undefined) {
+      submission.targetItemIds =
+        targetItemIds.length > 0 ? [...targetItemIds] : [];
     }
     return submission;
   }
@@ -1280,6 +1318,31 @@ export class GameScene extends Phaser.Scene {
   }
 
   private normalizeTargetPlayers(
+    value: string[] | undefined | null
+  ): string[] | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (!Array.isArray(value) || value.length === 0) {
+      return [];
+    }
+    const seen = new Set<string>();
+    const normalized: string[] = [];
+    for (const entry of value) {
+      if (typeof entry !== "string") {
+        continue;
+      }
+      const trimmed = entry.trim();
+      if (!trimmed || seen.has(trimmed)) {
+        continue;
+      }
+      seen.add(trimmed);
+      normalized.push(trimmed);
+    }
+    return normalized;
+  }
+
+  private normalizeTargetItems(
     value: string[] | undefined | null
   ): string[] | undefined {
     if (value === undefined) {
@@ -1335,6 +1398,40 @@ export class GameScene extends Phaser.Scene {
     }
     for (let i = 0; i < aNorm.length; i += 1) {
       if (aNorm[i] !== bNorm[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private isSameTargetItems(
+    a: string[] | undefined | null,
+    b: string[] | undefined | null
+  ): boolean {
+    const normalize = (input: string[] | undefined | null) => {
+      if (!input || input.length === 0) {
+        return [] as string[];
+      }
+      const result: string[] = [];
+      for (const value of input) {
+        if (typeof value !== "string") {
+          continue;
+        }
+        const trimmed = value.trim();
+        if (!trimmed) {
+          continue;
+        }
+        result.push(trimmed);
+      }
+      return result;
+    };
+    const aNormalized = normalize(a);
+    const bNormalized = normalize(b);
+    if (aNormalized.length !== bNormalized.length) {
+      return false;
+    }
+    for (let index = 0; index < aNormalized.length; index += 1) {
+      if (aNormalized[index] !== bNormalized[index]) {
         return false;
       }
     }

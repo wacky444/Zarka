@@ -395,6 +395,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 2,
     cooldown: 3,
+    developed: true,
     requirements: [{ description: "Debe ver los objetos a recoger." }],
     effects: [{ description: "Permite recoger hasta 3 objetos visibles." }],
     extraExecution: {
@@ -406,7 +407,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "hand_token.png",
     actionOrder: 6,
     actionSubOrder: 1,
-    tags: ["Logistics"],
+    tags: ["Logistics", "TargetItems"]
   },
   search: {
     id: "search",
