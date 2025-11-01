@@ -405,6 +405,13 @@ export class CharacterPanelLogView {
             } else if (this.didSearchFindNothing(event.action.metadata)) {
               lines.push(`${actor} found nothing`);
             }
+          } else if (actionId === "pick_up") {
+            const pickedItems = this.extractPickedItemNames(
+              event.action.metadata
+            );
+            if (pickedItems.length > 0) {
+              lines.push(`${actor} picked up ${pickedItems.join(", ")}`);
+            }
           }
         }
         if (Array.isArray(event.targets)) {
@@ -520,6 +527,40 @@ export class CharacterPanelLogView {
       return definition.name;
     }
     return itemType;
+  }
+
+  private extractPickedItemNames(metadata: unknown): string[] {
+    if (!metadata || typeof metadata !== "object") {
+      return [];
+    }
+    const container = metadata as {
+      pickedItems?: unknown;
+      pickedItemIds?: unknown;
+    };
+    const result: string[] = [];
+    if (Array.isArray(container.pickedItems)) {
+      for (const entry of container.pickedItems) {
+        if (!entry || typeof entry !== "object") {
+          continue;
+        }
+        const record = entry as { itemType?: unknown };
+        if (typeof record.itemType !== "string") {
+          continue;
+        }
+        const name = this.resolveItemName(record.itemType);
+        result.push(name);
+      }
+    }
+    if (result.length === 0 && Array.isArray(container.pickedItemIds)) {
+      for (const entry of container.pickedItemIds) {
+        if (typeof entry !== "string") {
+          continue;
+        }
+        const name = this.resolveItemName(entry);
+        result.push(name);
+      }
+    }
+    return result;
   }
 
   private didSearchFindNothing(metadata: unknown): boolean {

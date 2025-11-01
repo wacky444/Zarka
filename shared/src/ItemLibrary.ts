@@ -21,8 +21,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     weapon: false,
     consumable: true,
     weight: 3,
-    description:
-      "Recupera 12 puntos de esfuerzo y deja una botella vacía tras su consumo.",
+    description: "Recupera 12 puntos de esfuerzo.",
     sellValue: 2,
     notes: ["Al usarla se obtiene una botella."],
     tags: ["Energy"],
