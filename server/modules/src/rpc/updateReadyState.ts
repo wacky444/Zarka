@@ -10,6 +10,7 @@ import {
   tailorMapForCharacter,
   tailorMatchItemsForCharacter,
 } from "../utils/matchView";
+import { processBotActions } from "src/match/botAI";
 
 export function updateReadyStateRpc(
   ctx: nkruntime.Context,
@@ -73,6 +74,7 @@ export function updateReadyStateRpc(
 
   if (allReady) {
     resolvedTurnNumber = (match.current_turn || 0) + 1;
+    processBotActions(match, logger);
     advanceResult = advanceTurn(match, resolvedTurnNumber, logger);
     match.current_turn = resolvedTurnNumber;
     const resetStates: Record<string, boolean> = {};

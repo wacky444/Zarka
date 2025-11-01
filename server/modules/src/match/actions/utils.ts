@@ -203,19 +203,13 @@ export function applyActionEnergyCost(
     totalAvailableBefore < effectiveCost ||
     (effectiveCost === 0 && totalAvailableBefore <= 0);
   outcome.exhausted = exhausted;
-  // debug log
-  logger.debug("exhausted Action energy cost:", outcome, exhausted);
   if (!exhausted) {
-    // TODO mirar si es por esto que no baja la vida
     return outcome;
   }
   const healthOutcome = applyHealthDelta(character, -1);
-  logger.debug("exhausted healthOutcome:", healthOutcome);
 
   mergeCharacterState(character, healthOutcome.character);
   outcome.healthLost = Math.max(0, -healthOutcome.result.delta);
-
-  logger.debug("exhausted outcome after health:", outcome);
 
   return outcome;
 }
