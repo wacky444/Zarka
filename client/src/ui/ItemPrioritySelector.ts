@@ -13,7 +13,7 @@ export type ItemPriorityOption = {
 
 const SELECT_LABEL = "[ Add priority item ]";
 const SELECT_PENDING_LABEL = "[ Selecting... ]";
-const CLEAR_OPTION_LABEL = "Clear priorities";
+const CLEAR_OPTION_LABEL = "No priority";
 const CLEAR_OPTION_DESCRIPTION = "Removes every prioritized item.";
 const EMPTY_LIST_LABEL = "No prioritized items";
 

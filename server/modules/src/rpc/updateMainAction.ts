@@ -48,6 +48,7 @@ export function updateMainActionRpc(
   let normalizedActionId: ActionId | null = null;
   let targetLocation: Axial | undefined;
   let targetPlayerIds: string[] | undefined;
+  let targetItemIds: string[] | undefined;
   if (submission) {
     actionId = normalizeActionId(submission.actionId);
     if (actionId.length === 0) {
@@ -96,6 +97,26 @@ export function updateMainActionRpc(
         .map((value) => (typeof value === "string" ? value.trim() : ""))
         .filter((value) => value.length > 0);
       targetPlayerIds = filtered.length > 0 ? filtered : undefined;
+    }
+    const rawTargetItems = submission.targetItemIds;
+    if (Array.isArray(rawTargetItems)) {
+      const seen: Record<string, true> = {};
+      const filtered: string[] = [];
+      for (const value of rawTargetItems) {
+        if (typeof value !== "string") {
+          continue;
+        }
+        const trimmed = value.trim();
+        if (!trimmed) {
+          continue;
+        }
+        if (Object.prototype.hasOwnProperty.call(seen, trimmed)) {
+          continue;
+        }
+        seen[trimmed] = true;
+        filtered.push(trimmed);
+      }
+      targetItemIds = filtered.length > 0 ? filtered : undefined;
     }
   }
   const clearAction = !submission;
@@ -161,6 +182,11 @@ export function updateMainActionRpc(
     } else if (nextPlan.targetPlayerIds) {
       delete nextPlan.targetPlayerIds;
     }
+    if (targetItemIds && targetItemIds.length > 0) {
+      nextPlan.targetItemIds = targetItemIds;
+    } else if (nextPlan.targetItemIds) {
+      delete nextPlan.targetItemIds;
+    }
     character.actionPlan.main = nextPlan;
   }
   storage.writeMatch(match, read.version);
@@ -174,6 +200,10 @@ export function updateMainActionRpc(
       clearAction || !targetPlayerIds || targetPlayerIds.length === 0
         ? undefined
         : targetPlayerIds,
+    targetItemIds:
+      clearAction || !targetItemIds || targetItemIds.length === 0
+        ? undefined
+        : targetItemIds,
   };
   return JSON.stringify(response);
 }
