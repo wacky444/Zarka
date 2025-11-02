@@ -172,11 +172,14 @@ function filterVisibleItems(
   tileItemIds: string[],
   character: PlayerCharacter
 ): string[] {
+  if (!Array.isArray(tileItemIds) || tileItemIds.length === 0) {
+    return [];
+  }
   const found = Array.isArray(character.foundItems)
     ? character.foundItems.filter((entry) => typeof entry === "string")
     : [];
   if (found.length === 0) {
-    return tileItemIds.slice();
+    return [];
   }
   const lookup: Record<string, true> = {};
   for (const entry of found) {
