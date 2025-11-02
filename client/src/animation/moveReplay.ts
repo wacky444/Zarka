@@ -6,6 +6,7 @@ import { animateMoveEvent } from "./replayActions/MoveAnimation";
 import { animatePickUpEvent } from "./replayActions/PickUpAnimation";
 import { animateProtectEvent } from "./replayActions/ProtectAnimation";
 import { animatePunchEvent } from "./replayActions/PunchAnimation";
+import { animateAxeAttackEvent } from "./replayActions/AxeAttackAnimation";
 import { animateRecoverEvent } from "./replayActions/RecoverAnimation";
 import { animateScareEvent } from "./replayActions/ScareAnimation";
 import { animateSearchEvent } from "./replayActions/SearchAnimation";
@@ -35,6 +36,8 @@ export async function playReplayEvents(
       await animateFeedEvent(context, event);
     } else if (actionId === ActionLibrary.protect.id) {
       await animateProtectEvent(context, event);
+    } else if (actionId === ActionLibrary.axe_attack.id) {
+      await animateAxeAttackEvent(context, event);
     } else if (actionId === ActionLibrary.punch.id) {
       await animatePunchEvent(context, event);
     } else if (actionId === ActionLibrary.pick_up.id) {

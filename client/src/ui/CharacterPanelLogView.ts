@@ -408,7 +408,17 @@ export class CharacterPanelLogView {
           lines.push(`${actor} moved to (${q}, ${r})`);
         } else {
           lines.push(`${actor} used ${actionName}`);
-          if (actionId === "search") {
+          if (actionId === "axe_attack") {
+            const totalDamage =
+              typeof event.action.damageDealt === "number"
+                ? event.action.damageDealt
+                : 0;
+            if (totalDamage > 0) {
+              lines.push(`${actor} dealt ${totalDamage} damage with an axe`);
+            } else {
+              lines.push(`${actor} failed to connect with the axe`);
+            }
+          } else if (actionId === "search") {
             const foundItems = this.extractSearchItemNames(
               event.action.metadata
             );
