@@ -407,7 +407,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "hand_token.png",
     actionOrder: 6,
     actionSubOrder: 1,
-    tags: ["Logistics", "TargetItems"]
+    tags: ["Logistics", "TargetItems"],
   },
   search: {
     id: "search",
@@ -1239,6 +1239,21 @@ export const ActionLibrary: ActionLibraryDefinition = {
     actionOrder: 17,
     actionSubOrder: 3,
     tags: ["Support", "Status"],
+  },
+  status_dead: {
+    id: "status_dead",
+    name: "Muere",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "skull.png",
+    actionOrder: 99,
+    actionSubOrder: 1,
+    notes: ["Evento automático cuando un personaje pierde toda su vida."],
+    tags: ["Status"],
   },
   status_unconscious: {
     id: "status_unconscious",

@@ -69,6 +69,7 @@ export type ActionId =
   | "inject_virus"
   | "inject_vaccine"
   | "sleep"
+  | "status_dead"
   | "status_unconscious";
 
 export type ActionTag =

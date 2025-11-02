@@ -11,6 +11,7 @@ import {
   tailorMatchItemsForCharacter,
 } from "../utils/matchView";
 import { processBotActions } from "src/match/botAI";
+import { isCharacterIncapacitated } from "../utils/playerCharacter";
 
 export function updateReadyStateRpc(
   ctx: nkruntime.Context,
@@ -41,7 +42,7 @@ export function updateReadyStateRpc(
     );
   }
 
-  const ready = json.ready === true;
+  const requestedReady = json.ready === true;
 
   const nkWrapper = createNakamaWrapper(nk);
   const storage = new StorageService(nkWrapper);
@@ -58,8 +59,15 @@ export function updateReadyStateRpc(
   ) {
     throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
   }
+  const viewerCharacter = match.playerCharacters?.[ctx.userId] ?? null;
+  const viewerIsIncapadited = isCharacterIncapacitated(viewerCharacter);
+  if (viewerIsIncapadited) {
+    // throw makeNakamaError("character_incapacitated", 9); TODO uncomment when the turn advances automatically when only bots remain
+  }
+
+  const effectiveReady = viewerIsIncapadited ? true : requestedReady;
   match.readyStates = match.readyStates ?? {};
-  match.readyStates[ctx.userId] = ready;
+  match.readyStates[ctx.userId] = effectiveReady;
 
   let advanced = false;
   const players = Array.isArray(match.players) ? match.players : [];
@@ -67,7 +75,9 @@ export function updateReadyStateRpc(
     players.length > 0 &&
     players.every(
       (playerId) =>
-        match.readyStates !== undefined && match.readyStates[playerId] === true
+        match.readyStates !== undefined &&
+        (isCharacterIncapacitated(match.playerCharacters?.[playerId]) ||
+          match.readyStates[playerId] === true)
     );
   let advanceResult: ReturnType<typeof advanceTurn> | null = null;
   let resolvedTurnNumber: number | null = null;
@@ -79,7 +89,10 @@ export function updateReadyStateRpc(
     match.current_turn = resolvedTurnNumber;
     const resetStates: Record<string, boolean> = {};
     for (const playerId of players) {
-      resetStates[playerId] = false;
+      const character = match.playerCharacters?.[playerId] ?? null;
+      resetStates[playerId] = isCharacterIncapacitated(character)
+        ? true
+        : false;
     }
     match.readyStates = resetStates;
     advanced = true;
@@ -142,12 +155,10 @@ export function updateReadyStateRpc(
     }
   }
 
-  const viewerCharacter = match.playerCharacters?.[ctx.userId] ?? null;
-
   const response: import("@shared").UpdateReadyStatePayload = {
     ok: true,
     match_id: matchId,
-    ready: advanced ? false : ready,
+    ready: advanced ? false : effectiveReady,
     all_ready: allReady,
     turn: match.current_turn,
     readyStates: match.readyStates,

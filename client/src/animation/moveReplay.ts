@@ -1,6 +1,7 @@
 import { ActionLibrary, type ReplayEvent } from "@shared";
 import type { MoveReplayContext } from "./MoveReplayContext";
 import { animateFeedEvent } from "./replayActions/FeedAnimation";
+import { animateDeathEvent } from "./replayActions/DeathAnimation";
 import { animateMoveEvent } from "./replayActions/MoveAnimation";
 import { animatePickUpEvent } from "./replayActions/PickUpAnimation";
 import { animateProtectEvent } from "./replayActions/ProtectAnimation";
@@ -40,6 +41,8 @@ export async function playReplayEvents(
       await animatePickUpEvent(context, event);
     } else if (actionId === ActionLibrary.search.id) {
       await animateSearchEvent(context, event);
+    } else if (actionId === ActionLibrary.status_dead.id) {
+      await animateDeathEvent(context, event);
     }
   }
 }

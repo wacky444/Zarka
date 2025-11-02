@@ -7,6 +7,7 @@ import type {
   PlayerPlannedAction,
   ReplayPlayerEvent,
 } from "@shared";
+import { isCharacterDead } from "../../utils/playerCharacter";
 
 export type PlannedActionKey = "main" | "secondary";
 
@@ -23,6 +24,7 @@ export interface ActionEnergyOutcome {
   energySpent: number;
   healthLost: number;
   exhausted: boolean;
+  event?: ReplayPlayerEvent;
 }
 
 export interface HealthChangeResult {
@@ -32,6 +34,8 @@ export interface HealthChangeResult {
   max: number;
   unconscious: boolean;
   becameUnconscious: boolean;
+  dead: boolean;
+  becameDead: boolean;
 }
 
 export interface HealthDeltaOutcome {
@@ -41,11 +45,13 @@ export interface HealthDeltaOutcome {
 }
 
 const STATUS_UNCONSCIOUS_ACTION_ID: ActionId = "status_unconscious";
+const STATUS_DEAD_ACTION_ID: ActionId = "status_dead";
 
 export function applyHealthDelta(
   character: PlayerCharacter,
   delta: number,
-  canDamageUnconscious: boolean = false
+  canDamageUnconscious: boolean = false,
+  logger: any = undefined
 ): HealthDeltaOutcome {
   const stats = character.stats;
   const health = stats?.health;
@@ -59,6 +65,8 @@ export function applyHealthDelta(
         max: 0,
         unconscious: false,
         becameUnconscious: false,
+        dead: false,
+        becameDead: false,
       },
     };
   }
@@ -88,13 +96,14 @@ export function applyHealthDelta(
     typeof health.injuredMax === "number" && isFinite(health.injuredMax)
       ? health.injuredMax
       : INJURED_MAX_HP;
-  const isUnconscious: boolean = conditions.indexOf("unconscious") !== -1;
+  const wasUnconscious = conditions.indexOf("unconscious") !== -1;
+  const wasDead = isCharacterDead(character);
   const injuredCap = injuredMax > 0 ? injuredMax : INJURED_MAX_HP;
   let nextMaxHP = health.max;
   let nextCurrent: number;
   let nextActionPlan = actionPlan;
 
-  if (delta < 0 && isUnconscious && !canDamageUnconscious) {
+  if (delta < 0 && wasUnconscious && !canDamageUnconscious) {
     nextMaxHP = Math.min(nextMaxHP, injuredCap);
     nextCurrent = Math.min(previousHP, nextMaxHP);
   } else {
@@ -102,8 +111,27 @@ export function applyHealthDelta(
     nextCurrent = Math.min(nextCurrent, nextMaxHP);
   }
 
-  const unconscious = nextCurrent > 0 && nextCurrent <= knockoutThreshold;
-  const becameUnconscious = unconscious && previousHP > knockoutThreshold;
+  let becameDead = false;
+  let isDead = false;
+  if (nextCurrent <= 0) {
+    isDead = true;
+    becameDead = !wasDead && previousHP > 0;
+    ensureCondition(conditions, "dead");
+    removeCondition(conditions, "unconscious");
+    nextMaxHP = Math.min(nextMaxHP, injuredCap);
+    nextCurrent = 0;
+    nextActionPlan = undefined;
+    if (logger) {
+      logger.debug("dead character: %s", character.id);
+    }
+  } else if (wasDead) {
+    removeCondition(conditions, "dead");
+  }
+
+  const unconscious =
+    !isDead && nextCurrent > 0 && nextCurrent <= knockoutThreshold;
+  const becameUnconscious =
+    !isDead && unconscious && previousHP > knockoutThreshold;
 
   if (becameUnconscious) {
     ensureCondition(conditions, "unconscious");
@@ -120,7 +148,13 @@ export function applyHealthDelta(
     max: nextMaxHP,
     unconscious: conditions.indexOf("unconscious") !== -1,
     becameUnconscious,
+    dead: isDead,
+    becameDead,
   };
+
+  if (logger) {
+    logger.debug("dead HealthChangeResult:", result);
+  }
 
   const nextHealth = {
     ...health,
@@ -145,13 +179,23 @@ export function applyHealthDelta(
     delete nextCharacter.actionPlan;
   }
 
-  const event = becameUnconscious
+  if (logger) {
+    logger.debug("dead becameDead:", becameDead);
+  }
+
+  const event = becameDead
+    ? createDeathReplayEvent(character.id, result.previous, result.current)
+    : becameUnconscious
     ? createUnconsciousReplayEvent(
         character.id,
         result.previous,
         result.current
       )
     : undefined;
+
+  if (logger) {
+    logger.debug("dead event:", event);
+  }
 
   return {
     character: nextCharacter,
@@ -206,10 +250,11 @@ export function applyActionEnergyCost(
   if (!exhausted) {
     return outcome;
   }
-  const healthOutcome = applyHealthDelta(character, -1);
+  const healthOutcome = applyHealthDelta(character, -1, false, logger);
 
   mergeCharacterState(character, healthOutcome.character);
   outcome.healthLost = Math.max(0, -healthOutcome.result.delta);
+  outcome.event = healthOutcome.event;
 
   return outcome;
 }
@@ -282,6 +327,16 @@ function ensureCondition(
   }
 }
 
+function removeCondition(
+  conditions: PlayerConditionFlag[],
+  flag: PlayerConditionFlag
+): void {
+  const index = conditions.indexOf(flag);
+  if (index !== -1) {
+    conditions.splice(index, 1);
+  }
+}
+
 function createUnconsciousReplayEvent(
   actorId: string | undefined,
   previous: number,
@@ -295,6 +350,27 @@ function createUnconsciousReplayEvent(
     actorId,
     action: {
       actionId: STATUS_UNCONSCIOUS_ACTION_ID,
+      metadata: {
+        previous,
+        current,
+      },
+    },
+  };
+}
+
+function createDeathReplayEvent(
+  actorId: string | undefined,
+  previous: number,
+  current: number
+): ReplayPlayerEvent | undefined {
+  if (!actorId) {
+    return undefined;
+  }
+  return {
+    kind: "player",
+    actorId,
+    action: {
+      actionId: STATUS_DEAD_ACTION_ID,
       metadata: {
         previous,
         current,

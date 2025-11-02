@@ -122,6 +122,31 @@ function collectParticipants(
   return list;
 }
 
+function applyEnergyForParticipants(
+  participants: PlannedActionParticipant[],
+  energyCost: number,
+  match: MatchRecord,
+  logger: any
+): ReplayEvent[] {
+  const events: ReplayEvent[] = [];
+  const characters = match.playerCharacters;
+  if (!characters) {
+    return events;
+  }
+  for (const participant of participants) {
+    const outcome = applyActionEnergyCost(
+      participant.character,
+      energyCost,
+      logger
+    );
+    if (outcome.event) {
+      events.push(outcome.event);
+    }
+    characters[participant.playerId] = participant.character;
+  }
+  return events;
+}
+
 function activateTemporaryEnergy(match: MatchRecord): void {
   if (!match.playerCharacters) {
     return;
@@ -213,11 +238,16 @@ export function advanceTurn(
       if (participants.length === 0) {
         continue;
       }
-      for (const participant of participants) {
-        applyActionEnergyCost(participant.character, action.energyCost, logger);
-        match.playerCharacters[participant.playerId] = participant.character;
-      }
-      eventsForAction = executeMoveAction(participants, match);
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger
+      );
+      const actionEvents = executeMoveAction(participants, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
       for (const participant of participants) {
         applyActionCooldown(
           participant.character,
@@ -233,11 +263,16 @@ export function advanceTurn(
       if (participants.length === 0) {
         continue;
       }
-      for (const participant of participants) {
-        applyActionEnergyCost(participant.character, action.energyCost, logger);
-        match.playerCharacters[participant.playerId] = participant.character;
-      }
-      eventsForAction = executeScareAction(participants, match);
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger
+      );
+      const actionEvents = executeScareAction(participants, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
       for (const participant of participants) {
         applyActionCooldown(
           participant.character,
@@ -273,11 +308,16 @@ export function advanceTurn(
       if (eligible.length === 0) {
         continue;
       }
-      for (const participant of eligible) {
-        applyActionEnergyCost(participant.character, action.energyCost, logger);
-        match.playerCharacters[participant.playerId] = participant.character;
-      }
-      eventsForAction = executeUseBandageAction(eligible, match);
+      const energyEvents = applyEnergyForParticipants(
+        eligible,
+        action.energyCost,
+        match,
+        logger
+      );
+      const actionEvents = executeUseBandageAction(eligible, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
       for (const participant of eligible) {
         applyActionCooldown(
           participant.character,
@@ -293,11 +333,16 @@ export function advanceTurn(
       if (participants.length === 0) {
         continue;
       }
-      for (const participant of participants) {
-        applyActionEnergyCost(participant.character, action.energyCost, logger);
-        match.playerCharacters[participant.playerId] = participant.character;
-      }
-      eventsForAction = executeSleepAction(participants, match);
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger
+      );
+      const actionEvents = executeSleepAction(participants, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
       for (const participant of participants) {
         applyActionCooldown(
           participant.character,
@@ -331,11 +376,16 @@ export function advanceTurn(
       if (eligible.length === 0) {
         continue;
       }
-      for (const participant of eligible) {
-        applyActionEnergyCost(participant.character, action.energyCost, logger);
-        match.playerCharacters[participant.playerId] = participant.character;
-      }
-      eventsForAction = executeRecoverAction(eligible, match);
+      const energyEvents = applyEnergyForParticipants(
+        eligible,
+        action.energyCost,
+        match,
+        logger
+      );
+      const actionEvents = executeRecoverAction(eligible, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
       for (const participant of eligible) {
         applyActionCooldown(
           participant.character,
@@ -363,11 +413,16 @@ export function advanceTurn(
       if (eligible.length === 0) {
         continue;
       }
-      for (const participant of eligible) {
-        applyActionEnergyCost(participant.character, action.energyCost, logger);
-        match.playerCharacters[participant.playerId] = participant.character;
-      }
-      eventsForAction = executeFeedAction(eligible, match);
+      const energyEvents = applyEnergyForParticipants(
+        eligible,
+        action.energyCost,
+        match,
+        logger
+      );
+      const actionEvents = executeFeedAction(eligible, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
       for (const participant of eligible) {
         applyActionCooldown(
           participant.character,
@@ -383,11 +438,16 @@ export function advanceTurn(
       if (participants.length === 0) {
         continue;
       }
-      for (const participant of participants) {
-        applyActionEnergyCost(participant.character, action.energyCost, logger);
-        match.playerCharacters[participant.playerId] = participant.character;
-      }
-      eventsForAction = executePickUpAction(participants, match);
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger
+      );
+      const actionEvents = executePickUpAction(participants, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
       for (const participant of participants) {
         applyActionCooldown(
           participant.character,
@@ -403,11 +463,16 @@ export function advanceTurn(
       if (participants.length === 0) {
         continue;
       }
-      for (const participant of participants) {
-        applyActionEnergyCost(participant.character, action.energyCost, logger);
-        match.playerCharacters[participant.playerId] = participant.character;
-      }
-      eventsForAction = executeSearchAction(participants, match);
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger
+      );
+      const actionEvents = executeSearchAction(participants, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
       for (const participant of participants) {
         applyActionCooldown(
           participant.character,
@@ -423,11 +488,16 @@ export function advanceTurn(
       if (participants.length === 0) {
         continue;
       }
-      for (const participant of participants) {
-        applyActionEnergyCost(participant.character, action.energyCost, logger);
-        match.playerCharacters[participant.playerId] = participant.character;
-      }
-      eventsForAction = executeFocusAction(participants, match);
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger
+      );
+      const actionEvents = executeFocusAction(participants, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
       for (const participant of participants) {
         applyActionCooldown(
           participant.character,
@@ -443,11 +513,16 @@ export function advanceTurn(
       if (participants.length === 0) {
         continue;
       }
-      for (const participant of participants) {
-        applyActionEnergyCost(participant.character, action.energyCost, logger);
-        match.playerCharacters[participant.playerId] = participant.character;
-      }
-      eventsForAction = executeProtectAction(participants, match);
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger
+      );
+      const actionEvents = executeProtectAction(participants, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
       for (const participant of participants) {
         applyActionCooldown(
           participant.character,
@@ -463,11 +538,16 @@ export function advanceTurn(
       if (participants.length === 0) {
         continue;
       }
-      for (const participant of participants) {
-        applyActionEnergyCost(participant.character, action.energyCost, logger);
-        match.playerCharacters[participant.playerId] = participant.character;
-      }
-      eventsForAction = executePunchAction(participants, match);
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger
+      );
+      const actionEvents = executePunchAction(participants, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
       for (const participant of participants) {
         applyActionCooldown(
           participant.character,

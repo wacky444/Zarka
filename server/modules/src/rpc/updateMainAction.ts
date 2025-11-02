@@ -11,6 +11,7 @@ import {
   isActionOnCooldown,
   updateCharacterCooldowns,
 } from "../match/actions/cooldowns";
+import { isCharacterIncapacitated } from "../utils/playerCharacter";
 
 export function updateMainActionRpc(
   ctx: nkruntime.Context,
@@ -19,16 +20,16 @@ export function updateMainActionRpc(
   payload: string
 ): string {
   if (!ctx || !ctx.userId) {
-    throw makeNakamaError("No user context", nkruntime.Codes.INVALID_ARGUMENT);
+    throw makeNakamaError("No user context", 3);
   }
   if (!payload || payload === "") {
-    throw makeNakamaError("Missing payload", nkruntime.Codes.INVALID_ARGUMENT);
+    throw makeNakamaError("Missing payload", 3);
   }
   let json: any;
   try {
     json = JSON.parse(payload);
   } catch {
-    throw makeNakamaError("bad_json", nkruntime.Codes.INVALID_ARGUMENT);
+    throw makeNakamaError("bad_json", 3);
   }
   const matchId: string | undefined = json.match_id;
   const submissionRaw: unknown = json.submission;
@@ -37,10 +38,7 @@ export function updateMainActionRpc(
       ? null
       : (submissionRaw as ActionSubmission);
   if (!matchId) {
-    throw makeNakamaError(
-      "match_id required",
-      nkruntime.Codes.INVALID_ARGUMENT
-    );
+    throw makeNakamaError("match_id required", 3);
   }
   const normalizeActionId = (raw: unknown) =>
     typeof raw === "string" ? raw.trim() : "";
@@ -52,21 +50,15 @@ export function updateMainActionRpc(
   if (submission) {
     actionId = normalizeActionId(submission.actionId);
     if (actionId.length === 0) {
-      throw makeNakamaError(
-        "action_id required",
-        nkruntime.Codes.INVALID_ARGUMENT
-      );
+      throw makeNakamaError("action_id required", 3);
     }
     const candidate = actionId as ActionId;
     const definition = ActionLibrary[candidate];
     if (!definition) {
-      throw makeNakamaError("invalid_action", nkruntime.Codes.INVALID_ARGUMENT);
+      throw makeNakamaError("invalid_action", 3);
     }
     if (!definition.developed) {
-      throw makeNakamaError(
-        "action_not_available",
-        nkruntime.Codes.FAILED_PRECONDITION
-      );
+      throw makeNakamaError("action_not_available", 9);
     }
     normalizedActionId = candidate;
     const locationCandidate = submission.targetLocationId as Axial | undefined;
@@ -84,10 +76,7 @@ export function updateMainActionRpc(
           ? rawCandidate.r
           : Number(rawCandidate.r);
       if (isNaN(qNum) || isNaN(rNum)) {
-        throw makeNakamaError(
-          "invalid_target_location",
-          nkruntime.Codes.INVALID_ARGUMENT
-        );
+        throw makeNakamaError("invalid_target_location", 3);
       }
       targetLocation = { q: qNum, r: rNum };
     }
@@ -124,18 +113,22 @@ export function updateMainActionRpc(
   const storage = new StorageService(nkWrapper);
   const read = storage.getMatch(matchId);
   if (!read) {
-    throw makeNakamaError("not_found", nkruntime.Codes.NOT_FOUND);
+    throw makeNakamaError("not_found", 5);
   }
   const match: MatchRecord = read.match;
   if (!match.players || match.players.indexOf(ctx.userId) === -1) {
-    throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
+    throw makeNakamaError("not_in_match", 7);
   }
   if (!match.playerCharacters) {
-    throw makeNakamaError("no_character", nkruntime.Codes.FAILED_PRECONDITION);
+    throw makeNakamaError("no_character", 9);
   }
   const character = match.playerCharacters[ctx.userId];
   if (!character) {
-    throw makeNakamaError("no_character", nkruntime.Codes.FAILED_PRECONDITION);
+    throw makeNakamaError("no_character", 9);
+  }
+  const isIncapacitated = isCharacterIncapacitated(character);
+  if (!clearAction && isIncapacitated) {
+    throw makeNakamaError("character_incapacitated", 9);
   }
   const currentTurn = match.current_turn ?? 0;
   updateCharacterCooldowns(character, currentTurn);
@@ -164,10 +157,7 @@ export function updateMainActionRpc(
         normalizedActionId,
         currentTurn
       );
-      throw makeNakamaError(
-        `action_on_cooldown:${remaining}`,
-        nkruntime.Codes.FAILED_PRECONDITION
-      );
+      throw makeNakamaError(`action_on_cooldown:${remaining}`, 9);
     }
     if (normalizedActionId) {
       nextPlan.actionId = normalizedActionId;

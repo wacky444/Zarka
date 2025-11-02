@@ -38,6 +38,10 @@ import {
 } from "../animation/moveReplay";
 import { collectItemSpriteInfos, resolveItemTexture } from "../ui/itemIcons";
 import { ItemTooltipManager, composeItemDescription } from "../ui/ItemTooltip";
+import {
+  EliminationBanner,
+  type PlayerEliminationBannerEvent,
+} from "../ui/EliminationBanner";
 import { assetPath } from "../utils/assetPath";
 
 export class GameScene extends Phaser.Scene {
@@ -75,6 +79,7 @@ export class GameScene extends Phaser.Scene {
   private gridModalActive = false;
   private tileItemContainers = new Map<string, Phaser.GameObjects.Container>();
   private itemTooltip: ItemTooltipManager | null = null;
+  private eliminationBanner: EliminationBanner | null = null;
   private readonly turnAdvancedHandler = (
     payload: TurnAdvancedMessagePayload
   ) => {
@@ -183,12 +188,20 @@ export class GameScene extends Phaser.Scene {
     this.characterPanel.on("log-play", this.handleLogPlayRequest, this);
     this.characterPanel.on("grid-modal-open", this.gridModalOpenHandler);
     this.characterPanel.on("grid-modal-close", this.gridModalCloseHandler);
+    this.characterPanel.on(
+      "player-eliminated",
+      this.handlePlayerEliminated,
+      this
+    );
 
     this.menuButton = makeButton(this, 0, 0, "☰", () => {
       this.scene.stop("GameScene");
       this.scene.wake("MainScene");
     }).setScrollFactor(0);
     this.cam.ignore(this.menuButton);
+    this.eliminationBanner = new EliminationBanner(this, {
+      camera: this.cam,
+    });
 
     const match = await this.fetchMatchFromServer();
     this.currentMatch = match;
@@ -249,6 +262,11 @@ export class GameScene extends Phaser.Scene {
       this.characterPanel?.off("log-play", this.handleLogPlayRequest, this);
       this.characterPanel?.off("grid-modal-open", this.gridModalOpenHandler);
       this.characterPanel?.off("grid-modal-close", this.gridModalCloseHandler);
+      this.characterPanel?.off(
+        "player-eliminated",
+        this.handlePlayerEliminated,
+        this
+      );
       this.gridModalActive = false;
       this.cancelMainActionLocationPick();
       this.itemTooltip?.hide();
@@ -261,6 +279,8 @@ export class GameScene extends Phaser.Scene {
       if (this.turnService) {
         this.turnService.setOnTurnAdvanced();
       }
+      this.eliminationBanner?.destroy();
+      this.eliminationBanner = null;
     });
   }
 
@@ -446,6 +466,11 @@ export class GameScene extends Phaser.Scene {
         const offset = offsets[index] ?? { x: 0, y: 0 };
         const x = world.x + offset.x;
         const y = world.y + offset.y;
+        const character = characters[playerId];
+        const conditions = character?.statuses?.conditions;
+        const isDead = Array.isArray(conditions)
+          ? conditions.indexOf("dead") !== -1
+          : false;
         let sprite = this.playerSprites.get(playerId);
         if (!sprite || !sprite.active || sprite.scene !== this) {
           sprite = this.add.image(x, y, "char", "body_human_tan_01.png");
@@ -457,6 +482,7 @@ export class GameScene extends Phaser.Scene {
         sprite.setPosition(x, y);
         sprite.setVisible(true);
         sprite.setDepth(5 + y / 1000);
+        sprite.setAngle(isDead ? -90 : 0);
 
         const name = this.playerNameMap[playerId] ?? playerId;
         let label = this.playerNameLabels.get(playerId);
@@ -711,6 +737,10 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
+  private handlePlayerEliminated(payload: PlayerEliminationBannerEvent) {
+    this.eliminationBanner?.show(payload);
+  }
+
   private layoutUI() {
     const width = this.uiCam ? this.uiCam.width : this.scale.width;
     const height = this.uiCam ? this.uiCam.height : this.scale.height;
@@ -725,6 +755,7 @@ export class GameScene extends Phaser.Scene {
         height - this.menuButton.height - 10
       );
     }
+    this.eliminationBanner?.layout(width);
   }
 
   private handleResize(gameSize: Phaser.Structs.Size) {
@@ -902,7 +933,7 @@ export class GameScene extends Phaser.Scene {
       this.updateCharacterPanel(this.currentMatch);
     } catch (error) {
       console.warn("update_main_action failed", error);
-      this.updateCharacterPanel(this.currentMatch);
+      // this.updateCharacterPanel(this.currentMatch); TODO it creates a loop
     } finally {
       this.mainActionUpdateRunning = false;
       if (this.pendingMainActionSelection) {
@@ -1024,7 +1055,7 @@ export class GameScene extends Phaser.Scene {
       this.updateCharacterPanel(this.currentMatch);
     } catch (error) {
       console.warn("update_secondary_action failed", error);
-      this.updateCharacterPanel(this.currentMatch);
+      // this.updateCharacterPanel(this.currentMatch); TODO it creates a loop
     } finally {
       this.secondaryActionUpdateRunning = false;
       if (this.pendingSecondaryActionSelection) {

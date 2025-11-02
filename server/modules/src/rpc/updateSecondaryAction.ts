@@ -12,6 +12,7 @@ import {
   updateCharacterCooldowns,
 } from "../match/actions/cooldowns";
 import { clearSecondaryPlan } from "../match/actions/utils";
+import { isCharacterIncapacitated } from "../utils/playerCharacter";
 
 export function updateSecondaryActionRpc(
   ctx: nkruntime.Context,
@@ -131,6 +132,10 @@ export function updateSecondaryActionRpc(
   const character = match.playerCharacters[ctx.userId];
   if (!character) {
     throw makeNakamaError("no_character", 9);
+  }
+  const isDead = isCharacterIncapacitated(character);
+  if (!clearAction && isDead) {
+    throw makeNakamaError("character_incapacitated", 9);
   }
   const currentTurn = match.current_turn ?? 0;
   updateCharacterCooldowns(character, currentTurn);

@@ -86,6 +86,20 @@ export type SecondaryActionSelection = {
   targetItemIds?: string[];
 };
 
+type LogEliminationPayload = {
+  playerId: string;
+  playerName: string;
+  turn: number;
+};
+
+type PlayerEliminatedPayload = {
+  playerId: string;
+  playerName: string;
+  texture: string;
+  frame: string;
+  turn: number;
+};
+
 export class CharacterPanel extends Phaser.GameObjects.Container {
   private readonly tabConfigs: Array<{ key: TabKey; label: string }> = [
     { key: "character", label: "Character" },
@@ -219,6 +233,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   };
   private readonly handleActionModalClose = () => {
     this.emit("grid-modal-close");
+  };
+  private readonly handleLogElimination = (payload: LogEliminationPayload) => {
+    const character =
+      this.currentMatch?.playerCharacters?.[payload.playerId] ?? null;
+    const sprite = this.resolvePlayerSpriteInfo(payload.playerId, character, 1);
+    const eventPayload: PlayerEliminatedPayload = {
+      playerId: payload.playerId,
+      playerName: payload.playerName,
+      texture: sprite.texture,
+      frame: sprite.frame,
+      turn: payload.turn,
+    };
+    this.emit("player-eliminated", eventPayload);
   };
 
   constructor(
@@ -615,6 +642,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.emit("log-play", turn);
       },
       formatActionName: (id) => this.formatActionName(id),
+      onElimination: this.handleLogElimination,
     });
     this.logView.handleVisibilityChange({ visible: false, forceEnsure: false });
     this.logView.setTurnInfo(0);

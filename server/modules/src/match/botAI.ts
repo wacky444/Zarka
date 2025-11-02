@@ -16,6 +16,7 @@ import {
   isActionOnCooldown,
   updateCharacterCooldowns,
 } from "./actions/cooldowns";
+import { isCharacterIncapacitated } from "../utils/playerCharacter";
 
 export enum BotPersonality {
   Safe = "Safe",
@@ -247,14 +248,6 @@ function clearBotPlans(character: PlayerCharacter): void {
   ) {
     delete character.actionPlan;
   }
-}
-
-function isCharacterIncapacitated(character: PlayerCharacter): boolean {
-  const conditions = character.statuses?.conditions ?? [];
-  return (
-    conditions.indexOf("dead") !== -1 ||
-    conditions.indexOf("unconscious") !== -1
-  );
 }
 
 function buildExecutableActionCandidates(

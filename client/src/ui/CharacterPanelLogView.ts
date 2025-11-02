@@ -34,6 +34,11 @@ interface CharacterPanelLogViewOptions {
   onRequestReplay: (turn: number) => void;
   onPlay: (turn: number) => void;
   formatActionName: (id: string) => string;
+  onElimination: (payload: {
+    playerId: string;
+    playerName: string;
+    turn: number;
+  }) => void;
 }
 
 export class CharacterPanelLogView {
@@ -48,6 +53,7 @@ export class CharacterPanelLogView {
   private lastRequestedTurn: number | null = null;
   private usernames: Record<string, string> = {};
   private visible = false;
+  private eliminationKeys = new Set<string>();
 
   constructor(private readonly options: CharacterPanelLogViewOptions) {
     this.elements = options.elements;
@@ -83,6 +89,7 @@ export class CharacterPanelLogView {
       this.displayedTurn = null;
       this.eventStrings = [];
       this.lastRequestedTurn = null;
+      this.eliminationKeys.clear();
       this.showStatus("No replays yet.");
     } else if (
       this.selectedTurn === null ||
@@ -114,6 +121,7 @@ export class CharacterPanelLogView {
     this.lastRequestedTurn = this.selectedTurn;
     this.loading = false;
     this.eventStrings = this.formatReplayEvents(events);
+    this.notifyEliminationEvents(resolvedTurn, events);
     if (this.eventStrings.length > 0) {
       this.elements.eventsText.setText(this.eventStrings.join("\n"));
       this.elements.statusText.setVisible(false);
@@ -383,6 +391,10 @@ export class CharacterPanelLogView {
       if (event.kind === "player") {
         const actor = this.resolvePlayerName(event.actorId);
         const actionId = event.action.actionId;
+        if (actionId === "status_dead") {
+          lines.push(`${actor} died`);
+          continue;
+        }
         if (actionId === "status_unconscious") {
           lines.push(`${actor} fell unconscious`);
           continue;
@@ -468,6 +480,35 @@ export class CharacterPanelLogView {
       }
     }
     return lines;
+  }
+
+  private notifyEliminationEvents(turn: number, events: ReplayEvent[]): void {
+    if (typeof this.options.onElimination !== "function") {
+      return;
+    }
+    if (!Array.isArray(events) || events.length === 0) {
+      return;
+    }
+    for (const event of events) {
+      if (event.kind !== "player" || event.action.actionId !== "status_dead") {
+        continue;
+      }
+      const actorId = event.actorId;
+      if (typeof actorId !== "string" || actorId.length === 0) {
+        continue;
+      }
+      const key = `${turn}:${actorId}`;
+      if (this.eliminationKeys.has(key)) {
+        continue;
+      }
+      this.eliminationKeys.add(key);
+      const playerName = this.resolvePlayerName(actorId);
+      this.options.onElimination({
+        playerId: actorId,
+        playerName,
+        turn,
+      });
+    }
   }
 
   private resolvePlayerName(playerId: string | undefined): string {

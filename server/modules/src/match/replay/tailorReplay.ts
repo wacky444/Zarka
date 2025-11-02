@@ -36,6 +36,9 @@ function filterPlayerEvent(
   if (event.actorId === playerId) {
     return true;
   }
+  if (event.action.actionId === "status_dead") {
+    return true;
+  }
   if (!viewer) {
     return false;
   }

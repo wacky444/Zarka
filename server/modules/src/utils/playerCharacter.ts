@@ -39,22 +39,7 @@ export function createDefaultCharacter(userId: string): PlayerCharacter {
     inventory: {
       carriedItems: [
         {
-          itemId: "bandage",
-          quantity: 2,
-          weight: 1,
-        },
-        {
           itemId: "food",
-          quantity: 2,
-          weight: 3,
-        },
-        {
-          itemId: "knife",
-          quantity: 2,
-          weight: 3,
-        },
-        {
-          itemId: "drink",
           quantity: 1,
           weight: 3,
         },
@@ -115,6 +100,29 @@ export function ensureAllPlayerCharacters(match: MatchRecord): boolean {
   }
 
   return mutated;
+}
+
+export function isCharacterDead(
+  character: PlayerCharacter | null | undefined
+): boolean {
+  const conditions = character?.statuses?.conditions;
+  if (!Array.isArray(conditions)) {
+    return false;
+  }
+  return conditions.indexOf("dead") !== -1;
+}
+
+export function isCharacterIncapacitated(
+  character: PlayerCharacter | null | undefined
+): boolean {
+  if (!character) {
+    return false;
+  }
+  if (isCharacterDead(character)) {
+    return true;
+  }
+  const conditions = character.statuses?.conditions ?? [];
+  return conditions.indexOf("unconscious") !== -1;
 }
 
 type RandomFn = () => number;
