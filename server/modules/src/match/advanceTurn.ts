@@ -13,6 +13,7 @@ import { executeMoveAction } from "./actions/move";
 import { executeScareAction } from "./actions/scare";
 import { executeProtectAction } from "./actions/protect";
 import { executePunchAction } from "./actions/punch";
+import { executeKnifeAttackAction } from "./actions/knifeAttack";
 import { executeAxeAttackAction } from "./actions/axeAttack";
 import { executeSleepAction } from "./actions/sleep";
 import { executeRecoverAction } from "./actions/recover";
@@ -525,6 +526,51 @@ export function advanceTurn(
         ? [...energyEvents, ...actionEvents]
         : actionEvents;
       for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn
+        );
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
+      handled = true;
+    } else if (action.id === ActionLibrary.knife_attack.id) {
+      const participants = collectParticipants(players, match, action.id);
+      if (participants.length === 0) {
+        continue;
+      }
+      const eligible: PlannedActionParticipant[] = [];
+      for (const participant of participants) {
+        const carried = participant.character.inventory?.carriedItems ?? [];
+        const hasKnife = carried.some(
+          (stack) =>
+            !!stack &&
+            stack.itemId === "knife" &&
+            typeof stack.quantity === "number" &&
+            stack.quantity > 0
+        );
+        if (hasKnife) {
+          eligible.push(participant);
+        } else {
+          clearPlanByKey(participant.character, participant.planKey);
+          match.playerCharacters[participant.playerId] = participant.character;
+        }
+      }
+      if (eligible.length === 0) {
+        continue;
+      }
+      const energyEvents = applyEnergyForParticipants(
+        eligible,
+        action.energyCost,
+        match,
+        logger
+      );
+      const actionEvents = executeKnifeAttackAction(eligible, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
+      for (const participant of eligible) {
         applyActionCooldown(
           participant.character,
           action.id,

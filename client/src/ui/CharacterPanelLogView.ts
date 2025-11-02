@@ -408,15 +408,19 @@ export class CharacterPanelLogView {
           lines.push(`${actor} moved to (${q}, ${r})`);
         } else {
           lines.push(`${actor} used ${actionName}`);
-          if (actionId === "axe_attack") {
+          if (actionId === "axe_attack" || actionId === "knife_attack") {
             const totalDamage =
               typeof event.action.damageDealt === "number"
                 ? event.action.damageDealt
                 : 0;
+            const weaponLabel =
+              actionId === "axe_attack" ? "an axe" : "a knife";
             if (totalDamage > 0) {
-              lines.push(`${actor} dealt ${totalDamage} damage with an axe`);
+              lines.push(
+                `${actor} dealt ${totalDamage} damage with ${weaponLabel}`
+              );
             } else {
-              lines.push(`${actor} failed to connect with the axe`);
+              lines.push(`${actor} failed to connect with ${weaponLabel}`);
             }
           } else if (actionId === "search") {
             const foundItems = this.extractSearchItemNames(

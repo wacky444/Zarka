@@ -7,6 +7,7 @@ import { animatePickUpEvent } from "./replayActions/PickUpAnimation";
 import { animateProtectEvent } from "./replayActions/ProtectAnimation";
 import { animatePunchEvent } from "./replayActions/PunchAnimation";
 import { animateAxeAttackEvent } from "./replayActions/AxeAttackAnimation";
+import { animateKnifeAttackEvent } from "./replayActions/KnifeAttackAnimation";
 import { animateRecoverEvent } from "./replayActions/RecoverAnimation";
 import { animateScareEvent } from "./replayActions/ScareAnimation";
 import { animateSearchEvent } from "./replayActions/SearchAnimation";
@@ -36,6 +37,8 @@ export async function playReplayEvents(
       await animateFeedEvent(context, event);
     } else if (actionId === ActionLibrary.protect.id) {
       await animateProtectEvent(context, event);
+    } else if (actionId === ActionLibrary.knife_attack.id) {
+      await animateKnifeAttackEvent(context, event);
     } else if (actionId === ActionLibrary.axe_attack.id) {
       await animateAxeAttackEvent(context, event);
     } else if (actionId === ActionLibrary.punch.id) {
