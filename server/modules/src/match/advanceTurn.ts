@@ -93,13 +93,19 @@ export interface AdvanceTurnResult {
 }
 
 function collectParticipants(
-  players: string[],
   match: MatchRecord,
   actionId: string
 ): PlannedActionParticipant[] {
   const list: PlannedActionParticipant[] = [];
-  for (const playerId of players) {
-    const character = match.playerCharacters?.[playerId];
+  const characters = match.playerCharacters;
+  if (!characters) {
+    return list;
+  }
+  for (const playerId in characters) {
+    if (!Object.prototype.hasOwnProperty.call(characters, playerId)) {
+      continue;
+    }
+    const character = characters[playerId];
     if (!character || !character.actionPlan) {
       continue;
     }
@@ -219,10 +225,8 @@ export function advanceTurn(
   if (!Array.isArray(match.players) || !match.playerCharacters) {
     return { events: [] };
   }
-  const players = match.players.filter(
-    (playerId) => !!match.playerCharacters?.[playerId]
-  );
-  if (players.length === 0) {
+  const characters = match.playerCharacters;
+  if (Object.keys(characters).length === 0) {
     return { events: [] };
   }
   const tileLookup = buildTileLookup(match);
@@ -236,7 +240,7 @@ export function advanceTurn(
     let handled = false;
     let eventsForAction: ReplayEvent[] = [];
     if (action.id === ActionLibrary.move.id) {
-      const participants = collectParticipants(players, match, action.id);
+      const participants = collectParticipants(match, action.id);
       if (participants.length === 0) {
         continue;
       }
@@ -261,7 +265,7 @@ export function advanceTurn(
       }
       handled = true;
     } else if (action.id === ActionLibrary.scare.id) {
-      const participants = collectParticipants(players, match, action.id);
+      const participants = collectParticipants(match, action.id);
       if (participants.length === 0) {
         continue;
       }
@@ -286,7 +290,7 @@ export function advanceTurn(
       }
       handled = true;
     } else if (action.id === ActionLibrary.use_bandage.id) {
-      const participants = collectParticipants(players, match, action.id);
+      const participants = collectParticipants(match, action.id);
       if (participants.length === 0) {
         continue;
       }
@@ -331,7 +335,7 @@ export function advanceTurn(
       }
       handled = true;
     } else if (action.id === ActionLibrary.sleep.id) {
-      const participants = collectParticipants(players, match, action.id);
+      const participants = collectParticipants(match, action.id);
       if (participants.length === 0) {
         continue;
       }
@@ -356,7 +360,7 @@ export function advanceTurn(
       }
       handled = true;
     } else if (action.id === ActionLibrary.recover.id) {
-      const participants = collectParticipants(players, match, action.id);
+      const participants = collectParticipants(match, action.id);
       if (participants.length === 0) {
         continue;
       }
@@ -399,7 +403,7 @@ export function advanceTurn(
       }
       handled = true;
     } else if (action.id === ActionLibrary.feed.id) {
-      const participants = collectParticipants(players, match, action.id);
+      const participants = collectParticipants(match, action.id);
       if (participants.length === 0) {
         continue;
       }
@@ -436,7 +440,7 @@ export function advanceTurn(
       }
       handled = true;
     } else if (action.id === ActionLibrary.pick_up.id) {
-      const participants = collectParticipants(players, match, action.id);
+      const participants = collectParticipants(match, action.id);
       if (participants.length === 0) {
         continue;
       }
@@ -461,7 +465,7 @@ export function advanceTurn(
       }
       handled = true;
     } else if (action.id === ActionLibrary.search.id) {
-      const participants = collectParticipants(players, match, action.id);
+      const participants = collectParticipants(match, action.id);
       if (participants.length === 0) {
         continue;
       }
@@ -486,7 +490,7 @@ export function advanceTurn(
       }
       handled = true;
     } else if (action.id === ActionLibrary.focus.id) {
-      const participants = collectParticipants(players, match, action.id);
+      const participants = collectParticipants(match, action.id);
       if (participants.length === 0) {
         continue;
       }
@@ -511,7 +515,7 @@ export function advanceTurn(
       }
       handled = true;
     } else if (action.id === ActionLibrary.protect.id) {
-      const participants = collectParticipants(players, match, action.id);
+      const participants = collectParticipants(match, action.id);
       if (participants.length === 0) {
         continue;
       }
@@ -536,7 +540,7 @@ export function advanceTurn(
       }
       handled = true;
     } else if (action.id === ActionLibrary.knife_attack.id) {
-      const participants = collectParticipants(players, match, action.id);
+      const participants = collectParticipants(match, action.id);
       if (participants.length === 0) {
         continue;
       }
@@ -581,7 +585,7 @@ export function advanceTurn(
       }
       handled = true;
     } else if (action.id === ActionLibrary.axe_attack.id) {
-      const participants = collectParticipants(players, match, action.id);
+      const participants = collectParticipants(match, action.id);
       if (participants.length === 0) {
         continue;
       }
@@ -626,7 +630,7 @@ export function advanceTurn(
       }
       handled = true;
     } else if (action.id === ActionLibrary.punch.id) {
-      const participants = collectParticipants(players, match, action.id);
+      const participants = collectParticipants(match, action.id);
       if (participants.length === 0) {
         continue;
       }
