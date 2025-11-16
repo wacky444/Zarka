@@ -7,20 +7,17 @@ import type {
   ReplayActionTarget,
   ReplayPlayerEvent,
 } from "@shared";
-import { clearPlanByKey, type PlannedActionParticipant } from "./utils";
+import {
+  clearPlanByKey,
+  isTargetProtected,
+  shuffleParticipants,
+  type PlannedActionParticipant,
+} from "./utils";
 import { collectTargets } from "./targeting";
 
 interface Destination {
   tileId: string;
   coord: { q: number; r: number };
-}
-
-function hasProtection(character: PlayerCharacter | undefined): boolean {
-  const conditions = character?.statuses?.conditions;
-  if (!conditions) {
-    return false;
-  }
-  return conditions.indexOf("protected") !== -1;
 }
 
 function resolveDestination(
@@ -61,13 +58,7 @@ export function executeScareAction(
   participants: PlannedActionParticipant[],
   match: MatchRecord
 ): ReplayPlayerEvent[] {
-  const roster = participants.slice();
-  for (let i = roster.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = roster[i];
-    roster[i] = roster[j];
-    roster[j] = tmp;
-  }
+  const roster = shuffleParticipants(participants);
 
   const events: ReplayPlayerEvent[] = [];
   for (const participant of roster) {
@@ -81,7 +72,7 @@ export function executeScareAction(
     const selection = origin
       ? collectTargets(actionId, participant, match, {
           allowMultiple: false,
-          filter: (candidate) => !hasProtection(candidate.character),
+          filter: (candidate) => !isTargetProtected(candidate.character),
         })
       : [];
     clearPlanByKey(participant.character, participant.planKey);

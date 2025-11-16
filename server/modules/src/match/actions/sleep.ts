@@ -13,24 +13,15 @@ import {
   applyHealthDelta,
   clearPlanByKey,
   mergeCharacterState,
+  shuffleParticipants,
   type PlannedActionParticipant,
 } from "./utils";
-
-function shuffle<T>(items: T[]): T[] {
-  for (let i = items.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = items[i];
-    items[i] = items[j];
-    items[j] = tmp;
-  }
-  return items;
-}
 
 export function executeSleepAction(
   participants: PlannedActionParticipant[],
   match: MatchRecord
 ): ReplayPlayerEvent[] {
-  const roster = shuffle(participants.slice());
+  const roster = shuffleParticipants(participants);
   const events: ReplayPlayerEvent[] = [];
   for (const participant of roster) {
     const actionId = participant.plan.actionId as ActionId;

@@ -12,6 +12,7 @@ import {
 import {
   applyHealthDelta,
   clearPlanByKey,
+  collectPlanTargetIds,
   mergeCharacterState,
   type PlannedActionParticipant,
 } from "./utils";
@@ -90,30 +91,6 @@ function consumeBandage(character: PlayerCharacter): boolean {
   return true;
 }
 
-function resolveTargets(
-  participant: PlannedActionParticipant,
-  match: MatchRecord
-): string[] {
-  const map = match.playerCharacters ?? {};
-  const selected: string[] = [];
-  const explicit = participant.plan.targetPlayerIds ?? [];
-  for (const candidate of explicit) {
-    if (!candidate || typeof candidate !== "string") {
-      continue;
-    }
-    if (!map[candidate]) {
-      continue;
-    }
-    if (selected.indexOf(candidate) === -1) {
-      selected.push(candidate);
-    }
-  }
-  if (selected.length === 0) {
-    selected.push(participant.playerId);
-  }
-  return selected;
-}
-
 export function executeUseBandageAction(
   participants: PlannedActionParticipant[],
   match: MatchRecord
@@ -134,7 +111,7 @@ export function executeUseBandageAction(
       }
       continue;
     }
-    const targets = resolveTargets(participant, match);
+    const targets = collectPlanTargetIds(participant, match);
     const appliedTargets: ReplayActionTarget[] = [];
     for (const targetId of targets) {
       const target = match.playerCharacters?.[targetId];

@@ -9,6 +9,7 @@ import type {
   ReplayPlayerEvent,
 } from "@shared";
 import { ReplayActionEffect } from "@shared";
+import type { MatchRecord } from "../../models/types";
 import { isCharacterDead } from "../../utils/playerCharacter";
 
 export type PlannedActionKey = "main" | "secondary";
@@ -46,8 +47,10 @@ export interface HealthDeltaOutcome {
   event?: ReplayPlayerEvent;
 }
 
-export function isTargetProtected(target: PlayerCharacter): boolean {
-  const conditions = target.statuses?.conditions;
+export function isTargetProtected(
+  target: PlayerCharacter | undefined
+): boolean {
+  const conditions = target?.statuses?.conditions;
   return Array.isArray(conditions) && conditions.indexOf("protected") !== -1;
 }
 
@@ -93,6 +96,48 @@ export function createFailedActionEvent(
       },
     },
   };
+}
+
+export function shuffleParticipants<T extends PlannedActionParticipant>(
+  participants: T[]
+): T[] {
+  const roster = participants.slice();
+  for (let i = roster.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = roster[i];
+    roster[i] = roster[j];
+    roster[j] = tmp;
+  }
+  return roster;
+}
+
+export interface PlanTargetOptions {
+  fallbackToSelf?: boolean;
+}
+
+export function collectPlanTargetIds(
+  participant: PlannedActionParticipant,
+  match: MatchRecord,
+  options?: PlanTargetOptions
+): string[] {
+  const characters = match.playerCharacters ?? {};
+  const requested = participant.plan.targetPlayerIds ?? [];
+  const targets: string[] = [];
+  for (const candidate of requested) {
+    if (typeof candidate !== "string" || candidate.trim().length === 0) {
+      continue;
+    }
+    if (!characters[candidate]) {
+      continue;
+    }
+    if (targets.indexOf(candidate) === -1) {
+      targets.push(candidate);
+    }
+  }
+  if (targets.length === 0 && options?.fallbackToSelf !== false) {
+    targets.push(participant.playerId);
+  }
+  return targets;
 }
 
 export function hasCarriedItem(

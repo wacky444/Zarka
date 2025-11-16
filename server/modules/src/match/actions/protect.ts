@@ -12,7 +12,12 @@ import type {
   ReplayPlayerEvent,
 } from "@shared";
 import { ReplayActionEffect } from "@shared";
-import { clearPlanByKey, type PlannedActionParticipant } from "./utils";
+import {
+  clearPlanByKey,
+  collectPlanTargetIds,
+  shuffleParticipants,
+  type PlannedActionParticipant,
+} from "./utils";
 
 function ensureStatusState(character: PlayerCharacter): PlayerStatusState {
   if (!character.statuses) {
@@ -35,30 +40,6 @@ function applyProtection(character: PlayerCharacter): boolean {
   return true;
 }
 
-function resolveTargets(
-  participant: PlannedActionParticipant,
-  match: MatchRecord
-): string[] {
-  const map = match.playerCharacters ?? {};
-  const raw = participant.plan.targetPlayerIds ?? [];
-  const collected: string[] = [];
-  for (const value of raw) {
-    if (typeof value !== "string" || value.trim().length === 0) {
-      continue;
-    }
-    if (!map[value]) {
-      continue;
-    }
-    if (collected.indexOf(value) === -1) {
-      collected.push(value);
-    }
-  }
-  if (collected.length === 0) {
-    collected.push(participant.playerId);
-  }
-  return collected;
-}
-
 function guardEffectMask(): ReplayActionEffectMask {
   return ReplayActionEffect.Guard;
 }
@@ -67,13 +48,7 @@ export function executeProtectAction(
   participants: PlannedActionParticipant[],
   match: MatchRecord
 ): ReplayPlayerEvent[] {
-  const roster = participants.slice();
-  for (let i = roster.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = roster[i];
-    roster[i] = roster[j];
-    roster[j] = tmp;
-  }
+  const roster = shuffleParticipants(participants);
 
   const events: ReplayPlayerEvent[] = [];
   for (const participant of roster) {
@@ -82,7 +57,7 @@ export function executeProtectAction(
       clearPlanByKey(participant.character, participant.planKey);
       continue;
     }
-    const targets = resolveTargets(participant, match);
+    const targets = collectPlanTargetIds(participant, match);
     const appliedTargets: ReplayActionTarget[] = [];
     for (const targetId of targets) {
       const target = match.playerCharacters?.[targetId];

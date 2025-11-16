@@ -7,8 +7,11 @@ import type {
   ReplayActionDone,
   ReplayPlayerEvent,
 } from "@shared";
-import type { PlannedActionParticipant } from "./utils";
-import { clearPlanByKey } from "./utils";
+import {
+  clearPlanByKey,
+  shuffleParticipants,
+  type PlannedActionParticipant,
+} from "./utils";
 
 function findDestination(match: MatchRecord, plan: PlayerPlannedAction) {
   const target = plan.targetLocationId;
@@ -35,14 +38,9 @@ export function executeMoveAction(
   match: MatchRecord
 ): ReplayPlayerEvent[] {
   const events: ReplayPlayerEvent[] = [];
-  for (let i = participants.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const temp = participants[i];
-    participants[i] = participants[j];
-    participants[j] = temp;
-  }
+  const roster = shuffleParticipants(participants);
 
-  for (const entry of participants) {
+  for (const entry of roster) {
     const destination = findDestination(match, entry.plan);
     if (!destination) {
       continue;

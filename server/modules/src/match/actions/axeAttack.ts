@@ -15,6 +15,7 @@ import {
   buildGuardedEffectMask,
   isTargetProtected,
   resolveGuardedDamage,
+  shuffleParticipants,
   type PlannedActionParticipant,
 } from "./utils";
 import { collectTargets } from "./targeting";
@@ -23,13 +24,7 @@ export function executeAxeAttackAction(
   participants: PlannedActionParticipant[],
   match: MatchRecord
 ): ReplayPlayerEvent[] {
-  const roster = participants.slice();
-  for (let i = roster.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = roster[i];
-    roster[i] = roster[j];
-    roster[j] = tmp;
-  }
+  const roster = shuffleParticipants(participants);
 
   const events: ReplayPlayerEvent[] = [];
   for (const participant of roster) {
