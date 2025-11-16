@@ -5,8 +5,10 @@ import type {
   PlayerCharacter,
   PlayerConditionFlag,
   PlayerPlannedAction,
+  ReplayActionEffectMask,
   ReplayPlayerEvent,
 } from "@shared";
+import { ReplayActionEffect } from "@shared";
 import { isCharacterDead } from "../../utils/playerCharacter";
 
 export type PlannedActionKey = "main" | "secondary";
@@ -42,6 +44,51 @@ export interface HealthDeltaOutcome {
   character: PlayerCharacter;
   result: HealthChangeResult;
   event?: ReplayPlayerEvent;
+}
+
+export function isTargetProtected(target: PlayerCharacter): boolean {
+  const conditions = target.statuses?.conditions;
+  return Array.isArray(conditions) && conditions.indexOf("protected") !== -1;
+}
+
+export function resolveGuardedDamage(
+  baseDamage: number,
+  guarded: boolean
+): number {
+  if (!guarded) {
+    return baseDamage;
+  }
+  const reduction = Math.ceil(baseDamage / 3);
+  const dealt = baseDamage - reduction;
+  return dealt > 0 ? dealt : 0;
+}
+
+export function buildGuardedEffectMask(
+  guarded: boolean,
+  baseMask: ReplayActionEffectMask = ReplayActionEffect.Hit
+): ReplayActionEffectMask {
+  return guarded ? baseMask | ReplayActionEffect.Guard : baseMask;
+}
+
+export function hasCarriedItem(
+  character: PlayerCharacter,
+  itemId: string,
+  minimumQuantity: number = 1
+): boolean {
+  if (!itemId) {
+    return false;
+  }
+  const carried = character.inventory?.carriedItems;
+  if (!Array.isArray(carried) || carried.length === 0) {
+    return false;
+  }
+  return carried.some(
+    (stack) =>
+      !!stack &&
+      stack.itemId === itemId &&
+      typeof stack.quantity === "number" &&
+      stack.quantity >= minimumQuantity
+  );
 }
 
 const STATUS_UNCONSCIOUS_ACTION_ID: ActionId = "status_unconscious";

@@ -3,9 +3,7 @@
 import type { MatchRecord } from "../../models/types";
 import type {
   ActionId,
-  PlayerCharacter,
   ReplayActionDone,
-  ReplayActionEffectMask,
   ReplayActionTarget,
   ReplayPlayerEvent,
 } from "@shared";
@@ -14,34 +12,12 @@ import {
   applyHealthDelta,
   clearPlanByKey,
   mergeCharacterState,
+  buildGuardedEffectMask,
+  isTargetProtected,
+  resolveGuardedDamage,
   type PlannedActionParticipant,
 } from "./utils";
 import { collectTargets } from "./targeting";
-
-function isGuarded(target: PlayerCharacter): boolean {
-  const statuses = target.statuses;
-  if (!statuses?.conditions) {
-    return false;
-  }
-  return statuses.conditions.indexOf("protected") !== -1;
-}
-
-function resolveDamage(baseDamage: number, guarded: boolean): number {
-  if (!guarded) {
-    return baseDamage;
-  }
-  const reduction = Math.ceil(baseDamage / 3);
-  const dealt = baseDamage - reduction;
-  return dealt > 0 ? dealt : 0;
-}
-
-function resolveTargetEffects(guarded: boolean): ReplayActionEffectMask {
-  let mask = ReplayActionEffect.Hit;
-  if (guarded) {
-    mask |= ReplayActionEffect.Guard;
-  }
-  return mask;
-}
 
 export function executeAxeAttackAction(
   participants: PlannedActionParticipant[],
@@ -72,9 +48,9 @@ export function executeAxeAttackAction(
       if (!target) {
         continue;
       }
-      const guarded = isGuarded(target);
+      const guarded = isTargetProtected(target);
       const baseDamage = 8;
-      const dealtAmount = resolveDamage(baseDamage, guarded);
+      const dealtAmount = resolveGuardedDamage(baseDamage, guarded);
       const {
         result: healthChange,
         character: updatedTarget,
@@ -95,7 +71,7 @@ export function executeAxeAttackAction(
       const targetEntry: ReplayActionTarget = {
         targetId,
         damageTaken: applied,
-        effects: resolveTargetEffects(guarded),
+        effects: buildGuardedEffectMask(guarded),
       };
       if (eliminated) {
         targetEntry.eliminated = true;
