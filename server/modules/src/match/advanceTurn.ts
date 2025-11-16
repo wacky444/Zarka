@@ -29,6 +29,8 @@ import {
 import {
   applyActionEnergyCost,
   clearPlanByKey,
+  createFailedActionEvent,
+  hasCarriedItem,
   type PlannedActionParticipant,
 } from "./actions/utils";
 
@@ -295,36 +297,35 @@ export function advanceTurn(
         continue;
       }
       const eligible: PlannedActionParticipant[] = [];
+      const missing: PlannedActionParticipant[] = [];
       for (const participant of participants) {
-        const carried = participant.character.inventory?.carriedItems ?? [];
-        const hasItem = carried.some(
-          (stack) =>
-            !!stack &&
-            stack.itemId === "bandage" &&
-            typeof stack.quantity === "number" &&
-            stack.quantity > 0
-        );
-        if (hasItem) {
+        if (hasCarriedItem(participant.character, "bandage")) {
           eligible.push(participant);
         } else {
+          missing.push(participant);
           clearPlanByKey(participant.character, participant.planKey);
           match.playerCharacters[participant.playerId] = participant.character;
         }
       }
-      if (eligible.length === 0) {
-        continue;
-      }
       const energyEvents = applyEnergyForParticipants(
-        eligible,
+        participants,
         action.energyCost,
         match,
         logger
       );
-      const actionEvents = executeUseBandageAction(eligible, match);
-      eventsForAction = energyEvents.length
-        ? [...energyEvents, ...actionEvents]
-        : actionEvents;
-      for (const participant of eligible) {
+      const actionEvents = eligible.length
+        ? executeUseBandageAction(eligible, match)
+        : [];
+      const failureEvents = missing.length
+        ? missing.map((participant) =>
+            createFailedActionEvent(participant, action.id, {
+              reason: "missing_item",
+              missingItemId: "bandage",
+            })
+          )
+        : [];
+      eventsForAction = [...energyEvents, ...actionEvents, ...failureEvents];
+      for (const participant of participants) {
         applyActionCooldown(
           participant.character,
           action.id,
@@ -545,36 +546,35 @@ export function advanceTurn(
         continue;
       }
       const eligible: PlannedActionParticipant[] = [];
+      const missing: PlannedActionParticipant[] = [];
       for (const participant of participants) {
-        const carried = participant.character.inventory?.carriedItems ?? [];
-        const hasKnife = carried.some(
-          (stack) =>
-            !!stack &&
-            stack.itemId === "knife" &&
-            typeof stack.quantity === "number" &&
-            stack.quantity > 0
-        );
-        if (hasKnife) {
+        if (hasCarriedItem(participant.character, "knife")) {
           eligible.push(participant);
         } else {
+          missing.push(participant);
           clearPlanByKey(participant.character, participant.planKey);
           match.playerCharacters[participant.playerId] = participant.character;
         }
       }
-      if (eligible.length === 0) {
-        continue;
-      }
       const energyEvents = applyEnergyForParticipants(
-        eligible,
+        participants,
         action.energyCost,
         match,
         logger
       );
-      const actionEvents = executeKnifeAttackAction(eligible, match);
-      eventsForAction = energyEvents.length
-        ? [...energyEvents, ...actionEvents]
-        : actionEvents;
-      for (const participant of eligible) {
+      const actionEvents = eligible.length
+        ? executeKnifeAttackAction(eligible, match)
+        : [];
+      const failureEvents = missing.length
+        ? missing.map((participant) =>
+            createFailedActionEvent(participant, action.id, {
+              reason: "missing_item",
+              missingItemId: "knife",
+            })
+          )
+        : [];
+      eventsForAction = [...energyEvents, ...actionEvents, ...failureEvents];
+      for (const participant of participants) {
         applyActionCooldown(
           participant.character,
           action.id,
@@ -590,36 +590,35 @@ export function advanceTurn(
         continue;
       }
       const eligible: PlannedActionParticipant[] = [];
+      const missing: PlannedActionParticipant[] = [];
       for (const participant of participants) {
-        const carried = participant.character.inventory?.carriedItems ?? [];
-        const hasAxe = carried.some(
-          (stack) =>
-            !!stack &&
-            stack.itemId === "axe" &&
-            typeof stack.quantity === "number" &&
-            stack.quantity > 0
-        );
-        if (hasAxe) {
+        if (hasCarriedItem(participant.character, "axe")) {
           eligible.push(participant);
         } else {
+          missing.push(participant);
           clearPlanByKey(participant.character, participant.planKey);
           match.playerCharacters[participant.playerId] = participant.character;
         }
       }
-      if (eligible.length === 0) {
-        continue;
-      }
       const energyEvents = applyEnergyForParticipants(
-        eligible,
+        participants,
         action.energyCost,
         match,
         logger
       );
-      const actionEvents = executeAxeAttackAction(eligible, match);
-      eventsForAction = energyEvents.length
-        ? [...energyEvents, ...actionEvents]
-        : actionEvents;
-      for (const participant of eligible) {
+      const actionEvents = eligible.length
+        ? executeAxeAttackAction(eligible, match)
+        : [];
+      const failureEvents = missing.length
+        ? missing.map((participant) =>
+            createFailedActionEvent(participant, action.id, {
+              reason: "missing_item",
+              missingItemId: "axe",
+            })
+          )
+        : [];
+      eventsForAction = [...energyEvents, ...actionEvents, ...failureEvents];
+      for (const participant of participants) {
         applyActionCooldown(
           participant.character,
           action.id,

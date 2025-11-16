@@ -70,6 +70,31 @@ export function buildGuardedEffectMask(
   return guarded ? baseMask | ReplayActionEffect.Guard : baseMask;
 }
 
+export type FailedActionReason = "missing_item";
+
+export interface FailedActionDetails {
+  reason: FailedActionReason;
+  missingItemId?: string;
+}
+
+export function createFailedActionEvent(
+  participant: PlannedActionParticipant,
+  attemptedActionId: ActionId,
+  details: FailedActionDetails
+): ReplayPlayerEvent {
+  return {
+    kind: "player",
+    actorId: participant.playerId,
+    action: {
+      actionId: "failedAction",
+      metadata: {
+        attemptedActionId,
+        ...details,
+      },
+    },
+  };
+}
+
 export function hasCarriedItem(
   character: PlayerCharacter,
   itemId: string,

@@ -13,6 +13,8 @@ import { animateScareEvent } from "./replayActions/ScareAnimation";
 import { animateSearchEvent } from "./replayActions/SearchAnimation";
 import { animateSleepEvent } from "./replayActions/SleepAnimation";
 import { animateUseBandageEvent } from "./replayActions/UseBandageAnimation";
+import { animateFocusEvent } from "./replayActions/FocusAnimation";
+import { animateFailedActionEvent } from "./replayActions/FailedActionAnimation";
 
 export async function playReplayEvents(
   context: MoveReplayContext,
@@ -37,6 +39,8 @@ export async function playReplayEvents(
       await animateFeedEvent(context, event);
     } else if (actionId === ActionLibrary.protect.id) {
       await animateProtectEvent(context, event);
+    } else if (actionId === ActionLibrary.focus.id) {
+      await animateFocusEvent(context, event);
     } else if (actionId === ActionLibrary.knife_attack.id) {
       await animateKnifeAttackEvent(context, event);
     } else if (actionId === ActionLibrary.axe_attack.id) {
@@ -49,6 +53,8 @@ export async function playReplayEvents(
       await animateSearchEvent(context, event);
     } else if (actionId === ActionLibrary.status_dead.id) {
       await animateDeathEvent(context, event);
+    } else if (actionId === ActionLibrary.failedAction.id) {
+      await animateFailedActionEvent(context, event);
     }
   }
 }

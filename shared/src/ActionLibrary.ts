@@ -1274,6 +1274,23 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     tags: ["Status"],
   },
+  failedAction: {
+    id: "failedAction",
+    name: "Acción fallida",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "hand_cross.png",
+    actionOrder: 99,
+    actionSubOrder: 2,
+    notes: [
+      "Evento automático cuando una acción no cumple los requisitos mínimos.",
+    ],
+    tags: ["Status"],
+  },
 };
 
 for (const actionId in ActionLibrary) {

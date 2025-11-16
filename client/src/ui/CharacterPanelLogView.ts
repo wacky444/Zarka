@@ -399,6 +399,10 @@ export class CharacterPanelLogView {
           lines.push(`${actor} fell unconscious`);
           continue;
         }
+        if (actionId === "failedAction") {
+          lines.push(this.buildFailedActionLine(actor, event.action.metadata));
+          continue;
+        }
         const definition = ActionLibrary[actionId as ActionId] ?? null;
         const actionName = definition
           ? definition.name
@@ -523,6 +527,35 @@ export class CharacterPanelLogView {
         turn,
       });
     }
+  }
+
+  private buildFailedActionLine(actor: string, metadata: unknown): string {
+    if (!metadata || typeof metadata !== "object") {
+      return `${actor} failed to use an action`;
+    }
+    const container = metadata as {
+      attemptedActionId?: unknown;
+      missingItemId?: unknown;
+    };
+    const attemptedId =
+      typeof container.attemptedActionId === "string"
+        ? (container.attemptedActionId as ActionId)
+        : null;
+    const definition = attemptedId ? ActionLibrary[attemptedId] ?? null : null;
+    const attemptedName = definition
+      ? definition.name
+      : attemptedId
+      ? this.options.formatActionName(attemptedId)
+      : "an action";
+    const missingItemId =
+      typeof container.missingItemId === "string"
+        ? container.missingItemId
+        : null;
+    if (missingItemId) {
+      const itemName = this.resolveItemName(missingItemId);
+      return `${actor} failed to use ${attemptedName} (missing ${itemName})`;
+    }
+    return `${actor} failed to use ${attemptedName}`;
   }
 
   private resolvePlayerName(playerId: string | undefined): string {

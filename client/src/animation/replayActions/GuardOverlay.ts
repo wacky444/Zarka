@@ -10,6 +10,7 @@ import type { MoveReplayContext } from "../MoveReplayContext";
 export const SHIELD_TEXTURE_KEY = deriveBoardIconKey("shield.png");
 export const HEAL_TEXTURE_KEY = deriveBoardIconKey("suit_hearts.png");
 export const FEED_TEXTURE_KEY = deriveBoardIconKey("resource_apple.png");
+export const FOCUS_TEXTURE_KEY = deriveBoardIconKey("hourglass.png");
 
 export function hasEffect(
   effects: ReplayActionEffectMask | undefined,

@@ -70,7 +70,8 @@ export type ActionId =
   | "inject_vaccine"
   | "sleep"
   | "status_dead"
-  | "status_unconscious";
+  | "status_unconscious"
+  | "failedAction";
 
 export type ActionTag =
   | "Attack"
