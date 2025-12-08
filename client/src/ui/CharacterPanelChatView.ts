@@ -18,7 +18,7 @@ interface CharacterPanelChatViewOptions {
   maxInputLength?: number;
 }
 
-const MAX_MESSAGES = 40;
+const MAX_MESSAGES = 31;
 
 function clampLength(value: string, max: number) {
   if (value.length <= max) {
@@ -52,6 +52,8 @@ export class CharacterPanelChatView {
   private readonly placeholderText: Phaser.GameObjects.Text;
   private readonly sendButton: Phaser.GameObjects.Text;
   private readonly keyListener: (event: KeyboardEvent) => void;
+  private sendCooldownUntil = 0;
+  private sendCooldownTimer: number | null = null;
   private inputValue = "";
   private inputFocused = false;
   private inputEnabled = false;
@@ -64,7 +66,7 @@ export class CharacterPanelChatView {
     this.scene = options.scene;
     this.onSend = options.onSend;
     this.onFocusChange = options.onFocusChange;
-    this.maxInputLength = options.maxInputLength ?? 240;
+    this.maxInputLength = options.maxInputLength ?? 70;
     this.titleText = this.scene.add
       .text(0, 0, "Match Chat", { fontSize: "16px", color: "#ffffff" })
       .setVisible(false);
@@ -73,6 +75,7 @@ export class CharacterPanelChatView {
       .setVisible(false);
     this.messagesBox = this.scene.add
       .rectangle(0, 0, 100, 100, 0x1b2440)
+      .setOrigin(0, 0)
       .setVisible(false);
     this.messagesText = this.scene.add
       .text(0, 0, "", {
@@ -90,6 +93,7 @@ export class CharacterPanelChatView {
     this.inputBackground = this.scene.add
       .rectangle(0, 0, 100, 44, 0x11152a)
       .setStrokeStyle(1, 0x2c3557, 1)
+      .setOrigin(0, 0)
       .setVisible(false)
       .setInteractive({ useHandCursor: true });
     this.inputText = this.scene.add
@@ -145,6 +149,20 @@ export class CharacterPanelChatView {
     return this.elements;
   }
 
+  startSendCooldown(durationMs: number) {
+    const now = Date.now();
+    this.sendCooldownUntil = now + Math.max(0, durationMs);
+    if (this.sendCooldownTimer !== null) {
+      clearTimeout(this.sendCooldownTimer);
+    }
+    this.sendCooldownTimer = window.setTimeout(() => {
+      this.sendCooldownUntil = 0;
+      this.sendCooldownTimer = null;
+      this.updateInputStyles();
+    }, Math.max(0, durationMs));
+    this.updateInputStyles();
+  }
+
   layout(bounds: {
     margin: number;
     contentTop: number;
@@ -163,9 +181,9 @@ export class CharacterPanelChatView {
     this.messagesBox.setPosition(margin, boxY);
     this.messagesBox.setSize(boxWidth, boxHeight);
     this.messagesBox.setDisplaySize(boxWidth, boxHeight);
-    this.messagesText.setPosition(margin + 16, boxY + 16);
+    this.messagesText.setPosition(margin + 16, boxY + 8);
     this.messagesText.setWordWrapWidth(boxWidth - 32);
-    this.overlayText.setPosition(margin + 16, boxY + 16);
+    this.overlayText.setPosition(margin + 16, boxY + 8);
     const inputY = boxY + boxHeight + 16;
     const inputWidth = Math.max(140, boxWidth - 100);
     this.inputBackground.setPosition(margin, inputY);
@@ -253,7 +271,12 @@ export class CharacterPanelChatView {
   }
 
   private handleKeyInput(event: KeyboardEvent) {
-    if (!this.inputFocused || !this.inputEnabled || !this.visible) {
+    if (
+      !this.inputFocused ||
+      !this.inputEnabled ||
+      !this.visible ||
+      this.isCoolingDown()
+    ) {
       return;
     }
     if (event.key === "Enter") {
@@ -283,7 +306,7 @@ export class CharacterPanelChatView {
   }
 
   private trySend() {
-    if (!this.inputEnabled) {
+    if (!this.inputEnabled || this.isCoolingDown()) {
       return;
     }
     const trimmed = this.inputValue.trim();
@@ -335,6 +358,7 @@ export class CharacterPanelChatView {
   }
 
   private updateInputStyles() {
+    const cooling = this.isCoolingDown();
     const caret = this.inputFocused ? "_" : "";
     this.inputText.setText(`${this.inputValue}${caret}`);
     const showPlaceholder =
@@ -343,7 +367,10 @@ export class CharacterPanelChatView {
     const showText = this.inputFocused || this.inputValue.length > 0;
     this.inputText.setVisible(this.visible && showText);
     const canSend =
-      this.visible && this.inputEnabled && this.inputValue.trim().length > 0;
+      this.visible &&
+      this.inputEnabled &&
+      !cooling &&
+      this.inputValue.trim().length > 0;
     if (canSend) {
       this.sendButton.setAlpha(1);
       this.sendButton.setColor("#4ade80");
@@ -353,6 +380,10 @@ export class CharacterPanelChatView {
       this.sendButton.setColor("#2f9c5f");
       this.sendButton.disableInteractive();
     }
+  }
+
+  private isCoolingDown() {
+    return this.sendCooldownUntil > Date.now();
   }
 
   private updateOverlayVisibility() {

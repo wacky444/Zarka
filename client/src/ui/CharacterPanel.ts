@@ -883,6 +883,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.chatView?.setInputEnabled(enabled);
   }
 
+  setChatSendCooldown(durationMs: number) {
+    this.chatView?.startSendCooldown(durationMs);
+  }
+
   getPanelWidth() {
     return this.panelWidth;
   }

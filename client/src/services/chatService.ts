@@ -10,11 +10,12 @@ import type {
   MatchChatMessage,
   SaveChatMessageRequest,
 } from "@shared";
+import { MAX_CHAT_MESSAGE_LENGTH } from "@shared";
 import { getEnv } from "./nakama";
 import type { TurnService } from "./turnService";
 
 const HISTORY_LIMIT = 50;
-const MAX_MESSAGE_LENGTH = 240;
+const MAX_MESSAGE_LENGTH = MAX_CHAT_MESSAGE_LENGTH;
 const CHANNEL_TYPE_ROOM = 1; // Nakama: 1 = room, 2 = DM, 3 = group
 
 function stringFromContent(value: unknown): string {

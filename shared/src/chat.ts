@@ -26,3 +26,5 @@ export interface SaveChatMessageRequest {
   persistent?: boolean;
   system?: boolean;
 }
+
+export const MAX_CHAT_MESSAGE_LENGTH = 70;

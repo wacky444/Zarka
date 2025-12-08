@@ -935,6 +935,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.chatService) {
       return;
     }
+    this.characterPanel?.setChatSendCooldown(750);
     try {
       await this.chatService.send(message);
     } catch (error) {

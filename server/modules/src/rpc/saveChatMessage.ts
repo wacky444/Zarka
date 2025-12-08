@@ -44,9 +44,12 @@ export function saveChatMessageRpc(
     );
   }
 
-  if (typeof json.content !== "string" || !json.content.trim()) {
+  const trimmedContent =
+    typeof json.content === "string" ? json.content.trim() : "";
+  if (!trimmedContent) {
     throw makeNakamaError("content required", nkruntime.Codes.INVALID_ARGUMENT);
   }
+  const normalizedContent = trimmedContent.toLowerCase().replace(/\s+/g, " ");
 
   const nkWrapper = createNakamaWrapper(nk);
   const storage = new StorageService(nkWrapper);
@@ -66,15 +69,58 @@ export function saveChatMessageRpc(
     );
   }
 
+  const createdAt =
+    typeof json.createdAt === "number" && isFinite(json.createdAt)
+      ? json.createdAt
+      : Date.now();
+
+  const history = storage.listChatMessages(matchId, 200);
+  const senderHistory = history.filter(
+    (entry) => entry.senderId === ctx.userId
+  );
+  const lastFromSender = senderHistory[senderHistory.length - 1];
+  if (lastFromSender && createdAt - lastFromSender.createdAt < 750) {
+    throw makeNakamaError(
+      "rate_limited_fast",
+      nkruntime.Codes.RESOURCE_EXHAUSTED
+    );
+  }
+  if (
+    lastFromSender &&
+    typeof lastFromSender.content === "string" &&
+    lastFromSender.content.trim().toLowerCase().replace(/\s+/g, " ") ===
+      normalizedContent
+  ) {
+    throw makeNakamaError(
+      "duplicate_message",
+      nkruntime.Codes.RESOURCE_EXHAUSTED
+    );
+  }
+  const window10s = senderHistory.filter(
+    (entry) => createdAt - entry.createdAt <= 10_000
+  );
+  if (window10s.length >= 4) {
+    throw makeNakamaError(
+      "rate_limited_10s",
+      nkruntime.Codes.RESOURCE_EXHAUSTED
+    );
+  }
+  const window5m = senderHistory.filter(
+    (entry) => createdAt - entry.createdAt <= 300_000
+  );
+  if (window5m.length >= 25) {
+    throw makeNakamaError(
+      "rate_limited_5m",
+      nkruntime.Codes.RESOURCE_EXHAUSTED
+    );
+  }
+
   const message: MatchChatMessage = {
     matchId,
     messageId,
     senderId: ctx.userId,
-    content: json.content,
-    createdAt:
-      typeof json.createdAt === "number" && isFinite(json.createdAt)
-        ? json.createdAt
-        : Date.now(),
+    content: trimmedContent,
+    createdAt,
     username: typeof json.username === "string" ? json.username : undefined,
     code: typeof json.code === "number" ? json.code : undefined,
     persistent:
