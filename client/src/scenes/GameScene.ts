@@ -779,10 +779,7 @@ export class GameScene extends Phaser.Scene {
       this.characterPanel.setPanelSize(panelWidth, height);
     }
     if (this.menuButton) {
-      this.menuButton.setPosition(
-        0 + 10,
-        height - this.menuButton.height - 10
-      );
+      this.menuButton.setPosition(0 + 10, height - this.menuButton.height - 10);
     }
     this.eliminationBanner?.layout(width);
   }
@@ -1424,9 +1421,16 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const coord = this.normalizeAxial(tile.coord);
+    if (!coord) {
+      this.locationSelectionPointerId = null;
+      this.cancelMainActionLocationPick();
+      return;
+    }
+    const actionId = selection.actionId as ActionId;
+    const inRange = this.isLocationInRange(actionId, coord);
     this.locationSelectionPointerId = null;
     this.cancelMainActionLocationPick();
-    if (!coord) {
+    if (!inRange) {
       return;
     }
     this.characterPanel?.setMainActionTarget(coord, true);
@@ -1639,6 +1643,35 @@ export class GameScene extends Phaser.Scene {
 
   private handleTabChange(key: string) {
     this.logTabActive = key === "log";
+  }
+
+  private getCurrentPlayerCoord(): Axial | null {
+    if (!this.currentMatch || !this.currentUserId) {
+      return null;
+    }
+    return (
+      this.currentMatch.playerCharacters?.[this.currentUserId]?.position
+        ?.coord ?? null
+    );
+  }
+
+  private axialDistance(a: Axial, b: Axial): number {
+    const dq = a.q - b.q;
+    const dr = a.r - b.r;
+    const ds = -dq - dr;
+    return Math.max(Math.abs(dq), Math.abs(dr), Math.abs(ds));
+  }
+
+  private isLocationInRange(actionId: ActionId, target: Axial): boolean {
+    const definition = ActionLibrary[actionId];
+    const allowed =
+      definition?.range && definition.range.length > 0 ? definition.range : [0];
+    const origin = this.getCurrentPlayerCoord();
+    if (!origin) {
+      return false;
+    }
+    const distance = this.axialDistance(origin, target);
+    return allowed.indexOf(distance) !== -1;
   }
 
   private handleLogTabOpened() {

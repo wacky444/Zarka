@@ -129,7 +129,7 @@ Scaling Considerations:
   - [ ] View and edit profile information
   - [ ] Track player statistics and match history
 - [ ] Chat
-  - [ ] In-game and lobby text chat
+  - [x] In-game and lobby text chat
   - [ ] In-game private direct messages
   - [ ] Game global chat
 - [ ] Automated tests

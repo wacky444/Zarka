@@ -1,37 +1,15 @@
 /// <reference path="../../../node_modules/nakama-runtime/index.d.ts" />
 
 import type { MatchRecord } from "../../models/types";
-import type {
-  ActionId,
-  PlayerPlannedAction,
-  ReplayActionDone,
-  ReplayPlayerEvent,
-} from "@shared";
+import type { ActionId, ReplayActionDone, ReplayPlayerEvent } from "@shared";
 import {
   clearPlanByKey,
+  resolvePlanDestination,
   shuffleParticipants,
   type PlannedActionParticipant,
 } from "./utils";
-
-function findDestination(match: MatchRecord, plan: PlayerPlannedAction) {
-  const target = plan.targetLocationId;
-  if (!target) {
-    return undefined;
-  }
-  const tiles = match.map?.tiles ?? [];
-  for (const entry of tiles) {
-    if (entry.coord.q === target.q && entry.coord.r === target.r) {
-      return {
-        tileId: entry.id,
-        coord: { q: target.q, r: target.r },
-      };
-    }
-  }
-  return {
-    tileId: `hex_${target.q}_${target.r}`,
-    coord: { q: target.q, r: target.r },
-  };
-}
+import { ActionLibrary } from "@shared";
+import { axialDistance } from "../../utils/location";
 
 export function executeMoveAction(
   participants: PlannedActionParticipant[],
@@ -41,8 +19,19 @@ export function executeMoveAction(
   const roster = shuffleParticipants(participants);
 
   for (const entry of roster) {
-    const destination = findDestination(match, entry.plan);
-    if (!destination) {
+    const actionId = entry.plan.actionId as ActionId;
+    const destination = resolvePlanDestination(match, entry.plan);
+    const originCoord = entry.character.position?.coord;
+    if (!destination || !originCoord) {
+      clearPlanByKey(entry.character, entry.planKey);
+      continue;
+    }
+    const definition = ActionLibrary[actionId];
+    const allowedRange =
+      definition?.range && definition.range.length > 0 ? definition.range : [0];
+    const distance = axialDistance(originCoord, destination.coord);
+    if (allowedRange.indexOf(distance) === -1) {
+      clearPlanByKey(entry.character, entry.planKey);
       continue;
     }
     const previousPosition = entry.character.position;
@@ -51,7 +40,7 @@ export function executeMoveAction(
       coord: destination.coord,
     };
     const action: ReplayActionDone = {
-      actionId: entry.plan.actionId as ActionId,
+      actionId,
       targetLocation: destination.coord,
     };
     if (previousPosition?.coord) {

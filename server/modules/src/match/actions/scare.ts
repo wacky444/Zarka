@@ -2,7 +2,6 @@ import type { MatchRecord } from "../../models/types";
 import type {
   ActionId,
   PlayerCharacter,
-  PlayerPlannedAction,
   ReplayActionDone,
   ReplayActionTarget,
   ReplayPlayerEvent,
@@ -10,38 +9,11 @@ import type {
 import {
   clearPlanByKey,
   isTargetProtected,
+  resolvePlanDestination,
   shuffleParticipants,
   type PlannedActionParticipant,
 } from "./utils";
 import { collectTargets } from "./targeting";
-
-interface Destination {
-  tileId: string;
-  coord: { q: number; r: number };
-}
-
-function resolveDestination(
-  match: MatchRecord,
-  plan: PlayerPlannedAction
-): Destination | undefined {
-  const target = plan.targetLocationId;
-  if (!target) {
-    return undefined;
-  }
-  const tiles = match.map?.tiles ?? [];
-  for (const entry of tiles) {
-    if (entry.coord.q === target.q && entry.coord.r === target.r) {
-      return {
-        tileId: entry.id,
-        coord: { q: target.q, r: target.r },
-      };
-    }
-  }
-  return {
-    tileId: `hex_${target.q}_${target.r}`,
-    coord: { q: target.q, r: target.r },
-  };
-}
 
 function reduceEnergy(character: PlayerCharacter, amount: number): number {
   if (!character.stats?.energy) {
@@ -67,7 +39,7 @@ export function executeScareAction(
       clearPlanByKey(participant.character, participant.planKey);
       continue;
     }
-    const destination = resolveDestination(match, participant.plan);
+    const destination = resolvePlanDestination(match, participant.plan);
     const origin = participant.character.position?.coord;
     const selection = origin
       ? collectTargets(actionId, participant, match, {

@@ -7,6 +7,7 @@ import type {
   PlayerPlannedAction,
   ReplayActionEffectMask,
   ReplayPlayerEvent,
+  Axial,
 } from "@shared";
 import { ReplayActionEffect } from "@shared";
 import type { MatchRecord } from "../../models/types";
@@ -115,6 +116,11 @@ export interface PlanTargetOptions {
   fallbackToSelf?: boolean;
 }
 
+export interface PlanDestination {
+  tileId: string;
+  coord: Axial;
+}
+
 export function collectPlanTargetIds(
   participant: PlannedActionParticipant,
   match: MatchRecord,
@@ -138,6 +144,29 @@ export function collectPlanTargetIds(
     targets.push(participant.playerId);
   }
   return targets;
+}
+
+export function resolvePlanDestination(
+  match: MatchRecord,
+  plan: PlayerPlannedAction
+): PlanDestination | undefined {
+  const target = plan.targetLocationId;
+  if (!target) {
+    return undefined;
+  }
+  const tiles = match.map?.tiles ?? [];
+  for (const entry of tiles) {
+    if (entry.coord.q === target.q && entry.coord.r === target.r) {
+      return {
+        tileId: entry.id,
+        coord: { q: target.q, r: target.r },
+      };
+    }
+  }
+  return {
+    tileId: `hex_${target.q}_${target.r}`,
+    coord: { q: target.q, r: target.r },
+  };
 }
 
 export function hasCarriedItem(
