@@ -35,6 +35,10 @@ export const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
       started: params && params["started"] === "true",
       creator: typeof creator === "string" ? creator : undefined,
       name,
+      lastAutoAdvanceAt:
+        params && params["lastAutoAdvanceAt"]
+          ? parseInt(params["lastAutoAdvanceAt"], 10)
+          : undefined,
     };
 
     if (isRestore && params && params["players"]) {

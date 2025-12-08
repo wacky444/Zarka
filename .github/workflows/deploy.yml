@@ -52,6 +52,7 @@ jobs:
           VITE_NAKAMA_PORT: ${{ vars.NAKAMA_PORT || '443' }}
           VITE_NAKAMA_SERVER_KEY: ${{ vars.NAKAMA_SERVER_KEY || 'defaultkey' }}
           VITE_NAKAMA_SSL: ${{ vars.NAKAMA_SSL || 'true' }}
+          ROUND_TIME_OFFSET_MINUTES: ${{ vars.ROUND_TIME_OFFSET_MINUTES || '60' }}
 
       - name: List build output (for debugging)
         run: |

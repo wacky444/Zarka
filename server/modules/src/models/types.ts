@@ -23,4 +23,6 @@ export interface AsyncTurnState extends nkruntime.MatchState {
   creator?: string;
   name?: string;
   map?: GameMap;
+  lastAutoAdvanceAt?: number;
+  lastAutoCheckAt?: number;
 }

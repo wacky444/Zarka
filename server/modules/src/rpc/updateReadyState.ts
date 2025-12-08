@@ -5,13 +5,13 @@ import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { MatchRecord } from "../models/types";
-import { advanceTurn } from "../match/advanceTurn";
+import type { AdvanceTurnResult } from "../match/advanceTurn";
 import {
   tailorMapForCharacter,
   tailorMatchItemsForCharacter,
 } from "../utils/matchView";
-import { processBotActions } from "src/match/botAI";
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
+import { resolveTurnForMatch } from "../match/turnResolution";
 
 export function updateReadyStateRpc(
   ctx: nkruntime.Context,
@@ -79,23 +79,16 @@ export function updateReadyStateRpc(
         (isCharacterIncapacitated(match.playerCharacters?.[playerId]) ||
           match.readyStates[playerId] === true)
     );
-  let advanceResult: ReturnType<typeof advanceTurn> | null = null;
+  let advanceResult: AdvanceTurnResult | null = null;
   let resolvedTurnNumber: number | null = null;
 
   if (allReady) {
-    resolvedTurnNumber = (match.current_turn || 0) + 1;
-    processBotActions(match, logger);
-    advanceResult = advanceTurn(match, resolvedTurnNumber, logger);
-    match.current_turn = resolvedTurnNumber;
-    const resetStates: Record<string, boolean> = {};
-    for (const playerId of players) {
-      const character = match.playerCharacters?.[playerId] ?? null;
-      resetStates[playerId] = isCharacterIncapacitated(character)
-        ? true
-        : false;
+    const outcome = resolveTurnForMatch(match, logger);
+    if (outcome.advanced) {
+      resolvedTurnNumber = outcome.resolvedTurn ?? null;
+      advanceResult = { events: outcome.events };
+      advanced = true;
     }
-    match.readyStates = resetStates;
-    advanced = true;
   }
 
   try {

@@ -26,6 +26,7 @@ export interface MatchRecord {
   removed: number;
   map?: GameMap;
   items?: MatchItemRecord[];
+  lastAutoAdvanceAt?: number;
 }
 
 export interface TurnRecord {

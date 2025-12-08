@@ -5,6 +5,7 @@ import { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { normalizeMatchName } from "../utils/normalize";
+import { validateTime } from "../utils/validation";
 import { DEFAULT_MAP_COLS, DEFAULT_MAP_ROWS } from "@shared";
 
 function getNumberOfMatches(storage: StorageService, userId: string): number {
@@ -43,6 +44,8 @@ export function createMatchRpc(
 
   let size = 2;
   let name = DEFAULT_MATCH_NAME;
+  let roundTime = "23:00";
+  let autoSkip = true;
 
   if (payload && payload !== "") {
     try {
@@ -52,6 +55,15 @@ export function createMatchRpc(
       }
       if (json && typeof json.name === "string") {
         name = normalizeMatchName(json.name);
+      }
+      if (json && typeof json.roundTime === "string") {
+        const valid = validateTime(json.roundTime);
+        if (valid) {
+          roundTime = valid;
+        }
+      }
+      if (json && typeof json.autoSkip === "boolean") {
+        autoSkip = json.autoSkip;
       }
     } catch (err) {
       logger.debug(
@@ -81,6 +93,8 @@ export function createMatchRpc(
     name,
     cols: String(DEFAULT_MAP_COLS),
     rows: String(DEFAULT_MAP_ROWS),
+    roundTime,
+    autoSkip: String(autoSkip),
   };
 
   const matchId = nkWrapper.matchCreate("async_turn", params);
@@ -93,6 +107,8 @@ export function createMatchRpc(
     size,
     cols: DEFAULT_MAP_COLS,
     rows: DEFAULT_MAP_ROWS,
+    roundTime,
+    autoSkip,
     created_at: Math.floor(Date.now() / 1000),
     current_turn: 0,
     creator: ctx.userId,

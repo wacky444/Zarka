@@ -72,6 +72,7 @@ export function restoreMatchesFromStorage(
           botPlayers: String(match.botPlayers || 0),
           current_turn: String(match.current_turn),
           started: String(match.started),
+          lastAutoAdvanceAt: String(match.lastAutoAdvanceAt || 0),
           restore: "true",
           old_match_id: oldMatchId,
           players: JSON.stringify(match.players),
