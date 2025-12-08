@@ -285,7 +285,7 @@ export class LobbyView {
     const cam = scene.cameras.main;
     this.returnToGameButton = makeButton(
       scene,
-      cam.width - 100,
+      10,
       cam.height - 40,
       "← Return",
       () => {

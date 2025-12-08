@@ -780,7 +780,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.menuButton) {
       this.menuButton.setPosition(
-        width - this.menuButton.width - 10,
+        0 + 10,
         height - this.menuButton.height - 10
       );
     }

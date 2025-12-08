@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { makeButton, type UIButton } from "./button";
 
 export type ChatConnectionState = "idle" | "connecting" | "ready" | "error";
 
@@ -50,7 +51,7 @@ export class CharacterPanelChatView {
   private readonly inputBackground: Phaser.GameObjects.Rectangle;
   private readonly inputText: Phaser.GameObjects.Text;
   private readonly placeholderText: Phaser.GameObjects.Text;
-  private readonly sendButton: Phaser.GameObjects.Text;
+  private readonly sendButton: UIButton;
   private readonly keyListener: (event: KeyboardEvent) => void;
   private sendCooldownUntil = 0;
   private sendCooldownTimer: number | null = null;
@@ -102,10 +103,10 @@ export class CharacterPanelChatView {
     this.placeholderText = this.scene.add
       .text(0, 0, "Type a message", { fontSize: "15px", color: "#6c7398" })
       .setVisible(false);
-    this.sendButton = this.scene.add
-      .text(0, 0, "Send", { fontSize: "16px", color: "#4ade80" })
-      .setVisible(false)
-      .setInteractive({ useHandCursor: true });
+    this.sendButton = makeButton(this.scene, 0, 0, "Send", () => {
+      this.trySend();
+    });
+    this.sendButton.setVisible(false);
     this.elements = [
       this.titleText,
       this.statusText,
