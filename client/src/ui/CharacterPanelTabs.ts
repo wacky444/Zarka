@@ -13,10 +13,13 @@ interface CharacterPanelTabsOptions {
   defaultKey: TabKey;
   characterElements: Phaser.GameObjects.GameObject[];
   itemsElements: Phaser.GameObjects.GameObject[];
+  chatElements: Phaser.GameObjects.GameObject[];
   onCharacterTabShow: () => void;
   onCharacterTabHide: () => void;
   onItemsTabShow: () => void;
   onItemsTabHide: () => void;
+  onChatTabShow: () => void;
+  onChatTabHide: () => void;
   onLogVisibilityChange: (options: {
     visible: boolean;
     forceEnsure: boolean;
@@ -91,6 +94,13 @@ export class CharacterPanelTabs {
       this.options.onItemsTabShow();
     } else {
       this.options.onItemsTabHide();
+    }
+    const showChat = this.activeKey === "chat";
+    this.toggleElements(this.options.chatElements, showChat);
+    if (showChat) {
+      this.options.onChatTabShow();
+    } else {
+      this.options.onChatTabHide();
     }
     const showLog = this.activeKey === "log";
     this.options.onLogVisibilityChange({ visible: showLog, forceEnsure });

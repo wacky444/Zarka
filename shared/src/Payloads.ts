@@ -2,6 +2,7 @@ import type { MatchItemRecord, MatchRecord, TurnRecord } from "./match";
 import type { GameMap, Axial } from "./hexTile";
 import type { PlayerCharacter } from "./playerCharacter";
 import type { ReplayEvent } from "./Replay";
+import type { MatchChatMessage } from "./chat";
 
 export const OPCODE_SETTINGS_UPDATE = 100;
 export const OPCODE_MATCH_REMOVED = 101;
@@ -153,4 +154,18 @@ export type TurnAdvancedMessagePayload = {
   viewDistance?: number;
   map?: GameMap;
   items?: MatchItemRecord[];
+};
+
+export type SaveChatMessagePayload = {
+  ok?: boolean;
+  match_id?: string;
+  message_id?: string;
+  error?: string;
+};
+
+export type GetChatHistoryPayload = {
+  ok?: boolean;
+  match_id?: string;
+  messages?: MatchChatMessage[];
+  error?: string;
 };

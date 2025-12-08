@@ -30,6 +30,15 @@ import { CharacterPanelLogView } from "./CharacterPanelLogView";
 import { InventoryGrid, type InventoryGridItem } from "./InventoryGrid";
 import { resolveItemTexture } from "./itemIcons";
 import { ENERGY_ACCENT_COLOR, HEALTH_ACCENT_COLOR } from "./ColorPalette";
+import {
+  CharacterPanelChatView,
+  type ChatConnectionState,
+  type ChatMessageViewModel,
+} from "./CharacterPanelChatView";
+export type {
+  ChatMessageViewModel,
+  ChatConnectionState,
+} from "./CharacterPanelChatView";
 
 type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   layout?: () => void;
@@ -112,8 +121,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private tabs: CharacterPanelTabEntry[] = [];
   private characterElements: Phaser.GameObjects.GameObject[] = [];
   private itemsElements: Phaser.GameObjects.GameObject[] = [];
+  private chatElements: Phaser.GameObjects.GameObject[] = [];
   private tabsController!: CharacterPanelTabs;
   private logView!: CharacterPanelLogView;
+  private chatView!: CharacterPanelChatView;
   private portrait: Phaser.GameObjects.Image;
   private nameText: Phaser.GameObjects.Text;
   private healthLabel: Phaser.GameObjects.Text;
@@ -653,6 +664,26 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       boxWidth,
       panelHeight: this.panelHeight,
     });
+    this.chatView = new CharacterPanelChatView({
+      scene,
+      onSend: (message) => {
+        this.emit("chat-send", message);
+      },
+      onFocusChange: (focused) => {
+        this.emit("chat-focus-change", focused);
+      },
+    });
+    this.chatElements = this.chatView.getElements();
+    for (const element of this.chatElements) {
+      this.add(element);
+    }
+    this.chatView.handleVisibilityChange(false);
+    this.chatView.layout({
+      margin: MARGIN,
+      contentTop,
+      boxWidth,
+      panelHeight: this.panelHeight,
+    });
     this.characterElements = [
       this.portrait,
       this.nameText,
@@ -670,6 +701,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       defaultKey: "character",
       characterElements: this.characterElements,
       itemsElements: this.itemsElements,
+      chatElements: this.chatElements,
       onCharacterTabShow: () => {
         this.mainActionDropdown.setVisible(true);
         this.mainActionDropdown.setActive(true);
@@ -704,6 +736,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       },
       onItemsTabHide: () => {
         this.inventoryGrid.setActive(false);
+      },
+      onChatTabShow: () => {
+        this.chatView.handleVisibilityChange(true);
+        this.emit("chat-tab-opened");
+      },
+      onChatTabHide: () => {
+        this.chatView.handleVisibilityChange(false);
+        this.emit("chat-tab-closed");
       },
       onLogVisibilityChange: ({ visible, forceEnsure }) => {
         this.logView.handleVisibilityChange({ visible, forceEnsure });
@@ -759,6 +799,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.secondaryPlayerSelector.hideDropdown();
     this.readyToggle?.off("pointerup", this.handleReadyToggle);
     this.logView?.destroy();
+    this.chatView?.destroy();
     super.destroy(fromScene);
   }
 
@@ -816,6 +857,30 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         panelHeight: height,
       });
     }
+    if (this.chatView) {
+      this.chatView.layout({
+        margin: MARGIN,
+        contentTop,
+        boxWidth,
+        panelHeight: height,
+      });
+    }
+  }
+
+  setChatMessages(messages: ChatMessageViewModel[]) {
+    this.chatView?.setMessages(messages);
+  }
+
+  appendChatMessage(message: ChatMessageViewModel) {
+    this.chatView?.appendMessage(message);
+  }
+
+  setChatConnectionState(state: ChatConnectionState, message?: string) {
+    this.chatView?.setConnectionState(state, message);
+  }
+
+  setChatInputEnabled(enabled: boolean) {
+    this.chatView?.setInputEnabled(enabled);
   }
 
   getPanelWidth() {

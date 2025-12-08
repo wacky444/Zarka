@@ -130,6 +130,17 @@ export function restoreMatchesFromStorage(
           }
         }
 
+        try {
+          storage.migrateChatLog(oldMatchId, newMatchId);
+        } catch (chatError) {
+          logger.warn(
+            "Failed to migrate chat log for %s -> %s: %s",
+            oldMatchId,
+            newMatchId,
+            (chatError as Error).message || String(chatError)
+          );
+        }
+
         restoredCount++;
       } catch (e) {
         logger.error(

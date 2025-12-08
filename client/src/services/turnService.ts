@@ -7,6 +7,7 @@ import {
   type InMatchSettings,
   type ActionSubmission,
   type TurnAdvancedMessagePayload,
+  type SaveChatMessageRequest,
 } from "@shared";
 
 export type Move = { n: number; ts: number };
@@ -206,6 +207,28 @@ export class TurnService {
     const res = await this.client.rpc(this.session, "remove_match", {
       match_id,
     });
+    return res;
+  }
+
+  async saveChatMessage(request: SaveChatMessageRequest) {
+    const res = await this.client.rpc(
+      this.session,
+      "save_chat_message",
+      request
+    );
+    return res;
+  }
+
+  async getChatHistory(match_id: string, limit?: number) {
+    const payload: { match_id: string; limit?: number } = { match_id };
+    if (typeof limit === "number" && Number.isFinite(limit)) {
+      payload.limit = limit;
+    }
+    const res = await this.client.rpc(
+      this.session,
+      "get_chat_history",
+      payload
+    );
     return res;
   }
 

@@ -10,3 +10,4 @@ export * from "./ActionLibrary";
 export * from "./Item";
 export * from "./ItemLibrary";
 export * from "./Replay";
+export * from "./chat";

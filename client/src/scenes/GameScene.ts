@@ -5,8 +5,10 @@ import {
   CharacterPanel,
   type MainActionSelection,
   type SecondaryActionSelection,
+  type ChatMessageViewModel,
 } from "../ui/CharacterPanel";
 import type { TurnService } from "../services/turnService";
+import { MatchChatService } from "../services/chatService";
 import {
   ActionLibrary,
   ActionCategory,
@@ -28,6 +30,7 @@ import {
   type TurnAdvancedMessagePayload,
   type ReplayEvent,
   type GetReplayPayload,
+  type MatchChatMessage,
   getHexTileOffsets,
   ItemLibrary,
 } from "@shared";
@@ -80,6 +83,10 @@ export class GameScene extends Phaser.Scene {
   private tileItemContainers = new Map<string, Phaser.GameObjects.Container>();
   private itemTooltip: ItemTooltipManager | null = null;
   private eliminationBanner: EliminationBanner | null = null;
+  private chatService: MatchChatService | null = null;
+  private chatMessages: MatchChatMessage[] = [];
+  private chatUnsubscribe: (() => void) | null = null;
+  private chatHistoryRefreshRunning = false;
   private readonly turnAdvancedHandler = (
     payload: TurnAdvancedMessagePayload
   ) => {
@@ -193,6 +200,8 @@ export class GameScene extends Phaser.Scene {
       this.handlePlayerEliminated,
       this
     );
+    this.characterPanel.on("chat-send", this.handleChatSend, this);
+    this.characterPanel.on("chat-tab-opened", this.handleChatTabOpened, this);
 
     this.menuButton = makeButton(this, 0, 0, "☰", () => {
       this.scene.stop("GameScene");
@@ -213,6 +222,10 @@ export class GameScene extends Phaser.Scene {
     const map = this.resolveMap(match);
 
     await this.resolvePlayerNames(match);
+    const fallbackMatchId = this.registry.get("currentMatchId") as
+      | string
+      | null;
+    await this.initMatchChat(match?.match_id ?? fallbackMatchId ?? null);
     this.renderMap(map);
     if (match) {
       this.renderPlayerCharacters(match);
@@ -267,6 +280,12 @@ export class GameScene extends Phaser.Scene {
         this.handlePlayerEliminated,
         this
       );
+      this.characterPanel?.off("chat-send", this.handleChatSend, this);
+      this.characterPanel?.off(
+        "chat-tab-opened",
+        this.handleChatTabOpened,
+        this
+      );
       this.gridModalActive = false;
       this.cancelMainActionLocationPick();
       this.itemTooltip?.hide();
@@ -281,6 +300,16 @@ export class GameScene extends Phaser.Scene {
       }
       this.eliminationBanner?.destroy();
       this.eliminationBanner = null;
+      if (this.chatUnsubscribe) {
+        this.chatUnsubscribe();
+        this.chatUnsubscribe = null;
+      }
+      if (this.chatService) {
+        this.chatService
+          .disconnect()
+          .catch((error) => console.warn("Chat disconnect failed", error));
+        this.chatService = null;
+      }
     });
   }
 
@@ -823,6 +852,128 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.currentUserId) {
       this.currentPlayerName = this.playerNameMap[this.currentUserId] ?? null;
+    }
+  }
+
+  private async initMatchChat(matchId: string | null) {
+    const panel = this.characterPanel;
+    if (!panel) {
+      return;
+    }
+    if (this.chatUnsubscribe) {
+      this.chatUnsubscribe();
+      this.chatUnsubscribe = null;
+    }
+    this.chatMessages = [];
+    panel.setChatMessages([]);
+    if (!matchId || !this.turnService) {
+      panel.setChatConnectionState("idle", "Chat unavailable");
+      panel.setChatInputEnabled(false);
+      if (this.chatService) {
+        await this.chatService.disconnect();
+        this.chatService = null;
+      }
+      return;
+    }
+    if (!this.chatService) {
+      this.chatService = new MatchChatService(this.turnService);
+    }
+    panel.setChatConnectionState("connecting", "Connecting...");
+    panel.setChatInputEnabled(false);
+    try {
+      const history = await this.chatService.connect(matchId);
+      this.chatMessages = Array.isArray(history) ? history : [];
+      this.syncChatMessagesToPanel();
+      panel.setChatConnectionState("ready", "Connected");
+      panel.setChatInputEnabled(true);
+      this.chatUnsubscribe = this.chatService.onMessage((payload) => {
+        this.handleIncomingChatMessage(payload);
+      });
+    } catch (error) {
+      console.warn("initMatchChat failed", error);
+      panel.setChatConnectionState("error", "Chat unavailable");
+      panel.setChatInputEnabled(false);
+    }
+  }
+
+  private handleIncomingChatMessage(message: MatchChatMessage) {
+    this.chatMessages = [...this.chatMessages, message].slice(-100);
+    if (!this.characterPanel) {
+      return;
+    }
+    this.characterPanel.appendChatMessage(this.toChatViewModel(message));
+  }
+
+  private syncChatMessagesToPanel() {
+    if (!this.characterPanel) {
+      return;
+    }
+    const list = this.chatMessages.map((entry) => this.toChatViewModel(entry));
+    this.characterPanel.setChatMessages(list);
+  }
+
+  private toChatViewModel(message: MatchChatMessage): ChatMessageViewModel {
+    const baseName =
+      this.playerNameMap[message.senderId] ??
+      message.username ??
+      message.senderId ??
+      "Unknown";
+    return {
+      id:
+        message.messageId?.trim().length > 0
+          ? message.messageId
+          : `${message.createdAt}:${message.senderId}`,
+      senderLabel: message.system ? "System" : baseName,
+      content: message.content,
+      timestamp: message.createdAt,
+      isSelf: !!this.currentUserId && message.senderId === this.currentUserId,
+      isSystem: message.system === true,
+    };
+  }
+
+  private async handleChatSend(message: string) {
+    if (!this.chatService) {
+      return;
+    }
+    try {
+      await this.chatService.send(message);
+    } catch (error) {
+      console.warn("chat send failed", error);
+      this.characterPanel?.setChatConnectionState("error", "Send failed");
+      setTimeout(() => {
+        this.characterPanel?.setChatConnectionState("ready", "Connected");
+      }, 2000);
+    }
+  }
+
+  private async handleChatTabOpened() {
+    if (this.chatService) {
+      if (this.chatMessages.length === 0) {
+        await this.refreshChatHistory();
+      } else {
+        this.syncChatMessagesToPanel();
+      }
+      return;
+    }
+    const matchId = this.registry.get("currentMatchId") as string | null;
+    if (matchId) {
+      await this.initMatchChat(matchId);
+    }
+  }
+
+  private async refreshChatHistory() {
+    if (!this.chatService || this.chatHistoryRefreshRunning) {
+      return;
+    }
+    this.chatHistoryRefreshRunning = true;
+    try {
+      const history = await this.chatService.refreshHistory();
+      this.chatMessages = Array.isArray(history) ? history : [];
+      this.syncChatMessagesToPanel();
+    } catch (error) {
+      console.warn("chat history refresh failed", error);
+    } finally {
+      this.chatHistoryRefreshRunning = false;
     }
   }
 

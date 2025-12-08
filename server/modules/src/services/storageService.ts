@@ -6,9 +6,11 @@ import {
   REPLAY_COLLECTION,
   SERVER_USER_ID,
   TURN_COLLECTION,
+  CHAT_COLLECTION,
+  CHAT_KEY_PREFIX,
 } from "../constants";
 import { MatchRecord, TurnRecord } from "../models/types";
-import type { ReplayRecord } from "@shared";
+import type { MatchChatLog, MatchChatMessage, ReplayRecord } from "@shared";
 import { NakamaWrapper, createNakamaWrapper } from "./nakamaWrapper";
 
 export interface MatchStorageObject {
@@ -20,6 +22,13 @@ export interface ReplayStorageObject {
   key: string;
   replay: ReplayRecord;
 }
+
+export interface ChatLogStorageObject {
+  chat: MatchChatLog;
+  version: string;
+}
+
+const CHAT_HISTORY_LIMIT = 200;
 
 export function createStorageService(nk: nkruntime.Nakama): StorageService {
   return new StorageService(createNakamaWrapper(nk));
@@ -172,6 +181,118 @@ export class StorageService {
     return items;
   }
 
+  getChatLog(matchId: string): ChatLogStorageObject | null {
+    const key = this.getChatKey(matchId);
+    const reads = this.nk.storageRead([
+      {
+        collection: CHAT_COLLECTION,
+        key,
+        userId: SERVER_USER_ID,
+      },
+    ]);
+    if (!reads || reads.length === 0 || !reads[0]) {
+      return null;
+    }
+    const chat = reads[0].value as MatchChatLog;
+    return {
+      chat,
+      version: reads[0].version,
+    };
+  }
+
+  writeChatLog(log: MatchChatLog, version?: string): void {
+    this.nk.storageWrite([
+      {
+        collection: CHAT_COLLECTION,
+        key: this.getChatKey(log.matchId),
+        userId: SERVER_USER_ID,
+        value: log,
+        permissionRead: 2,
+        permissionWrite: 0,
+        version,
+      },
+    ]);
+  }
+
+  appendChatMessage(
+    message: MatchChatMessage,
+    limit = CHAT_HISTORY_LIMIT
+  ): void {
+    const matchId = message.matchId;
+    const maxAttempts = 5;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const existing = this.getChatLog(matchId);
+      const currentMessages: MatchChatMessage[] = existing?.chat?.messages
+        ? [...existing.chat.messages]
+        : [];
+      const alreadyStored = currentMessages.some(
+        (entry) => entry.messageId === message.messageId
+      );
+      if (!alreadyStored) {
+        currentMessages.push(message);
+      }
+      if (currentMessages.length > limit) {
+        currentMessages.splice(0, currentMessages.length - limit);
+      }
+      const log: MatchChatLog = {
+        matchId,
+        messages: currentMessages,
+        updatedAt: message.createdAt || Date.now(),
+      };
+      try {
+        this.writeChatLog(log, existing?.version);
+        return;
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        if (!/version conflict/i.test(errMsg)) {
+          throw error;
+        }
+        // retry on version conflict
+      }
+    }
+    throw new Error(`Failed to append chat message for match ${matchId} after ${maxAttempts} attempts`);
+  }
+
+  listChatMessages(
+    matchId: string,
+    limit = CHAT_HISTORY_LIMIT
+  ): MatchChatMessage[] {
+    const existing = this.getChatLog(matchId);
+    if (!existing || !existing.chat || !Array.isArray(existing.chat.messages)) {
+      return [];
+    }
+    const messages = existing.chat.messages.slice(-limit);
+    return messages;
+  }
+
+  deleteChatLog(matchId: string): void {
+    this.nk.storageDelete([
+      {
+        collection: CHAT_COLLECTION,
+        key: this.getChatKey(matchId),
+        userId: SERVER_USER_ID,
+      },
+    ]);
+  }
+
+  migrateChatLog(oldMatchId: string, newMatchId: string): void {
+    const existing = this.getChatLog(oldMatchId);
+    if (!existing || !existing.chat) {
+      return;
+    }
+    const updatedMessages = existing.chat.messages.map((entry) => ({
+      ...entry,
+      matchId: newMatchId,
+    }));
+    const log: MatchChatLog = {
+      matchId: newMatchId,
+      messages: updatedMessages,
+      updatedAt: existing.chat.updatedAt,
+    };
+    this.writeChatLog(log);
+    this.deleteChatLog(oldMatchId);
+  }
+
   deleteReplayByKey(key: string): void {
     this.nk.storageDelete([
       {
@@ -231,6 +352,10 @@ export class StorageService {
 
   private getMatchKey(matchId: string): string {
     return MATCH_KEY_PREFIX + matchId;
+  }
+
+  private getChatKey(matchId: string): string {
+    return CHAT_KEY_PREFIX + matchId;
   }
 
   private getTurnKey(matchId: string, turnNumber: number): string {
