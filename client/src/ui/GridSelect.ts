@@ -64,12 +64,17 @@ type RexGridTable = Phaser.GameObjects.GameObject & {
   setItems: (items?: unknown[]) => unknown;
   refresh?: () => unknown;
   layout?: () => unknown;
+  getBounds?: () => Phaser.Geom.Rectangle;
   on: (
     event: string,
     callback: (...args: unknown[]) => void,
     context?: unknown
   ) => unknown;
   resetAllCellsSize?: (width: number, height: number) => unknown;
+  setMask?: (
+    mask: Phaser.Display.Masks.BitmapMask | Phaser.Display.Masks.GeometryMask
+  ) => Phaser.GameObjects.GameObject;
+  clearMask?: (destroyMask?: boolean) => Phaser.GameObjects.GameObject;
 };
 
 type RexRoundRectangle = Phaser.GameObjects.GameObject & {
@@ -106,6 +111,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private overlay: Phaser.GameObjects.Container | null = null;
   private modalCover: Phaser.GameObjects.Rectangle | null = null;
   private gridTable: RexGridTable | null = null;
+  private gridTableMask: Phaser.Display.Masks.GeometryMask | null = null;
+  private gridTableMaskShape: Phaser.GameObjects.Rectangle | null = null;
   private tooltip: HoverTooltip | null = null;
   private enabled = true;
   private readonly labelActiveColor: string;
@@ -537,6 +544,29 @@ export class GridSelect extends Phaser.GameObjects.Container {
     modal.layout();
     modal.setPosition(width / 2, height / 2);
     overlay.add(modal);
+
+    this.gridTableMaskShape?.destroy();
+    this.gridTableMaskShape = null;
+    this.gridTableMask?.destroy();
+    this.gridTableMask = null;
+
+    const bounds =
+      gridTable.getBounds?.() ??
+      new Phaser.Geom.Rectangle(
+        (gridTable as unknown as { x?: number }).x ?? 0,
+        (gridTable as unknown as { y?: number }).y ?? 0,
+        (gridTable as unknown as { width?: number }).width ?? 0,
+        (gridTable as unknown as { height?: number }).height ?? 0
+      );
+    this.gridTableMaskShape = scene.add
+      .rectangle(bounds.x, bounds.y, bounds.width, bounds.height, 0xffffff, 1)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setAlpha(0.0001);
+    overlay.add(this.gridTableMaskShape);
+    this.gridTableMask = this.gridTableMaskShape.createGeometryMask();
+    gridTable.setMask?.(this.gridTableMask);
+
     this.ensureTooltip();
     this.overlay = overlay;
     this.gridTable = gridTable;
@@ -551,7 +581,14 @@ export class GridSelect extends Phaser.GameObjects.Container {
       }
       return;
     }
+
     if (forceDestroy) {
+      this.gridTable?.clearMask?.();
+      this.gridTableMask?.destroy();
+      this.gridTableMask = null;
+      this.gridTableMaskShape?.destroy();
+      this.gridTableMaskShape = null;
+
       this.overlay.destroy(true);
       this.overlay = null;
       this.modalCover = null;

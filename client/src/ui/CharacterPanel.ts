@@ -46,6 +46,10 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   setSize?: (width: number, height: number) => void;
   setOrigin?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
   setPosition?: (x: number, y: number) => Phaser.GameObjects.GameObject;
+  setMask?: (
+    mask: Phaser.Display.Masks.BitmapMask | Phaser.Display.Masks.GeometryMask
+  ) => Phaser.GameObjects.GameObject;
+  clearMask?: (destroyMask?: boolean) => Phaser.GameObjects.GameObject;
 };
 
 const DEFAULT_WIDTH = 420;
@@ -150,6 +154,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private itemsTitle!: Phaser.GameObjects.Text;
   private inventoryGrid!: InventoryGrid;
   private scrollPanel: ScrollablePanelInstance | null = null;
+  private scrollMask: Phaser.Display.Masks.GeometryMask | null = null;
+  private scrollMaskShape: Phaser.GameObjects.Rectangle | null = null;
   private scrollContent: Phaser.GameObjects.Container;
   private scrollContentWidth = 0;
   private panelWidth: number;
@@ -372,6 +378,21 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       height - estimatedScrollTop - MARGIN
     );
 
+    this.scrollMaskShape = scene.add
+      .rectangle(
+        460,
+        estimatedScrollTop,
+        initialScrollWidth + 100,
+        estimatedScrollHeight,
+        0xffffff,
+        0
+      )
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setVisible(true);
+    this.scrollMask = this.scrollMaskShape.createGeometryMask();
+    this.add(this.scrollMaskShape);
+
     this.scrollPanel = scene.rexUI.add.scrollablePanel({
       x: MARGIN,
       y: estimatedScrollTop,
@@ -396,6 +417,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       space: { left: 0, right: 0, top: 0, bottom: 0 },
     }) as ScrollablePanelInstance;
     this.scrollPanel?.setOrigin?.(0, 0);
+    if (this.scrollMask) {
+      this.scrollPanel.setMask?.(this.scrollMask);
+    }
     this.add(this.scrollPanel);
 
     const boxWidth = initialScrollWidth;
@@ -800,6 +824,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.readyToggle?.off("pointerup", this.handleReadyToggle);
     this.logView?.destroy();
     this.chatView?.destroy();
+    this.scrollPanel?.clearMask?.();
+    this.scrollMask?.destroy();
+    this.scrollMaskShape?.destroy();
+    this.scrollPanel = null;
+    this.scrollMask = null;
+    this.scrollMaskShape = null;
     super.destroy(fromScene);
   }
 
@@ -826,6 +856,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const scrollTop = readyBottom;
     const scrollHeight = Math.max(160, height - scrollTop - MARGIN);
     this.scrollContentWidth = scrollWidth;
+    if (this.scrollMaskShape) {
+      this.scrollMaskShape.setPosition(360, scrollTop);
+      this.scrollMaskShape.setSize(scrollWidth + 100, scrollHeight);
+      // this.scrollMaskShape.setDisplaySize(scrollWidth, scrollHeight);
+    }
     if (this.scrollPanel) {
       this.scrollPanel.setPosition?.(MARGIN, scrollTop);
       this.scrollPanel.setSize?.(scrollWidth, scrollHeight);
