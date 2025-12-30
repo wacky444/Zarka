@@ -87,7 +87,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     notes: [
       "Si no se dispone de esfuerzo suficiente al ejecutar la acción se pierde [color=#f97373]1[/color] punto de vida adicional tras completarla.",
     ],
-    tags: ["Support", "Status", "SingleTarget"],
+    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"],
   },
   breakfast: {
     id: "breakfast",
@@ -137,7 +137,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       maxRepetitions: 1,
       description: "Permite gastar una segunda venda en la misma acción.",
     },
-    tags: ["Support", "Status", "SingleTarget"],
+    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"],
   },
   use_medicine: {
     id: "use_medicine",
@@ -164,7 +164,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       maxRepetitions: 1,
       description: "Permite emplear un segundo medicamento.",
     },
-    tags: ["Support", "Status", "SingleTarget"],
+    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"],
   },
   talk: {
     id: "talk",
@@ -293,7 +293,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "shield.png",
     actionOrder: 3,
     actionSubOrder: 0,
-    tags: ["Support", "Status", "SingleTarget"],
+    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"],
   },
   dodge: {
     id: "dodge",
@@ -595,6 +595,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 3,
     cooldown: 3,
+    range: [1],
     developed: true,
     effects: [
       {
@@ -1003,7 +1004,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "notepad.png",
     actionOrder: 14,
     actionSubOrder: 2,
-    tags: ["Recon", "Logistics", "SingleTarget"],
+    tags: ["Recon", "Logistics", "SingleTarget", "CanTargetSelf"],
   },
   focus: {
     id: "focus",
@@ -1163,7 +1164,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "flask_half.png",
     actionOrder: 17,
     actionSubOrder: 0,
-    tags: ["Support", "Status", "SingleTarget"],
+    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"],
   },
   inject_virus: {
     id: "inject_virus",
@@ -1188,7 +1189,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "flask_full.png",
     actionOrder: 17,
     actionSubOrder: 1,
-    tags: ["Attack", "Area", "Status", "SingleTarget"],
+    tags: ["Attack", "Area", "Status", "SingleTarget", "CanTargetSelf"],
   },
   inject_vaccine: {
     id: "inject_vaccine",
@@ -1210,7 +1211,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "flask_half.png",
     actionOrder: 17,
     actionSubOrder: 2,
-    tags: ["Support", "Status", "SingleTarget"],
+    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"],
   },
   sleep: {
     id: "sleep",

@@ -86,7 +86,8 @@ export type ActionTag =
   | "Status"
   | "Economy"
   | "SingleTarget"
-  | "TargetItems";
+  | "TargetItems"
+  | "CanTargetSelf";
 
 export interface ActionRequirement {
   description: string;

@@ -178,8 +178,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private readyState = false;
   private readyEnabled = false;
   private playerOptions: PlayerOption[] = [];
+  private mainPlayerOptions: PlayerOption[] = [];
+  private secondaryPlayerOptions: PlayerOption[] = [];
   private itemOptions: ItemPriorityOption[] = [];
   private currentMatch: MatchRecord | null = null;
+  private currentUserId: string | null = null;
   private readonly handleMainActionSelection = (actionId: string | null) => {
     this.mainActionSelection = actionId ?? null;
     this.lastMainActionItem = this.mainActionDropdown.getSelectedItem() ?? null;
@@ -188,6 +191,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.setMainActionTargetPlayer(null, false);
       this.setMainActionPriorityItems([], false);
     }
+    this.refreshPlayerOptionsForSelectors();
     this.refreshLocationSelectorState();
     this.refreshPlayerSelectorState();
     this.emitMainActionChange();
@@ -224,6 +228,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.setSecondaryActionTargetPlayer(null, false);
       this.setSecondaryActionPriorityItems([], false);
     }
+    this.refreshPlayerOptionsForSelectors();
     this.refreshSecondaryLocationSelectorState();
     this.refreshSecondaryPlayerSelectorState();
     this.emitSecondaryActionChange();
@@ -945,6 +950,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const userMap = usernames ? { ...usernames } : {};
     this.logView.setUsernames(userMap);
     this.currentMatch = match ?? null;
+    this.currentUserId = currentUserId ?? null;
     this.updatePlayerOptions(match ?? null, userMap, currentUserId);
     this.updateItemOptions(match ?? null, currentUserId);
     if (!match || !currentUserId) {
@@ -1468,7 +1474,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private refreshPlayerSelectorState() {
     const supports = this.selectedActionSupportsSingleTarget();
-    const hasOptions = this.playerOptions.length > 0;
+    const hasOptions = this.mainPlayerOptions.length > 0;
     const shouldShow = supports && hasOptions;
     this.playerSelector.setVisible(shouldShow);
     this.playerSelector.setActive(shouldShow);
@@ -1544,7 +1550,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private refreshSecondaryPlayerSelectorState() {
     const supports = this.selectedSecondaryActionSupportsSingleTarget();
-    const hasOptions = this.playerOptions.length > 0;
+    const hasOptions = this.secondaryPlayerOptions.length > 0;
     const shouldShow = supports && hasOptions;
     this.secondaryPlayerSelector.setVisible(shouldShow);
     this.secondaryPlayerSelector.setActive(shouldShow);
@@ -1684,7 +1690,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     let normalized: string | null = null;
     if (
       targetId &&
-      this.playerOptions.some((option) => option.id === targetId)
+      this.mainPlayerOptions.some((option) => option.id === targetId)
     ) {
       normalized = targetId;
     }
@@ -1721,7 +1727,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     let normalized: string | null = null;
     if (
       targetId &&
-      this.playerOptions.some((option) => option.id === targetId)
+      this.secondaryPlayerOptions.some((option) => option.id === targetId)
     ) {
       normalized = targetId;
     }
@@ -1774,34 +1780,69 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       }
     }
     this.playerOptions = options;
+    this.currentUserId = currentUserId ?? null;
+    this.refreshPlayerOptionsForSelectors();
+    this.refreshPlayerSelectorState();
+    this.refreshSecondaryPlayerSelectorState();
+  }
+
+  private refreshPlayerOptionsForSelectors(): void {
+    const baseOptions = this.playerOptions;
+    const currentUserId = this.currentUserId;
+
+    const mainAllowsSelf = this.selectedActionCanTargetSelf();
+    const secondaryAllowsSelf = this.selectedSecondaryActionCanTargetSelf();
+
+    const mainOptions =
+      currentUserId && !mainAllowsSelf
+        ? baseOptions.filter((option) => option.id !== currentUserId)
+        : baseOptions;
+    const secondaryOptions =
+      currentUserId && !secondaryAllowsSelf
+        ? baseOptions.filter((option) => option.id !== currentUserId)
+        : baseOptions;
+
+    this.mainPlayerOptions = mainOptions;
+    this.secondaryPlayerOptions = secondaryOptions;
+
     if (
       this.mainActionTargetPlayerId &&
-      !options.some((option) => option.id === this.mainActionTargetPlayerId)
+      !mainOptions.some((option) => option.id === this.mainActionTargetPlayerId)
     ) {
       this.mainActionTargetPlayerId = null;
     }
     if (
       this.secondaryActionTargetPlayerId &&
-      !options.some(
+      !secondaryOptions.some(
         (option) => option.id === this.secondaryActionTargetPlayerId
       )
     ) {
       this.secondaryActionTargetPlayerId = null;
     }
-    this.playerSelector.setOptions(options);
-    this.secondaryPlayerSelector.setOptions(options);
-    if (this.mainActionTargetPlayerId) {
-      this.playerSelector.setValue(this.mainActionTargetPlayerId);
-    } else {
-      this.playerSelector.setValue(null);
+
+    this.playerSelector.setOptions(mainOptions);
+    this.secondaryPlayerSelector.setOptions(secondaryOptions);
+
+    this.playerSelector.setValue(this.mainActionTargetPlayerId ?? null);
+    this.secondaryPlayerSelector.setValue(
+      this.secondaryActionTargetPlayerId ?? null
+    );
+  }
+
+  private selectedActionCanTargetSelf(): boolean {
+    if (!this.mainActionSelection) {
+      return false;
     }
-    if (this.secondaryActionTargetPlayerId) {
-      this.secondaryPlayerSelector.setValue(this.secondaryActionTargetPlayerId);
-    } else {
-      this.secondaryPlayerSelector.setValue(null);
+    const definition = ActionLibrary[this.mainActionSelection as ActionId];
+    return definition?.tags?.includes("CanTargetSelf") === true;
+  }
+
+  private selectedSecondaryActionCanTargetSelf(): boolean {
+    if (!this.secondaryActionSelection) {
+      return false;
     }
-    this.refreshPlayerSelectorState();
-    this.refreshSecondaryPlayerSelectorState();
+    const definition = ActionLibrary[this.secondaryActionSelection as ActionId];
+    return definition?.tags?.includes("CanTargetSelf") === true;
   }
 
   private filterPriorityIds(ids: string[]): string[] {
