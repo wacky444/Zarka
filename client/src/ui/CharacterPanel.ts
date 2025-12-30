@@ -42,6 +42,8 @@ export type {
 
 type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   layout?: () => void;
+  setMouseWheelScrollerEnable?: (enabled: boolean) => void;
+  mouseWheelScrollerEnable?: boolean;
   setMinSize?: (width: number, height: number) => void;
   setSize?: (width: number, height: number) => void;
   setOrigin?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
@@ -158,6 +160,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private scrollMaskShape: Phaser.GameObjects.Rectangle | null = null;
   private scrollContent: Phaser.GameObjects.Container;
   private scrollContentWidth = 0;
+  private gridModalOpenCount = 0;
   private panelWidth: number;
   private panelHeight: number;
   private barWidth: number;
@@ -246,9 +249,17 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.setSecondaryActionPriorityItems(itemIds ?? [], true);
   };
   private readonly handleActionModalOpen = () => {
+    this.gridModalOpenCount += 1;
+    if (this.gridModalOpenCount === 1) {
+      this.scrollPanel?.setMouseWheelScrollerEnable?.(false);
+    }
     this.emit("grid-modal-open");
   };
   private readonly handleActionModalClose = () => {
+    this.gridModalOpenCount = Math.max(0, this.gridModalOpenCount - 1);
+    if (this.gridModalOpenCount === 0) {
+      this.scrollPanel?.setMouseWheelScrollerEnable?.(true);
+    }
     this.emit("grid-modal-close");
   };
   private readonly handleLogElimination = (payload: LogEliminationPayload) => {

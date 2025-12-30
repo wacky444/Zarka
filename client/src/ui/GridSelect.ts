@@ -633,7 +633,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         thumb: scene.rexUI.add.roundRectangle(0, 0, 8, 36, 4, 0x3b82f6),
       },
       mouseWheelScroller: {
-        focus: false,
+        focus: true,
         speed: 0.3,
       },
       space: {
