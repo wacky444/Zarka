@@ -3,6 +3,7 @@ import type { GameMap, Axial } from "./hexTile";
 import type { PlayerCharacter } from "./playerCharacter";
 import type { ReplayEvent } from "./Replay";
 import type { MatchChatMessage } from "./chat";
+import type { UserAccount } from "./UserAccount";
 
 export const OPCODE_SETTINGS_UPDATE = 100;
 export const OPCODE_MATCH_REMOVED = 101;
@@ -167,5 +168,11 @@ export type GetChatHistoryPayload = {
   ok?: boolean;
   match_id?: string;
   messages?: MatchChatMessage[];
+  error?: string;
+};
+
+export type GetUserAccountPayload = {
+  ok?: boolean;
+  account?: UserAccount;
   error?: string;
 };

@@ -11,3 +11,4 @@ export * from "./Item";
 export * from "./ItemLibrary";
 export * from "./Replay";
 export * from "./chat";
+export * from "./UserAccount";

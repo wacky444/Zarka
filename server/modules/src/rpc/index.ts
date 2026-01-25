@@ -13,3 +13,4 @@ export { updateSecondaryActionRpc } from "./updateSecondaryAction";
 export { getReplayRpc } from "./getReplay";
 export { saveChatMessageRpc } from "./saveChatMessage";
 export { getChatHistoryRpc } from "./getChatHistory";
+export { getUserAccountRpc } from "./getUserAccount";

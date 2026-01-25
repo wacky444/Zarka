@@ -12,7 +12,8 @@ export interface TurnResolutionResult {
 
 export function resolveTurnForMatch(
   match: MatchRecord,
-  logger: nkruntime.Logger
+  logger: nkruntime.Logger,
+  nk: nkruntime.Nakama
 ): TurnResolutionResult {
   const players = Array.isArray(match.players) ? match.players : [];
   if (players.length === 0) {
@@ -21,7 +22,7 @@ export function resolveTurnForMatch(
 
   const resolvedTurn = (match.current_turn || 0) + 1;
   processBotActions(match, logger);
-  const { events } = advanceTurn(match, resolvedTurn, logger);
+  const { events } = advanceTurn(match, resolvedTurn, logger, nk);
 
   const resetStates: Record<string, boolean> = {};
   for (const playerId of players) {

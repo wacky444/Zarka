@@ -122,7 +122,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       return { state };
     }
 
-    const outcome = resolveTurnForMatch(match, logger);
+    const outcome = resolveTurnForMatch(match, logger, nk);
     if (!outcome.advanced || !outcome.resolvedTurn) {
       return { state };
     }
@@ -179,6 +179,21 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
         ctx.matchId,
         (error as Error).message
       );
+    }
+
+    if (match.removed && match.removed !== 0) {
+      try {
+        nkWrapper.matchSignal(
+          ctx.matchId,
+          JSON.stringify({ type: "match_removed" })
+        );
+      } catch (error) {
+        logger.debug(
+          "autoskip match_removed signal failed for %s: %s",
+          ctx.matchId,
+          (error as Error).message
+        );
+      }
     }
 
     state.lastAutoAdvanceAt = match.lastAutoAdvanceAt;

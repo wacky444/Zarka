@@ -83,7 +83,7 @@ export function updateReadyStateRpc(
   let resolvedTurnNumber: number | null = null;
 
   if (allReady) {
-    const outcome = resolveTurnForMatch(match, logger);
+    const outcome = resolveTurnForMatch(match, logger, nk);
     if (outcome.advanced) {
       resolvedTurnNumber = outcome.resolvedTurn ?? null;
       advanceResult = { events: outcome.events };
@@ -145,6 +145,20 @@ export function updateReadyStateRpc(
         "update_ready_state matchSignal failed: %s",
         (e as Error).message
       );
+    }
+
+    if (match.removed && match.removed !== 0) {
+      try {
+        nkWrapper.matchSignal(
+          matchId,
+          JSON.stringify({ type: "match_removed" })
+        );
+      } catch (e) {
+        logger.debug(
+          "update_ready_state match_removed signal failed: %s",
+          (e as Error).message
+        );
+      }
     }
   }
 

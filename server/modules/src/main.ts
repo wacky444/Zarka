@@ -17,6 +17,7 @@ import {
   getReplayRpc,
   saveChatMessageRpc,
   getChatHistoryRpc,
+  getUserAccountRpc,
 } from "./rpc";
 import { asyncTurnMatchHandler } from "./match/async_turn";
 import { restoreMatchesFromStorage } from "./services/matchRestoration";
@@ -72,6 +73,14 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register get_chat_history: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("get_user_account", getUserAccountRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register get_user_account: %s",
       (error && (error as Error).message) || String(error)
     );
   }

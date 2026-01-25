@@ -22,6 +22,7 @@ import { executeFocusAction } from "./actions/focus";
 import { executeUseBandageAction } from "./actions/useBandage";
 import { executeSearchAction } from "./actions/search";
 import { executePickUpAction } from "./actions/pickup";
+import { finalizeMatchIfEnded } from "./checkEndGame";
 import {
   applyActionCooldown,
   updateCooldownsForTurn,
@@ -222,7 +223,8 @@ function removeStateFromAllCharacters(
 export function advanceTurn(
   match: MatchRecord,
   resolvedTurn: number,
-  logger: any
+  logger: nkruntime.Logger,
+  nk?: nkruntime.Nakama
 ): AdvanceTurnResult {
   if (!Array.isArray(match.players) || !match.playerCharacters) {
     return { events: [] };
@@ -662,5 +664,9 @@ export function advanceTurn(
     }
   }
   // removeProtectedState(match);
+
+  if (nk) {
+    finalizeMatchIfEnded(match, nk, logger);
+  }
   return { events: replayEvents };
 }
