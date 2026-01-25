@@ -8,6 +8,7 @@ import type { UserAccount } from "./UserAccount";
 export const OPCODE_SETTINGS_UPDATE = 100;
 export const OPCODE_MATCH_REMOVED = 101;
 export const OPCODE_TURN_ADVANCED = 102;
+export const OPCODE_MATCH_ENDED = 103;
 
 export type CreateMatchPayload = {
   match_id: string;
@@ -155,6 +156,12 @@ export type TurnAdvancedMessagePayload = {
   viewDistance?: number;
   map?: GameMap;
   items?: MatchItemRecord[];
+};
+
+export type MatchEndedMessagePayload = {
+  match_id: string;
+  winnerId?: string;
+  reason: "last_alive" | "all_dead";
 };
 
 export type SaveChatMessagePayload = {

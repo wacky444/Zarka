@@ -2,11 +2,13 @@ import { Client, Session, Socket } from "@heroiclabs/nakama-js";
 import { getEnv } from "./nakama";
 import {
   OPCODE_MATCH_REMOVED,
+  OPCODE_MATCH_ENDED,
   OPCODE_SETTINGS_UPDATE,
   OPCODE_TURN_ADVANCED,
   type InMatchSettings,
   type ActionSubmission,
   type TurnAdvancedMessagePayload,
+  type MatchEndedMessagePayload,
   type SaveChatMessageRequest,
 } from "@shared";
 
@@ -33,10 +35,14 @@ export class TurnService {
     players?: string[];
   }) => void;
   private onMatchRemoved?: () => void;
+  private onMatchEnded?: (payload: MatchEndedMessagePayload) => void;
   private onTurnAdvanced?: (payload: TurnAdvancedMessagePayload) => void;
   private usernameCache = new Map<string, string>();
 
-  constructor(private client: Client, private session: Session) {}
+  constructor(
+    private client: Client,
+    private session: Session,
+  ) {}
 
   // Resolve Nakama usernames (or display names) for the given userIds with caching.
   async resolveUsernames(userIds: string[]): Promise<Record<string, string>> {
@@ -47,9 +53,9 @@ export class TurnService {
     const ids = Array.from(
       new Set(
         userIds.filter(
-          (id): id is string => typeof id === "string" && id.trim().length > 0
-        )
-      )
+          (id): id is string => typeof id === "string" && id.trim().length > 0,
+        ),
+      ),
     );
 
     if (ids.length === 0) {
@@ -78,8 +84,8 @@ export class TurnService {
             typeof user.user_id === "string"
               ? user.user_id
               : typeof user.id === "string"
-              ? user.id
-              : null;
+                ? user.id
+                : null;
           if (!id) continue;
           const username =
             (typeof user.username === "string" && user.username.trim()) ||
@@ -162,7 +168,7 @@ export class TurnService {
 
   async updateMainAction(
     match_id: string,
-    submission: ActionSubmission | null
+    submission: ActionSubmission | null,
   ) {
     const res = await this.client.rpc(this.session, "update_main_action", {
       match_id,
@@ -173,7 +179,7 @@ export class TurnService {
 
   async updateSecondaryAction(
     match_id: string,
-    submission: ActionSubmission | null
+    submission: ActionSubmission | null,
   ) {
     const res = await this.client.rpc(this.session, "update_secondary_action", {
       match_id,
@@ -214,7 +220,7 @@ export class TurnService {
     const res = await this.client.rpc(
       this.session,
       "save_chat_message",
-      request
+      request,
     );
     return res;
   }
@@ -227,7 +233,7 @@ export class TurnService {
     const res = await this.client.rpc(
       this.session,
       "get_chat_history",
-      payload
+      payload,
     );
     return res;
   }
@@ -269,10 +275,21 @@ export class TurnService {
           } catch (e) {
             console.warn("Failed to parse match removed message", e);
           }
+        } else if (m.op_code === OPCODE_MATCH_ENDED) {
+          try {
+            const payload = JSON.parse(
+              new TextDecoder().decode(m.data),
+            ) as MatchEndedMessagePayload;
+            if (this.onMatchEnded) {
+              this.onMatchEnded(payload);
+            }
+          } catch (e) {
+            console.warn("Failed to parse match ended message", e);
+          }
         } else if (m.op_code === OPCODE_TURN_ADVANCED) {
           try {
             const payload = JSON.parse(
-              new TextDecoder().decode(m.data)
+              new TextDecoder().decode(m.data),
             ) as TurnAdvancedMessagePayload;
             if (this.onTurnAdvanced) {
               this.onTurnAdvanced(payload);
@@ -334,13 +351,17 @@ export class TurnService {
       started?: boolean;
       name?: string;
       players?: string[];
-    }) => void
+    }) => void,
   ) {
     this.onSettingsUpdate = cb;
   }
 
   setOnMatchRemoved(cb: () => void) {
     this.onMatchRemoved = cb;
+  }
+
+  setOnMatchEnded(cb?: (payload: MatchEndedMessagePayload) => void) {
+    this.onMatchEnded = cb;
   }
 
   setOnTurnAdvanced(cb?: (payload: TurnAdvancedMessagePayload) => void) {
@@ -364,6 +385,7 @@ export class TurnService {
     }
     this.onSettingsUpdate = undefined;
     this.onMatchRemoved = undefined;
+    this.onMatchEnded = undefined;
     this.onTurnAdvanced = undefined;
   }
 

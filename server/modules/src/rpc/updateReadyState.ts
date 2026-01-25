@@ -12,12 +12,13 @@ import {
 } from "../utils/matchView";
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
 import { resolveTurnForMatch } from "../match/turnResolution";
+import { getAliveCharacterIds } from "../match/checkEndGame";
 
 export function updateReadyStateRpc(
   ctx: nkruntime.Context,
   logger: nkruntime.Logger,
   nk: nkruntime.Nakama,
-  payload: string
+  payload: string,
 ): string {
   if (!ctx || !ctx.userId) {
     throw makeNakamaError("No user context", nkruntime.Codes.INVALID_ARGUMENT);
@@ -38,7 +39,7 @@ export function updateReadyStateRpc(
   if (!matchId || matchId === "") {
     throw makeNakamaError(
       "match_id required",
-      nkruntime.Codes.INVALID_ARGUMENT
+      nkruntime.Codes.INVALID_ARGUMENT,
     );
   }
 
@@ -77,7 +78,7 @@ export function updateReadyStateRpc(
       (playerId) =>
         match.readyStates !== undefined &&
         (isCharacterIncapacitated(match.playerCharacters?.[playerId]) ||
-          match.readyStates[playerId] === true)
+          match.readyStates[playerId] === true),
     );
   let advanceResult: AdvanceTurnResult | null = null;
   let resolvedTurnNumber: number | null = null;
@@ -96,7 +97,7 @@ export function updateReadyStateRpc(
   } catch (e) {
     logger.warn(
       "update_ready_state storage write failed: %s",
-      (e as Error).message
+      (e as Error).message,
     );
     throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
   }
@@ -117,7 +118,7 @@ export function updateReadyStateRpc(
     } catch (e) {
       logger.warn(
         "update_ready_state replay write failed: %s",
-        (e as Error).message
+        (e as Error).message,
       );
     }
   }
@@ -138,25 +139,44 @@ export function updateReadyStateRpc(
           viewDistance,
           map: match.map,
           items: match.items,
-        })
+        }),
       );
     } catch (e) {
       logger.debug(
         "update_ready_state matchSignal failed: %s",
-        (e as Error).message
+        (e as Error).message,
       );
     }
 
     if (match.removed && match.removed !== 0) {
       try {
+        const alive = getAliveCharacterIds(match);
+        const winnerId = alive.length === 1 ? alive[0] : undefined;
+        const reason = alive.length === 0 ? "all_dead" : "last_alive";
         nkWrapper.matchSignal(
           matchId,
-          JSON.stringify({ type: "match_removed" })
+          JSON.stringify({
+            type: "match_ended",
+            match_id: matchId,
+            winnerId,
+            reason,
+          }),
+        );
+      } catch (e) {
+        logger.debug(
+          "update_ready_state match_ended signal failed: %s",
+          (e as Error).message,
+        );
+      }
+      try {
+        nkWrapper.matchSignal(
+          matchId,
+          JSON.stringify({ type: "match_removed" }),
         );
       } catch (e) {
         logger.debug(
           "update_ready_state match_removed signal failed: %s",
-          (e as Error).message
+          (e as Error).message,
         );
       }
     }

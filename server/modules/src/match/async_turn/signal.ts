@@ -4,6 +4,7 @@ import { DEFAULT_MATCH_NAME } from "../../constants";
 import {
   DEFAULT_REPLAY_VIEW_DISTANCE,
   OPCODE_MATCH_REMOVED,
+  OPCODE_MATCH_ENDED,
   OPCODE_SETTINGS_UPDATE,
   OPCODE_TURN_ADVANCED,
 } from "@shared";
@@ -70,7 +71,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             payload,
             null,
             null,
-            true
+            true,
           );
         } catch {}
       } else if (msg && msg.type === "start_match") {
@@ -103,7 +104,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
               payload,
               null,
               null,
-              true
+              true,
             );
           } catch {}
         }
@@ -133,7 +134,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
         if (typeof msg.name === "string") {
           state.name = normalizeMatchName(
             msg.name,
-            state.name ?? DEFAULT_MATCH_NAME
+            state.name ?? DEFAULT_MATCH_NAME,
           );
         }
         if (typeof msg.started === "boolean") {
@@ -166,7 +167,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             payload,
             null,
             null,
-            true
+            true,
           );
         } catch {}
       } else if (msg && msg.type === "turn_advanced") {
@@ -207,7 +208,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
               payload,
               null,
               null,
-              true
+              true,
             );
           } else {
             for (const [playerId, presence] of entries) {
@@ -215,18 +216,18 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
                 events,
                 playerId,
                 msg.playerCharacters,
-                viewDistance
+                viewDistance,
               );
               const payload = JSON.stringify({
                 ...payloadBase,
                 replay: tailored,
                 map: tailorMapForCharacter(
                   msg.map,
-                  msg.playerCharacters?.[playerId] ?? null
+                  msg.playerCharacters?.[playerId] ?? null,
                 ),
                 items: tailorMatchItemsForCharacter(
                   msg.items,
-                  msg.playerCharacters?.[playerId] ?? null
+                  msg.playerCharacters?.[playerId] ?? null,
                 ),
               });
               dispatcher.broadcastMessage(
@@ -234,7 +235,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
                 payload,
                 [presence],
                 null,
-                true
+                true,
               );
             }
           }
@@ -247,10 +248,26 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             payload,
             null,
             null,
-            true
+            true,
           );
         } catch {}
         return null;
+      } else if (msg && msg.type === "match_ended") {
+        try {
+          const payload = JSON.stringify({
+            match_id: msg.match_id ?? ctx.matchId,
+            winnerId:
+              typeof msg.winnerId === "string" ? msg.winnerId : undefined,
+            reason: msg.reason === "all_dead" ? "all_dead" : "last_alive",
+          });
+          dispatcher.broadcastMessage(
+            OPCODE_MATCH_ENDED,
+            payload,
+            null,
+            null,
+            true,
+          );
+        } catch {}
       }
     } catch (e) {
       logger.warn("matchSignal parse error: %v", e);

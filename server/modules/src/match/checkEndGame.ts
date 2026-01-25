@@ -152,6 +152,22 @@ export function checkEndGameOutcome(match: MatchRecord): EndGameOutcome {
   };
 }
 
+export function getAliveCharacterIds(match: MatchRecord): string[] {
+  const characters = match.playerCharacters ?? {};
+  const characterIds = Object.keys(characters);
+  const alive: string[] = [];
+  for (const id of characterIds) {
+    const character = characters[id];
+    if (!character) {
+      continue;
+    }
+    if (!isCharacterDead(character)) {
+      alive.push(id);
+    }
+  }
+  return alive;
+}
+
 export function finalizeMatchIfEnded(
   match: MatchRecord,
   nk: nkruntime.Nakama,

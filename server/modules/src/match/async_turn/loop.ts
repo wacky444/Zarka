@@ -7,6 +7,7 @@ import { StorageService } from "../../services/storageService";
 import { resolveTurnForMatch } from "../turnResolution";
 import { validateTime } from "../../utils/validation";
 import { isCharacterIncapacitated } from "../../utils/playerCharacter";
+import { getAliveCharacterIds } from "../checkEndGame";
 
 const AUTO_CHECK_INTERVAL_MS = 60 * 1000;
 
@@ -33,7 +34,7 @@ function timeToMinutes(value: string): number | null {
 function hasAutoAdvancedToday(
   lastAutoAdvanceAt: number | undefined,
   nowMs: number,
-  offsetMinutes: number
+  offsetMinutes: number,
 ): boolean {
   if (!lastAutoAdvanceAt) return false;
   const lastLocal = toLocalDate(lastAutoAdvanceAt * 1000, offsetMinutes);
@@ -74,7 +75,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       "Auto-checking turn advancement, currentMinutes/targetMinutes/offset: %d/%d/%d",
       currentMinutes,
       targetMinutes,
-      offsetMinutes
+      offsetMinutes,
     );
     if (targetMinutes === null || currentMinutes < targetMinutes) {
       return { state };
@@ -94,7 +95,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
 
     const matchRoundTime =
       typeof match.roundTime === "string"
-        ? validateTime(match.roundTime) ?? configuredRoundTime
+        ? (validateTime(match.roundTime) ?? configuredRoundTime)
         : configuredRoundTime;
     const matchTargetMinutes = timeToMinutes(matchRoundTime);
     if (matchTargetMinutes === null || currentMinutes < matchTargetMinutes) {
@@ -136,7 +137,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       logger.warn(
         "autoskip write failed for %s: %s",
         ctx.matchId,
-        (error as Error).message
+        (error as Error).message,
       );
       return { state };
     }
@@ -153,7 +154,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
         logger.warn(
           "autoskip replay write failed for %s: %s",
           ctx.matchId,
-          (error as Error).message
+          (error as Error).message,
         );
       }
     }
@@ -171,27 +172,47 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
           viewDistance: DEFAULT_REPLAY_VIEW_DISTANCE,
           map: match.map,
           items: match.items,
-        })
+        }),
       );
     } catch (error) {
       logger.debug(
         "autoskip matchSignal failed for %s: %s",
         ctx.matchId,
-        (error as Error).message
+        (error as Error).message,
       );
     }
 
     if (match.removed && match.removed !== 0) {
       try {
+        const alive = getAliveCharacterIds(match);
+        const winnerId = alive.length === 1 ? alive[0] : undefined;
+        const reason = alive.length === 0 ? "all_dead" : "last_alive";
         nkWrapper.matchSignal(
           ctx.matchId,
-          JSON.stringify({ type: "match_removed" })
+          JSON.stringify({
+            type: "match_ended",
+            match_id: ctx.matchId,
+            winnerId,
+            reason,
+          }),
+        );
+      } catch (error) {
+        logger.debug(
+          "autoskip match_ended signal failed for %s: %s",
+          ctx.matchId,
+          (error as Error).message,
+        );
+      }
+      try {
+        nkWrapper.matchSignal(
+          ctx.matchId,
+          JSON.stringify({ type: "match_removed" }),
         );
       } catch (error) {
         logger.debug(
           "autoskip match_removed signal failed for %s: %s",
           ctx.matchId,
-          (error as Error).message
+          (error as Error).message,
         );
       }
     }

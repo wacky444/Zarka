@@ -41,11 +41,16 @@ import {
 } from "../animation/moveReplay";
 import { collectItemSpriteInfos, resolveItemTexture } from "../ui/itemIcons";
 import { ItemTooltipManager, composeItemDescription } from "../ui/ItemTooltip";
-import {
-  EliminationBanner,
-  type PlayerEliminationBannerEvent,
-} from "../ui/EliminationBanner";
+import { TopBanner, type TopBannerPayload } from "../ui/TopBanner";
 import { assetPath } from "../utils/assetPath";
+
+type PlayerEliminationBannerEvent = {
+  playerId: string;
+  playerName: string;
+  texture: string;
+  frame: string;
+  turn: number;
+};
 
 export class GameScene extends Phaser.Scene {
   private static readonly TILE_WIDTH = 128;
@@ -82,15 +87,20 @@ export class GameScene extends Phaser.Scene {
   private gridModalActive = false;
   private tileItemContainers = new Map<string, Phaser.GameObjects.Container>();
   private itemTooltip: ItemTooltipManager | null = null;
-  private eliminationBanner: EliminationBanner | null = null;
+  private topBanner: TopBanner | null = null;
   private chatService: MatchChatService | null = null;
   private chatMessages: MatchChatMessage[] = [];
   private chatUnsubscribe: (() => void) | null = null;
   private chatHistoryRefreshRunning = false;
   private readonly turnAdvancedHandler = (
-    payload: TurnAdvancedMessagePayload
+    payload: TurnAdvancedMessagePayload,
   ) => {
     this.handleTurnAdvancedUpdate(payload);
+  };
+  private readonly matchEndedHandler = (
+    payload: import("@shared").MatchEndedMessagePayload,
+  ) => {
+    this.handleMatchEnded(payload);
   };
   private readonly pointerDownHandler = (pointer: Phaser.Input.Pointer) => {
     const overUI = this.isPointerOverUI(pointer);
@@ -126,12 +136,12 @@ export class GameScene extends Phaser.Scene {
     this.load.atlasXML(
       "hex",
       assetPath("assets/spritesheets/hexagonAll_sheet.png"),
-      assetPath("assets/spritesheets/hexagonAll_sheet.xml")
+      assetPath("assets/spritesheets/hexagonAll_sheet.xml"),
     );
     this.load.atlasXML(
       "char",
       assetPath("assets/spritesheets/roguelikeChar_transparent.png"),
-      assetPath("assets/spritesheets/roguelikeChar_transparent.xml")
+      assetPath("assets/spritesheets/roguelikeChar_transparent.xml"),
     );
 
     const boardIconFrames = new Set<string>();
@@ -168,6 +178,7 @@ export class GameScene extends Phaser.Scene {
     this.currentUserId = this.registry.get("currentUserId") as string | null;
     if (this.turnService) {
       this.turnService.setOnTurnAdvanced(this.turnAdvancedHandler);
+      this.turnService.setOnMatchEnded(this.matchEndedHandler);
     }
 
     this.characterPanel = new CharacterPanel(this, 0, 0);
@@ -175,17 +186,17 @@ export class GameScene extends Phaser.Scene {
     this.characterPanel.on(
       "main-action-change",
       this.handleMainActionSelection,
-      this
+      this,
     );
     this.characterPanel.on(
       "secondary-action-change",
       this.handleSecondaryActionSelection,
-      this
+      this,
     );
     this.characterPanel.on(
       "main-action-location-request",
       this.beginMainActionLocationPick,
-      this
+      this,
     );
     this.characterPanel.on("ready-change", this.handleReadyStateChange, this);
     this.characterPanel.on("tab-change", this.handleTabChange, this);
@@ -198,7 +209,7 @@ export class GameScene extends Phaser.Scene {
     this.characterPanel.on(
       "player-eliminated",
       this.handlePlayerEliminated,
-      this
+      this,
     );
     this.characterPanel.on("chat-send", this.handleChatSend, this);
     this.characterPanel.on("chat-tab-opened", this.handleChatTabOpened, this);
@@ -208,7 +219,7 @@ export class GameScene extends Phaser.Scene {
       this.scene.wake("MainScene");
     }).setScrollFactor(0);
     this.cam.ignore(this.menuButton);
-    this.eliminationBanner = new EliminationBanner(this, {
+    this.topBanner = new TopBanner(this, {
       camera: this.cam,
     });
 
@@ -247,22 +258,22 @@ export class GameScene extends Phaser.Scene {
       this.characterPanel?.off(
         "main-action-change",
         this.handleMainActionSelection,
-        this
+        this,
       );
       this.characterPanel?.off(
         "secondary-action-change",
         this.handleSecondaryActionSelection,
-        this
+        this,
       );
       this.characterPanel?.off(
         "main-action-location-request",
         this.beginMainActionLocationPick,
-        this
+        this,
       );
       this.characterPanel?.off(
         "ready-change",
         this.handleReadyStateChange,
-        this
+        this,
       );
       this.characterPanel?.off("tab-change", this.handleTabChange, this);
       this.characterPanel?.off("log-tab-opened", this.handleLogTabOpened, this);
@@ -270,7 +281,7 @@ export class GameScene extends Phaser.Scene {
       this.characterPanel?.off(
         "log-turn-request",
         this.handleLogTurnRequest,
-        this
+        this,
       );
       this.characterPanel?.off("log-play", this.handleLogPlayRequest, this);
       this.characterPanel?.off("grid-modal-open", this.gridModalOpenHandler);
@@ -278,13 +289,13 @@ export class GameScene extends Phaser.Scene {
       this.characterPanel?.off(
         "player-eliminated",
         this.handlePlayerEliminated,
-        this
+        this,
       );
       this.characterPanel?.off("chat-send", this.handleChatSend, this);
       this.characterPanel?.off(
         "chat-tab-opened",
         this.handleChatTabOpened,
-        this
+        this,
       );
       this.gridModalActive = false;
       this.cancelMainActionLocationPick();
@@ -297,9 +308,10 @@ export class GameScene extends Phaser.Scene {
       this.itemTooltip = null;
       if (this.turnService) {
         this.turnService.setOnTurnAdvanced();
+        this.turnService.setOnMatchEnded();
       }
-      this.eliminationBanner?.destroy();
-      this.eliminationBanner = null;
+      this.topBanner?.destroy();
+      this.topBanner = null;
       if (this.chatUnsubscribe) {
         this.chatUnsubscribe();
         this.chatUnsubscribe = null;
@@ -410,7 +422,7 @@ export class GameScene extends Phaser.Scene {
             return;
           }
           this.completeMainActionLocationPick(tileData);
-        }
+        },
       );
       sprites.push(img);
       this.tilePositions[tile.id] = { x, y };
@@ -424,7 +436,7 @@ export class GameScene extends Phaser.Scene {
       -gridWidth / 2,
       -gridHeight / 2,
       gridWidth * 2,
-      gridHeight * 2
+      gridHeight * 2,
     );
     this.cam.centerOn(gridWidth / 2, gridHeight / 2);
     this.registry.set("currentMatchMap", map);
@@ -433,7 +445,7 @@ export class GameScene extends Phaser.Scene {
 
   private getTileWorldPosition(
     tileId: string,
-    coord: { q: number; r: number }
+    coord: { q: number; r: number },
   ): { x: number; y: number } {
     const existing = this.tilePositions[tileId];
     if (existing) {
@@ -488,7 +500,7 @@ export class GameScene extends Phaser.Scene {
       const sorted = [...members].sort();
       const offsets = getHexTileOffsets(
         sorted.length,
-        GameScene.TILE_WIDTH / 4
+        GameScene.TILE_WIDTH / 4,
       );
       for (let index = 0; index < sorted.length; index += 1) {
         const playerId = sorted[index];
@@ -634,7 +646,7 @@ export class GameScene extends Phaser.Scene {
           }
           const tooltipBody = composeItemDescription(
             definition.description,
-            definition.notes
+            definition.notes,
           );
           const showTooltip = (pointer: Phaser.Input.Pointer) => {
             if (pointer.button !== 0) {
@@ -648,14 +660,14 @@ export class GameScene extends Phaser.Scene {
               pointer.x,
               pointer.y,
               definition.name,
-              tooltipBody
+              tooltipBody,
             );
           };
           const sprite = this.add.image(
             x,
             y,
             textureInfo.texture,
-            textureInfo.frame
+            textureInfo.frame,
           );
           sprite.setScale(1);
           sprite.setInteractive({ useHandCursor: true });
@@ -714,7 +726,7 @@ export class GameScene extends Phaser.Scene {
 
   private positionNameLabel(
     label: Phaser.GameObjects.Text,
-    sprite: Phaser.GameObjects.Image
+    sprite: Phaser.GameObjects.Image,
   ) {
     const offset = sprite.displayHeight / 2 + 12;
     label.setPosition(sprite.x, sprite.y - offset);
@@ -751,7 +763,7 @@ export class GameScene extends Phaser.Scene {
         pointer: Phaser.Input.Pointer,
         _over: unknown[],
         _dx: number,
-        dy: number
+        dy: number,
       ) => {
         if (this.gridModalActive || this.isPointerOverUI(pointer)) {
           return;
@@ -762,12 +774,35 @@ export class GameScene extends Phaser.Scene {
         const worldPointAfter = cam.getWorldPoint(pointer.x, pointer.y);
         cam.scrollX += worldPointBefore.x - worldPointAfter.x;
         cam.scrollY += worldPointBefore.y - worldPointAfter.y;
-      }
+      },
     );
   }
 
   private handlePlayerEliminated(payload: PlayerEliminationBannerEvent) {
-    this.eliminationBanner?.show(payload);
+    const bannerPayload: TopBannerPayload = {
+      text: `Player ${payload.playerName} eliminated`,
+      texture: payload.texture,
+      frame: payload.frame,
+    };
+    this.topBanner?.show(bannerPayload);
+  }
+
+  private handleMatchEnded(
+    payload: import("@shared").MatchEndedMessagePayload,
+  ) {
+    if (!payload || typeof payload.match_id !== "string") {
+      return;
+    }
+    const matchId = this.registry.get("currentMatchId") as string | null;
+    if (!matchId || payload.match_id !== matchId) {
+      return;
+    }
+    if (!this.currentUserId) {
+      return;
+    }
+    if (payload.winnerId && payload.winnerId !== this.currentUserId) {
+      this.topBanner?.show({ text: "You lost the match." });
+    }
   }
 
   private layoutUI() {
@@ -781,7 +816,7 @@ export class GameScene extends Phaser.Scene {
     if (this.menuButton) {
       this.menuButton.setPosition(0 + 10, height - this.menuButton.height - 10);
     }
-    this.eliminationBanner?.layout(width);
+    this.topBanner?.layout(width);
   }
 
   private handleResize(gameSize: Phaser.Structs.Size) {
@@ -976,7 +1011,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private async handleMainActionSelection(
-    selection: MainActionSelection | null | undefined
+    selection: MainActionSelection | null | undefined,
   ) {
     this.cancelMainActionLocationPick();
     const matchId = this.registry.get("currentMatchId") as string | null;
@@ -984,10 +1019,10 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const normalizedPlayers = this.normalizeTargetPlayers(
-      selection?.targetPlayerIds ?? undefined
+      selection?.targetPlayerIds ?? undefined,
     );
     const normalizedItems = this.normalizeTargetItems(
-      selection?.targetItemIds ?? undefined
+      selection?.targetItemIds ?? undefined,
     );
     const normalizedSelection: MainActionSelection = {
       actionId: selection?.actionId ?? null,
@@ -1001,17 +1036,17 @@ export class GameScene extends Phaser.Scene {
     const previousActionId = previousPlan?.actionId ?? null;
     const previousTarget = this.normalizeAxial(previousPlan?.targetLocationId);
     const previousPlayers = this.normalizeTargetPlayers(
-      previousPlan?.targetPlayerIds ?? undefined
+      previousPlan?.targetPlayerIds ?? undefined,
     );
     const previousItems = this.normalizeTargetItems(
-      previousPlan?.targetItemIds ?? undefined
+      previousPlan?.targetItemIds ?? undefined,
     );
     if (
       normalizedSelection.actionId === previousActionId &&
       this.isSameAxial(normalizedSelection.targetLocation, previousTarget) &&
       this.isSameTargetPlayers(
         normalizedSelection.targetPlayerIds,
-        previousPlayers
+        previousPlayers,
       ) &&
       this.isSameTargetItems(normalizedSelection.targetItemIds, previousItems)
     ) {
@@ -1029,7 +1064,7 @@ export class GameScene extends Phaser.Scene {
             normalizedSelection.actionId,
             normalizedSelection.targetLocation,
             normalizedSelection.targetPlayerIds,
-            normalizedSelection.targetItemIds
+            normalizedSelection.targetItemIds,
           )
         : null;
       const res = await this.turnService.updateMainAction(matchId, submission);
@@ -1094,17 +1129,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   private async handleSecondaryActionSelection(
-    selection: SecondaryActionSelection | null | undefined
+    selection: SecondaryActionSelection | null | undefined,
   ) {
     const matchId = this.registry.get("currentMatchId") as string | null;
     if (!this.turnService || !this.currentUserId || !matchId) {
       return;
     }
     const normalizedPlayers = this.normalizeTargetPlayers(
-      selection?.targetPlayerIds ?? undefined
+      selection?.targetPlayerIds ?? undefined,
     );
     const normalizedItems = this.normalizeTargetItems(
-      selection?.targetItemIds ?? undefined
+      selection?.targetItemIds ?? undefined,
     );
     const normalizedSelection: SecondaryActionSelection = {
       actionId: selection?.actionId ?? null,
@@ -1117,20 +1152,20 @@ export class GameScene extends Phaser.Scene {
     const previousPlan = character?.actionPlan?.secondary ?? null;
     const previousActionId = previousPlan?.actionId ?? null;
     const previousTarget = this.normalizeAxial(
-      previousPlan?.targetLocationId ?? null
+      previousPlan?.targetLocationId ?? null,
     );
     const previousPlayers = this.normalizeTargetPlayers(
-      previousPlan?.targetPlayerIds ?? undefined
+      previousPlan?.targetPlayerIds ?? undefined,
     );
     const previousItems = this.normalizeTargetItems(
-      previousPlan?.targetItemIds ?? undefined
+      previousPlan?.targetItemIds ?? undefined,
     );
     if (
       normalizedSelection.actionId === previousActionId &&
       this.isSameAxial(normalizedSelection.targetLocation, previousTarget) &&
       this.isSameTargetPlayers(
         normalizedSelection.targetPlayerIds,
-        previousPlayers
+        previousPlayers,
       ) &&
       this.isSameTargetItems(normalizedSelection.targetItemIds, previousItems)
     ) {
@@ -1148,12 +1183,12 @@ export class GameScene extends Phaser.Scene {
             normalizedSelection.actionId,
             normalizedSelection.targetLocation,
             normalizedSelection.targetPlayerIds,
-            normalizedSelection.targetItemIds
+            normalizedSelection.targetItemIds,
           )
         : null;
       const res = await this.turnService.updateSecondaryAction(
         matchId,
-        submission
+        submission,
       );
       const payload = this.parseRpcPayload<UpdateSecondaryActionPayload>(res);
       if (payload.error) {
@@ -1324,14 +1359,16 @@ export class GameScene extends Phaser.Scene {
       ? (payload.replay as ReplayEvent[])
       : [];
     const alternateEvents = Array.isArray(
-      (payload as { events?: unknown }).events
+      (payload as { events?: unknown }).events,
     )
-      ? (payload as { events?: ReplayEvent[] }).events ?? []
+      ? ((payload as { events?: ReplayEvent[] }).events ?? [])
       : [];
     const replayEvents =
       eventsFromField.length > 0 ? eventsFromField : alternateEvents;
     const turnNumber =
-      typeof payload.turn === "number" ? payload.turn : match.current_turn ?? 0;
+      typeof payload.turn === "number"
+        ? payload.turn
+        : (match.current_turn ?? 0);
     if (replayEvents.length > 0) {
       this.logReplayCache.set(turnNumber, replayEvents);
       this.enqueueReplay(replayEvents);
@@ -1440,7 +1477,7 @@ export class GameScene extends Phaser.Scene {
     actionId: string,
     target: Axial | null,
     targetPlayerIds: string[] | undefined,
-    targetItemIds: string[] | undefined
+    targetItemIds: string[] | undefined,
   ): ActionSubmission {
     const typedId = actionId as ActionId;
     const definition = ActionLibrary[typedId] ?? null;
@@ -1468,7 +1505,7 @@ export class GameScene extends Phaser.Scene {
     actionId: string,
     target: Axial | null,
     targetPlayerIds: string[] | undefined,
-    targetItemIds: string[] | undefined
+    targetItemIds: string[] | undefined,
   ): ActionSubmission {
     const typedId = actionId as ActionId;
     const definition = ActionLibrary[typedId] ?? null;
@@ -1505,7 +1542,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private normalizeTargetPlayers(
-    value: string[] | undefined | null
+    value: string[] | undefined | null,
   ): string[] | undefined {
     if (value === undefined) {
       return undefined;
@@ -1530,7 +1567,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private normalizeTargetItems(
-    value: string[] | undefined | null
+    value: string[] | undefined | null,
   ): string[] | undefined {
     if (value === undefined) {
       return undefined;
@@ -1566,7 +1603,7 @@ export class GameScene extends Phaser.Scene {
 
   private isSameTargetPlayers(
     a: string[] | undefined | null,
-    b: string[] | undefined | null
+    b: string[] | undefined | null,
   ): boolean {
     const normalize = (input: string[] | undefined | null) => {
       if (!input || input.length === 0) {
@@ -1593,7 +1630,7 @@ export class GameScene extends Phaser.Scene {
 
   private isSameTargetItems(
     a: string[] | undefined | null,
-    b: string[] | undefined | null
+    b: string[] | undefined | null,
   ): boolean {
     const normalize = (input: string[] | undefined | null) => {
       if (!input || input.length === 0) {
