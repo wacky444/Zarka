@@ -49,7 +49,7 @@ export class TopBanner {
 
     const portraitSize = this.height - this.margin;
     const portrait = scene.add
-      .image(0, 0, "char", "body_human_tan_01.png")
+      .image(0, 0, "char", "body_human_white.png")
       .setOrigin(0.5, 0.5)
       .setDisplaySize(portraitSize, portraitSize);
     portrait.setScrollFactor(0);

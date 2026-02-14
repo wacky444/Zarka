@@ -29,8 +29,17 @@ export type PlayerStats = {
   readonly lastMatchEndedAtMs?: number;
 };
 
+// body, shoes, shirt, hair, hat
+export type Skin = {
+  readonly body: SkinId;
+  readonly shoes: SkinId;
+  readonly shirt: SkinId;
+  readonly hair: SkinId;
+  readonly hat: SkinId;
+};
+
 export type UserCosmetics = {
-  readonly selectedSkinId: SkinId;
+  readonly selectedSkinId: Skin;
   readonly unlockedSkinIds?: readonly SkinId[];
   readonly unlockedCosmeticIds?: readonly CosmeticUnlockId[];
 };

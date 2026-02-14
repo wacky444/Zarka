@@ -49,7 +49,7 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   setOrigin?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
   setPosition?: (x: number, y: number) => Phaser.GameObjects.GameObject;
   setMask?: (
-    mask: Phaser.Display.Masks.BitmapMask | Phaser.Display.Masks.GeometryMask
+    mask: Phaser.Display.Masks.BitmapMask | Phaser.Display.Masks.GeometryMask,
   ) => Phaser.GameObjects.GameObject;
   clearMask?: (destroyMask?: boolean) => Phaser.GameObjects.GameObject;
 };
@@ -63,14 +63,14 @@ const BOX_HEIGHT = 180;
 const PRIMARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
   .filter(
     (definition) =>
-      definition.category === ActionCategory.Primary && !definition.hidden
+      definition.category === ActionCategory.Primary && !definition.hidden,
   )
   .map((definition) => definition.id)
   .sort((a, b) => ActionLibrary[a].name.localeCompare(ActionLibrary[b].name));
 const SECONDARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
   .filter(
     (definition) =>
-      definition.category === ActionCategory.Secondary && !definition.hidden
+      definition.category === ActionCategory.Secondary && !definition.hidden,
   )
   .map((definition) => definition.id)
   .sort((a, b) => ActionLibrary[a].name.localeCompare(ActionLibrary[b].name));
@@ -218,7 +218,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.setReadyState(!this.readyState, true);
   };
   private readonly handleSecondaryActionSelection = (
-    actionId: string | null
+    actionId: string | null,
   ) => {
     this.secondaryActionSelection = actionId ?? null;
     this.lastSecondaryActionItem =
@@ -246,7 +246,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.setSecondaryActionTarget(null, true);
   };
   private readonly handleSecondaryPlayerSelection = (
-    playerId: string | null
+    playerId: string | null,
   ) => {
     this.setSecondaryActionTargetPlayer(playerId ?? null, true);
   };
@@ -286,7 +286,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     x: number,
     y: number,
     width = DEFAULT_WIDTH,
-    height: number = scene.scale.height
+    height: number = scene.scale.height,
   ) {
     super(scene, x, y);
 
@@ -310,7 +310,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
           0,
           tabWidth,
           TAB_HEIGHT,
-          isDefaultTab ? 0x253055 : 0x1c233f
+          isDefaultTab ? 0x253055 : 0x1c233f,
         )
         .setOrigin(0, 0)
         .setInteractive({ useHandCursor: true });
@@ -391,7 +391,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const estimatedScrollTop = readyY + this.readyToggle.height + 24;
     const estimatedScrollHeight = Math.max(
       200,
-      height - estimatedScrollTop - MARGIN
+      height - estimatedScrollTop - MARGIN,
     );
 
     this.scrollMaskShape = scene.add
@@ -401,7 +401,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         initialScrollWidth + 100,
         estimatedScrollHeight,
         0xffffff,
-        0
+        0,
       )
       .setOrigin(0, 0)
       .setScrollFactor(0)
@@ -467,7 +467,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       scene,
       0,
       0,
-      this.mainActionDropdownWidth
+      this.mainActionDropdownWidth,
     );
     this.locationSelector.setEnabled(false);
     this.locationSelector.setVisible(false);
@@ -479,7 +479,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       scene,
       0,
       0,
-      this.mainActionDropdownWidth
+      this.mainActionDropdownWidth,
     );
     this.playerSelector.setEnabled(false);
     this.playerSelector.setVisible(false);
@@ -490,7 +490,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       scene,
       0,
       0,
-      this.mainActionDropdownWidth
+      this.mainActionDropdownWidth,
     );
     this.itemSelector.setEnabled(false);
     this.itemSelector.setVisible(false);
@@ -523,7 +523,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.scrollContent.add(this.secondaryActionDropdown);
     this.secondaryActionDropdown.on(
       "change",
-      this.handleSecondaryActionSelection
+      this.handleSecondaryActionSelection,
     );
     this.secondaryActionDropdown.on("modal-open", this.handleActionModalOpen);
     this.secondaryActionDropdown.on("modal-close", this.handleActionModalClose);
@@ -531,53 +531,53 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       scene,
       0,
       0,
-      this.secondaryActionDropdownWidth
+      this.secondaryActionDropdownWidth,
     );
     this.secondaryLocationSelector.setEnabled(false);
     this.secondaryLocationSelector.setVisible(false);
     this.secondaryLocationSelector.setActive(false);
     this.secondaryLocationSelector.on(
       "pick-request",
-      this.handleSecondaryLocationPickRequest
+      this.handleSecondaryLocationPickRequest,
     );
     this.secondaryLocationSelector.on(
       "clear-request",
-      this.handleSecondaryLocationClear
+      this.handleSecondaryLocationClear,
     );
     this.scrollContent.add(this.secondaryLocationSelector);
     this.secondaryPlayerSelector = new PlayerSelector(
       scene,
       0,
       0,
-      this.secondaryActionDropdownWidth
+      this.secondaryActionDropdownWidth,
     );
     this.secondaryPlayerSelector.setEnabled(false);
     this.secondaryPlayerSelector.setVisible(false);
     this.secondaryPlayerSelector.setActive(false);
     this.secondaryPlayerSelector.on(
       "change",
-      this.handleSecondaryPlayerSelection
+      this.handleSecondaryPlayerSelection,
     );
     this.scrollContent.add(this.secondaryPlayerSelector);
     this.secondaryItemSelector = new ItemPrioritySelector(
       scene,
       0,
       0,
-      this.secondaryActionDropdownWidth
+      this.secondaryActionDropdownWidth,
     );
     this.secondaryItemSelector.setEnabled(false);
     this.secondaryItemSelector.setVisible(false);
     this.secondaryItemSelector.setActive(false);
     this.secondaryItemSelector.on(
       "change",
-      this.handleSecondaryItemPriorityChange
+      this.handleSecondaryItemPriorityChange,
     );
     this.scrollContent.add(this.secondaryItemSelector);
     this.updateScrollLayout();
     const itemsBoxY = contentTop;
     const itemsBoxHeight = Math.max(
       BOX_HEIGHT * 2,
-      height - itemsBoxY - MARGIN
+      height - itemsBoxY - MARGIN,
     );
     const itemsBoxWidth = boxWidth;
     this.itemsBackground = scene.add
@@ -600,7 +600,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       itemsBoxY + 48,
       itemsBoxWidth - 24,
       Math.max(0, itemsBoxHeight - 60),
-      { columns: 2, iconSize: 32 }
+      { columns: 2, iconSize: 32 },
     );
     this.inventoryGrid.setVisible(false);
     this.inventoryGrid.setActive(false);
@@ -817,24 +817,24 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.playerSelector.hideDropdown();
     this.secondaryActionDropdown.off(
       "change",
-      this.handleSecondaryActionSelection
+      this.handleSecondaryActionSelection,
     );
     this.secondaryActionDropdown.off("modal-open", this.handleActionModalOpen);
     this.secondaryActionDropdown.off(
       "modal-close",
-      this.handleActionModalClose
+      this.handleActionModalClose,
     );
     this.secondaryLocationSelector.off(
       "pick-request",
-      this.handleSecondaryLocationPickRequest
+      this.handleSecondaryLocationPickRequest,
     );
     this.secondaryLocationSelector.off(
       "clear-request",
-      this.handleSecondaryLocationClear
+      this.handleSecondaryLocationClear,
     );
     this.secondaryPlayerSelector.off(
       "change",
-      this.handleSecondaryPlayerSelection
+      this.handleSecondaryPlayerSelection,
     );
     this.secondaryPlayerSelector.hideDropdown();
     this.readyToggle?.off("pointerup", this.handleReadyToggle);
@@ -888,7 +888,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const itemsBoxWidth = boxWidth;
     const itemsBoxHeight = Math.max(
       BOX_HEIGHT * 2,
-      height - itemsBoxY - MARGIN
+      height - itemsBoxY - MARGIN,
     );
     this.itemsBackground.setPosition(MARGIN, itemsBoxY);
     this.itemsBackground.setSize(itemsBoxWidth, itemsBoxHeight);
@@ -897,7 +897,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.inventoryGrid.setPosition(MARGIN + 12, itemsBoxY + 48);
     this.inventoryGrid.setDimensions(
       itemsBoxWidth - 24,
-      Math.max(0, itemsBoxHeight - 60)
+      Math.max(0, itemsBoxHeight - 60),
     );
     if (this.logView) {
       this.logView.layout({
@@ -945,7 +945,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   updateFromMatch(
     match: MatchRecord | null,
     currentUserId: string | null,
-    usernames?: Record<string, string>
+    usernames?: Record<string, string>,
   ) {
     const userMap = usernames ? { ...usernames } : {};
     this.logView.setUsernames(userMap);
@@ -970,7 +970,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private applyCharacter(
     character: PlayerCharacter | null,
     playerName: string | null,
-    ready: boolean
+    ready: boolean,
   ) {
     if (!character) {
       this.nameText.setText("No character");
@@ -1035,12 +1035,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.energyLabel.setText(energyLabel);
     this.useBarValue(
       this.healthBar,
-      health.max === 0 ? 0 : health.current / health.max
+      health.max === 0 ? 0 : health.current / health.max,
     );
     this.healthLabel.setText(`Health ${health.current}/${health.max}`);
     this.useBarValue(
       this.energyBar,
-      energy.max === 0 ? 0 : energy.current / energy.max
+      energy.max === 0 ? 0 : energy.current / energy.max,
     );
     const actions = this.collectMainActions(character);
     const mainActionId = character.actionPlan?.main?.actionId ?? null;
@@ -1052,7 +1052,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const serverTargetPlayerId = this.normalizePlayerId(
       Array.isArray(targetPlayers) && targetPlayers.length > 0
         ? targetPlayers[0]
-        : null
+        : null,
     );
     this.setMainActionTargetPlayer(serverTargetPlayerId, false);
     const targetItems = Array.isArray(character.actionPlan?.main?.targetItemIds)
@@ -1067,7 +1067,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const secondaryTargetLocation =
       character.actionPlan?.secondary?.targetLocationId ?? null;
     const normalizedSecondaryTargetLocation = this.normalizeAxial(
-      secondaryTargetLocation
+      secondaryTargetLocation,
     );
     this.setSecondaryActionTarget(normalizedSecondaryTargetLocation, false);
     const secondaryTargetPlayers =
@@ -1075,11 +1075,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const secondaryServerTargetPlayerId = this.normalizePlayerId(
       Array.isArray(secondaryTargetPlayers) && secondaryTargetPlayers.length > 0
         ? secondaryTargetPlayers[0]
-        : null
+        : null,
     );
     this.setSecondaryActionTargetPlayer(secondaryServerTargetPlayerId, false);
     const secondaryTargetItems = Array.isArray(
-      character.actionPlan?.secondary?.targetItemIds
+      character.actionPlan?.secondary?.targetItemIds,
     )
       ? (character.actionPlan?.secondary?.targetItemIds as string[])
       : [];
@@ -1092,13 +1092,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       mainActionId,
       normalizedTargetLocation,
       serverTargetPlayerId,
-      targetItems
+      targetItems,
     );
     this.syncSecondaryActionWithServer(
       secondaryId,
       normalizedSecondaryTargetLocation,
       secondaryServerTargetPlayerId,
-      secondaryTargetItems
+      secondaryTargetItems,
     );
     this.updateInventoryPanel(character);
     this.updateScrollLayout();
@@ -1136,7 +1136,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private buildInventoryItems(
-    stacks: Array<{ itemId?: string; quantity?: number; weight?: number }>
+    stacks: Array<{ itemId?: string; quantity?: number; weight?: number }>,
   ): InventoryGridItem[] {
     const aggregated = new Map<
       string,
@@ -1166,8 +1166,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         fallbackPerWeight > 0
           ? fallbackPerWeight
           : quantity > 0
-          ? computedWeight / quantity
-          : 0;
+            ? computedWeight / quantity
+            : 0;
       if (quantity <= 0 && computedWeight <= 0) {
         continue;
       }
@@ -1256,12 +1256,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private applyMainActions(
     actions: ActionId[],
     preferredId: string | null,
-    character: PlayerCharacter | null
+    character: PlayerCharacter | null,
   ) {
     const items = this.buildMainActionItems(
       actions,
       character,
-      this.currentTurn
+      this.currentTurn,
     );
     this.mainActionDropdown.setItems(items);
     if (preferredId) {
@@ -1286,12 +1286,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private applySecondaryActions(
     actions: ActionId[],
     preferredId: string | null,
-    character: PlayerCharacter | null
+    character: PlayerCharacter | null,
   ) {
     const items = this.buildSecondaryActionItems(
       actions,
       character,
-      this.currentTurn
+      this.currentTurn,
     );
     this.secondaryActionDropdown.setItems(items);
     if (preferredId) {
@@ -1335,7 +1335,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private buildMainActionItems(
     actionIds: ActionId[],
     character: PlayerCharacter | null,
-    currentTurn: number
+    currentTurn: number,
   ): GridSelectItem[] {
     const cooldowns = this.buildActionCooldownMap(character, currentTurn);
     const baseList: (ActionId | string)[] = PRIMARY_ACTION_IDS;
@@ -1359,7 +1359,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private buildSecondaryActionItems(
     actionIds: ActionId[],
     character: PlayerCharacter | null,
-    currentTurn: number
+    currentTurn: number,
   ): GridSelectItem[] {
     const cooldowns = this.buildActionCooldownMap(character, currentTurn);
     const baseList: (ActionId | string)[] = SECONDARY_ACTION_IDS;
@@ -1382,7 +1382,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private buildActionCooldownMap(
     character: PlayerCharacter | null,
-    currentTurn: number
+    currentTurn: number,
   ): Map<string, number> {
     const map = new Map<string, number>();
     if (!character?.statuses?.cooldowns) {
@@ -1398,7 +1398,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
           : currentTurn + 1 + Math.max(0, entry.remainingTurns);
       const remaining = Math.max(
         0,
-        Math.ceil(availableOnTurn - (currentTurn + 1))
+        Math.ceil(availableOnTurn - (currentTurn + 1)),
       );
       if (remaining > 0) {
         const current = map.get(entry.actionId) ?? 0;
@@ -1410,7 +1410,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private resolveActionMetadata(
     actionId: ActionId | string,
-    cooldownRemaining: number
+    cooldownRemaining: number,
   ): GridSelectItem {
     const normalizedRemaining = Math.max(0, Math.ceil(cooldownRemaining));
     let isDisabled = normalizedRemaining > 0;
@@ -1616,7 +1616,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       dropdown: GridSelect,
       locationSelector: LocationSelector,
       playerSelector: PlayerSelector,
-      itemSelector: ItemPrioritySelector
+      itemSelector: ItemPrioritySelector,
     ) => {
       box.setPosition(0, cursorY);
       box.setSize(width, BOX_HEIGHT);
@@ -1652,7 +1652,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.mainActionDropdown,
       this.locationSelector,
       this.playerSelector,
-      this.itemSelector
+      this.itemSelector,
     );
     cursorY += 16;
     layoutActionBlock(
@@ -1661,7 +1661,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.secondaryActionDropdown,
       this.secondaryLocationSelector,
       this.secondaryPlayerSelector,
-      this.secondaryItemSelector
+      this.secondaryItemSelector,
     );
     cursorY += 16;
     this.scrollContent.setPosition(0, 0);
@@ -1671,7 +1671,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private setMainActionTargetPlayer(
     targetId: string | null,
-    emit = false
+    emit = false,
   ): boolean {
     const supports = this.selectedActionSupportsSingleTarget();
     if (!supports) {
@@ -1708,7 +1708,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private setSecondaryActionTargetPlayer(
     targetId: string | null,
-    emit = false
+    emit = false,
   ): boolean {
     const supports = this.selectedSecondaryActionSupportsSingleTarget();
     if (!supports) {
@@ -1746,7 +1746,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private updatePlayerOptions(
     match: MatchRecord | null,
     usernames: Record<string, string>,
-    currentUserId: string | null
+    currentUserId: string | null,
   ) {
     const options: PlayerOption[] = [];
     if (match) {
@@ -1814,7 +1814,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (
       this.secondaryActionTargetPlayerId &&
       !secondaryOptions.some(
-        (option) => option.id === this.secondaryActionTargetPlayerId
+        (option) => option.id === this.secondaryActionTargetPlayerId,
       )
     ) {
       this.secondaryActionTargetPlayerId = null;
@@ -1825,7 +1825,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
     this.playerSelector.setValue(this.mainActionTargetPlayerId ?? null);
     this.secondaryPlayerSelector.setValue(
-      this.secondaryActionTargetPlayerId ?? null
+      this.secondaryActionTargetPlayerId ?? null,
     );
   }
 
@@ -1897,7 +1897,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private setSecondaryActionPriorityItems(
     ids: string[],
-    emit = false
+    emit = false,
   ): boolean {
     const supports = this.selectedSecondaryActionSupportsItemPriority();
     if (!supports) {
@@ -1926,7 +1926,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private updateItemOptions(
     match: MatchRecord | null,
-    currentUserId: string | null
+    currentUserId: string | null,
   ) {
     const options: ItemPriorityOption[] = [];
     if (match && currentUserId) {
@@ -1984,7 +1984,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const normalizedMain = this.filterPriorityIds(this.mainActionPriorityItems);
     this.mainActionPriorityItems = normalizedMain;
     const normalizedSecondary = this.filterPriorityIds(
-      this.secondaryActionPriorityItems
+      this.secondaryActionPriorityItems,
     );
     this.secondaryActionPriorityItems = normalizedSecondary;
     if (this.selectedActionSupportsItemPriority()) {
@@ -2004,7 +2004,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private resolvePlayerSpriteInfo(
     playerId: string,
     character: PlayerCharacter | null,
-    scale: number
+    scale: number,
   ) {
     const appearance = (
       character as unknown as {
@@ -2017,8 +2017,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       typeof appearance?.frame === "string"
         ? appearance.frame
         : typeof appearance?.body === "string"
-        ? appearance.body
-        : undefined;
+          ? appearance.body
+          : undefined;
     const textures = this.scene.textures;
     if (
       !frame ||
@@ -2030,9 +2030,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         PLAYER_SPRITE_FRAMES.length > 0
           ? this.hashString(playerId) % PLAYER_SPRITE_FRAMES.length
           : 0;
-      frame = PLAYER_SPRITE_FRAMES[index] ?? "body_human_tan_01.png";
+      frame = PLAYER_SPRITE_FRAMES[index] ?? "body_orc.png";
     }
-    const resolvedFrame = frame ?? "body_human_tan_01.png";
+    const resolvedFrame = frame ?? "body_human_tan.png";
     return { texture, frame: resolvedFrame, iconScale: scale };
   }
 
@@ -2121,20 +2121,20 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     serverActionId: string | null,
     serverTargetLocation: Axial | null,
     serverTargetPlayerId: string | null,
-    serverTargetItems: string[] | null
+    serverTargetItems: string[] | null,
   ): void {
     const matchesSelection =
       (this.mainActionSelection ?? null) === (serverActionId ?? null);
     const matchesLocation = this.isSameAxial(
       this.mainActionTarget,
-      serverTargetLocation
+      serverTargetLocation,
     );
     const matchesPlayer =
       (this.mainActionTargetPlayerId ?? null) ===
       (serverTargetPlayerId ?? null);
     const matchesItems = this.isSameTargetItems(
       this.mainActionPriorityItems,
-      serverTargetItems
+      serverTargetItems,
     );
     if (
       !matchesSelection ||
@@ -2150,20 +2150,20 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     serverActionId: string | null,
     serverTargetLocation: Axial | null,
     serverTargetPlayerId: string | null,
-    serverTargetItems: string[] | null
+    serverTargetItems: string[] | null,
   ): void {
     const matchesSelection =
       (this.secondaryActionSelection ?? null) === (serverActionId ?? null);
     const matchesLocation = this.isSameAxial(
       this.secondaryActionTarget,
-      serverTargetLocation
+      serverTargetLocation,
     );
     const matchesPlayer =
       (this.secondaryActionTargetPlayerId ?? null) ===
       (serverTargetPlayerId ?? null);
     const matchesItems = this.isSameTargetItems(
       this.secondaryActionPriorityItems,
-      serverTargetItems
+      serverTargetItems,
     );
     if (
       !matchesSelection ||
@@ -2195,7 +2195,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     this.mainActionTarget = normalized;
     this.locationSelector.setValue(
-      normalized ? { q: normalized.q, r: normalized.r } : null
+      normalized ? { q: normalized.q, r: normalized.r } : null,
     );
     if (!normalized) {
       this.locationSelector.setPending(false);
@@ -2226,7 +2226,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     this.secondaryActionTarget = normalized;
     this.secondaryLocationSelector.setValue(
-      normalized ? { q: normalized.q, r: normalized.r } : null
+      normalized ? { q: normalized.q, r: normalized.r } : null,
     );
     if (!normalized) {
       this.secondaryLocationSelector.setPending(false);
@@ -2322,7 +2322,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private isSameTargetItems(
     local: string[] | undefined | null,
-    remote: string[] | undefined | null
+    remote: string[] | undefined | null,
   ): boolean {
     const normalize = (input: string[] | undefined | null) => {
       if (!input || input.length === 0) {
