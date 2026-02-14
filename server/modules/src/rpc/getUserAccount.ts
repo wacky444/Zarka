@@ -48,7 +48,13 @@ function buildDefaultStats(): import("@shared").PlayerStats {
 
 function buildDefaultCosmetics(): import("@shared").UserCosmetics {
   return {
-    selectedSkinId: "default",
+    selectedSkinId: {
+      body: "body_human_white.png",
+      shoes: "shoe_01.png",
+      shirt: "shirt_001.png",
+      hair: "hair_001.png",
+      hat: "",
+    },
     unlockedSkinIds: ["default"],
   };
 }
@@ -63,7 +69,7 @@ function clampNonNegativeInt(value: unknown, fallback: number): number {
 }
 
 function buildAccountFromUser(
-  user: nkruntime.User
+  user: nkruntime.User,
 ): import("@shared").UserAccount {
   const userId =
     (user as unknown as { id?: string; userId?: string }).id ??
@@ -71,7 +77,7 @@ function buildAccountFromUser(
     "";
 
   const metadata = asRecord(
-    (user as unknown as { metadata?: unknown }).metadata
+    (user as unknown as { metadata?: unknown }).metadata,
   );
   const zarka = asRecord(metadata?.zarka);
 
@@ -84,7 +90,7 @@ function buildAccountFromUser(
   const stats: import("@shared").PlayerStats = {
     matchesPlayed: clampNonNegativeInt(
       statsObj?.matchesPlayed,
-      defaultsStats.matchesPlayed
+      defaultsStats.matchesPlayed,
     ),
     wins: clampNonNegativeInt(statsObj?.wins, defaultsStats.wins),
     losses: clampNonNegativeInt(statsObj?.losses, defaultsStats.losses),
@@ -92,15 +98,15 @@ function buildAccountFromUser(
     elo: clampNonNegativeInt(statsObj?.elo, defaultsStats.elo),
     highestElo: clampNonNegativeInt(
       statsObj?.highestElo,
-      defaultsStats.highestElo
+      defaultsStats.highestElo,
     ),
     currentWinStreak: clampNonNegativeInt(
       statsObj?.currentWinStreak,
-      defaultsStats.currentWinStreak
+      defaultsStats.currentWinStreak,
     ),
     bestWinStreak: clampNonNegativeInt(
       statsObj?.bestWinStreak,
-      defaultsStats.bestWinStreak
+      defaultsStats.bestWinStreak,
     ),
     rankTier:
       (asString(statsObj?.rankTier) as
@@ -109,8 +115,15 @@ function buildAccountFromUser(
     lastMatchEndedAtMs: parseEpochMs(statsObj?.lastMatchEndedAtMs),
   };
 
-  const selectedSkinId =
-    asString(cosmeticsObj?.selectedSkinId) ?? defaultsCosmetics.selectedSkinId;
+  const skinObj = asRecord(cosmeticsObj?.selectedSkinId);
+  const defaultSkin = defaultsCosmetics.selectedSkinId;
+  const selectedSkinId: import("@shared").Skin = {
+    body: asString(skinObj?.body) ?? defaultSkin.body,
+    shoes: asString(skinObj?.shoes) ?? defaultSkin.shoes,
+    shirt: asString(skinObj?.shirt) ?? defaultSkin.shirt,
+    hair: asString(skinObj?.hair) ?? defaultSkin.hair,
+    hat: asString(skinObj?.hat) ?? defaultSkin.hat,
+  };
   const unlockedSkinIdsRaw = cosmeticsObj?.unlockedSkinIds;
   const unlockedSkinIds = Array.isArray(unlockedSkinIdsRaw)
     ? unlockedSkinIdsRaw.filter((x): x is string => typeof x === "string")
@@ -121,16 +134,16 @@ function buildAccountFromUser(
     unlockedSkinIds,
     unlockedCosmeticIds: Array.isArray(cosmeticsObj?.unlockedCosmeticIds)
       ? cosmeticsObj.unlockedCosmeticIds.filter(
-          (x): x is string => typeof x === "string"
+          (x): x is string => typeof x === "string",
         )
       : undefined,
   };
 
   const createdAtMs = parseEpochMs(
-    (user as unknown as { createTime?: unknown }).createTime
+    (user as unknown as { createTime?: unknown }).createTime,
   );
   const updatedAtMs = parseEpochMs(
-    (user as unknown as { updateTime?: unknown }).updateTime
+    (user as unknown as { updateTime?: unknown }).updateTime,
   );
 
   return {
@@ -152,7 +165,7 @@ export function getUserAccountRpc(
   ctx: nkruntime.Context,
   logger: nkruntime.Logger,
   nk: nkruntime.Nakama,
-  payload: string
+  payload: string,
 ): string {
   let requestedUserId: string | undefined;
   if (payload && payload !== "") {
@@ -187,7 +200,7 @@ export function getUserAccountRpc(
   } catch (error) {
     logger.error(
       "get_user_account usersGetId failed: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
     return JSON.stringify({
       error: "internal_error",

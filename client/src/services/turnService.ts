@@ -10,6 +10,8 @@ import {
   type TurnAdvancedMessagePayload,
   type MatchEndedMessagePayload,
   type SaveChatMessageRequest,
+  type GetUserAccountPayload,
+  type Skin,
 } from "@shared";
 
 export type Move = { n: number; ts: number };
@@ -390,6 +392,29 @@ export class TurnService {
   }
 
   // Getters for client and session (used in MainScene)
+  async getUserSkin(): Promise<Skin | null> {
+    try {
+      const rpcRes = await this.client.rpc(
+        this.session,
+        "get_user_account",
+        {},
+      );
+      const raw = (rpcRes as unknown as { payload?: unknown }).payload;
+      const payload = (typeof raw === "string" ? JSON.parse(raw) : raw) as
+        | GetUserAccountPayload
+        | undefined;
+      if (payload?.ok && payload.account) {
+        const skin = payload.account.cosmetics.selectedSkinId;
+        if (skin && typeof skin === "object") {
+          return skin;
+        }
+      }
+    } catch (e) {
+      console.warn("getUserSkin: failed to fetch", e);
+    }
+    return null;
+  }
+
   getClient(): Client {
     return this.client;
   }

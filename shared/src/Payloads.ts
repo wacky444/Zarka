@@ -3,7 +3,7 @@ import type { GameMap, Axial } from "./hexTile";
 import type { PlayerCharacter } from "./playerCharacter";
 import type { ReplayEvent } from "./Replay";
 import type { MatchChatMessage } from "./chat";
-import type { UserAccount } from "./UserAccount";
+import type { Skin, UserAccount } from "./UserAccount";
 
 export const OPCODE_SETTINGS_UPDATE = 100;
 export const OPCODE_MATCH_REMOVED = 101;
@@ -181,5 +181,11 @@ export type GetChatHistoryPayload = {
 export type GetUserAccountPayload = {
   ok?: boolean;
   account?: UserAccount;
+  error?: string;
+};
+
+export type UpdateSkinPayload = {
+  ok?: boolean;
+  skin?: Skin;
   error?: string;
 };

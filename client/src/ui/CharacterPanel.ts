@@ -11,6 +11,7 @@ import {
   ItemLibrary,
   type ItemId,
   type ItemDefinition,
+  DEFAULT_SKIN,
 } from "@shared";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
 import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
@@ -30,6 +31,7 @@ import { CharacterPanelLogView } from "./CharacterPanelLogView";
 import { InventoryGrid, type InventoryGridItem } from "./InventoryGrid";
 import { resolveItemTexture } from "./itemIcons";
 import { ENERGY_ACCENT_COLOR, HEALTH_ACCENT_COLOR } from "./ColorPalette";
+import { resolveSkinBodyFrame, createSkinContainer, SkinContainer } from "./PlayerSkinRenderer";
 import {
   CharacterPanelChatView,
   type ChatConnectionState,
@@ -74,19 +76,6 @@ const SECONDARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
   )
   .map((definition) => definition.id)
   .sort((a, b) => ActionLibrary[a].name.localeCompare(ActionLibrary[b].name));
-const PLAYER_SPRITE_FRAMES = [
-  "body_human_light_01.png",
-  "body_human_tan_01.png",
-  "body_orc_green_01.png",
-  "body_elf_pale_01.png",
-  "body_dwarf_ruddy_01.png",
-  "body_human_dark_01.png",
-  "body_human_brown_01.png",
-  "body_human_red_01.png",
-  "body_human_olive_01.png",
-  "body_human_peach_01.png",
-];
-
 export type MainActionSelection = {
   actionId: string | null;
   targetLocation: Axial | null;
@@ -131,7 +120,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private tabsController!: CharacterPanelTabs;
   private logView!: CharacterPanelLogView;
   private chatView!: CharacterPanelChatView;
-  private portrait: Phaser.GameObjects.Image;
+  private portrait: SkinContainer;
   private nameText: Phaser.GameObjects.Text;
   private healthLabel: Phaser.GameObjects.Text;
   private energyLabel: Phaser.GameObjects.Text;
@@ -183,6 +172,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private itemOptions: ItemPriorityOption[] = [];
   private currentMatch: MatchRecord | null = null;
   private currentUserId: string | null = null;
+  private currentPlayerSkin: import("@shared").Skin | null = null;
   private readonly handleMainActionSelection = (actionId: string | null) => {
     this.mainActionSelection = actionId ?? null;
     this.lastMainActionItem = this.mainActionDropdown.getSelectedItem() ?? null;
@@ -332,10 +322,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.tabs.push({ key: tab.key as TabKey, rect, text });
     });
     const contentTop = TAB_HEIGHT + MARGIN;
-    this.portrait = scene.add
-      .image(MARGIN, contentTop, "char", "body_human_tan_01.png")
-      .setOrigin(0, 0);
-    this.portrait.setDisplaySize(PORTRAIT_SIZE, PORTRAIT_SIZE);
+    const portraitScale = PORTRAIT_SIZE / 16;
+    this.portrait = createSkinContainer(
+      scene,
+      MARGIN + PORTRAIT_SIZE / 2,
+      contentTop + PORTRAIT_SIZE / 2,
+      DEFAULT_SKIN,
+      portraitScale,
+    );
     this.add(this.portrait);
     this.nameText = scene.add
       .text(MARGIN, contentTop - 14, "", {
@@ -940,6 +934,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   getPanelWidth() {
     return this.panelWidth;
+  }
+
+  setCurrentPlayerSkin(skin: import("@shared").Skin) {
+    this.currentPlayerSkin = skin;
+    this.portrait.updateSkin(skin, this.scene.textures);
   }
 
   updateFromMatch(
@@ -2026,22 +2025,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       !textures.get(texture).has(frame)
     ) {
       texture = "char";
-      const index =
-        PLAYER_SPRITE_FRAMES.length > 0
-          ? this.hashString(playerId) % PLAYER_SPRITE_FRAMES.length
-          : 0;
-      frame = PLAYER_SPRITE_FRAMES[index] ?? "body_orc.png";
+      const skinForPlayer =
+        this.currentUserId && playerId === this.currentUserId
+          ? this.currentPlayerSkin
+          : null;
+      frame = resolveSkinBodyFrame(skinForPlayer);
     }
-    const resolvedFrame = frame ?? "body_human_tan.png";
-    return { texture, frame: resolvedFrame, iconScale: scale };
-  }
-
-  private hashString(value: string) {
-    let hash = 0;
-    for (let i = 0; i < value.length; i += 1) {
-      hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
-    }
-    return hash >>> 0;
+    return { texture, frame, iconScale: scale };
   }
 
   private selectedActionSupportsLocation() {

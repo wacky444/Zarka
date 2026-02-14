@@ -33,6 +33,7 @@ import {
   type MatchChatMessage,
   getHexTileOffsets,
   ItemLibrary,
+  DEFAULT_SKIN,
 } from "@shared";
 import { buildBoardIconUrl, deriveBoardIconKey } from "../ui/actionIcons";
 import {
@@ -43,6 +44,10 @@ import { collectItemSpriteInfos, resolveItemTexture } from "../ui/itemIcons";
 import { ItemTooltipManager, composeItemDescription } from "../ui/ItemTooltip";
 import { TopBanner, type TopBannerPayload } from "../ui/TopBanner";
 import { assetPath } from "../utils/assetPath";
+import {
+  createSkinContainer,
+  SkinContainer,
+} from "../ui/PlayerSkinRenderer";
 
 type PlayerEliminationBannerEvent = {
   playerId: string;
@@ -60,7 +65,7 @@ export class GameScene extends Phaser.Scene {
   private uiCam!: Phaser.Cameras.Scene2D.Camera;
   private currentMatch: MatchRecord | null = null;
   private tilePositions: Record<string, { x: number; y: number }> = {};
-  private playerSprites = new Map<string, Phaser.GameObjects.Image>();
+  private playerSprites = new Map<string, SkinContainer>();
   private playerNameLabels = new Map<string, Phaser.GameObjects.Text>();
   private playerNameMap: Record<string, string> = {};
   private characterPanel: CharacterPanel | null = null;
@@ -92,6 +97,7 @@ export class GameScene extends Phaser.Scene {
   private chatMessages: MatchChatMessage[] = [];
   private chatUnsubscribe: (() => void) | null = null;
   private chatHistoryRefreshRunning = false;
+  private currentPlayerSkin: import("@shared").Skin | null = null;
   private readonly turnAdvancedHandler = (
     payload: TurnAdvancedMessagePayload,
   ) => {
@@ -213,6 +219,14 @@ export class GameScene extends Phaser.Scene {
     );
     this.characterPanel.on("chat-send", this.handleChatSend, this);
     this.characterPanel.on("chat-tab-opened", this.handleChatTabOpened, this);
+
+    if (this.turnService) {
+      const skin = await this.turnService.getUserSkin();
+      if (skin) {
+        this.currentPlayerSkin = skin;
+        this.characterPanel.setCurrentPlayerSkin(skin);
+      }
+    }
 
     this.menuButton = makeButton(this, 0, 0, "☰", () => {
       this.scene.stop("GameScene");
@@ -514,8 +528,11 @@ export class GameScene extends Phaser.Scene {
           : false;
         let sprite = this.playerSprites.get(playerId);
         if (!sprite || !sprite.active || sprite.scene !== this) {
-          sprite = this.add.image(x, y, "char", "body_human_tan_01.png");
-          sprite.setScale(2);
+          const playerSkin =
+            playerId === this.currentUserId && this.currentPlayerSkin
+              ? this.currentPlayerSkin
+              : DEFAULT_SKIN;
+          sprite = createSkinContainer(this, x, y, playerSkin, 2);
           sprite.setData("playerId", playerId);
           this.uiCam.ignore(sprite);
           this.playerSprites.set(playerId, sprite);
@@ -726,7 +743,7 @@ export class GameScene extends Phaser.Scene {
 
   private positionNameLabel(
     label: Phaser.GameObjects.Text,
-    sprite: Phaser.GameObjects.Image,
+    sprite: SkinContainer,
   ) {
     const offset = sprite.displayHeight / 2 + 12;
     label.setPosition(sprite.x, sprite.y - offset);

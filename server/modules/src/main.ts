@@ -18,6 +18,7 @@ import {
   saveChatMessageRpc,
   getChatHistoryRpc,
   getUserAccountRpc,
+  updateSkinRpc,
 } from "./rpc";
 import { asyncTurnMatchHandler } from "./match/async_turn";
 import { restoreMatchesFromStorage } from "./services/matchRestoration";
@@ -26,14 +27,14 @@ export function InitModule(
   ctx: nkruntime.Context,
   logger: nkruntime.Logger,
   nk: nkruntime.Nakama,
-  initializer: nkruntime.Initializer
+  initializer: nkruntime.Initializer,
 ) {
   try {
     initializer.registerRpc("create_match", createMatchRpc);
   } catch (error) {
     logger.error(
       "Failed to register create_match: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
   try {
@@ -41,7 +42,7 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register submit_turn: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
   try {
@@ -49,7 +50,7 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register get_state: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
   try {
@@ -57,7 +58,7 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register get_replay: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
   try {
@@ -65,7 +66,7 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register save_chat_message: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
   try {
@@ -73,7 +74,7 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register get_chat_history: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
   try {
@@ -81,7 +82,15 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register get_user_account: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
+    );
+  }
+  try {
+    initializer.registerRpc("update_skin", updateSkinRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register update_skin: %s",
+      (error && (error as Error).message) || String(error),
     );
   }
   try {
@@ -89,7 +98,7 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register join_match: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
   try {
@@ -97,7 +106,7 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register leave_match: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
   try {
@@ -105,7 +114,7 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register update_settings: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
   try {
@@ -113,7 +122,7 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register start_match: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
   try {
@@ -121,7 +130,7 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register list_my_matches: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
   try {
@@ -129,7 +138,7 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register remove_match: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
   try {
@@ -137,18 +146,18 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register update_main_action: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
   try {
     initializer.registerRpc(
       "update_secondary_action",
-      updateSecondaryActionRpc
+      updateSecondaryActionRpc,
     );
   } catch (error) {
     logger.error(
       "Failed to register update_secondary_action: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
   try {
@@ -156,18 +165,18 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register update_ready_state: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
   try {
     initializer.registerMatch<AsyncTurnState>(
       "async_turn",
-      asyncTurnMatchHandler
+      asyncTurnMatchHandler,
     );
   } catch (error) {
     logger.error(
       "Failed to register match handler async_turn: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
 
@@ -177,12 +186,12 @@ export function InitModule(
     const restoredCount = restoreMatchesFromStorage(ctx, logger, nk);
     logger.info(
       "Match restoration completed: %d matches restored",
-      restoredCount
+      restoredCount,
     );
   } catch (error) {
     logger.error(
       "Failed to restore matches from storage: %s",
-      (error && (error as Error).message) || String(error)
+      (error && (error as Error).message) || String(error),
     );
   }
 }
