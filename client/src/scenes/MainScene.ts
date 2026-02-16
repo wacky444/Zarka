@@ -215,7 +215,7 @@ export class MainScene extends Phaser.Scene {
           }
         }
         // When match starts, transition to GameScene (for non-host clients)
-        if (p.started === true && this.activeView === "inMatch") {
+        if (p.started && this.activeView === "inMatch") {
           this.scene.sleep("MainScene");
           this.scene.run("GameScene");
         }
