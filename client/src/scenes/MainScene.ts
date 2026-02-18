@@ -214,6 +214,11 @@ export class MainScene extends Phaser.Scene {
             view.setPlayers(players);
           }
         }
+        // When match starts, transition to GameScene (for non-host clients)
+        if (p.started && this.activeView === "inMatch") {
+          this.scene.sleep("MainScene");
+          this.scene.run("GameScene");
+        }
       });
       this.turnService.setOnMatchRemoved(() => {
         this.statusText.setText(
