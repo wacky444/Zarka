@@ -44,10 +44,8 @@ import { collectItemSpriteInfos, resolveItemTexture } from "../ui/itemIcons";
 import { ItemTooltipManager, composeItemDescription } from "../ui/ItemTooltip";
 import { TopBanner, type TopBannerPayload } from "../ui/TopBanner";
 import { assetPath } from "../utils/assetPath";
-import {
-  createSkinContainer,
-  SkinContainer,
-} from "../ui/PlayerSkinRenderer";
+import { createSkinContainer, SkinContainer } from "../ui/PlayerSkinRenderer";
+import { AccountService } from "../services/AccountService";
 
 type PlayerEliminationBannerEvent = {
   playerId: string;
@@ -98,6 +96,8 @@ export class GameScene extends Phaser.Scene {
   private chatUnsubscribe: (() => void) | null = null;
   private chatHistoryRefreshRunning = false;
   private currentPlayerSkin: import("@shared").Skin | null = null;
+  private playerSkinMap = new Map<string, import("@shared").Skin>();
+  private accountService: AccountService | null = null;
   private readonly turnAdvancedHandler = (
     payload: TurnAdvancedMessagePayload,
   ) => {
@@ -185,6 +185,9 @@ export class GameScene extends Phaser.Scene {
     if (this.turnService) {
       this.turnService.setOnTurnAdvanced(this.turnAdvancedHandler);
       this.turnService.setOnMatchEnded(this.matchEndedHandler);
+      this.accountService = this.registry.get(
+        "accountService",
+      ) as AccountService | null;
     }
 
     this.characterPanel = new CharacterPanel(this, 0, 0);
@@ -224,6 +227,9 @@ export class GameScene extends Phaser.Scene {
       const skin = await this.turnService.getUserSkin();
       if (skin) {
         this.currentPlayerSkin = skin;
+        if (this.currentUserId) {
+          this.playerSkinMap.set(this.currentUserId, skin);
+        }
         this.characterPanel.setCurrentPlayerSkin(skin);
       }
     }
@@ -526,16 +532,19 @@ export class GameScene extends Phaser.Scene {
         const isDead = Array.isArray(conditions)
           ? conditions.indexOf("dead") !== -1
           : false;
+        const playerSkin =
+          this.playerSkinMap.get(playerId) ??
+          (playerId === this.currentUserId && this.currentPlayerSkin
+            ? this.currentPlayerSkin
+            : DEFAULT_SKIN);
         let sprite = this.playerSprites.get(playerId);
         if (!sprite || !sprite.active || sprite.scene !== this) {
-          const playerSkin =
-            playerId === this.currentUserId && this.currentPlayerSkin
-              ? this.currentPlayerSkin
-              : DEFAULT_SKIN;
           sprite = createSkinContainer(this, x, y, playerSkin, 2);
           sprite.setData("playerId", playerId);
           this.uiCam.ignore(sprite);
           this.playerSprites.set(playerId, sprite);
+        } else {
+          sprite.updateSkin(playerSkin, this.textures);
         }
         sprite.setPosition(x, y);
         sprite.setVisible(true);
@@ -863,6 +872,10 @@ export class GameScene extends Phaser.Scene {
   private async resolvePlayerNames(match: MatchRecord | null) {
     this.playerNameMap = {};
     this.currentPlayerName = null;
+    this.playerSkinMap.clear();
+    if (this.currentUserId && this.currentPlayerSkin) {
+      this.playerSkinMap.set(this.currentUserId, this.currentPlayerSkin);
+    }
     if (!match || !this.turnService) {
       return;
     }
@@ -901,6 +914,32 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.currentUserId) {
       this.currentPlayerName = this.playerNameMap[this.currentUserId] ?? null;
+    }
+    await this.resolvePlayerAccounts(match);
+  }
+
+  private async resolvePlayerAccounts(match: MatchRecord | null) {
+    if (!match || !this.accountService || !this.characterPanel) return;
+    const ids = new Set<string>();
+    if (Array.isArray(match.players)) {
+      for (const id of match.players) {
+        if (typeof id === "string" && id.trim().length > 0) ids.add(id);
+      }
+    }
+    if (match.playerCharacters) {
+      for (const id of Object.keys(match.playerCharacters)) {
+        if (typeof id === "string" && id.trim().length > 0) ids.add(id);
+      }
+    }
+    if (ids.size === 0) return;
+    const accounts = await this.accountService.getAccounts(Array.from(ids));
+    const panel = this.characterPanel;
+    for (const [userId, account] of accounts) {
+      panel.setPlayerAccount(userId, account);
+      const accountSkin = account?.cosmetics?.selectedSkinId;
+      if (accountSkin) {
+        this.playerSkinMap.set(userId, accountSkin);
+      }
     }
   }
 

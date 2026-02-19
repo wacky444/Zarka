@@ -12,6 +12,7 @@ import {
   type ItemId,
   type ItemDefinition,
   DEFAULT_SKIN,
+  Skin,
 } from "@shared";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
 import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
@@ -31,7 +32,7 @@ import { CharacterPanelLogView } from "./CharacterPanelLogView";
 import { InventoryGrid, type InventoryGridItem } from "./InventoryGrid";
 import { resolveItemTexture } from "./itemIcons";
 import { ENERGY_ACCENT_COLOR, HEALTH_ACCENT_COLOR } from "./ColorPalette";
-import { resolveSkinBodyFrame, createSkinContainer, SkinContainer } from "./PlayerSkinRenderer";
+import { createSkinContainer, SkinContainer } from "./PlayerSkinRenderer";
 import {
   CharacterPanelChatView,
   type ChatConnectionState,
@@ -173,6 +174,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private currentMatch: MatchRecord | null = null;
   private currentUserId: string | null = null;
   private currentPlayerSkin: import("@shared").Skin | null = null;
+  private playerAccounts = new Map<string, import("@shared").UserAccount>();
+  private playerOptionSkinIcons = new Map<
+    string,
+    { textureKey: string; signature: string }
+  >();
   private readonly handleMainActionSelection = (actionId: string | null) => {
     this.mainActionSelection = actionId ?? null;
     this.lastMainActionItem = this.mainActionDropdown.getSelectedItem() ?? null;
@@ -260,12 +266,18 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private readonly handleLogElimination = (payload: LogEliminationPayload) => {
     const character =
       this.currentMatch?.playerCharacters?.[payload.playerId] ?? null;
-    const sprite = this.resolvePlayerSpriteInfo(payload.playerId, character, 1);
+    const sprite = this.resolvePlayerSpriteInfo(
+      payload.playerId,
+      character,
+      this.playerAccounts.get(payload.playerId)?.cosmetics.selectedSkinId ??
+        null,
+      1,
+    );
     const eventPayload: PlayerEliminatedPayload = {
       playerId: payload.playerId,
       playerName: payload.playerName,
       texture: sprite.texture,
-      frame: sprite.frame,
+      frame: sprite.frame ?? DEFAULT_SKIN.body,
       turn: payload.turn,
     };
     this.emit("player-eliminated", eventPayload);
@@ -840,6 +852,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.scrollPanel = null;
     this.scrollMask = null;
     this.scrollMaskShape = null;
+    this.disposePlayerOptionSkinIcons();
     super.destroy(fromScene);
   }
 
@@ -939,6 +952,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   setCurrentPlayerSkin(skin: import("@shared").Skin) {
     this.currentPlayerSkin = skin;
     this.portrait.updateSkin(skin, this.scene.textures);
+  }
+
+  setPlayerAccount(userId: string, account: import("@shared").UserAccount) {
+    this.playerAccounts.set(userId, account);
   }
 
   updateFromMatch(
@@ -1757,12 +1774,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         seen.add(id);
         const character = match.playerCharacters?.[id] ?? null;
         const baseName = usernames[id] ?? character?.name ?? id;
+        const account = this.playerAccounts.get(id) ?? null;
+        const accountSkin = account?.cosmetics.selectedSkinId ?? null;
         const displayName = baseName && baseName.length > 0 ? baseName : id;
         const label =
           currentUserId && id === currentUserId
             ? `${displayName} (You)`
             : displayName;
-        const sprite = this.resolvePlayerSpriteInfo(id, character, 1);
+        const sprite = this.resolvePlayerSpriteInfo(
+          id,
+          character,
+          accountSkin,
+          1,
+        );
         options.push({
           id,
           label,
@@ -1779,6 +1803,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       }
     }
     this.playerOptions = options;
+    const activeIds = new Set(options.map((option) => option.id));
+    this.disposePlayerOptionSkinIcons(activeIds);
     this.currentUserId = currentUserId ?? null;
     this.refreshPlayerOptionsForSelectors();
     this.refreshPlayerSelectorState();
@@ -2002,36 +2028,83 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private resolvePlayerSpriteInfo(
     playerId: string,
-    character: PlayerCharacter | null,
+    _character: PlayerCharacter | null,
+    accountSkin: Skin | null,
     scale: number,
   ) {
-    const appearance = (
-      character as unknown as {
-        appearance?: { texture?: string; frame?: string; body?: string };
-      } | null
-    )?.appearance;
-    let texture =
-      typeof appearance?.texture === "string" ? appearance.texture : "char";
-    let frame =
-      typeof appearance?.frame === "string"
-        ? appearance.frame
-        : typeof appearance?.body === "string"
-          ? appearance.body
-          : undefined;
-    const textures = this.scene.textures;
+    const skinForPlayer =
+      accountSkin ??
+      (this.currentUserId && playerId === this.currentUserId
+        ? (this.currentPlayerSkin ?? DEFAULT_SKIN)
+        : DEFAULT_SKIN);
+    const signature = this.skinSignature(skinForPlayer);
+    const existing = this.playerOptionSkinIcons.get(playerId);
     if (
-      !frame ||
-      !textures.exists(texture) ||
-      !textures.get(texture).has(frame)
+      existing &&
+      existing.signature === signature &&
+      this.scene.textures.exists(existing.textureKey)
     ) {
-      texture = "char";
-      const skinForPlayer =
-        this.currentUserId && playerId === this.currentUserId
-          ? this.currentPlayerSkin
-          : null;
-      frame = resolveSkinBodyFrame(skinForPlayer);
+      return {
+        texture: existing.textureKey,
+        frame: undefined,
+        iconScale: scale,
+      };
     }
-    return { texture, frame, iconScale: scale };
+
+    if (existing) {
+      if (this.scene.textures.exists(existing.textureKey)) {
+        this.scene.textures.remove(existing.textureKey);
+      }
+      this.playerOptionSkinIcons.delete(playerId);
+    }
+
+    const textureKey = `player-option-skin-${playerId}`;
+    const created = this.createPlayerOptionSkinTexture(
+      textureKey,
+      skinForPlayer,
+    );
+    if (created) {
+      this.playerOptionSkinIcons.set(playerId, { textureKey, signature });
+      return { texture: textureKey, frame: undefined, iconScale: scale };
+    }
+
+    return { texture: "char", frame: DEFAULT_SKIN.body, iconScale: scale };
+  }
+
+  private createPlayerOptionSkinTexture(
+    textureKey: string,
+    skin: Skin,
+  ): boolean {
+    if (this.scene.textures.exists(textureKey)) {
+      this.scene.textures.remove(textureKey);
+    }
+    const sprite = createSkinContainer(this.scene, 0, 0, skin, 1);
+    const rt = this.scene.make.renderTexture({ width: 16, height: 16 }, false);
+    if (!rt) {
+      sprite.destroy(true);
+      return false;
+    }
+    rt.draw(sprite, 8, 8);
+    rt.saveTexture(textureKey);
+    rt.destroy();
+    sprite.destroy(true);
+    return this.scene.textures.exists(textureKey);
+  }
+
+  private skinSignature(skin: Skin): string {
+    return [skin.body, skin.shoes, skin.shirt, skin.hair, skin.hat].join("|");
+  }
+
+  private disposePlayerOptionSkinIcons(activeIds?: Set<string>): void {
+    for (const [playerId, cached] of this.playerOptionSkinIcons) {
+      if (activeIds && activeIds.has(playerId)) {
+        continue;
+      }
+      if (this.scene.textures.exists(cached.textureKey)) {
+        this.scene.textures.remove(cached.textureKey);
+      }
+      this.playerOptionSkinIcons.delete(playerId);
+    }
   }
 
   private selectedActionSupportsLocation() {

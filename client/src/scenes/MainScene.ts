@@ -3,6 +3,7 @@ import { Client, Session, RpcResponse } from "@heroiclabs/nakama-js";
 import { initNakama } from "../services/nakama";
 import { SessionManager } from "../services/sessionManager";
 import { TurnService } from "../services/turnService";
+import { AccountService } from "../services/AccountService";
 import { makeButton, UIButton } from "../ui/button";
 import { MatchesListView } from "./MatchesList";
 import { MyMatchesListView } from "./MyMatchesList";
@@ -20,6 +21,7 @@ import type {
 export class MainScene extends Phaser.Scene {
   private statusText!: Phaser.GameObjects.Text;
   private turnService: TurnService | null = null;
+  private accountService: AccountService | null = null;
   private currentMatchId: string | null = null;
   private currentMatchName: string | null = null;
   private moveCounter = 0;
@@ -45,7 +47,7 @@ export class MainScene extends Phaser.Scene {
       } catch (e) {
         console.warn("Realtime join failed", e);
         this.statusText.setText(
-          "Realtime connection failed. Please try again."
+          "Realtime connection failed. Please try again.",
         );
         return;
       }
@@ -72,7 +74,7 @@ export class MainScene extends Phaser.Scene {
       this.statusText.setText(
         `Join OK: ${nameForStatus}${stateSuffix}. Players: ${count ?? "?"}/${
           parsed.size ?? "?"
-        }`
+        }`,
       );
       if (this.lobbyView) {
         this.lobbyView.setMatchInfo(matchId, displayName);
@@ -82,10 +84,10 @@ export class MainScene extends Phaser.Scene {
         if (Array.isArray(parsed.players) && parsed.players.length > 0) {
           try {
             const usernameMap = await this.turnService.resolveUsernames(
-              parsed.players
+              parsed.players,
             );
             const playerNames = parsed.players.map(
-              (id) => usernameMap[id] ?? id
+              (id) => usernameMap[id] ?? id,
             );
             this.lobbyView.setPlayers(playerNames);
           } catch (e) {
@@ -113,10 +115,10 @@ export class MainScene extends Phaser.Scene {
             !!creator && !!this.currentUserId && creator === this.currentUserId;
           if (Array.isArray(matchObj?.players) && matchObj.players.length > 0) {
             const usernameMap = await this.turnService.resolveUsernames(
-              matchObj.players
+              matchObj.players,
             );
             const playerNames = matchObj.players.map(
-              (id) => usernameMap[id] ?? id
+              (id) => usernameMap[id] ?? id,
             );
             this.lobbyView.setPlayers(playerNames);
             const creatorDisplay = creator ? usernameMap[creator] : undefined;
@@ -174,6 +176,8 @@ export class MainScene extends Phaser.Scene {
 
       this.turnService = new TurnService(client, session);
       this.registry.set("turnService", this.turnService);
+      this.accountService = new AccountService(client, session);
+      this.registry.set("accountService", this.accountService);
       this.setCurrentMatchId(this.currentMatchId);
       this.currentUserId = session.user_id ?? null;
       this.registry.set("currentUserId", this.currentUserId);
@@ -214,7 +218,6 @@ export class MainScene extends Phaser.Scene {
             view.setPlayers(players);
           }
         }
-        // When match starts, transition to GameScene (for non-host clients)
         if (p.started && this.activeView === "inMatch") {
           this.scene.sleep("MainScene");
           this.scene.run("GameScene");
@@ -222,7 +225,7 @@ export class MainScene extends Phaser.Scene {
       });
       this.turnService.setOnMatchRemoved(() => {
         this.statusText.setText(
-          "Match has been removed by the host. Returning to main menu."
+          "Match has been removed by the host. Returning to main menu.",
         );
         if (this.currentMatchId && this.turnService) {
           this.turnService
@@ -303,7 +306,7 @@ export class MainScene extends Phaser.Scene {
         const move = { n: ++this.moveCounter, ts: Date.now() };
         const res = await this.turnService.submitTurn(
           this.currentMatchId,
-          move
+          move,
         );
         const parsed = this.parseRpcPayload<SubmitTurnPayload>(res);
         if (parsed && parsed.ok) {
@@ -340,7 +343,7 @@ export class MainScene extends Phaser.Scene {
         try {
           await this.turnService.updateSettings(this.currentMatchId, s);
           this.statusText.setText(
-            `Settings updated: name="${s.name}" players=${s.players}, ${s.cols}x${s.rows}`
+            `Settings updated: name="${s.name}" players=${s.players}, ${s.cols}x${s.rows}`,
           );
         } catch (e) {
           console.error("update_settings error", e);
@@ -397,8 +400,8 @@ export class MainScene extends Phaser.Scene {
             // Auto-join the match we just created
             await this.joinMatch(parsed.match_id);
           },
-          ["main"]
-        )
+          ["main"],
+        ),
       );
 
       // Matches list view toggle
@@ -411,8 +414,8 @@ export class MainScene extends Phaser.Scene {
           () => {
             this.showView("matchList");
           },
-          ["main"]
-        )
+          ["main"],
+        ),
       );
 
       // My Matches list view toggle
@@ -425,8 +428,8 @@ export class MainScene extends Phaser.Scene {
           () => {
             this.showView("myMatchList");
           },
-          ["main"]
-        )
+          ["main"],
+        ),
       );
 
       // Logout button
@@ -439,8 +442,8 @@ export class MainScene extends Phaser.Scene {
           () => {
             this.logout();
           },
-          ["main"]
-        )
+          ["main"],
+        ),
       );
 
       // Account Settings button
@@ -456,8 +459,8 @@ export class MainScene extends Phaser.Scene {
               session: this.turnService?.getSession(),
             });
           },
-          ["main"]
-        )
+          ["main"],
+        ),
       );
 
       // View-specific buttons for MatchesList
@@ -468,8 +471,8 @@ export class MainScene extends Phaser.Scene {
           70,
           "Refresh",
           () => this.matchesListView.refresh(),
-          ["matchList"]
-        )
+          ["matchList"],
+        ),
       );
       this.buttons.push(
         makeButton(
@@ -480,8 +483,8 @@ export class MainScene extends Phaser.Scene {
           () => {
             this.showView("main");
           },
-          ["matchList"]
-        )
+          ["matchList"],
+        ),
       );
 
       // View-specific buttons for MyMatchesList
@@ -492,8 +495,8 @@ export class MainScene extends Phaser.Scene {
           70,
           "Refresh",
           () => this.myMatchesListView.refresh(),
-          ["myMatchList"]
-        )
+          ["myMatchList"],
+        ),
       );
       this.buttons.push(
         makeButton(
@@ -504,8 +507,8 @@ export class MainScene extends Phaser.Scene {
           () => {
             this.showView("main");
           },
-          ["myMatchList"]
-        )
+          ["myMatchList"],
+        ),
       );
 
       // Placeholder: inMatch view buttons can be added and tagged with ["inMatch"]
@@ -519,8 +522,8 @@ export class MainScene extends Phaser.Scene {
             this.showView("main");
             this.statusText.setText("Back to main menu (still in match).");
           },
-          ["inMatch"]
-        )
+          ["inMatch"],
+        ),
       );
 
       // Initialize in main view
@@ -532,7 +535,7 @@ export class MainScene extends Phaser.Scene {
       // Provide user-friendly error message for server connection issues
       if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
         this.statusText.setText(
-          "Server unavailable. Please check your connection or try again later."
+          "Server unavailable. Please check your connection or try again later.",
         );
       } else {
         this.statusText.setText("Init error: " + msg);
@@ -610,8 +613,7 @@ export class MainScene extends Phaser.Scene {
     this.currentUserId = null;
     this.registry.set("currentUserId", null);
     this.registry.set("turnService", null);
-
-    // Navigate back to login scene
+    this.registry.set("accountService", null);
     this.scene.start("LoginScene");
   }
 }
