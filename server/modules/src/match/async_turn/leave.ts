@@ -25,26 +25,26 @@ export const asyncTurnMatchLeave: nkruntime.MatchLeaveFunction<AsyncTurnState> =
       dispatcher.matchLabelUpdate(label);
     } catch {}
 
-    try {
-      const payload = JSON.stringify({
-        size: state.size,
-        cols: state.cols,
-        rows: state.rows,
-        roundTime: state.roundTime,
-        autoSkip: state.autoSkip,
-        botPlayers: state.botPlayers,
-        name: state.name,
-        started: state.started,
-        players: state.order,
-      });
-      dispatcher.broadcastMessage(
-        OPCODE_SETTINGS_UPDATE,
-        payload,
-        null,
-        null,
-        true
-      );
-    } catch {}
+    // try {
+    //   const payload = JSON.stringify({
+    //     size: state.size,
+    //     cols: state.cols,
+    //     rows: state.rows,
+    //     roundTime: state.roundTime,
+    //     autoSkip: state.autoSkip,
+    //     botPlayers: state.botPlayers,
+    //     name: state.name,
+    //     started: state.started,
+    //     players: state.order,
+    //   });
+    //   dispatcher.broadcastMessage(
+    //     OPCODE_SETTINGS_UPDATE,
+    //     payload,
+    //     null,
+    //     null,
+    //     true
+    //   );
+    // } catch {}
 
     return { state };
   };
