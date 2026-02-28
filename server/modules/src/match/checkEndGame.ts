@@ -25,6 +25,14 @@ function clampNonNegativeInt(value: unknown, fallback: number): number {
   return Math.max(0, rounded);
 }
 
+function clampNonNegativeNumber(value: unknown, fallback: number): number {
+  const n = asNumber(value);
+  if (typeof n !== "number") {
+    return fallback;
+  }
+  return Math.max(0, n);
+}
+
 function buildDefaultStats(): import("@shared").PlayerStats {
   return {
     matchesPlayed: 0,
@@ -35,6 +43,7 @@ function buildDefaultStats(): import("@shared").PlayerStats {
     highestElo: 1000,
     currentWinStreak: 0,
     bestWinStreak: 0,
+    avgTurnsPerMatch: 0,
     rankTier: "unranked",
   };
 }
@@ -72,6 +81,10 @@ function parsePlayerStatsFromUser(
     bestWinStreak: clampNonNegativeInt(
       statsObj?.bestWinStreak,
       defaults.bestWinStreak,
+    ),
+    avgTurnsPerMatch: clampNonNegativeNumber(
+      statsObj?.avgTurnsPerMatch,
+      defaults.avgTurnsPerMatch ?? 0,
     ),
     rankTier:
       (typeof statsObj?.rankTier === "string"
@@ -240,6 +253,14 @@ export function finalizeMatchIfEnded(
         nextCurrentWinStreak,
       );
 
+      const matchTurns = Math.max(0, Math.floor(match.current_turn ?? 0));
+      const previousAvg = previous.avgTurnsPerMatch ?? 0;
+      const totalTurns = previousAvg * previous.matchesPlayed + matchTurns;
+      const nextAvgTurnsPerMatch =
+        nextMatchesPlayed > 0
+          ? Math.round((totalTurns / nextMatchesPlayed) * 100) / 100
+          : 0;
+
       const nextStats: import("@shared").PlayerStats = {
         ...previous,
         matchesPlayed: nextMatchesPlayed,
@@ -248,6 +269,7 @@ export function finalizeMatchIfEnded(
         draws: nextDraws,
         currentWinStreak: nextCurrentWinStreak,
         bestWinStreak: nextBestWinStreak,
+        avgTurnsPerMatch: nextAvgTurnsPerMatch,
         lastMatchEndedAtMs: nowMs,
       };
 

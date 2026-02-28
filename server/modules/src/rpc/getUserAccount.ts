@@ -42,6 +42,7 @@ function buildDefaultStats(): import("@shared").PlayerStats {
     highestElo: 1000,
     currentWinStreak: 0,
     bestWinStreak: 0,
+    avgTurnsPerMatch: 0,
     rankTier: "unranked",
   };
 }
@@ -66,6 +67,14 @@ function clampNonNegativeInt(value: unknown, fallback: number): number {
 
   const rounded = Math.floor(value);
   return Math.max(0, rounded);
+}
+
+function clampNonNegativeNumber(value: unknown, fallback: number): number {
+  if (typeof value !== "number" || !isFinite(value)) {
+    return fallback;
+  }
+
+  return Math.max(0, value);
 }
 
 function buildAccountFromUser(
@@ -107,6 +116,10 @@ function buildAccountFromUser(
     bestWinStreak: clampNonNegativeInt(
       statsObj?.bestWinStreak,
       defaultsStats.bestWinStreak,
+    ),
+    avgTurnsPerMatch: clampNonNegativeNumber(
+      statsObj?.avgTurnsPerMatch,
+      defaultsStats.avgTurnsPerMatch ?? 0,
     ),
     rankTier:
       (asString(statsObj?.rankTier) as
