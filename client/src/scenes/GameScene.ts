@@ -69,6 +69,7 @@ export class GameScene extends Phaser.Scene {
   private characterPanel: CharacterPanel | null = null;
   private menuButton: UIButton | null = null;
   private currentUserId: string | null = null;
+  private spectatorMode = false;
   private currentPlayerName: string | null = null;
   private turnService: TurnService | null = null;
   private pointerDownInUI = false;
@@ -181,7 +182,10 @@ export class GameScene extends Phaser.Scene {
     this.uiCam.setZoom(1);
     this.itemTooltip = new ItemTooltipManager(this);
     this.turnService = this.registry.get("turnService") as TurnService | null;
-    this.currentUserId = this.registry.get("currentUserId") as string | null;
+    this.spectatorMode = this.registry.get("spectatorMode") === true;
+    this.currentUserId = this.spectatorMode
+      ? null
+      : (this.registry.get("currentUserId") as string | null);
     if (this.turnService) {
       this.turnService.setOnTurnAdvanced(this.turnAdvancedHandler);
       this.turnService.setOnMatchEnded(this.matchEndedHandler);
@@ -242,6 +246,9 @@ export class GameScene extends Phaser.Scene {
     this.topBanner = new TopBanner(this, {
       camera: this.cam,
     });
+    if (this.spectatorMode) {
+      this.topBanner.show({ text: "Spectator Mode (Read-only)" });
+    }
 
     const match = await this.fetchMatchFromServer();
     this.currentMatch = match;
@@ -973,7 +980,7 @@ export class GameScene extends Phaser.Scene {
       this.chatMessages = Array.isArray(history) ? history : [];
       this.syncChatMessagesToPanel();
       panel.setChatConnectionState("ready", "Connected");
-      panel.setChatInputEnabled(true);
+      panel.setChatInputEnabled(!this.spectatorMode);
       this.chatUnsubscribe = this.chatService.onMessage((payload) => {
         this.handleIncomingChatMessage(payload);
       });
@@ -1020,7 +1027,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private async handleChatSend(message: string) {
-    if (!this.chatService) {
+    if (this.spectatorMode || !this.chatService) {
       return;
     }
     this.characterPanel?.setChatSendCooldown(750);
