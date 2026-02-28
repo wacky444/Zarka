@@ -157,7 +157,12 @@ export class MainScene extends Phaser.Scene {
 
   preload() {}
 
-  async create(data?: { client?: Client; session?: Session }) {
+  async create(data?: {
+    client?: Client;
+    session?: Session;
+    spectatorMode?: boolean;
+    spectatorMatchId?: string;
+  }) {
     this.statusText = this.add.text(10, 10, "Connecting...", {
       color: "#ffffff",
     });
@@ -181,6 +186,20 @@ export class MainScene extends Phaser.Scene {
       this.setCurrentMatchId(this.currentMatchId);
       this.currentUserId = session.user_id ?? null;
       this.registry.set("currentUserId", this.currentUserId);
+      const spectatorMode = data?.spectatorMode === true;
+      this.registry.set("spectatorMode", spectatorMode);
+      if (spectatorMode) {
+        const matchId = data?.spectatorMatchId?.trim();
+        if (!matchId) {
+          this.statusText.setText("Spectator match ID missing.");
+          return;
+        }
+        this.setCurrentMatchId(matchId);
+        this.statusText.setText(`Spectating match ${matchId}`);
+        this.scene.sleep("MainScene");
+        this.scene.run("GameScene");
+        return;
+      }
       // Pre-connect the realtime socket so join calls don't race the connection
       await this.turnService.connectSocket();
       // Real-time settings updates from server
