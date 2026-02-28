@@ -2,6 +2,11 @@
 
 import type { MatchRecord } from "../models/types";
 import { isCharacterDead } from "../utils/playerCharacter";
+import {
+  asNumber,
+  clampNonNegativeInt,
+  clampNonNegativeNumber,
+} from "../utils/number";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -10,27 +15,6 @@ function asRecord(value: unknown): UnknownRecord | undefined {
     return undefined;
   }
   return value as UnknownRecord;
-}
-
-function asNumber(value: unknown): number | undefined {
-  return typeof value === "number" && isFinite(value) ? value : undefined;
-}
-
-function clampNonNegativeInt(value: unknown, fallback: number): number {
-  const n = asNumber(value);
-  if (typeof n !== "number") {
-    return fallback;
-  }
-  const rounded = Math.floor(n);
-  return Math.max(0, rounded);
-}
-
-function clampNonNegativeNumber(value: unknown, fallback: number): number {
-  const n = asNumber(value);
-  if (typeof n !== "number") {
-    return fallback;
-  }
-  return Math.max(0, n);
 }
 
 function buildDefaultStats(): import("@shared").PlayerStats {

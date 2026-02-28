@@ -1,5 +1,11 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
+import {
+  asNumber,
+  clampNonNegativeInt,
+  clampNonNegativeNumber,
+} from "../utils/number";
+
 type UnknownRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): UnknownRecord | undefined {
@@ -11,10 +17,6 @@ function asRecord(value: unknown): UnknownRecord | undefined {
 
 function asString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  return typeof value === "number" && isFinite(value) ? value : undefined;
 }
 
 function parseEpochMs(value: unknown): number | undefined {
@@ -58,23 +60,6 @@ function buildDefaultCosmetics(): import("@shared").UserCosmetics {
     },
     unlockedSkinIds: ["default"],
   };
-}
-
-function clampNonNegativeInt(value: unknown, fallback: number): number {
-  if (typeof value !== "number" || !isFinite(value)) {
-    return fallback;
-  }
-
-  const rounded = Math.floor(value);
-  return Math.max(0, rounded);
-}
-
-function clampNonNegativeNumber(value: unknown, fallback: number): number {
-  if (typeof value !== "number" || !isFinite(value)) {
-    return fallback;
-  }
-
-  return Math.max(0, value);
 }
 
 function buildAccountFromUser(
