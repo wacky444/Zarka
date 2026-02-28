@@ -189,3 +189,10 @@ export type UpdateSkinPayload = {
   skin?: Skin;
   error?: string;
 };
+
+export type UpdateProfilePayload = {
+  ok?: boolean;
+  displayName?: string;
+  avatarUrl?: string;
+  error?: string;
+};

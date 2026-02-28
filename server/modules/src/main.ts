@@ -19,6 +19,7 @@ import {
   getChatHistoryRpc,
   getUserAccountRpc,
   updateSkinRpc,
+  updateProfileRpc,
 } from "./rpc";
 import { asyncTurnMatchHandler } from "./match/async_turn";
 import { restoreMatchesFromStorage } from "./services/matchRestoration";
@@ -90,6 +91,14 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register update_skin: %s",
+      (error && (error as Error).message) || String(error),
+    );
+  }
+  try {
+    initializer.registerRpc("update_profile", updateProfileRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register update_profile: %s",
       (error && (error as Error).message) || String(error),
     );
   }

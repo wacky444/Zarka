@@ -15,3 +15,4 @@ export { saveChatMessageRpc } from "./saveChatMessage";
 export { getChatHistoryRpc } from "./getChatHistory";
 export { getUserAccountRpc } from "./getUserAccount";
 export { updateSkinRpc } from "./updateSkin";
+export { updateProfileRpc } from "./updateProfile";
