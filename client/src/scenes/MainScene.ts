@@ -188,18 +188,6 @@ export class MainScene extends Phaser.Scene {
       this.registry.set("currentUserId", this.currentUserId);
       const spectatorMode = data?.spectatorMode === true;
       this.registry.set("spectatorMode", spectatorMode);
-      if (spectatorMode) {
-        const matchId = data?.spectatorMatchId?.trim();
-        if (!matchId) {
-          this.statusText.setText("Spectator match ID missing.");
-          return;
-        }
-        this.setCurrentMatchId(matchId);
-        this.statusText.setText(`Spectating match ${matchId}`);
-        this.scene.sleep("MainScene");
-        this.scene.run("GameScene");
-        return;
-      }
       // Pre-connect the realtime socket so join calls don't race the connection
       await this.turnService.connectSocket();
       // Real-time settings updates from server
@@ -547,6 +535,24 @@ export class MainScene extends Phaser.Scene {
 
       // Initialize in main view
       this.applyViewVisibility();
+
+      if (spectatorMode) {
+        const matchId = data?.spectatorMatchId?.trim();
+        if (!matchId) {
+          this.statusText.setText("Spectator match ID missing.");
+          return;
+        }
+        this.setCurrentMatchId(matchId);
+        this.statusText.setText(`Spectating match ${matchId}`);
+        try {
+          await this.turnService.joinRealtimeMatch(matchId);
+        } catch (e) {
+          console.warn("Spectator: realtime join failed", e);
+        }
+        this.scene.sleep("MainScene");
+        this.scene.run("GameScene");
+        return;
+      }
     } catch (e) {
       console.error(e);
       const msg = e instanceof Error ? e.message : String(e);
