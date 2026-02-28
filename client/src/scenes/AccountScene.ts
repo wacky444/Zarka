@@ -8,6 +8,7 @@ import { assetPath } from "../utils/assetPath";
 import type {
   GetUserAccountPayload,
   UpdateSkinPayload,
+  UpdateProfilePayload,
   UserAccount,
   Skin,
   SkinCategory,
@@ -48,6 +49,8 @@ export class AccountScene extends Phaser.Scene {
   private previewLayers: SkinLayers = {};
   private currentSkin: Skin = { ...DEFAULT_SKIN };
   private saving = false;
+  private profileDisplayName?: string;
+  private profileAvatarUrl?: string;
 
   constructor() {
     super("AccountScene");
@@ -100,6 +103,10 @@ export class AccountScene extends Phaser.Scene {
         fontSize: "13px",
       })
       .setOrigin(0.5);
+
+    makeButton(this, 650, 115, "Edit Profile", async () => {
+      await this.editProfile();
+    }).setOrigin(0.5);
 
     this.add
       .text(400, 155, "Player Stats", {
@@ -252,6 +259,46 @@ export class AccountScene extends Phaser.Scene {
     }
   }
 
+  private async editProfile() {
+    const displayName = window.prompt(
+      "Display name",
+      this.profileDisplayName ?? "",
+    );
+    if (displayName === null) {
+      return;
+    }
+    const avatarUrl = window.prompt(
+      "Avatar URL (optional)",
+      this.profileAvatarUrl ?? "",
+    );
+    if (avatarUrl === null) {
+      return;
+    }
+
+    this.statusText.setText("Saving profile...");
+    try {
+      const rpcRes = await this.client.rpc(this.session, "update_profile", {
+        displayName,
+        avatarUrl,
+      });
+      const raw = (rpcRes as unknown as { payload?: unknown }).payload;
+      const result = (typeof raw === "string" ? JSON.parse(raw) : raw) as
+        | UpdateProfilePayload
+        | undefined;
+      if (result?.ok) {
+        this.statusText.setText("Profile updated.");
+        await this.loadUserInfo();
+      } else {
+        this.statusText.setText(
+          `Profile update failed: ${result?.error ?? "unknown"}`,
+        );
+      }
+    } catch (error) {
+      console.error("Failed to update profile:", error);
+      this.statusText.setText("Failed to update profile");
+    }
+  }
+
   private async loadUserInfo() {
     try {
       const account = await this.client.getAccount(this.session);
@@ -274,6 +321,9 @@ export class AccountScene extends Phaser.Scene {
         console.warn("Failed to load user account metadata:", e);
       }
 
+      this.profileDisplayName = userAccount?.displayName;
+      this.profileAvatarUrl = userAccount?.avatarUrl;
+
       let userInfo = `User ID: ${this.session.user_id}\n`;
       if (account.user?.username) {
         userInfo += `Username: ${account.user.username}\n`;
@@ -285,6 +335,13 @@ export class AccountScene extends Phaser.Scene {
       if (userAccount?.displayName) {
         userInfo += `Display Name: ${userAccount.displayName}\n`;
       }
+      if (userAccount?.avatarUrl) {
+        userInfo += `Avatar: ${userAccount.avatarUrl}\n`;
+      }
+      if (userAccount?.createdAtMs) {
+        const createdAt = new Date(userAccount.createdAtMs).toLocaleDateString();
+        userInfo += `Created: ${createdAt}\n`;
+      }
 
       this.userInfoText.setText(userInfo);
 
@@ -295,6 +352,7 @@ export class AccountScene extends Phaser.Scene {
         lines.push(
           `Matches: ${s.matchesPlayed} | Wins: ${s.wins} | Losses: ${s.losses} | Draws: ${s.draws}`,
         );
+        lines.push(`Avg turns/match: ${s.avgTurnsPerMatch ?? 0}`);
         lines.push(
           `ELO: ${s.elo} (peak ${s.highestElo}) | Rank: ${s.rankTier ?? "unranked"}`,
         );
