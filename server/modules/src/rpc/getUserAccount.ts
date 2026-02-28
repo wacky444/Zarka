@@ -1,5 +1,11 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
+import {
+  asNumber,
+  clampNonNegativeInt,
+  clampNonNegativeNumber,
+} from "../utils/number";
+
 type UnknownRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): UnknownRecord | undefined {
@@ -11,10 +17,6 @@ function asRecord(value: unknown): UnknownRecord | undefined {
 
 function asString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  return typeof value === "number" && isFinite(value) ? value : undefined;
 }
 
 function parseEpochMs(value: unknown): number | undefined {
@@ -42,6 +44,7 @@ function buildDefaultStats(): import("@shared").PlayerStats {
     highestElo: 1000,
     currentWinStreak: 0,
     bestWinStreak: 0,
+    avgTurnsPerMatch: 0,
     rankTier: "unranked",
   };
 }
@@ -57,15 +60,6 @@ function buildDefaultCosmetics(): import("@shared").UserCosmetics {
     },
     unlockedSkinIds: ["default"],
   };
-}
-
-function clampNonNegativeInt(value: unknown, fallback: number): number {
-  if (typeof value !== "number" || !isFinite(value)) {
-    return fallback;
-  }
-
-  const rounded = Math.floor(value);
-  return Math.max(0, rounded);
 }
 
 function buildAccountFromUser(
@@ -107,6 +101,10 @@ function buildAccountFromUser(
     bestWinStreak: clampNonNegativeInt(
       statsObj?.bestWinStreak,
       defaultsStats.bestWinStreak,
+    ),
+    avgTurnsPerMatch: clampNonNegativeNumber(
+      statsObj?.avgTurnsPerMatch,
+      defaultsStats.avgTurnsPerMatch ?? 0,
     ),
     rankTier:
       (asString(statsObj?.rankTier) as
