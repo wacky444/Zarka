@@ -29,6 +29,16 @@ function getNumberOfMatches(storage: StorageService, userId: string): number {
   return creatorMatchCount;
 }
 
+function generateInviteCode(length = 6): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < length; i++) {
+    const idx = Math.floor(Math.random() * alphabet.length);
+    code += alphabet[idx];
+  }
+  return code;
+}
+
 export function createMatchRpc(
   ctx: nkruntime.Context,
   logger: nkruntime.Logger,
@@ -46,6 +56,8 @@ export function createMatchRpc(
   let name = DEFAULT_MATCH_NAME;
   let roundTime = "23:00";
   let autoSkip = true;
+  let isPrivate = false;
+  let inviteCode: string | undefined;
 
   if (payload && payload !== "") {
     try {
@@ -65,6 +77,11 @@ export function createMatchRpc(
       if (json && typeof json.autoSkip === "boolean") {
         autoSkip = json.autoSkip;
       }
+      if (json && typeof json.private === "boolean") {
+        isPrivate = json.private;
+      } else if (json && typeof json.isPrivate === "boolean") {
+        isPrivate = json.isPrivate;
+      }
     } catch (err) {
       logger.debug(
         "create_match payload parse failed: %s",
@@ -74,6 +91,10 @@ export function createMatchRpc(
   }
 
   name = normalizeMatchName(name);
+
+  if (isPrivate) {
+    inviteCode = generateInviteCode();
+  }
 
   const nkWrapper = createNakamaWrapper(nk);
   const storage = new StorageService(nkWrapper);
@@ -97,6 +118,13 @@ export function createMatchRpc(
     autoSkip: String(autoSkip),
   };
 
+  if (isPrivate) {
+    params["private"] = "true";
+    if (inviteCode) {
+      params["inviteCode"] = inviteCode;
+    }
+  }
+
   const matchId = nkWrapper.matchCreate("async_turn", params);
 
   const record: MatchRecord = {
@@ -115,15 +143,24 @@ export function createMatchRpc(
     name,
     started: false,
     removed: 0,
+    isPrivate,
+    inviteCode,
+    invited: [],
   };
 
   storage.writeMatch(record);
+
+  const inviteToken =
+    isPrivate && inviteCode ? `${matchId}:${inviteCode}` : undefined;
 
   const response: import("@shared").CreateMatchPayload = {
     match_id: matchId,
     size,
     name,
     started: false,
+    isPrivate,
+    inviteCode,
+    inviteToken,
   };
 
   return JSON.stringify(response);

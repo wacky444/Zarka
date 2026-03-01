@@ -36,7 +36,22 @@ export function joinMatchRpc(
     throw makeNakamaError("bad_json", nkruntime.Codes.INVALID_ARGUMENT);
   }
 
-  const matchId: string = json.match_id;
+  let matchId: string = typeof json.match_id === "string" ? json.match_id : "";
+  let inviteCode: string | undefined =
+    typeof json.inviteCode === "string" ? json.inviteCode : undefined;
+  const inviteToken: string | undefined =
+    typeof json.inviteToken === "string" ? json.inviteToken : undefined;
+
+  if (inviteToken && inviteToken.includes(":")) {
+    const [tokenMatchId, tokenCode] = inviteToken.split(":");
+    if (!matchId) {
+      matchId = tokenMatchId;
+    }
+    if (!inviteCode && tokenCode) {
+      inviteCode = tokenCode;
+    }
+  }
+
   if (!matchId || matchId === "") {
     throw makeNakamaError(
       "match_id required",
@@ -59,6 +74,23 @@ export function joinMatchRpc(
 
   let joinedNow = false;
   let shouldWrite = false;
+
+  if (match.isPrivate) {
+    const isCreator = match.creator === ctx.userId;
+    const invitedList = Array.isArray(match.invited) ? match.invited : [];
+    const isInvited = invitedList.indexOf(ctx.userId) !== -1;
+    if (!isCreator && !isInvited) {
+      if (!inviteCode || inviteCode !== match.inviteCode) {
+        throw makeNakamaError(
+          "invite_required",
+          nkruntime.Codes.PERMISSION_DENIED
+        );
+      }
+      invitedList.push(ctx.userId);
+      match.invited = invitedList;
+      shouldWrite = true;
+    }
+  }
 
   if (!match.readyStates) {
     match.readyStates = {};
@@ -130,6 +162,11 @@ export function joinMatchRpc(
     }
   }
 
+  const inviteToken =
+    match.isPrivate && match.inviteCode
+      ? `${matchId}:${match.inviteCode}`
+      : undefined;
+
   const response: import("@shared").JoinMatchPayload = {
     ok: true,
     match_id: matchId,
@@ -138,6 +175,9 @@ export function joinMatchRpc(
     joined: joinedNow,
     name: match.name,
     started: match.started,
+    isPrivate: match.isPrivate,
+    inviteCode: match.inviteCode,
+    inviteToken,
   };
 
   return JSON.stringify(response);

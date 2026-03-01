@@ -39,6 +39,8 @@ export const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
         params && params["lastAutoAdvanceAt"]
           ? parseInt(params["lastAutoAdvanceAt"], 10)
           : undefined,
+      isPrivate: params && params["private"] === "true",
+      inviteCode: params && params["inviteCode"] ? params["inviteCode"] : undefined,
     };
 
     if (isRestore && params && params["players"]) {
@@ -59,6 +61,7 @@ export const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
       players: state.order.length,
       started: state.started,
       creator: state.creator,
+      isPrivate: state.isPrivate,
     });
 
     const tickRate = 1;

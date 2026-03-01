@@ -50,6 +50,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             players: state.order.length,
             started: state.started,
             creator: state.creator,
+            isPrivate: state.isPrivate,
           });
           dispatcher.matchLabelUpdate(label);
         } catch {}
@@ -84,6 +85,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
               players: state.order.length,
               started: state.started,
               creator: state.creator,
+              isPrivate: state.isPrivate,
             });
             dispatcher.matchLabelUpdate(label);
           } catch {}
@@ -147,6 +149,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             players: state.order.length,
             started: state.started,
             creator: state.creator,
+            isPrivate: state.isPrivate,
           });
           dispatcher.matchLabelUpdate(label);
         } catch {}

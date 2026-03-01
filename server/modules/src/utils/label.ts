@@ -4,6 +4,7 @@ export interface MatchLabelDetails {
   players: number;
   started: boolean;
   creator?: string;
+  isPrivate?: boolean;
 }
 
 export function buildMatchLabel(details: MatchLabelDetails): string {
@@ -14,5 +15,6 @@ export function buildMatchLabel(details: MatchLabelDetails): string {
     players: details.players,
     started: details.started,
     creator: details.creator ?? null,
+    private: details.isPrivate ?? false,
   });
 }

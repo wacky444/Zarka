@@ -16,3 +16,4 @@ export { getChatHistoryRpc } from "./getChatHistory";
 export { getUserAccountRpc } from "./getUserAccount";
 export { updateSkinRpc } from "./updateSkin";
 export { updateProfileRpc } from "./updateProfile";
+export { listFriendsRpc, friendActionRpc, inviteToMatchRpc } from "./friends";

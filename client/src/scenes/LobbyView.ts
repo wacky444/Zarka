@@ -20,6 +20,8 @@ export class LobbyView {
   private matchIdText!: Phaser.GameObjects.Text;
   private matchNameText!: Phaser.GameObjects.Text;
   private creatorText!: Phaser.GameObjects.Text;
+  private privacyText!: Phaser.GameObjects.Text;
+  private inviteText!: Phaser.GameObjects.Text;
   private playerListTitle!: Phaser.GameObjects.Text;
   private playerListText!: Phaser.GameObjects.Text;
 
@@ -43,15 +45,19 @@ export class LobbyView {
   private startMatchButton?: UIButton;
   private removeMatchButton?: UIButton;
   private returnToGameButton?: UIButton;
+  private inviteFriendButton?: UIButton;
 
   private onLeave?: () => void | Promise<void>;
   private onEndTurn?: () => void | Promise<void>;
   private onSettingsChange?: (s: InMatchSettings) => void | Promise<void>;
   private onStartMatch?: () => void | Promise<void>;
   private onRemoveMatch?: () => void | Promise<void>;
+  private onInviteFriend?: () => void | Promise<void>;
 
   private started = false;
   private startMatchBusy = false;
+  private isPrivate = false;
+  private inviteToken?: string;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -80,6 +86,16 @@ export class LobbyView {
       color: "#cccccc",
     });
     this.container.add(this.creatorText);
+
+    this.privacyText = scene.add.text(300, 80, "Public Match", {
+      color: "#cccccc",
+    });
+    this.container.add(this.privacyText);
+
+    this.inviteText = scene.add.text(300, 100, "", {
+      color: "#cccccc",
+    });
+    this.container.add(this.inviteText);
 
     this.renameButton = makeButton(
       scene,
@@ -161,6 +177,21 @@ export class LobbyView {
     );
     this.container.add(this.removeMatchButton);
     this.setRemoveMatchEnabled(this.isHost);
+
+    this.inviteFriendButton = makeButton(
+      scene,
+      610,
+      y,
+      "Invite Friend",
+      async () => {
+        if (this.onInviteFriend) {
+          await this.onInviteFriend();
+        }
+      },
+      ["inMatch"]
+    );
+    this.container.add(this.inviteFriendButton);
+    this.updateInviteButton();
 
     y += 40;
 
@@ -320,6 +351,11 @@ export class LobbyView {
     this.onRemoveMatch = handler;
   }
 
+  setOnInviteFriend(handler: () => void | Promise<void>) {
+    this.onInviteFriend = handler;
+    this.updateInviteButton();
+  }
+
   setMatchInfo(matchId?: string, matchName?: string) {
     this.matchIdText.setText(`Match: ${matchId ?? "-"}`);
     if (typeof matchName === "string") {
@@ -327,11 +363,24 @@ export class LobbyView {
     }
     if (!matchId) {
       this.setMatchStarted(false);
+      this.setMatchPrivacy(false, undefined);
     }
   }
 
   setMatchName(matchName?: string) {
     this.applyMatchName(matchName);
+  }
+
+  setMatchPrivacy(isPrivate: boolean, inviteToken?: string) {
+    this.isPrivate = !!isPrivate;
+    this.inviteToken = inviteToken;
+    this.privacyText.setText(this.isPrivate ? "Private Match" : "Public Match");
+    if (this.isPrivate && inviteToken) {
+      this.inviteText.setText(`Invite: ${inviteToken}`);
+    } else {
+      this.inviteText.setText("");
+    }
+    this.updateInviteButton();
   }
 
   setCreator(creatorId?: string, isSelf = false, creatorName?: string) {
@@ -356,6 +405,7 @@ export class LobbyView {
     this.setRenameEnabled(enabled);
     this.setRemoveMatchEnabled(enabled);
     this.updateStartButtonState();
+    this.updateInviteButton();
   }
 
   applySettings(partial: {
@@ -478,6 +528,19 @@ export class LobbyView {
     } else {
       this.removeMatchButton.setAlpha(0.5);
       this.removeMatchButton.disableInteractive();
+    }
+  }
+
+  private updateInviteButton() {
+    if (!this.inviteFriendButton) return;
+    const visible = this.isHost && this.isPrivate;
+    this.inviteFriendButton.setVisible(visible).setActive(visible);
+    if (visible) {
+      this.inviteFriendButton.setAlpha(1);
+      this.inviteFriendButton.setInteractive({ useHandCursor: true });
+    } else {
+      this.inviteFriendButton.setAlpha(0.5);
+      this.inviteFriendButton.disableInteractive();
     }
   }
 

@@ -15,6 +15,9 @@ type MyMatch = {
   rows?: number;
   name?: string;
   started?: boolean;
+  isPrivate?: boolean;
+  inviteCode?: string;
+  inviteToken?: string;
 };
 
 // A lightweight view container for My Matches List that can be mounted inside any Scene.
@@ -118,10 +121,11 @@ export class MyMatchesListView {
       const isCreator = this.scene.registry.get("currentUserId") === m.creator;
       const stateLabel = m.started ? "In Progress" : "Waiting";
       const hostTag = isCreator ? " (Host)" : "";
+      const privacyTag = m.isPrivate ? "Private" : "Public";
 
       const text = `${
         idx + 1
-      }. ${matchName} | ${playerCount}/${maxPlayers} players | ${turns} turns | ${stateLabel}${hostTag}`;
+      }. ${matchName} | ${playerCount}/${maxPlayers} players | ${turns} turns | ${stateLabel} | ${privacyTag}${hostTag}`;
       const lineY = y + idx * pad;
       const line = this.scene.add.text(10, lineY, text, {
         color: "#00ccff",

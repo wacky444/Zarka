@@ -34,6 +34,9 @@ export function listMyMatchesRpc(
       botPlayers?: number;
       name?: string;
       started?: boolean;
+      isPrivate?: boolean;
+      inviteCode?: string;
+      inviteToken?: string;
     }> = [];
 
     if (result && result.objects) {
@@ -48,6 +51,11 @@ export function listMyMatchesRpc(
             match.players.indexOf(ctx.userId) !== -1 &&
             (match.removed === 0 || match.removed === undefined)
           ) {
+            const inviteToken =
+              match.isPrivate && match.inviteCode
+                ? `${match.match_id}:${match.inviteCode}`
+                : undefined;
+
             matches.push({
               match_id: match.match_id,
               size: match.size,
@@ -62,6 +70,9 @@ export function listMyMatchesRpc(
               botPlayers: match.botPlayers,
               name: match.name,
               started: match.started,
+              isPrivate: match.isPrivate,
+              inviteCode: match.inviteCode,
+              inviteToken,
             });
           }
         }

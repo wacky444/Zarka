@@ -24,6 +24,9 @@ export interface MatchRecord {
   name?: string;
   started: boolean;
   removed: number;
+  isPrivate?: boolean;
+  inviteCode?: string;
+  invited?: string[];
   map?: GameMap;
   items?: MatchItemRecord[];
   lastAutoAdvanceAt?: number;

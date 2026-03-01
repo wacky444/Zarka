@@ -24,6 +24,7 @@ export const asyncTurnMatchJoin: nkruntime.MatchJoinFunction<AsyncTurnState> =
         players: playerCount,
         started: state.started,
         creator: state.creator,
+        isPrivate: state.isPrivate,
       });
       dispatcher.matchLabelUpdate(label);
     } catch (e) {
