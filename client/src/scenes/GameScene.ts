@@ -91,6 +91,10 @@ export class GameScene extends Phaser.Scene {
   private tileItemContainers = new Map<string, Phaser.GameObjects.Container>();
   private itemTooltip: ItemTooltipManager | null = null;
   private topBanner: TopBanner | null = null;
+  private autoAdvanceText: Phaser.GameObjects.Text | null = null;
+  private autoAdvanceTimer: Phaser.Time.TimerEvent | null = null;
+  private autoAdvanceEnabled = false;
+  private autoAdvanceRoundTime: string | null = null;
   private chatService: MatchChatService | null = null;
   private chatMessages: MatchChatMessage[] = [];
   private chatUnsubscribe: (() => void) | null = null;
@@ -243,6 +247,16 @@ export class GameScene extends Phaser.Scene {
       camera: this.cam,
     });
 
+    this.autoAdvanceText = this.add
+      .text(10, 10, "", {
+        fontFamily: "Arial",
+        fontSize: "14px",
+        color: "#cbd5f5",
+      })
+      .setScrollFactor(0)
+      .setVisible(false);
+    this.cam.ignore(this.autoAdvanceText);
+
     const match = await this.fetchMatchFromServer();
     this.currentMatch = match;
     this.logReplayCache.clear();
@@ -262,6 +276,7 @@ export class GameScene extends Phaser.Scene {
       this.renderPlayerCharacters(match);
     }
     this.updateCharacterPanel(match);
+    this.configureAutoAdvanceTimer(match);
 
     this.enableDragPan();
     this.enableWheelZoom();
@@ -332,6 +347,12 @@ export class GameScene extends Phaser.Scene {
       }
       this.topBanner?.destroy();
       this.topBanner = null;
+      if (this.autoAdvanceTimer) {
+        this.autoAdvanceTimer.remove(false);
+        this.autoAdvanceTimer = null;
+      }
+      this.autoAdvanceText?.destroy();
+      this.autoAdvanceText = null;
       if (this.chatUnsubscribe) {
         this.chatUnsubscribe();
         this.chatUnsubscribe = null;
@@ -831,6 +852,82 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private configureAutoAdvanceTimer(match: MatchRecord | null) {
+    const roundTime =
+      match && typeof match.roundTime === "string" ? match.roundTime : null;
+    const autoSkip = match?.autoSkip === true;
+    this.autoAdvanceEnabled = autoSkip && !!roundTime;
+    this.autoAdvanceRoundTime = this.autoAdvanceEnabled ? roundTime : null;
+
+    if (!this.autoAdvanceText) {
+      return;
+    }
+
+    if (!this.autoAdvanceEnabled || !this.autoAdvanceRoundTime) {
+      this.autoAdvanceText.setVisible(false);
+      if (this.autoAdvanceTimer) {
+        this.autoAdvanceTimer.remove(false);
+        this.autoAdvanceTimer = null;
+      }
+      return;
+    }
+
+    this.autoAdvanceText.setVisible(true);
+    this.refreshAutoAdvanceTimer();
+
+    if (!this.autoAdvanceTimer) {
+      this.autoAdvanceTimer = this.time.addEvent({
+        delay: 60_000,
+        loop: true,
+        callback: this.refreshAutoAdvanceTimer,
+        callbackScope: this,
+      });
+    }
+  }
+
+  private refreshAutoAdvanceTimer() {
+    if (!this.autoAdvanceText || !this.autoAdvanceRoundTime) {
+      return;
+    }
+    const parsed = this.parseRoundTime(this.autoAdvanceRoundTime);
+    if (!parsed) {
+      this.autoAdvanceText.setText("Auto-advance time unavailable");
+      return;
+    }
+    const now = new Date();
+    const target = new Date(now);
+    target.setHours(parsed.hours, parsed.minutes, 0, 0);
+    if (target.getTime() <= now.getTime()) {
+      target.setDate(target.getDate() + 1);
+    }
+    const diffMs = target.getTime() - now.getTime();
+    const totalMinutes = Math.max(0, Math.ceil(diffMs / 60_000));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const targetLabel = `${String(parsed.hours).padStart(2, "0")}:${String(
+      parsed.minutes,
+    ).padStart(2, "0")}`;
+    this.autoAdvanceText.setText(
+      `Auto-advance at ${targetLabel} • ${hours}h ${minutes}m`,
+    );
+    const urgent = diffMs <= 3 * 60 * 60 * 1000;
+    this.autoAdvanceText.setColor(urgent ? "#ff6666" : "#cbd5f5");
+  }
+
+  private parseRoundTime(value: string): { hours: number; minutes: number } | null {
+    const parts = value.split(":");
+    if (parts.length !== 2) return null;
+    const hours = Number(parts[0]);
+    const minutes = Number(parts[1]);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+      return null;
+    }
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return null;
+    }
+    return { hours, minutes };
+  }
+
   private layoutUI() {
     const width = this.uiCam ? this.uiCam.width : this.scale.width;
     const height = this.uiCam ? this.uiCam.height : this.scale.height;
@@ -841,6 +938,9 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.menuButton) {
       this.menuButton.setPosition(0 + 10, height - this.menuButton.height - 10);
+    }
+    if (this.autoAdvanceText) {
+      this.autoAdvanceText.setPosition(10, 10);
     }
     this.topBanner?.layout(width);
   }
@@ -1434,6 +1534,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.updateCharacterPanel(match);
+    this.configureAutoAdvanceTimer(match);
     if (this.characterPanel) {
       this.characterPanel.setLogTurnInfo(match.current_turn ?? 0);
     }
