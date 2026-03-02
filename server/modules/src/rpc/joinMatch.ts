@@ -42,7 +42,7 @@ export function joinMatchRpc(
   const inviteToken: string | undefined =
     typeof json.inviteToken === "string" ? json.inviteToken : undefined;
 
-  if (inviteToken && inviteToken.includes(":")) {
+  if (inviteToken && inviteToken.indexOf(":") !== -1) {
     const [tokenMatchId, tokenCode] = inviteToken.split(":");
     if (!matchId) {
       matchId = tokenMatchId;
@@ -162,7 +162,7 @@ export function joinMatchRpc(
     }
   }
 
-  const inviteToken =
+  const inviteTokenResponse =
     match.isPrivate && match.inviteCode
       ? `${matchId}:${match.inviteCode}`
       : undefined;
@@ -177,7 +177,7 @@ export function joinMatchRpc(
     started: match.started,
     isPrivate: match.isPrivate,
     inviteCode: match.inviteCode,
-    inviteToken,
+    inviteToken: inviteTokenResponse,
   };
 
   return JSON.stringify(response);
