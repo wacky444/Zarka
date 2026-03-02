@@ -16,6 +16,9 @@ export type CreateMatchPayload = {
   name?: string;
   error?: string;
   started?: boolean;
+  isPrivate?: boolean;
+  inviteCode?: string;
+  inviteToken?: string;
 };
 
 export type JoinMatchPayload = {
@@ -26,6 +29,9 @@ export type JoinMatchPayload = {
   match_id?: string;
   name?: string;
   started?: boolean;
+  isPrivate?: boolean;
+  inviteCode?: string;
+  inviteToken?: string;
   error?: string;
 };
 
@@ -127,6 +133,9 @@ export type ListMyMatchesPayload = {
     botPlayers?: number;
     name?: string;
     started?: boolean;
+    isPrivate?: boolean;
+    inviteCode?: string;
+    inviteToken?: string;
   }>;
   error?: string;
 };
@@ -187,5 +196,41 @@ export type GetUserAccountPayload = {
 export type UpdateSkinPayload = {
   ok?: boolean;
   skin?: Skin;
+  error?: string;
+};
+
+export type UpdateProfilePayload = {
+  ok?: boolean;
+  displayName?: string;
+  avatarUrl?: string;
+  error?: string;
+};
+
+export type InviteToMatchPayload = {
+  ok?: boolean;
+  match_id?: string;
+  inviteeUserId?: string;
+  inviteCode?: string;
+  inviteToken?: string;
+  error?: string;
+};
+
+export type FriendState = "friend" | "invite_sent" | "invite_received" | "blocked";
+
+export type FriendEntry = {
+  userId: string;
+  username?: string;
+  displayName?: string;
+  state: FriendState;
+};
+
+export type ListFriendsPayload = {
+  ok?: boolean;
+  friends?: FriendEntry[];
+  error?: string;
+};
+
+export type FriendActionPayload = {
+  ok?: boolean;
   error?: string;
 };

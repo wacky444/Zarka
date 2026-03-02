@@ -25,6 +25,7 @@ export type PlayerStats = {
   readonly bestWinStreak: number;
 
   // Optional convenience fields
+  readonly avgTurnsPerMatch?: number;
   readonly rankTier?: UserRankTier;
   readonly lastMatchEndedAtMs?: number;
 };

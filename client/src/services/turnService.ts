@@ -118,10 +118,15 @@ export class TurnService {
     return result;
   }
 
-  async createMatch(size = 2, name?: string) {
-    const payload: { size: number; name?: string } = { size };
+  async createMatch(size = 2, name?: string, isPrivate = false) {
+    const payload: { size: number; name?: string; private?: boolean } = {
+      size,
+    };
     if (typeof name === "string" && name.trim()) {
       payload.name = name;
+    }
+    if (isPrivate) {
+      payload.private = true;
     }
     const res = await this.client.rpc(this.session, "create_match", payload);
     return res;
@@ -149,8 +154,17 @@ export class TurnService {
     return res;
   }
 
-  async joinMatch(match_id: string) {
-    const res = await this.client.rpc(this.session, "join_match", { match_id });
+  async joinMatch(
+    match_id: string,
+    inviteCode?: string,
+    inviteToken?: string,
+  ) {
+    const payload: { match_id: string; inviteCode?: string; inviteToken?: string } = {
+      match_id,
+    };
+    if (inviteCode) payload.inviteCode = inviteCode;
+    if (inviteToken) payload.inviteToken = inviteToken;
+    const res = await this.client.rpc(this.session, "join_match", payload);
     return res;
   }
 
@@ -208,6 +222,31 @@ export class TurnService {
 
   async listMyMatches() {
     const res = await this.client.rpc(this.session, "list_my_matches", {});
+    return res;
+  }
+
+  async listFriends() {
+    const res = await this.client.rpc(this.session, "list_friends", {});
+    return res;
+  }
+
+  async friendAction(action: string, username?: string, userId?: string) {
+    const payload: { action: string; username?: string; userId?: string } = {
+      action,
+    };
+    if (username) payload.username = username;
+    if (userId) payload.userId = userId;
+    const res = await this.client.rpc(this.session, "friend_action", payload);
+    return res;
+  }
+
+  async inviteToMatch(match_id: string, username?: string, userId?: string) {
+    const payload: { match_id: string; username?: string; userId?: string } = {
+      match_id,
+    };
+    if (username) payload.username = username;
+    if (userId) payload.userId = userId;
+    const res = await this.client.rpc(this.session, "invite_to_match", payload);
     return res;
   }
 

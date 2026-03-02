@@ -17,6 +17,8 @@ export class MatchesListView {
   private statusText!: Phaser.GameObjects.Text;
   private listItems: Phaser.GameObjects.Text[] = [];
   private fetching = false;
+  private includeInProgress = true;
+  private includePrivate = false;
   private onJoin?: (matchId: string) => void | Promise<void>;
 
   constructor(scene: Phaser.Scene) {
@@ -42,6 +44,18 @@ export class MatchesListView {
     this.onJoin = handler;
   }
 
+  toggleIncludeInProgress(): boolean {
+    this.includeInProgress = !this.includeInProgress;
+    this.refresh();
+    return this.includeInProgress;
+  }
+
+  toggleIncludePrivate(): boolean {
+    this.includePrivate = !this.includePrivate;
+    this.refresh();
+    return this.includePrivate;
+  }
+
   show() {
     this.container.setVisible(true).setActive(true);
     this.refresh();
@@ -65,8 +79,41 @@ export class MatchesListView {
         this.statusText.setText("No matches found.");
         return;
       }
-      this.statusText.setText(`Found ${matches.length} matches:`);
-      this.renderList(matches);
+
+      const filtered = matches.filter((m) => {
+        let started = false;
+        let isPrivate = false;
+        if (m.label) {
+          try {
+            const parsed = JSON.parse(m.label) as {
+              started?: boolean;
+              private?: boolean;
+            };
+            if (parsed && typeof parsed.started === "boolean") {
+              started = parsed.started;
+            }
+            if (parsed && typeof parsed.private === "boolean") {
+              isPrivate = parsed.private;
+            }
+          } catch {
+            // ignore parse errors
+          }
+        }
+        if (!this.includePrivate && isPrivate) return false;
+        if (!this.includeInProgress && started) return false;
+        return true;
+      });
+
+      if (!filtered.length) {
+        this.statusText.setText("No matches match your filters.");
+        return;
+      }
+      const filteredLabel =
+        filtered.length === matches.length
+          ? `${filtered.length}`
+          : `${filtered.length} (filtered from ${matches.length})`;
+      this.statusText.setText(`Found ${filteredLabel} matches:`);
+      this.renderList(filtered);
     } catch (e) {
       console.error(e);
       const msg = e instanceof Error ? e.message : String(e);
@@ -85,6 +132,7 @@ export class MatchesListView {
       const maxSize = m.max_size ?? "?";
       let matchName: string | undefined;
       let stateTag = "";
+      let privacyTag = "";
       if (m.label) {
         try {
           const parsed = JSON.parse(m.label) as {
@@ -92,12 +140,16 @@ export class MatchesListView {
             started?: boolean;
             players?: number;
             size?: number | string;
+            private?: boolean;
           };
           if (parsed && typeof parsed.name === "string" && parsed.name.trim()) {
             matchName = parsed.name.trim();
           }
           if (parsed && typeof parsed.started === "boolean") {
             stateTag = parsed.started ? "In Progress" : "Open";
+          }
+          if (parsed && typeof parsed.private === "boolean") {
+            privacyTag = parsed.private ? "Private" : "";
           }
           if (parsed && parsed.players !== undefined) {
             const currentPlayers = Number(parsed.players);
@@ -112,7 +164,8 @@ export class MatchesListView {
                 idx + 1
               }. ${displayName} | ${currentPlayers}/${maxDisplay}`;
               const status = stateTag ? ` | ${stateTag}` : "";
-              const text = line + status;
+              const privacy = privacyTag ? ` | ${privacyTag}` : "";
+              const text = line + status + privacy;
               const lineY = y + idx * pad;
               const lineObj = this.scene.add.text(10, lineY, text, {
                 color: "#00ffcc",
@@ -145,7 +198,9 @@ export class MatchesListView {
       const displayName =
         matchName && matchName.length ? matchName : `Match ${idx + 1}`;
       const textBase = `${idx + 1}. ${displayName} | ${size}/${maxSize}`;
-      const text = stateTag ? `${textBase} | ${stateTag}` : textBase;
+      const status = stateTag ? ` | ${stateTag}` : "";
+      const privacy = privacyTag ? ` | ${privacyTag}` : "";
+      const text = textBase + status + privacy;
       const lineY = y + idx * pad;
       const line = this.scene.add.text(10, lineY, text, {
         color: "#00ffcc",

@@ -19,6 +19,10 @@ import {
   getChatHistoryRpc,
   getUserAccountRpc,
   updateSkinRpc,
+  updateProfileRpc,
+  listFriendsRpc,
+  friendActionRpc,
+  inviteToMatchRpc,
 } from "./rpc";
 import { asyncTurnMatchHandler } from "./match/async_turn";
 import { restoreMatchesFromStorage } from "./services/matchRestoration";
@@ -90,6 +94,38 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register update_skin: %s",
+      (error && (error as Error).message) || String(error),
+    );
+  }
+  try {
+    initializer.registerRpc("update_profile", updateProfileRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register update_profile: %s",
+      (error && (error as Error).message) || String(error),
+    );
+  }
+  try {
+    initializer.registerRpc("list_friends", listFriendsRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register list_friends: %s",
+      (error && (error as Error).message) || String(error),
+    );
+  }
+  try {
+    initializer.registerRpc("friend_action", friendActionRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register friend_action: %s",
+      (error && (error as Error).message) || String(error),
+    );
+  }
+  try {
+    initializer.registerRpc("invite_to_match", inviteToMatchRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register invite_to_match: %s",
       (error && (error as Error).message) || String(error),
     );
   }

@@ -158,6 +158,16 @@ export class LoginScene extends Phaser.Scene {
     makeButton(this, 400, 520, "Continue as Guest", async () => {
       await this.loginAsGuest();
     }).setOrigin(0.5);
+
+    // Spectator Login
+    makeButton(this, 400, 560, "Spectate Match", async () => {
+      const matchId = window.prompt("Enter match ID to spectate:", "");
+      if (!matchId || !matchId.trim()) {
+        this.statusText.setText("Spectator match ID is required.");
+        return;
+      }
+      await this.loginAsSpectator(matchId.trim());
+    }).setOrigin(0.5);
   }
 
   private focusEmailInput() {
@@ -391,6 +401,26 @@ export class LoginScene extends Phaser.Scene {
     } catch (error) {
       console.error("Guest login error:", error);
       this.statusText.setText("Guest login failed. Please try again.");
+    }
+  }
+
+  private async loginAsSpectator(matchId: string) {
+    this.statusText.setText("Connecting as spectator...");
+
+    try {
+      const deviceId = this.getOrCreateDeviceId();
+      const session = await this.client.authenticateDevice(deviceId, true);
+      SessionManager.storeSession(session);
+      this.statusText.setText("Spectator mode. Loading match...");
+      this.scene.start("MainScene", {
+        client: this.client,
+        session,
+        spectatorMode: true,
+        spectatorMatchId: matchId,
+      });
+    } catch (error) {
+      console.error("Spectator login error:", error);
+      this.statusText.setText("Spectator login failed. Please try again.");
     }
   }
 

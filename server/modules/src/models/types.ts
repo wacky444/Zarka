@@ -25,4 +25,7 @@ export interface AsyncTurnState extends nkruntime.MatchState {
   map?: GameMap;
   lastAutoAdvanceAt?: number;
   lastAutoCheckAt?: number;
+  isPrivate?: boolean;
+  inviteCode?: string;
+  invited?: string[];
 }

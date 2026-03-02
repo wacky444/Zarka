@@ -16,6 +16,9 @@ import type {
   GetStatePayload,
   StartMatchPayload,
   RemoveMatchPayload,
+  ListFriendsPayload,
+  FriendActionPayload,
+  InviteToMatchPayload,
 } from "@shared";
 
 export class MainScene extends Phaser.Scene {
@@ -36,9 +39,17 @@ export class MainScene extends Phaser.Scene {
     super("MainScene");
   }
 
-  private async joinMatch(matchId: string) {
+  private async joinMatch(
+    matchId: string,
+    inviteCode?: string,
+    inviteToken?: string,
+  ) {
     if (!this.turnService) throw new Error("No service");
-    const res = await this.turnService.joinMatch(matchId);
+    const res = await this.turnService.joinMatch(
+      matchId,
+      inviteCode,
+      inviteToken,
+    );
     const parsed = this.parseRpcPayload<JoinMatchPayload>(res);
     if (parsed && parsed.ok) {
       // Establish realtime presence in the authoritative match so players appear in state
@@ -78,6 +89,10 @@ export class MainScene extends Phaser.Scene {
       );
       if (this.lobbyView) {
         this.lobbyView.setMatchInfo(matchId, displayName);
+        this.lobbyView.setMatchPrivacy(
+          parsed.isPrivate ?? false,
+          parsed.inviteToken,
+        );
         if (typeof parsed.started === "boolean") {
           this.lobbyView.setMatchStarted(parsed.started);
         }
@@ -108,6 +123,8 @@ export class MainScene extends Phaser.Scene {
                   name?: string;
                   players?: string[];
                   started?: boolean;
+                  isPrivate?: boolean;
+                  inviteCode?: string;
                 })
               : undefined;
           const creator: string | undefined = matchObj?.creator;
@@ -131,6 +148,14 @@ export class MainScene extends Phaser.Scene {
             }
             this.lobbyView.setCreator(creator, isSelf, creatorDisplay);
           }
+          const inviteToken =
+            matchObj?.isPrivate && matchObj.inviteCode
+              ? `${matchId}:${matchObj.inviteCode}`
+              : undefined;
+          this.lobbyView.setMatchPrivacy(
+            matchObj?.isPrivate ?? false,
+            inviteToken,
+          );
           if (matchObj?.name) {
             this.lobbyView.setMatchName(matchObj.name);
             this.currentMatchName = matchObj.name;
@@ -157,7 +182,12 @@ export class MainScene extends Phaser.Scene {
 
   preload() {}
 
-  async create(data?: { client?: Client; session?: Session }) {
+  async create(data?: {
+    client?: Client;
+    session?: Session;
+    spectatorMode?: boolean;
+    spectatorMatchId?: string;
+  }) {
     this.statusText = this.add.text(10, 10, "Connecting...", {
       color: "#ffffff",
     });
@@ -181,6 +211,20 @@ export class MainScene extends Phaser.Scene {
       this.setCurrentMatchId(this.currentMatchId);
       this.currentUserId = session.user_id ?? null;
       this.registry.set("currentUserId", this.currentUserId);
+      const spectatorMode = data?.spectatorMode === true;
+      this.registry.set("spectatorMode", spectatorMode);
+      if (spectatorMode) {
+        const matchId = data?.spectatorMatchId?.trim();
+        if (!matchId) {
+          this.statusText.setText("Spectator match ID missing.");
+          return;
+        }
+        this.setCurrentMatchId(matchId);
+        this.statusText.setText(`Spectating match ${matchId}`);
+        this.scene.sleep("MainScene");
+        this.scene.run("GameScene");
+        return;
+      }
       // Pre-connect the realtime socket so join calls don't race the connection
       await this.turnService.connectSocket();
       // Real-time settings updates from server
@@ -374,6 +418,35 @@ export class MainScene extends Phaser.Scene {
           this.statusText.setText("Failed to remove match (see console).");
         }
       });
+      this.lobbyView.setOnInviteFriend(async () => {
+        if (!this.turnService || !this.currentMatchId) return;
+        const username = window.prompt("Friend username to invite", "");
+        if (!username) return;
+        try {
+          const res = await this.turnService.inviteToMatch(
+            this.currentMatchId,
+            username,
+          );
+          const parsed = this.parseRpcPayload<InviteToMatchPayload>(res);
+          if (parsed && parsed.ok) {
+            this.statusText.setText(
+              parsed.inviteToken
+                ? `Invite token for ${username}: ${parsed.inviteToken}`
+                : `Invited ${username}.`,
+            );
+            if (parsed.inviteToken && this.lobbyView) {
+              this.lobbyView.setMatchPrivacy(true, parsed.inviteToken);
+            }
+          } else {
+            this.statusText.setText(
+              `Invite failed: ${parsed?.error ?? "unknown"}`,
+            );
+          }
+        } catch (e) {
+          console.error("invite_to_match error", e);
+          this.statusText.setText("Failed to invite friend (see console).");
+        }
+      });
 
       // Buttons
       this.buttons.push(
@@ -384,7 +457,8 @@ export class MainScene extends Phaser.Scene {
           "Create Match",
           async () => {
             if (!this.turnService) throw new Error("No service");
-            const createRes = await this.turnService.createMatch(2);
+            const name = window.prompt("Match name", "") ?? undefined;
+            const createRes = await this.turnService.createMatch(2, name);
             const parsed = this.parseRpcPayload<CreateMatchPayload>(createRes);
             if (!parsed || !parsed.match_id)
               throw new Error("No match_id returned");
@@ -395,10 +469,166 @@ export class MainScene extends Phaser.Scene {
             if (this.lobbyView) {
               this.lobbyView.setMatchName(createdName);
               this.lobbyView.setMatchStarted(parsed.started ?? false);
+              this.lobbyView.setMatchPrivacy(
+                parsed.isPrivate ?? false,
+                parsed.inviteToken,
+              );
             }
 
             // Auto-join the match we just created
             await this.joinMatch(parsed.match_id);
+          },
+          ["main"],
+        ),
+      );
+
+      this.buttons.push(
+        makeButton(
+          this,
+          10,
+          80,
+          "Create Private Match",
+          async () => {
+            if (!this.turnService) throw new Error("No service");
+            const name = window.prompt("Private match name", "") ?? undefined;
+            const createRes = await this.turnService.createMatch(2, name, true);
+            const parsed = this.parseRpcPayload<CreateMatchPayload>(createRes);
+            if (!parsed || !parsed.match_id)
+              throw new Error("No match_id returned");
+            this.setCurrentMatchId(parsed.match_id);
+            const createdName = parsed.name ?? "Private Match";
+            this.currentMatchName = createdName;
+            const inviteToken = parsed.inviteToken ?? "";
+            this.statusText.setText(
+              inviteToken
+                ? `Private match created. Invite token: ${inviteToken}`
+                : `Private match created: ${createdName}`,
+            );
+            if (this.lobbyView) {
+              this.lobbyView.setMatchName(createdName);
+              this.lobbyView.setMatchStarted(parsed.started ?? false);
+              this.lobbyView.setMatchPrivacy(true, parsed.inviteToken);
+            }
+
+            await this.joinMatch(parsed.match_id, parsed.inviteCode, inviteToken);
+          },
+          ["main"],
+        ),
+      );
+
+      this.buttons.push(
+        makeButton(
+          this,
+          10,
+          120,
+          "Join via Invite",
+          async () => {
+            if (!this.turnService) throw new Error("No service");
+            const token = window.prompt(
+              "Enter invite token (matchId:code)",
+              "",
+            );
+            if (!token) return;
+            const [matchId, inviteCode] = token.split(":");
+            if (!matchId) {
+              this.statusText.setText("Invalid invite token.");
+              return;
+            }
+            await this.joinMatch(matchId, inviteCode, token);
+          },
+          ["main"],
+        ),
+      );
+
+      this.buttons.push(
+        makeButton(
+          this,
+          10,
+          160,
+          "List Friends",
+          async () => {
+            if (!this.turnService) throw new Error("No service");
+            const res = await this.turnService.listFriends();
+            const parsed = this.parseRpcPayload<ListFriendsPayload>(res);
+            if (!parsed || !parsed.ok) {
+              this.statusText.setText(
+                `list_friends error: ${parsed?.error ?? "unknown"}`,
+              );
+              return;
+            }
+            const friends = parsed.friends ?? [];
+            if (!friends.length) {
+              this.statusText.setText("No friends yet.");
+              return;
+            }
+            const summary = friends
+              .map((f) => `${f.username ?? f.userId} (${f.state})`)
+              .slice(0, 3)
+              .join(", ");
+            const more = friends.length > 3 ? ` +${friends.length - 3} more` : "";
+            this.statusText.setText(`Friends: ${summary}${more}`);
+          },
+          ["main"],
+        ),
+      );
+
+      this.buttons.push(
+        makeButton(
+          this,
+          10,
+          200,
+          "Add Friend",
+          async () => {
+            if (!this.turnService) throw new Error("No service");
+            const username = window.prompt("Enter username to add", "");
+            if (!username) return;
+            const res = await this.turnService.friendAction("send", username);
+            const parsed = this.parseRpcPayload<FriendActionPayload>(res);
+            if (parsed && parsed.ok) {
+              this.statusText.setText(`Friend request sent to ${username}.`);
+            } else {
+              this.statusText.setText(
+                `Friend request failed: ${parsed?.error ?? "unknown"}`,
+              );
+            }
+          },
+          ["main"],
+        ),
+      );
+
+      this.buttons.push(
+        makeButton(
+          this,
+          10,
+          240,
+          "Respond to Friend",
+          async () => {
+            if (!this.turnService) throw new Error("No service");
+            const username = window.prompt("Username to respond to", "");
+            if (!username) return;
+            const action = window.prompt(
+              "Type accept or deny",
+              "accept",
+            );
+            if (!action) return;
+            const normalized = action.toLowerCase();
+            if (normalized !== "accept" && normalized !== "deny") {
+              this.statusText.setText("Action must be accept or deny.");
+              return;
+            }
+            const res = await this.turnService.friendAction(
+              normalized,
+              username,
+            );
+            const parsed = this.parseRpcPayload<FriendActionPayload>(res);
+            const verb = normalized === "accept" ? "accepted" : "denied";
+            if (parsed && parsed.ok) {
+              this.statusText.setText(`Friend ${verb} for ${username}.`);
+            } else {
+              this.statusText.setText(
+                `Friend ${normalized} failed: ${parsed?.error ?? "unknown"}`,
+              );
+            }
           },
           ["main"],
         ),
@@ -409,7 +639,7 @@ export class MainScene extends Phaser.Scene {
         makeButton(
           this,
           10,
-          240,
+          300,
           "List Matches",
           () => {
             this.showView("matchList");
@@ -423,7 +653,7 @@ export class MainScene extends Phaser.Scene {
         makeButton(
           this,
           10,
-          280,
+          340,
           "My Matches",
           () => {
             this.showView("myMatchList");
@@ -437,7 +667,7 @@ export class MainScene extends Phaser.Scene {
         makeButton(
           this,
           10,
-          320,
+          380,
           "Logout",
           () => {
             this.logout();
@@ -451,7 +681,7 @@ export class MainScene extends Phaser.Scene {
         makeButton(
           this,
           10,
-          360,
+          420,
           "Account Settings",
           () => {
             this.scene.start("AccountScene", {
@@ -482,6 +712,40 @@ export class MainScene extends Phaser.Scene {
           "Back",
           () => {
             this.showView("main");
+          },
+          ["matchList"],
+        ),
+      );
+      this.buttons.push(
+        makeButton(
+          this,
+          200,
+          70,
+          "Toggle In-Progress",
+          () => {
+            const include = this.matchesListView.toggleIncludeInProgress();
+            this.statusText.setText(
+              include
+                ? "Showing in-progress matches."
+                : "Hiding in-progress matches.",
+            );
+          },
+          ["matchList"],
+        ),
+      );
+      this.buttons.push(
+        makeButton(
+          this,
+          420,
+          70,
+          "Toggle Private",
+          () => {
+            const include = this.matchesListView.toggleIncludePrivate();
+            this.statusText.setText(
+              include
+                ? "Showing private matches."
+                : "Hiding private matches.",
+            );
           },
           ["matchList"],
         ),
