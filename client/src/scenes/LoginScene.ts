@@ -1,22 +1,44 @@
 import Phaser from "phaser";
 import { Client, Session } from "@heroiclabs/nakama-js";
-import { makeButton } from "../ui/button";
+import { makeButton, type UIButton } from "../ui/button";
 import { getEnv, healthProbe } from "../services/nakama";
 import { SessionManager } from "../services/sessionManager";
 import { FacebookService } from "../services/facebookService";
 
+enum LoginGuiState {
+  Entry = "entry",
+  Login = "login",
+  Register = "register",
+}
+
+type VisibleGameObject = Phaser.GameObjects.GameObject & {
+  setVisible: (value: boolean) => VisibleGameObject;
+};
+
 export class LoginScene extends Phaser.Scene {
   private statusText!: Phaser.GameObjects.Text;
   private client!: Client;
+  private guiState: LoginGuiState = LoginGuiState.Entry;
+
   private emailValue = "";
   private passwordValue = "";
   private usernameValue = "";
+
   private isEmailFocused = false;
   private isPasswordFocused = false;
   private isUsernameFocused = false;
+
+  private emailLabel!: Phaser.GameObjects.Text;
+  private passwordLabel!: Phaser.GameObjects.Text;
+  private usernameLabel!: Phaser.GameObjects.Text;
   private emailDisplay!: Phaser.GameObjects.Text;
   private passwordDisplay!: Phaser.GameObjects.Text;
   private usernameDisplay!: Phaser.GameObjects.Text;
+  private formActionButton!: UIButton;
+  private formBackButton!: UIButton;
+
+  private entryObjects: VisibleGameObject[] = [];
+  private formObjects: VisibleGameObject[] = [];
 
   constructor() {
     super("LoginScene"); // Required to show the scene on logout
@@ -51,7 +73,7 @@ export class LoginScene extends Phaser.Scene {
 
     // Title
     this.add
-      .text(400, 100, "Zarka Login", {
+      .text(400, 100, "Zarka", {
         color: "#ffffff",
         fontSize: "32px",
         fontStyle: "bold",
@@ -65,26 +87,59 @@ export class LoginScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // Facebook Login Button
-    makeButton(this, 400, 200, "Login with Facebook", async () => {
-      await this.loginWithFacebook();
+    this.createEntryButtons();
+    this.createAuthForm();
+    this.setGuiState(LoginGuiState.Entry);
+
+    this.input.keyboard!.on("keydown", (event: KeyboardEvent) => {
+      this.handleKeyboardInput(event);
+    });
+  }
+
+  private createEntryButtons() {
+    const facebookButton = makeButton(
+      this,
+      400,
+      230,
+      "Login with Facebook",
+      async () => {
+        await this.loginWithFacebook();
+      },
+    ).setOrigin(0.5);
+
+    const loginButton = makeButton(this, 400, 300, "Login", async () => {
+      this.setGuiState(LoginGuiState.Login);
     }).setOrigin(0.5);
 
-    // Email Login Section
-    this.add
-      .text(400, 280, "Or login with email:", {
-        color: "#ffffff",
-        fontSize: "18px",
-      })
-      .setOrigin(0.5);
+    const guestButton = makeButton(
+      this,
+      400,
+      370,
+      "Continue as Guest",
+      async () => {
+        await this.loginAsGuest();
+      },
+    ).setOrigin(0.5);
 
-    // Email input display
-    this.add.text(200, 320, "Email:", {
+    const registerButton = makeButton(this, 400, 440, "Register", async () => {
+      this.setGuiState(LoginGuiState.Register);
+    }).setOrigin(0.5);
+
+    this.entryObjects.push(
+      facebookButton as VisibleGameObject,
+      loginButton as VisibleGameObject,
+      guestButton as VisibleGameObject,
+      registerButton as VisibleGameObject,
+    );
+  }
+
+  private createAuthForm() {
+    this.emailLabel = this.add.text(200, 280, "Email:", {
       color: "#ffffff",
       fontSize: "16px",
     });
 
-    this.emailDisplay = this.add.text(200, 345, "Click to enter email...", {
+    this.emailDisplay = this.add.text(200, 305, "", {
       color: "#666666",
       fontSize: "14px",
       backgroundColor: "#333333",
@@ -95,69 +150,100 @@ export class LoginScene extends Phaser.Scene {
       this.focusEmailInput();
     });
 
-    // Password input display
-    this.add.text(200, 385, "Password:", {
+    this.passwordLabel = this.add.text(200, 345, "Password:", {
       color: "#ffffff",
       fontSize: "16px",
     });
 
-    this.passwordDisplay = this.add.text(
-      200,
-      410,
-      "Click to enter password...",
-      {
-        color: "#666666",
-        fontSize: "14px",
-        backgroundColor: "#333333",
-        padding: { x: 8, y: 4 },
-      }
-    );
+    this.passwordDisplay = this.add.text(200, 370, "", {
+      color: "#666666",
+      fontSize: "14px",
+      backgroundColor: "#333333",
+      padding: { x: 8, y: 4 },
+    });
     this.passwordDisplay.setInteractive({ useHandCursor: true });
     this.passwordDisplay.on("pointerdown", () => {
       this.focusPasswordInput();
     });
 
-    // Username input
-    this.add.text(460, 320, "Username:", {
+    this.usernameLabel = this.add.text(200, 410, "Username:", {
       color: "#ffffff",
       fontSize: "16px",
     });
-    this.usernameDisplay = this.add.text(
-      460,
-      345,
-      "Click to enter username...",
-      {
-        color: "#666666",
-        fontSize: "14px",
-        backgroundColor: "#333333",
-        padding: { x: 8, y: 4 },
-      }
-    );
+
+    this.usernameDisplay = this.add.text(200, 435, "", {
+      color: "#666666",
+      fontSize: "14px",
+      backgroundColor: "#333333",
+      padding: { x: 8, y: 4 },
+    });
     this.usernameDisplay.setInteractive({ useHandCursor: true });
     this.usernameDisplay.on("pointerdown", () => {
-      // Placeholder for future username input handling
       this.focusUsernameInput();
     });
 
-    // Setup keyboard input
-    this.input.keyboard!.on("keydown", (event: KeyboardEvent) => {
-      this.handleKeyboardInput(event);
-    });
+    this.formActionButton = makeButton(this, 300, 510, "Login", async () => {
+      if (this.guiState === LoginGuiState.Login) {
+        await this.loginWithEmail();
+        return;
+      }
 
-    // Email Login Button
-    makeButton(this, 300, 450, "Login", async () => {
-      await this.loginWithEmail();
-    }).setOrigin(0.5);
-
-    // Register Button
-    makeButton(this, 500, 450, "Register", async () => {
       await this.registerWithEmail();
     }).setOrigin(0.5);
 
-    // Guest Login (device auth as fallback)
-    makeButton(this, 400, 520, "Continue as Guest", async () => {
-      await this.loginAsGuest();
+    this.formBackButton = makeButton(this, 500, 510, "Back", async () => {
+      this.setGuiState(LoginGuiState.Entry);
     }).setOrigin(0.5);
+
+    this.formObjects.push(
+      this.emailLabel as VisibleGameObject,
+      this.emailDisplay as VisibleGameObject,
+      this.passwordLabel as VisibleGameObject,
+      this.passwordDisplay as VisibleGameObject,
+      this.usernameLabel as VisibleGameObject,
+      this.usernameDisplay as VisibleGameObject,
+      this.formActionButton as VisibleGameObject,
+      this.formBackButton as VisibleGameObject,
+    );
+  }
+
+  private setGuiState(state: LoginGuiState) {
+    this.guiState = state;
+
+    const isEntry = state === LoginGuiState.Entry;
+    const isRegister = state === LoginGuiState.Register;
+
+    this.setGroupVisible(this.entryObjects, isEntry);
+    this.setGroupVisible(this.formObjects, !isEntry);
+    this.usernameLabel.setVisible(isRegister);
+    this.usernameDisplay.setVisible(isRegister);
+
+    if (isEntry) {
+      this.clearFocus();
+      this.statusText.setText("Choose your login method");
+      this.updateDisplays();
+      return;
+    }
+
+    this.formActionButton.setText(isRegister ? "[ Register ]" : "[ Login ]");
+    this.statusText.setText(
+      isRegister ? "Create your account" : "Login with username or email",
+    );
+
+    this.focusEmailInput();
+    this.updateDisplays();
+  }
+
+  private setGroupVisible(objects: VisibleGameObject[], visible: boolean) {
+    objects.forEach((object) => {
+      object.setVisible(visible);
+    });
+  }
+
+  private clearFocus() {
+    this.isEmailFocused = false;
+    this.isPasswordFocused = false;
+    this.isUsernameFocused = false;
   }
 
   private focusEmailInput() {
@@ -175,6 +261,10 @@ export class LoginScene extends Phaser.Scene {
   }
 
   private focusUsernameInput() {
+    if (this.guiState !== LoginGuiState.Register) {
+      return;
+    }
+
     this.isEmailFocused = false;
     this.isPasswordFocused = false;
     this.isUsernameFocused = true;
@@ -182,6 +272,13 @@ export class LoginScene extends Phaser.Scene {
   }
 
   private updateDisplays() {
+    const isLogin = this.guiState === LoginGuiState.Login;
+    const emailPlaceholder = isLogin
+      ? "Click to enter email or username..."
+      : "Click to enter email...";
+
+    this.emailLabel.setText(isLogin ? "Email or Username:" : "Email:");
+
     // Update email display
     if (this.isEmailFocused) {
       this.emailDisplay.setStyle({
@@ -194,7 +291,7 @@ export class LoginScene extends Phaser.Scene {
         color: this.emailValue ? "#ffffff" : "#666666",
         backgroundColor: "#333333",
       });
-      this.emailDisplay.setText(this.emailValue || "Click to enter email...");
+      this.emailDisplay.setText(this.emailValue || emailPlaceholder);
     }
 
     // Update password display
@@ -212,7 +309,7 @@ export class LoginScene extends Phaser.Scene {
       });
       const maskedPassword = "*".repeat(this.passwordValue.length);
       this.passwordDisplay.setText(
-        maskedPassword || "Click to enter password..."
+        maskedPassword || "Click to enter password...",
       );
     }
 
@@ -229,12 +326,16 @@ export class LoginScene extends Phaser.Scene {
         backgroundColor: "#333333",
       });
       this.usernameDisplay.setText(
-        this.usernameValue || "Click to enter username..."
+        this.usernameValue || "Click to enter username...",
       );
     }
   }
 
   private handleKeyboardInput(event: KeyboardEvent) {
+    if (this.guiState === LoginGuiState.Entry) {
+      return;
+    }
+
     if (
       !this.isEmailFocused &&
       !this.isPasswordFocused &&
@@ -248,39 +349,71 @@ export class LoginScene extends Phaser.Scene {
         this.emailValue = this.emailValue.slice(0, -1);
       } else if (this.isPasswordFocused && this.passwordValue.length > 0) {
         this.passwordValue = this.passwordValue.slice(0, -1);
-      } else if (this.isUsernameFocused && this.usernameValue.length > 0) {
+      } else if (
+        this.guiState === LoginGuiState.Register &&
+        this.isUsernameFocused &&
+        this.usernameValue.length > 0
+      ) {
         this.usernameValue = this.usernameValue.slice(0, -1);
       }
     } else if (event.key === "Tab") {
       event.preventDefault();
-      if (this.isEmailFocused) {
-        this.focusUsernameInput();
-      } else if (this.isPasswordFocused) {
-        this.focusEmailInput();
-      } else if (this.isUsernameFocused) {
-        this.focusPasswordInput();
-      }
+      this.focusNextInput();
     } else if (event.key === "Enter") {
       event.preventDefault();
-      if (this.isEmailFocused) {
-        this.focusUsernameInput();
-      } else if (this.isUsernameFocused) {
-        this.focusPasswordInput();
-      } else if (this.isPasswordFocused) {
-        this.loginWithEmail();
-      }
+      this.handleEnterKey();
     } else if (event.key.length === 1) {
-      // Regular character input
       if (this.isEmailFocused) {
         this.emailValue += event.key;
       } else if (this.isPasswordFocused) {
         this.passwordValue += event.key;
-      } else if (this.isUsernameFocused) {
+      } else if (
+        this.guiState === LoginGuiState.Register &&
+        this.isUsernameFocused
+      ) {
         this.usernameValue += event.key;
       }
     }
 
     this.updateDisplays();
+  }
+
+  private focusNextInput() {
+    if (this.guiState === LoginGuiState.Register) {
+      if (this.isEmailFocused) {
+        this.focusUsernameInput();
+      } else if (this.isUsernameFocused) {
+        this.focusPasswordInput();
+      } else {
+        this.focusEmailInput();
+      }
+      return;
+    }
+
+    if (this.isEmailFocused) {
+      this.focusPasswordInput();
+    } else {
+      this.focusEmailInput();
+    }
+  }
+
+  private handleEnterKey() {
+    if (this.guiState === LoginGuiState.Register) {
+      if (this.isEmailFocused) {
+        this.focusUsernameInput();
+      } else if (this.isUsernameFocused) {
+        this.focusPasswordInput();
+      } else {
+        this.registerWithEmail();
+      }
+      return;
+    }
+
+    if (this.isEmailFocused) {
+      this.focusPasswordInput();
+    } else {
+      this.loginWithEmail();
+    }
   }
 
   private async loginWithFacebook() {
@@ -291,7 +424,7 @@ export class LoginScene extends Phaser.Scene {
       const initialized = await FacebookService.initialize();
       if (!initialized) {
         this.statusText.setText(
-          "Facebook SDK not available. Please check your internet connection."
+          "Facebook SDK not available. Please check your internet connection.",
         );
         return;
       }
@@ -310,34 +443,45 @@ export class LoginScene extends Phaser.Scene {
       // Authenticate with Nakama using Facebook token
       const session = await this.client.authenticateFacebook(
         authResponse.accessToken,
-        true
+        true,
       );
       this.proceedToGame(session);
     } catch (error) {
       console.error("Facebook login error:", error);
       this.statusText.setText(
-        "Facebook login failed. Please try again or use email login."
+        "Facebook login failed. Please try again or use email login.",
       );
     }
   }
 
   private async loginWithEmail() {
-    const email = this.emailValue.trim();
+    const identifier = this.emailValue.trim();
     const password = this.passwordValue.trim();
 
-    if (!email || !password) {
-      this.statusText.setText("Please enter both email and password.");
+    if (!identifier || !password) {
+      this.statusText.setText("Please enter username/email and password.");
       return;
     }
 
     this.statusText.setText("Logging in...");
 
     try {
-      const session = await this.client.authenticateEmail(email, password);
+      const isEmail = identifier.includes("@");
+      const email = isEmail ? identifier : "";
+      const username = isEmail ? undefined : identifier;
+
+      const session = await this.client.authenticateEmail(
+        email,
+        password,
+        false,
+        username,
+      );
       this.proceedToGame(session);
     } catch (error) {
       console.error("Email login error:", error);
-      this.statusText.setText("Login failed. Please check your credentials.");
+      this.statusText.setText(
+        "Login failed. Please check your username/email and password.",
+      );
     }
   }
 
@@ -368,14 +512,14 @@ export class LoginScene extends Phaser.Scene {
         email,
         password,
         true,
-        username
+        username,
       );
       this.statusText.setText("Account created successfully!");
       this.proceedToGame(session);
     } catch (error) {
       console.error("Registration error:", error);
       this.statusText.setText(
-        "Registration failed. Email may already be in use."
+        "Registration failed. Email may already be in use.",
       );
     }
   }
