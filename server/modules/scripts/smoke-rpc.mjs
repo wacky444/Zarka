@@ -90,4 +90,16 @@ if (!statePayload.match) {
   throw new Error("get_state did not return match data");
 }
 
+const removeMatchPayload = JSON.stringify({ match_id: matchId });
+const removeMatchResponse = await fetch(`${baseUrl}/v2/rpc/remove_match`, {
+  method: "POST",
+  headers: rpcHeaders,
+  body: JSON.stringify(removeMatchPayload),
+});
+
+if (!removeMatchResponse.ok) {
+  const text = await removeMatchResponse.text();
+  throw new Error(`remove_match failed: ${removeMatchResponse.status} ${text}`);
+}
+
 console.log("Server RPC smoke test passed.");
