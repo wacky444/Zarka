@@ -823,12 +823,42 @@ export class GameScene extends Phaser.Scene {
     if (!matchId || payload.match_id !== matchId) {
       return;
     }
-    if (!this.currentUserId) {
+    const winnerId = payload.winnerId;
+    const winnerName = winnerId
+      ? this.playerNameMap[winnerId] ?? "Unknown"
+      : "No winner";
+    const bannerText = winnerId
+      ? `Winner: ${winnerName}`
+      : "Match ended";
+    this.topBanner?.show({ text: bannerText });
+    if (winnerId) {
+      this.playWinnerDance(winnerId);
+    }
+  }
+
+  private playWinnerDance(winnerId: string) {
+    const sprite = this.playerSprites.get(winnerId);
+    if (!sprite || !sprite.active) {
       return;
     }
-    if (payload.winnerId && payload.winnerId !== this.currentUserId) {
-      this.topBanner?.show({ text: "You lost the match." });
-    }
+    const startY = sprite.y;
+    this.tweens.add({
+      targets: sprite,
+      y: startY - 8,
+      duration: 180,
+      ease: "Sine.easeInOut",
+      yoyo: true,
+      repeat: 5,
+    });
+    this.tweens.add({
+      targets: sprite,
+      angle: { from: -6, to: 6 },
+      duration: 180,
+      ease: "Sine.easeInOut",
+      yoyo: true,
+      repeat: 5,
+      onComplete: () => sprite.setAngle(0),
+    });
   }
 
   private layoutUI() {
