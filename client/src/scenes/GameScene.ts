@@ -904,13 +904,8 @@ export class GameScene extends Phaser.Scene {
     const totalMinutes = Math.max(0, Math.ceil(diffMs / 60_000));
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-    const targetLabel = `${String(parsed.hours).padStart(2, "0")}:${String(
-      parsed.minutes,
-    ).padStart(2, "0")}`;
-    this.autoAdvanceText.setText(
-      `Auto-advance at ${targetLabel} • ${hours}h ${minutes}m`,
-    );
-    const urgent = diffMs <= 3 * 60 * 60 * 1000;
+    this.autoAdvanceText.setText(`Auto-advance in ${hours}h ${minutes}m`);
+    const urgent = diffMs < 3 * 60 * 60 * 1000;
     this.autoAdvanceText.setColor(urgent ? "#ff6666" : "#cbd5f5");
   }
 
