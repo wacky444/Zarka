@@ -95,6 +95,8 @@ export class GameScene extends Phaser.Scene {
   private autoAdvanceTimer: Phaser.Time.TimerEvent | null = null;
   private autoAdvanceEnabled = false;
   private autoAdvanceRoundTime: string | null = null;
+  private autoAdvanceOffsetMinutes = 0;
+  private autoAdvanceLastAt: number | undefined = undefined;
   private chatService: MatchChatService | null = null;
   private chatMessages: MatchChatMessage[] = [];
   private chatUnsubscribe: (() => void) | null = null;
@@ -858,6 +860,11 @@ export class GameScene extends Phaser.Scene {
     const autoSkip = match?.autoSkip === true;
     this.autoAdvanceEnabled = autoSkip && !!roundTime;
     this.autoAdvanceRoundTime = this.autoAdvanceEnabled ? roundTime : null;
+    this.autoAdvanceLastAt = match?.lastAutoAdvanceAt;
+
+    const rawOffset = import.meta.env.VITE_ROUND_TIME_OFFSET_MINUTES;
+    const parsedOffset = rawOffset ? parseInt(rawOffset, 10) : 0;
+    this.autoAdvanceOffsetMinutes = isFinite(parsedOffset) ? parsedOffset : 0;
 
     if (!this.autoAdvanceText) {
       return;
@@ -894,19 +901,46 @@ export class GameScene extends Phaser.Scene {
       this.autoAdvanceText.setText("Auto-advance time unavailable");
       return;
     }
-    const now = new Date();
-    const target = new Date(now);
-    target.setHours(parsed.hours, parsed.minutes, 0, 0);
-    if (target.getTime() <= now.getTime()) {
-      target.setDate(target.getDate() + 1);
-    }
-    const diffMs = target.getTime() - now.getTime();
+    const targetMinutes = parsed.hours * 60 + parsed.minutes;
+    const nowMs = Date.now();
+    const offsetMs = this.autoAdvanceOffsetMinutes * 60_000;
+    const nowLocal = new Date(nowMs + offsetMs);
+    const localMidnightMs =
+      Date.UTC(
+        nowLocal.getUTCFullYear(),
+        nowLocal.getUTCMonth(),
+        nowLocal.getUTCDate(),
+      ) - offsetMs;
+    const targetTodayMs = localMidnightMs + targetMinutes * 60_000;
+
+    const lastAt = this.autoAdvanceLastAt;
+    const alreadyAdvancedToday =
+      lastAt !== undefined &&
+      this.isInSameLocalDay(lastAt * 1000, nowMs);
+
+    const nextTargetMs =
+      alreadyAdvancedToday || nowMs >= targetTodayMs
+        ? targetTodayMs + 24 * 60 * 60_000
+        : targetTodayMs;
+
+    const diffMs = nextTargetMs - nowMs;
     const totalMinutes = Math.max(0, Math.ceil(diffMs / 60_000));
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     this.autoAdvanceText.setText(`Auto-advance in ${hours}h ${minutes}m`);
-    const urgent = diffMs < 3 * 60 * 60 * 1000;
+    const urgent = diffMs < 3 * 60 * 60_000;
     this.autoAdvanceText.setColor(urgent ? "#ff6666" : "#cbd5f5");
+  }
+
+  private isInSameLocalDay(msA: number, msB: number): boolean {
+    const offsetMs = this.autoAdvanceOffsetMinutes * 60_000;
+    const dateA = new Date(msA + offsetMs);
+    const dateB = new Date(msB + offsetMs);
+    return (
+      dateA.getUTCFullYear() === dateB.getUTCFullYear() &&
+      dateA.getUTCMonth() === dateB.getUTCMonth() &&
+      dateA.getUTCDate() === dateB.getUTCDate()
+    );
   }
 
   private parseRoundTime(value: string): { hours: number; minutes: number } | null {
