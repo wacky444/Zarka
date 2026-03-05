@@ -1,11 +1,33 @@
-const baseUrl = process.env.NAKAMA_BASE_URL || "http://localhost:7460";
-const serverKey = process.env.NAKAMA_SERVER_KEY || "defaultkey";
-const deviceId = process.env.NAKAMA_DEVICE_ID || "zarka-test-device";
+import { randomUUID } from "node:crypto";
+
+const baseUrl = process.env.ZARKA_NAKAMA_URL || "http://127.0.0.1:7460";
+const serverKey = process.env.ZARKA_NAKAMA_SERVER_KEY || "defaultkey";
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function waitForHealthcheck() {
+  const maxAttempts = 30;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(`${baseUrl}/healthcheck`, { method: "GET" });
+      if (response.ok) {
+        return;
+      }
+    } catch {}
+    await sleep(1000);
+  }
+  throw new Error(`Nakama healthcheck did not become ready at ${baseUrl}`);
+}
+
+await waitForHealthcheck();
+
+const deviceId = `smoke-${randomUUID()}`;
+const username = `smoke_${Date.now()}`;
 
 const basicAuth = Buffer.from(`${serverKey}:`).toString("base64");
 
 const authResponse = await fetch(
-  `${baseUrl}/v2/account/authenticate/device?create=true`,
+  `${baseUrl}/v2/account/authenticate/device?create=true&username=${encodeURIComponent(username)}`,
   {
     method: "POST",
     headers: {

@@ -1,10 +1,6 @@
-const targetUrl = process.env.ZARKA_CLIENT_URL || "http://localhost:5173";
+import { readFile } from "node:fs/promises";
 
-const response = await fetch(targetUrl, { method: "GET" });
-if (!response.ok) {
-  throw new Error(`Failed to fetch ${targetUrl}: ${response.status}`);
-}
-const html = await response.text();
+const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 // Phaser renders login UI in canvas after boot, so smoke-test static bootstrap markers.
 const requiredText = [
   'id="game"',
