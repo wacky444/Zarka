@@ -158,7 +158,8 @@ export class MainScene extends Phaser.Scene {
   preload() {}
 
   async create(data?: { client?: Client; session?: Session }) {
-    this.statusText = this.add.text(10, 10, "Connecting...", {
+    const layoutOffsetY = 30;
+    this.statusText = this.add.text(10, 10 + layoutOffsetY, "Connecting...", {
       color: "#ffffff",
     });
 
@@ -380,7 +381,7 @@ export class MainScene extends Phaser.Scene {
         makeButton(
           this,
           10,
-          40,
+          40 + layoutOffsetY,
           "Create Match",
           async () => {
             if (!this.turnService) throw new Error("No service");
@@ -409,7 +410,7 @@ export class MainScene extends Phaser.Scene {
         makeButton(
           this,
           10,
-          240,
+          240 + layoutOffsetY,
           "List Matches",
           () => {
             this.showView("matchList");
@@ -423,7 +424,7 @@ export class MainScene extends Phaser.Scene {
         makeButton(
           this,
           10,
-          280,
+          280 + layoutOffsetY,
           "My Matches",
           () => {
             this.showView("myMatchList");
@@ -437,7 +438,7 @@ export class MainScene extends Phaser.Scene {
         makeButton(
           this,
           10,
-          320,
+          320 + layoutOffsetY,
           "Logout",
           () => {
             this.logout();
@@ -451,7 +452,7 @@ export class MainScene extends Phaser.Scene {
         makeButton(
           this,
           10,
-          360,
+          360 + layoutOffsetY,
           "Account Settings",
           () => {
             this.scene.start("AccountScene", {
@@ -468,7 +469,7 @@ export class MainScene extends Phaser.Scene {
         makeButton(
           this,
           10,
-          70,
+          70 + layoutOffsetY,
           "Refresh",
           () => this.matchesListView.refresh(),
           ["matchList"],
@@ -478,7 +479,7 @@ export class MainScene extends Phaser.Scene {
         makeButton(
           this,
           110,
-          70,
+          70 + layoutOffsetY,
           "Back",
           () => {
             this.showView("main");
@@ -492,7 +493,7 @@ export class MainScene extends Phaser.Scene {
         makeButton(
           this,
           10,
-          70,
+          70 + layoutOffsetY,
           "Refresh",
           () => this.myMatchesListView.refresh(),
           ["myMatchList"],
@@ -502,7 +503,7 @@ export class MainScene extends Phaser.Scene {
         makeButton(
           this,
           110,
-          70,
+          70 + layoutOffsetY,
           "Back",
           () => {
             this.showView("main");
@@ -516,7 +517,7 @@ export class MainScene extends Phaser.Scene {
         makeButton(
           this,
           630,
-          80,
+          80 + layoutOffsetY,
           "Back to Menu",
           () => {
             this.showView("main");
