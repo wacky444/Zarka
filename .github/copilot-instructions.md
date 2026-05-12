@@ -12,7 +12,7 @@ These instructions are automatically included in every Copilot conversation for 
 
 - Skim relevant files and summarize the current behavior before proposing changes; prefer repository sources over assumptions.
 - Open responses with a short acknowledgement plus a plan. Keep sentences short, friendly, and concrete—skip filler.
-- When editing code, explain the reasoning, reference the files or symbols you touched, and call out risks or TODOs.
+- When editing code, explain the reasoning in the response, reference the files or symbols you touched, and call out risks or TODOs.
 - Run or describe the smallest useful validation (build, lint, targeted test) after code changes. Only promise checks you actually execute.
 - Prefer PowerShell-compatible commands (Windows host). Present commands in fenced `powershell` blocks and note that long-running tasks must finish—never cancel them early.
 - Avoid writting code comments and don't remove existing ones.
@@ -54,7 +54,7 @@ Key files:
 - Use services (`nakama.ts`, `turnService.ts`, `sessionManager.ts`) for IO; scenes should focus on presentation and state orchestration.
 - Keep UI building blocks in `client/src/ui/`; prefer lightweight composition over deep inheritance.
 - Assets live under `client/public/assets/`; update XML/JSON atlases alongside spritesheets when editing.
-- Use external libraries freely, preferring phaser-friendly options (e.g. `phaser3-rex-plugins`).
+- Use external libraries freely, preferring libraries officially recommended by Phaser or widely used in Phaser projects (e.g. `phaser3-rex-plugins`).
 
 ### Nakama TypeScript runtime
 

@@ -337,6 +337,7 @@ export class GameScene extends Phaser.Scene {
       this.gridModalActive = false;
       this.cancelMainActionLocationPick();
       this.itemTooltip?.hide();
+      this.stopAutoAdvanceTimer();
       for (const container of this.tileItemContainers.values()) {
         container.destroy(true);
       }
@@ -872,24 +873,35 @@ export class GameScene extends Phaser.Scene {
 
     if (!this.autoAdvanceEnabled || !this.autoAdvanceRoundTime) {
       this.autoAdvanceText.setVisible(false);
-      if (this.autoAdvanceTimer) {
-        this.autoAdvanceTimer.remove(false);
-        this.autoAdvanceTimer = null;
-      }
+      this.stopAutoAdvanceTimer();
       return;
     }
 
     this.autoAdvanceText.setVisible(true);
     this.refreshAutoAdvanceTimer();
+    this.startAutoAdvanceTimer();
+  }
 
-    if (!this.autoAdvanceTimer) {
-      this.autoAdvanceTimer = this.time.addEvent({
-        delay: 60_000,
-        loop: true,
-        callback: this.refreshAutoAdvanceTimer,
-        callbackScope: this,
-      });
+  private startAutoAdvanceTimer() {
+    if (this.autoAdvanceTimer) {
+      return;
     }
+    const nowMs = Date.now();
+    const delay = 60_000 - (nowMs % 60_000);
+    this.autoAdvanceTimer = this.time.addEvent({
+      delay,
+      loop: true,
+      callback: this.refreshAutoAdvanceTimer,
+      callbackScope: this,
+    });
+  }
+
+  private stopAutoAdvanceTimer() {
+    if (!this.autoAdvanceTimer) {
+      return;
+    }
+    this.autoAdvanceTimer.remove(false);
+    this.autoAdvanceTimer = null;
   }
 
   private refreshAutoAdvanceTimer() {
