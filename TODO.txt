@@ -1,0 +1,1 @@
+- when the host removes the game, it doesn't notify the clients, so they are left in a broken state. 

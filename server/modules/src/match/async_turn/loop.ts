@@ -11,17 +11,6 @@ import { getAliveCharacterIds } from "../checkEndGame";
 
 const AUTO_CHECK_INTERVAL_MS = 60 * 1000;
 
-function getLocalOffsetMinutes(env?: { [key: string]: string }): number {
-  const raw = env?.ROUND_TIME_OFFSET_MINUTES ?? env?.LOCAL_TIME_OFFSET_MINUTES;
-  if (typeof raw !== "string") return 0;
-  const parsed = parseInt(raw, 10);
-  return isFinite(parsed) ? parsed : 0;
-}
-
-function toLocalDate(baseMs: number, offsetMinutes: number): Date {
-  return new Date(baseMs + offsetMinutes * 60_000);
-}
-
 function timeToMinutes(value: string): number | null {
   const parts = value.split(":");
   if (parts.length !== 2) return null;
@@ -34,11 +23,10 @@ function timeToMinutes(value: string): number | null {
 function hasAutoAdvancedToday(
   lastAutoAdvanceAt: number | undefined,
   nowMs: number,
-  offsetMinutes: number,
 ): boolean {
   if (!lastAutoAdvanceAt) return false;
-  const lastLocal = toLocalDate(lastAutoAdvanceAt * 1000, offsetMinutes);
-  const nowLocal = toLocalDate(nowMs, offsetMinutes);
+  const lastLocal = new Date(lastAutoAdvanceAt * 1000);
+  const nowLocal = new Date(nowMs);
   return (
     lastLocal.getFullYear() === nowLocal.getFullYear() &&
     lastLocal.getMonth() === nowLocal.getMonth() &&
@@ -49,7 +37,6 @@ function hasAutoAdvancedToday(
 export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
   function (ctx, logger, nk, dispatcher, tick, state, messages) {
     const nowMs = Date.now();
-    const offsetMinutes = getLocalOffsetMinutes(ctx.env);
     const lastCheck = state.lastAutoCheckAt ?? 0;
     if (nowMs - lastCheck < AUTO_CHECK_INTERVAL_MS) {
       return { state };
@@ -68,14 +55,13 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       return { state };
     }
 
-    const nowLocal = toLocalDate(nowMs, offsetMinutes);
+    const nowLocal = new Date(nowMs);
     const currentMinutes = nowLocal.getHours() * 60 + nowLocal.getMinutes();
     const targetMinutes = timeToMinutes(configuredRoundTime);
     logger.debug(
-      "Auto-checking turn advancement, currentMinutes/targetMinutes/offset: %d/%d/%d",
+      "Auto-checking turn advancement, currentMinutes/targetMinutes: %d/%d",
       currentMinutes,
       targetMinutes,
-      offsetMinutes,
     );
     if (targetMinutes === null || currentMinutes < targetMinutes) {
       return { state };
@@ -119,7 +105,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       return { state };
     }
 
-    if (hasAutoAdvancedToday(match.lastAutoAdvanceAt, nowMs, offsetMinutes)) {
+    if (hasAutoAdvancedToday(match.lastAutoAdvanceAt, nowMs)) {
       return { state };
     }
 

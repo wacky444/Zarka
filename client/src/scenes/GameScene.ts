@@ -95,7 +95,6 @@ export class GameScene extends Phaser.Scene {
   private autoAdvanceTimer: Phaser.Time.TimerEvent | null = null;
   private autoAdvanceEnabled = false;
   private autoAdvanceRoundTime: string | null = null;
-  private autoAdvanceOffsetMinutes = 0;
   private autoAdvanceLastAt: number | undefined = undefined;
   private chatService: MatchChatService | null = null;
   private chatMessages: MatchChatMessage[] = [];
@@ -863,10 +862,6 @@ export class GameScene extends Phaser.Scene {
     this.autoAdvanceRoundTime = this.autoAdvanceEnabled ? roundTime : null;
     this.autoAdvanceLastAt = match?.lastAutoAdvanceAt;
 
-    const rawOffset = import.meta.env.VITE_ROUND_TIME_OFFSET_MINUTES;
-    const parsedOffset = rawOffset ? parseInt(rawOffset, 10) : 0;
-    this.autoAdvanceOffsetMinutes = isFinite(parsedOffset) ? parsedOffset : 0;
-
     if (!this.autoAdvanceText) {
       return;
     }
@@ -915,20 +910,17 @@ export class GameScene extends Phaser.Scene {
     }
     const targetMinutes = parsed.hours * 60 + parsed.minutes;
     const nowMs = Date.now();
-    const offsetMs = this.autoAdvanceOffsetMinutes * 60_000;
-    const nowLocal = new Date(nowMs + offsetMs);
-    const localMidnightMs =
-      Date.UTC(
-        nowLocal.getUTCFullYear(),
-        nowLocal.getUTCMonth(),
-        nowLocal.getUTCDate(),
-      ) - offsetMs;
+    const nowLocal = new Date(nowMs);
+    const localMidnightMs = new Date(
+      nowLocal.getFullYear(),
+      nowLocal.getMonth(),
+      nowLocal.getDate(),
+    ).getTime();
     const targetTodayMs = localMidnightMs + targetMinutes * 60_000;
 
     const lastAt = this.autoAdvanceLastAt;
     const alreadyAdvancedToday =
-      lastAt !== undefined &&
-      this.isInSameLocalDay(lastAt * 1000, nowMs);
+      lastAt !== undefined && this.isInSameLocalDay(lastAt * 1000, nowMs);
 
     const nextTargetMs =
       alreadyAdvancedToday || nowMs >= targetTodayMs
@@ -945,17 +937,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   private isInSameLocalDay(msA: number, msB: number): boolean {
-    const offsetMs = this.autoAdvanceOffsetMinutes * 60_000;
-    const dateA = new Date(msA + offsetMs);
-    const dateB = new Date(msB + offsetMs);
+    const dateA = new Date(msA);
+    const dateB = new Date(msB);
     return (
-      dateA.getUTCFullYear() === dateB.getUTCFullYear() &&
-      dateA.getUTCMonth() === dateB.getUTCMonth() &&
-      dateA.getUTCDate() === dateB.getUTCDate()
+      dateA.getFullYear() === dateB.getFullYear() &&
+      dateA.getMonth() === dateB.getMonth() &&
+      dateA.getDate() === dateB.getDate()
     );
   }
 
-  private parseRoundTime(value: string): { hours: number; minutes: number } | null {
+  private parseRoundTime(
+    value: string,
+  ): { hours: number; minutes: number } | null {
     const parts = value.split(":");
     if (parts.length !== 2) return null;
     const hours = Number(parts[0]);
