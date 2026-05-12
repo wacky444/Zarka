@@ -144,13 +144,83 @@ function createSeededRandom(seed: string): RandomFn {
   };
 }
 
-function shuffleInPlace<T>(items: T[], rng: RandomFn): void {
-  for (let i = items.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(rng() * (i + 1));
-    const tmp = items[i];
-    items[i] = items[j];
-    items[j] = tmp;
+interface SpawnTile {
+  id: string;
+  coord: {
+    q: number;
+    r: number;
+  };
+}
+
+function distanceSquared(
+  tile: SpawnTile,
+  targetQ: number,
+  targetR: number
+): number {
+  const dq = tile.coord.q - targetQ;
+  const dr = tile.coord.r - targetR;
+  return dq * dq + dr * dr;
+}
+
+function radialDistance(tile: SpawnTile, centerQ: number, centerR: number): number {
+  const dq = tile.coord.q - centerQ;
+  const dr = tile.coord.r - centerR;
+  return Math.sqrt(dq * dq + dr * dr);
+}
+
+function buildSpawnPool(
+  walkableTiles: SpawnTile[],
+  cols: number,
+  rows: number,
+  playerCount: number,
+  rng: RandomFn
+): SpawnTile[] {
+  if (walkableTiles.length <= 1 || playerCount <= 0) {
+    return walkableTiles.slice();
   }
+
+  const safeCols = cols > 0 ? cols : 1;
+  const safeRows = rows > 0 ? rows : 1;
+  const centerQ = (safeCols - 1) / 2;
+  const centerR = (safeRows - 1) / 2;
+  const radius = Math.max(1, Math.min(safeCols, safeRows) / 3);
+  const angleOffset = rng() * Math.PI * 2;
+  const slots = Math.min(playerCount, walkableTiles.length);
+  const remaining = walkableTiles.slice();
+  const ordered: SpawnTile[] = [];
+
+  for (let i = 0; i < slots; i += 1) {
+    const angle = angleOffset + (i / slots) * Math.PI * 2;
+    const targetQ = centerQ + Math.cos(angle) * radius;
+    const targetR = centerR + Math.sin(angle) * radius;
+    let bestIndex = 0;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (let index = 0; index < remaining.length; index += 1) {
+      const candidate = remaining[index];
+      const candidateDistance = distanceSquared(candidate, targetQ, targetR);
+      if (
+        candidateDistance < bestDistance ||
+        (candidateDistance === bestDistance &&
+          candidate.id < remaining[bestIndex].id)
+      ) {
+        bestDistance = candidateDistance;
+        bestIndex = index;
+      }
+    }
+    ordered.push(remaining[bestIndex]);
+    remaining.splice(bestIndex, 1);
+  }
+
+  remaining.sort((left, right) => {
+    const leftDelta = Math.abs(radialDistance(left, centerQ, centerR) - radius);
+    const rightDelta = Math.abs(radialDistance(right, centerQ, centerR) - radius);
+    if (leftDelta !== rightDelta) {
+      return leftDelta - rightDelta;
+    }
+    return left.id.localeCompare(right.id);
+  });
+
+  return ordered.concat(remaining);
 }
 
 export function assignSpawnPositions(
@@ -199,8 +269,13 @@ export function assignSpawnPositions(
   }
 
   const rng = createSeededRandom(`${map.seed}:${match.match_id}`);
-  const pool = walkableTiles.slice();
-  shuffleInPlace(pool, rng);
+  const pool = buildSpawnPool(
+    walkableTiles,
+    map.cols,
+    map.rows,
+    roster.length,
+    rng
+  );
 
   const used: Record<string, boolean> = {};
 
@@ -222,9 +297,9 @@ export function assignSpawnPositions(
     }
   }
 
-  const nextAvailableTile = (): (typeof walkableTiles)[number] | undefined => {
+  const nextAvailableTile = (): SpawnTile | undefined => {
     while (pool.length > 0) {
-      const tile = pool.pop();
+      const tile = pool.shift();
       if (tile && !used[tile.id]) {
         return tile;
       }
