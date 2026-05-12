@@ -126,6 +126,8 @@ export function isCharacterIncapacitated(
 }
 
 type RandomFn = () => number;
+const TWO_PI = Math.PI * 2;
+const SPAWN_RING_RADIUS_FACTOR = 3;
 
 function hashSeed(seed: string): number {
   let h = 2166136261;
@@ -183,14 +185,17 @@ function buildSpawnPool(
   const safeRows = rows > 0 ? rows : 1;
   const centerQ = (safeCols - 1) / 2;
   const centerR = (safeRows - 1) / 2;
-  const radius = Math.max(1, Math.min(safeCols, safeRows) / 3);
-  const angleOffset = rng() * Math.PI * 2;
+  const radius = Math.max(
+    1,
+    Math.min(safeCols, safeRows) / SPAWN_RING_RADIUS_FACTOR
+  );
+  const angleOffset = rng() * TWO_PI;
   const slots = Math.min(playerCount, walkableTiles.length);
   const remaining = walkableTiles.slice();
   const ordered: SpawnTile[] = [];
 
   for (let i = 0; i < slots; i += 1) {
-    const angle = angleOffset + (i / slots) * Math.PI * 2;
+    const angle = angleOffset + (i / slots) * TWO_PI;
     const targetQ = centerQ + Math.cos(angle) * radius;
     const targetR = centerR + Math.sin(angle) * radius;
     let bestIndex = 0;
