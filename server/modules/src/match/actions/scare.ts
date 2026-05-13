@@ -44,7 +44,8 @@ export function executeScareAction(
     const selection = origin
       ? collectTargets(actionId, participant, match, {
           allowMultiple: false,
-          filter: (candidate) => !isTargetProtected(candidate.character),
+          filter: (candidate) =>
+            candidate.distance === 0 && !isTargetProtected(candidate.character),
         })
       : [];
     clearPlanByKey(participant.character, participant.planKey);
