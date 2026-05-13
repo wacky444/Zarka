@@ -1938,9 +1938,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private setLocationSelectionHoveredTile(tileId: string | null) {
-    if (!this.locationSelectionActive) {
-      return;
-    }
     if (this.locationSelectionHoveredTileId === tileId) {
       return;
     }
@@ -1976,7 +1973,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateLocationSelectionHoverText() {
-    if (!this.locationSelectionActive || !this.locationSelectionHoveredTileId) {
+    if (!this.locationSelectionHoveredTileId) {
       if (this.locationSelectionHoverText) {
         this.locationSelectionHoverText.setVisible(false);
       }
