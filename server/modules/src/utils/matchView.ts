@@ -149,8 +149,7 @@ export function tailorMatchForPlayer(
   );
   return {
     ...match,
-    playerCharacters:
-      playerCharacters ?? ({} as Record<string, PlayerCharacter>),
+    playerCharacters: playerCharacters ?? {},
     map,
     items,
   };
