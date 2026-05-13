@@ -227,6 +227,12 @@ export class MainScene extends Phaser.Scene {
         this.statusText.setText(
           "Match has been removed by the host. Returning to main menu.",
         );
+        if (this.scene.isActive("GameScene") || this.scene.isSleeping("GameScene")) {
+          this.scene.stop("GameScene");
+        }
+        if (this.scene.isSleeping("MainScene")) {
+          this.scene.wake("MainScene");
+        }
         if (this.currentMatchId && this.turnService) {
           this.turnService
             .leaveRealtimeMatch(this.currentMatchId)
