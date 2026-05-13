@@ -15,6 +15,8 @@ import {
 } from "./utils";
 import { collectTargets } from "./targeting";
 
+const SAME_CELL_DISTANCE = 0;
+
 function reduceEnergy(character: PlayerCharacter, amount: number): number {
   if (!character.stats?.energy) {
     return 0;
@@ -45,7 +47,8 @@ export function executeScareAction(
       ? collectTargets(actionId, participant, match, {
           allowMultiple: false,
           filter: (candidate) =>
-            candidate.distance === 0 && !isTargetProtected(candidate.character),
+            candidate.distance === SAME_CELL_DISTANCE &&
+            !isTargetProtected(candidate.character),
         })
       : [];
     clearPlanByKey(participant.character, participant.planKey);

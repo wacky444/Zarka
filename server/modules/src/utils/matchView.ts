@@ -65,7 +65,7 @@ function filterItemsByFoundLookup(
   return filtered.map((item) => ({ ...item }));
 }
 
-function resolveViewRange(
+function getCharacterViewRange(
   character: PlayerCharacter | undefined | null
 ): number {
   const raw = character?.stats?.baseViewRange;
@@ -91,7 +91,7 @@ export function tailorPlayerCharactersForViewer(
     return { ...playerCharacters };
   }
   const viewerCoord = viewer.position?.coord;
-  const viewRange = resolveViewRange(viewer);
+  const viewRange = getCharacterViewRange(viewer);
   const filtered: Record<string, PlayerCharacter> = {};
   for (const id in playerCharacters) {
     if (!Object.prototype.hasOwnProperty.call(playerCharacters, id)) {
