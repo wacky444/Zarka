@@ -2001,7 +2001,9 @@ export class GameScene extends Phaser.Scene {
       this.uiCam.ignore(this.locationSelectionHoverText);
     }
     const { tile, image } = entry;
-    this.locationSelectionHoverText.setText(`(${tile.coord.q}, ${tile.coord.r})`);
+    this.locationSelectionHoverText.setText(
+      `${tile.cellType.localizationType}\n(${tile.coord.q}, ${tile.coord.r})`,
+    );
     this.locationSelectionHoverText.setPosition(
       image.x - this.locationSelectionHoverText.width / 2,
       image.y - image.displayHeight / 2 - this.locationSelectionHoverText.height - 8,
