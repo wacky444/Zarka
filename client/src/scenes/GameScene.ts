@@ -564,6 +564,13 @@ export class GameScene extends Phaser.Scene {
         if (!sprite || !sprite.active || sprite.scene !== this) {
           sprite = createSkinContainer(this, x, y, playerSkin, 2);
           sprite.setData("playerId", playerId);
+          sprite.setInteractive({ useHandCursor: true });
+          sprite.on(Phaser.Input.Events.POINTER_UP, (pointer: Phaser.Input.Pointer) => {
+            if (pointer.button !== 0 || this.locationSelectionActive) {
+              return;
+            }
+            this.openPlayerCard(playerId);
+          });
           this.uiCam.ignore(sprite);
           this.playerSprites.set(playerId, sprite);
         } else {
@@ -586,6 +593,13 @@ export class GameScene extends Phaser.Scene {
           });
           label.setOrigin(0.5, 0.5);
           label.setDepth(6);
+          label.setInteractive({ useHandCursor: true });
+          label.on(Phaser.Input.Events.POINTER_UP, (pointer: Phaser.Input.Pointer) => {
+            if (pointer.button !== 0 || this.locationSelectionActive) {
+              return;
+            }
+            this.openPlayerCard(playerId);
+          });
           this.uiCam.ignore(label);
           this.playerNameLabels.set(playerId, label);
         }
@@ -1871,6 +1885,13 @@ export class GameScene extends Phaser.Scene {
 
   private handleTabChange(key: string) {
     this.logTabActive = key === "log";
+  }
+
+  private openPlayerCard(playerId: string): void {
+    if (!this.characterPanel) {
+      return;
+    }
+    this.characterPanel.openPlayerCard(playerId);
   }
 
   private getCurrentPlayerCoord(): Axial | null {
