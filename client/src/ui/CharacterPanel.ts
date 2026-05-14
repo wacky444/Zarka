@@ -1034,26 +1034,40 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       itemsBoxWidth - 24,
       Math.max(0, itemsBoxHeight - 60),
     );
-    this.playersTabListBackground.setPosition(MARGIN, itemsBoxY);
-    this.playersTabListBackground.setSize(itemsBoxWidth, itemsBoxHeight);
-    this.playersTabListBackground.setDisplaySize(itemsBoxWidth, itemsBoxHeight);
-    this.playersTabListTitle.setPosition(MARGIN + 12, itemsBoxY + 12);
-    this.playersTabListContainer.setPosition(MARGIN + 12, itemsBoxY + 44);
+    const playersBoxY = itemsBoxY;
+    const playersBoxHeight = itemsBoxHeight;
+    this.playersTabListBackground.setPosition(MARGIN, playersBoxY);
+    this.playersTabListBackground.setSize(itemsBoxWidth, playersBoxHeight);
+    this.playersTabListBackground.setDisplaySize(itemsBoxWidth, playersBoxHeight);
+    this.playersTabListTitle.setPosition(MARGIN + 12, playersBoxY + 12);
+    this.playersTabListContainer.setPosition(MARGIN + 12, playersBoxY + 44);
     this.playersTabCardBackground.setPosition(
       MARGIN + 12,
-      itemsBoxY + itemsBoxHeight - 150,
+      playersBoxY + playersBoxHeight - 150,
     );
     this.playersTabCardBackground.setSize(itemsBoxWidth - 24, 138);
     this.playersTabCardBackground.setDisplaySize(itemsBoxWidth - 24, 138);
-    this.playersTabCardName.setPosition(MARGIN + 24, itemsBoxY + itemsBoxHeight - 138);
-    this.playersTabCardTeam.setPosition(MARGIN + 24, itemsBoxY + itemsBoxHeight - 112);
+    this.playersTabCardName.setPosition(
+      MARGIN + 24,
+      playersBoxY + playersBoxHeight - 138,
+    );
+    this.playersTabCardTeam.setPosition(
+      MARGIN + 24,
+      playersBoxY + playersBoxHeight - 112,
+    );
     this.playersTabCardHealth.setPosition(
       MARGIN + 24,
-      itemsBoxY + itemsBoxHeight - 88,
+      playersBoxY + playersBoxHeight - 88,
     );
-    this.playersTabCardEnergy.setPosition(MARGIN + 24, itemsBoxY + itemsBoxHeight - 66);
-    this.playersTabCardStatus.setPosition(MARGIN + 24, itemsBoxY + itemsBoxHeight - 44);
-    this.playersTabEmpty.setPosition(MARGIN + 24, itemsBoxY + 70);
+    this.playersTabCardEnergy.setPosition(
+      MARGIN + 24,
+      playersBoxY + playersBoxHeight - 66,
+    );
+    this.playersTabCardStatus.setPosition(
+      MARGIN + 24,
+      playersBoxY + playersBoxHeight - 44,
+    );
+    this.playersTabEmpty.setPosition(MARGIN + 24, playersBoxY + 70);
     this.refreshPlayersTabView();
     if (this.logView) {
       this.logView.layout({
@@ -2031,7 +2045,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     );
     const itemWidth = Math.max(80, containerWidth - 14);
     let y = 0;
+    let reachedMaxHeight = false;
     for (const teamId of order) {
+      if (reachedMaxHeight) {
+        break;
+      }
       const teamLabel = this.scene.add
         .text(0, y, `Team ${teamId}`, {
           fontSize: "13px",
@@ -2044,6 +2062,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       members.sort((a, b) => a.label.localeCompare(b.label));
       for (const option of members) {
         if (y + rowHeight > maxListHeight) {
+          reachedMaxHeight = true;
           break;
         }
         const button = this.scene.add
