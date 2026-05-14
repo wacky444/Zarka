@@ -23,6 +23,7 @@ export interface PlayerCharacterStats {
   load: PlayerLoadTrack;
   speed: number;
   sympathy: number;
+  baseViewRange: number;
 }
 
 export interface PlayerHealthTrack {

@@ -25,7 +25,7 @@ function coordsEqual(a: Axial | undefined, b: Axial | undefined): boolean {
 
 function pushUnique(
   target: TargetCandidate[],
-  candidate: TargetCandidate
+  candidate: TargetCandidate,
 ): void {
   if (target.some((entry) => entry.id === candidate.id)) {
     return;
@@ -35,7 +35,7 @@ function pushUnique(
 
 function findCandidate(
   list: TargetCandidate[],
-  id: string
+  id: string,
 ): TargetCandidate | undefined {
   for (const entry of list) {
     if (entry.id === id) {
@@ -52,8 +52,12 @@ export function collectTargets(
   options: CollectTargetsOptions = {}
 ): TargetCandidate[] {
   const definition = ActionLibrary[actionId];
-  const allowed =
+  let allowed =
     definition?.range && definition.range.length > 0 ? definition.range : [0];
+  if (actionId === "scare") {
+    allowed = [0];
+  }
+
   const actorCoord = participant.character.position?.coord;
   if (!actorCoord) {
     return [];

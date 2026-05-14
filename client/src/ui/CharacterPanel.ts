@@ -1831,9 +1831,6 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
           iconScale: sprite.iconScale,
         });
       };
-      if (Array.isArray(match.players)) {
-        match.players.forEach((id) => pushOption(id));
-      }
       if (match.playerCharacters) {
         Object.keys(match.playerCharacters).forEach((id) => pushOption(id));
       }
