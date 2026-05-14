@@ -110,6 +110,8 @@ export class GameScene extends Phaser.Scene {
   private currentPlayerSkin: import("@shared").Skin | null = null;
   private playerSkinMap = new Map<string, import("@shared").Skin>();
   private accountService: AccountService | null = null;
+  private playerViewRange: number = 0;
+  private playerCoordForTinting: Axial | null = null;
   private readonly turnAdvancedHandler = (
     payload: TurnAdvancedMessagePayload,
   ) => {
@@ -426,6 +428,68 @@ export class GameScene extends Phaser.Scene {
     return generated.map;
   }
 
+  private getCurrentPlayerViewRange(): number {
+    if (!this.currentMatch || !this.currentUserId) {
+      return 0;
+    }
+    const character = this.currentMatch.playerCharacters?.[this.currentUserId];
+    const viewRange = character?.stats?.baseViewRange;
+    return typeof viewRange === "number" && isFinite(viewRange)
+      ? Math.max(0, Math.floor(viewRange))
+      : 0;
+  }
+
+  private isOutOfViewRange(coord: Axial): boolean {
+    if (!this.playerCoordForTinting) {
+      return false;
+    }
+    const distance = this.axialDistance(this.playerCoordForTinting, coord);
+    return distance > this.playerViewRange;
+  }
+
+  private updateTileTintState(
+    image: Phaser.GameObjects.Image,
+    tile: HexTile,
+    options: {
+      isLocationSelectionActive?: boolean;
+      isInActionRange?: boolean;
+      isHovered?: boolean;
+    } = {},
+  ): void {
+    const isOutOfRange = this.isOutOfViewRange(tile.coord);
+    const dimTint = 0x666666; // Darker gray for out-of-view tiles
+    const { isLocationSelectionActive, isInActionRange, isHovered } = options;
+
+    // Base: apply dim tint if out of view range
+    if (isOutOfRange) {
+      image.setTint(dimTint);
+      image.setAlpha(1);
+    } else {
+      image.clearTint();
+      image.setAlpha(1);
+    }
+
+    // If location selection is active, apply selection tints on top of dimness
+    if (isLocationSelectionActive) {
+      if (isInActionRange) {
+        image.setTint(isOutOfRange ? dimTint | 0x7dd3fc : 0x7dd3fc);
+      } else {
+        image.setTint(isOutOfRange ? dimTint | 0x334155 : 0x334155);
+        image.setAlpha(0.8);
+      }
+    }
+
+    // Hover state overrides selection tints
+    if (isHovered) {
+      const hoverTint = isInActionRange ? 0xfacc15 : 0xfb7185;
+      image.setTint(hoverTint);
+      image.setAlpha(1);
+      image.setScale(1.03);
+    } else {
+      image.setScale(1);
+    }
+  }
+
   private renderMap(map: GameMap) {
     const tileW = GameScene.TILE_WIDTH;
     const tileH = GameScene.TILE_HEIGHT;
@@ -435,6 +499,11 @@ export class GameScene extends Phaser.Scene {
     const sprites: Phaser.GameObjects.Image[] = [];
     this.tilePositions = {};
     this.mapTileSprites = [];
+
+    const playerCoord = this.getCurrentPlayerCoord();
+    const viewRange = this.getCurrentPlayerViewRange();
+    this.playerCoordForTinting = playerCoord;
+    this.playerViewRange = viewRange;
 
     for (const snapshot of map.tiles) {
       let tile: HexTile;
@@ -455,6 +524,10 @@ export class GameScene extends Phaser.Scene {
       const y = row * dy + tileH;
       const img = this.add.image(x, y, "hex", frame);
       img.setData("tile", tile);
+
+      // Apply base tint (view range dimming)
+      this.updateTileTintState(img, tile);
+
       img.setInteractive({ useHandCursor: false });
       img.on(Phaser.Input.Events.POINTER_OVER, () => {
         this.setLocationSelectionHoveredTile(tile.id);
@@ -629,6 +702,8 @@ export class GameScene extends Phaser.Scene {
         this.playerNameLabels.delete(playerId);
       }
     }
+    // Ensure tile tinting reflects the current player's position/view
+    this.refreshAllTileTints();
   }
 
   private renderItems(map: GameMap) {
@@ -1946,30 +2021,48 @@ export class GameScene extends Phaser.Scene {
   }
 
   private refreshLocationSelectionVisuals() {
-    const active = this.locationSelectionActive && !!this.locationSelectionActionId;
+    const active =
+      this.locationSelectionActive && !!this.locationSelectionActionId;
     const actionId = this.locationSelectionActionId;
     const hovered = this.locationSelectionHoveredTileId;
     for (const entry of this.mapTileSprites) {
       const { tile, image } = entry;
-      image.clearTint();
-      image.setScale(1);
-      image.setAlpha(1);
-      if (!active || !actionId) {
-        continue;
-      }
-      const inRange = this.isLocationInRange(actionId, tile.coord);
-      if (inRange) {
-        image.setTint(0x7dd3fc);
-      } else {
-        image.setTint(0x334155);
-        image.setAlpha(0.8);
-      }
-      if (hovered === tile.id) {
-        image.setTint(inRange ? 0xfacc15 : 0xfb7185);
-        image.setScale(1.03);
-      }
+      const isHovered = hovered === tile.id;
+      const isInRange =
+        active && actionId
+          ? this.isLocationInRange(actionId, tile.coord)
+          : false;
+      this.updateTileTintState(image, tile, {
+        isLocationSelectionActive: active,
+        isInActionRange: isInRange,
+        isHovered,
+      });
     }
     this.updateLocationSelectionHoverText();
+  }
+
+  private refreshAllTileTints(): void {
+    // Update stored player coord/range then refresh all tile tints
+    this.playerCoordForTinting = this.getCurrentPlayerCoord();
+    this.playerViewRange = this.getCurrentPlayerViewRange();
+    const active =
+      this.locationSelectionActive && !!this.locationSelectionActionId;
+    const actionId = this.locationSelectionActionId;
+    const hovered = this.locationSelectionHoveredTileId;
+
+    for (const entry of this.mapTileSprites) {
+      const { tile, image } = entry;
+      const isHovered = hovered === tile.id;
+      const isInRange =
+        active && actionId
+          ? this.isLocationInRange(actionId, tile.coord)
+          : false;
+      this.updateTileTintState(image, tile, {
+        isLocationSelectionActive: active,
+        isInActionRange: isInRange,
+        isHovered,
+      });
+    }
   }
 
   private updateLocationSelectionHoverText() {
@@ -2006,7 +2099,10 @@ export class GameScene extends Phaser.Scene {
     );
     this.locationSelectionHoverText.setPosition(
       image.x - this.locationSelectionHoverText.width / 2,
-      image.y - image.displayHeight / 2 - this.locationSelectionHoverText.height - 8,
+      image.y -
+        image.displayHeight / 2 -
+        this.locationSelectionHoverText.height -
+        8,
     );
     this.locationSelectionHoverText.setVisible(true);
   }
