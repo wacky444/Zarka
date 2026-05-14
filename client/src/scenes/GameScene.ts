@@ -565,12 +565,7 @@ export class GameScene extends Phaser.Scene {
           sprite = createSkinContainer(this, x, y, playerSkin, 2);
           sprite.setData("playerId", playerId);
           sprite.setInteractive({ useHandCursor: true });
-          sprite.on(Phaser.Input.Events.POINTER_UP, (pointer: Phaser.Input.Pointer) => {
-            if (pointer.button !== 0 || this.locationSelectionActive) {
-              return;
-            }
-            this.openPlayerCard(playerId);
-          });
+          this.attachPlayerCardClickHandler(sprite, playerId);
           this.uiCam.ignore(sprite);
           this.playerSprites.set(playerId, sprite);
         } else {
@@ -594,12 +589,7 @@ export class GameScene extends Phaser.Scene {
           label.setOrigin(0.5, 0.5);
           label.setDepth(6);
           label.setInteractive({ useHandCursor: true });
-          label.on(Phaser.Input.Events.POINTER_UP, (pointer: Phaser.Input.Pointer) => {
-            if (pointer.button !== 0 || this.locationSelectionActive) {
-              return;
-            }
-            this.openPlayerCard(playerId);
-          });
+          this.attachPlayerCardClickHandler(label, playerId);
           this.uiCam.ignore(label);
           this.playerNameLabels.set(playerId, label);
         }
@@ -1885,6 +1875,21 @@ export class GameScene extends Phaser.Scene {
 
   private handleTabChange(key: string) {
     this.logTabActive = key === "log";
+  }
+
+  private attachPlayerCardClickHandler(
+    gameObject: Phaser.GameObjects.GameObject,
+    playerId: string,
+  ): void {
+    gameObject.on(
+      Phaser.Input.Events.POINTER_UP,
+      (pointer: Phaser.Input.Pointer) => {
+        if (pointer.button !== 0 || this.locationSelectionActive) {
+          return;
+        }
+        this.openPlayerCard(playerId);
+      },
+    );
   }
 
   private openPlayerCard(playerId: string): void {

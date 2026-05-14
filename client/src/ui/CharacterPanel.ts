@@ -63,6 +63,7 @@ const MARGIN = 16;
 const PORTRAIT_SIZE = 96;
 const BAR_HEIGHT = 20;
 const BOX_HEIGHT = 180;
+const NO_TEAM_LABEL = "No Team";
 const PRIMARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
   .filter(
     (definition) =>
@@ -2017,7 +2018,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const order: string[] = [];
     for (const option of list) {
       const teamId =
-        match.playerCharacters?.[option.id]?.teamId?.trim() || "No Team";
+        match.playerCharacters?.[option.id]?.teamId?.trim() || NO_TEAM_LABEL;
       if (!entriesByTeam.has(teamId)) {
         entriesByTeam.set(teamId, []);
         order.push(teamId);
@@ -2025,10 +2026,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       entriesByTeam.get(teamId)?.push(option);
     }
     order.sort((a, b) => {
-      if (a === "No Team") {
+      if (a === NO_TEAM_LABEL) {
         return 1;
       }
-      if (b === "No Team") {
+      if (b === NO_TEAM_LABEL) {
         return -1;
       }
       return a.localeCompare(b);
@@ -2075,14 +2076,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
             fontSize: "14px",
             color: "#ffffff",
           })
-          .setOrigin(0, 0.5);
+          .setOrigin(0, 0.5)
+          .setInteractive({ useHandCursor: true });
         button.on(Phaser.Input.Events.POINTER_UP, () => {
           this.handlePlayerCardRequest(option.id);
         });
         label.on(Phaser.Input.Events.POINTER_UP, () => {
           this.handlePlayerCardRequest(option.id);
         });
-        label.setInteractive({ useHandCursor: true });
         this.playersTabListContainer.add(button);
         this.playersTabListContainer.add(label);
         this.playersTabEntries.push({
@@ -2093,6 +2094,15 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         y += rowHeight + rowSpacing;
       }
       y += sectionSpacing;
+    }
+    if (reachedMaxHeight) {
+      const moreLabel = this.scene.add
+        .text(0, Math.max(0, maxListHeight - 16), "...more players", {
+          fontSize: "12px",
+          color: "#94a3d4",
+        })
+        .setOrigin(0, 0);
+      this.playersTabListContainer.add(moreLabel);
     }
     this.applyPlayersTabSelectionStyles();
     this.refreshPlayersTabCard();
@@ -2136,7 +2146,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.playerOptions.find((option) => option.id === selectedId)?.label ??
       selectedId;
     this.playersTabCardName.setText(displayName);
-    const teamId = character?.teamId?.trim() || "No Team";
+    const teamId = character?.teamId?.trim() || NO_TEAM_LABEL;
     this.playersTabCardTeam.setText(`Team: ${teamId}`);
     const health = character?.stats?.health;
     const energy = character?.stats?.energy;
