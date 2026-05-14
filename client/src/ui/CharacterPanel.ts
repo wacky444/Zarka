@@ -2027,11 +2027,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       entriesByTeam.get(teamId)?.push(option);
     }
     order.sort((a, b) => {
-      if (a === NO_TEAM_LABEL) {
-        return 1;
-      }
-      if (b === NO_TEAM_LABEL) {
-        return -1;
+      const rank = (value: string) => (value === NO_TEAM_LABEL ? 1 : 0);
+      const rankDiff = rank(a) - rank(b);
+      if (rankDiff !== 0) {
+        return rankDiff;
       }
       return a.localeCompare(b);
     });
@@ -2078,6 +2077,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
             color: "#ffffff",
           })
           .setOrigin(0, 0.5);
+        this.fitPlayerListLabelWidth(
+          label,
+          option.label,
+          itemWidth - PLAYER_LIST_LABEL_PADDING * 2,
+        );
         button.on(Phaser.Input.Events.POINTER_UP, () => {
           this.handlePlayerCardRequest(option.id);
         });
@@ -2108,6 +2112,24 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private handlePlayerCardRequest(playerId: string): void {
     this.playersTabSelection = playerId;
     this.refreshPlayersTabView();
+  }
+
+  private fitPlayerListLabelWidth(
+    label: Phaser.GameObjects.Text,
+    value: string,
+    maxWidth: number,
+  ): void {
+    if (label.width <= maxWidth) {
+      return;
+    }
+    let truncated = value;
+    while (truncated.length > 1) {
+      truncated = truncated.slice(0, -1).trimEnd();
+      label.setText(`${truncated}…`);
+      if (label.width <= maxWidth) {
+        return;
+      }
+    }
   }
 
   private applyPlayersTabSelectionStyles(): void {
