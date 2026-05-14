@@ -790,7 +790,7 @@ export class GameScene extends Phaser.Scene {
     // No-op handlers removed
 
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
-      if (!p.isDown || this.pointerDownInUI) return;
+      if (!p.isDown || this.pointerDownInUI || this.gridModalActive) return;
 
       // const { x, y } = p.velocity; // camStart.x - dx
       const diffX = p.position.x - p.prevPosition.x;
@@ -1124,6 +1124,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.characterPanel.appendChatMessage(this.toChatViewModel(message));
+    this.characterPanel.markChatUnread(true);
   }
 
   private syncChatMessagesToPanel() {

@@ -6,6 +6,7 @@ export interface CharacterPanelTabEntry {
   key: TabKey;
   rect: Phaser.GameObjects.Rectangle;
   text: Phaser.GameObjects.Text;
+  badge?: Phaser.GameObjects.Rectangle;
 }
 
 interface CharacterPanelTabsOptions {
@@ -31,6 +32,7 @@ interface CharacterPanelTabsOptions {
 
 export class CharacterPanelTabs {
   private activeKey: TabKey;
+  private readonly unreadTabs = new Set<TabKey>();
 
   constructor(private readonly options: CharacterPanelTabsOptions) {
     this.activeKey = options.defaultKey;
@@ -42,6 +44,15 @@ export class CharacterPanelTabs {
 
   isActive(key: TabKey): boolean {
     return this.activeKey === key;
+  }
+
+  setTabUnread(key: TabKey, unread: boolean): void {
+    if (unread) {
+      this.unreadTabs.add(key);
+    } else {
+      this.unreadTabs.delete(key);
+    }
+    this.updateStyles();
   }
 
   setActiveTab(key: TabKey): void {
@@ -56,6 +67,7 @@ export class CharacterPanelTabs {
     }
     const previous = this.activeKey;
     this.activeKey = key;
+    this.unreadTabs.delete(key);
     this.updateStyles();
     this.updateVisibility(false);
     this.options.onTabChange(key, previous);
@@ -75,8 +87,12 @@ export class CharacterPanelTabs {
   private updateStyles(): void {
     for (const tab of this.options.tabs) {
       const active = tab.key === this.activeKey;
+      const unread = !active && this.unreadTabs.has(tab.key);
       tab.rect.setFillStyle(active ? 0x253055 : 0x1c233f);
       tab.text.setAlpha(active ? 1 : 0.7);
+      if (tab.badge) {
+        tab.badge.setVisible(unread);
+      }
     }
   }
 

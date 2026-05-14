@@ -449,6 +449,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       .rectangle(0, 0, width, height, 0x020617, 0.75)
       .setOrigin(0, 0)
       .setInteractive();
+    let pointerDownOnCover = false;
     cover.on(
       Phaser.Input.Events.POINTER_DOWN,
       (
@@ -457,6 +458,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         _y: number,
         event: Phaser.Types.Input.EventData
       ) => {
+        pointerDownOnCover = true;
         event.stopPropagation();
       }
     );
@@ -480,6 +482,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
         event: Phaser.Types.Input.EventData
       ) => {
         event.stopPropagation();
+        if (!pointerDownOnCover) {
+          return;
+        }
+        pointerDownOnCover = false;
         this.tooltip?.hide();
         this.closeModal();
       }
@@ -514,6 +520,23 @@ export class GridSelect extends Phaser.GameObjects.Container {
       MODAL_BACKGROUND_COLOR
     );
     modal.addBackground(background);
+    const backgroundGO = background as unknown as Phaser.GameObjects.GameObject & {
+      setInteractive?: () => Phaser.GameObjects.GameObject;
+      on?: (event: string, handler: (...args: unknown[]) => void) => void;
+    };
+    backgroundGO.setInteractive?.();
+    backgroundGO.on?.(
+      Phaser.Input.Events.POINTER_DOWN,
+      (_pointer: unknown, _x: unknown, _y: unknown, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation();
+      }
+    );
+    backgroundGO.on?.(
+      Phaser.Input.Events.POINTER_UP,
+      (_pointer: unknown, _x: unknown, _y: unknown, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation();
+      }
+    );
 
     const header = scene.add
       .text(0, 0, this.modalTitle, {
@@ -570,6 +593,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.ensureTooltip();
     this.overlay = overlay;
     this.gridTable = gridTable;
+    scene.time.delayedCall(0, () => {
+      if (this.gridTable) {
+        this.gridTable.refresh?.();
+        this.gridTable.layout?.();
+      }
+    });
   }
 
   private closeModal(forceDestroy = false) {
@@ -634,7 +663,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       },
       mouseWheelScroller: {
         focus: true,
-        speed: 0.3,
+        speed: 1.5,
       },
       space: {
         left: 0,
