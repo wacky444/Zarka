@@ -520,20 +520,17 @@ export class GridSelect extends Phaser.GameObjects.Container {
       MODAL_BACKGROUND_COLOR
     );
     modal.addBackground(background);
-    const backgroundGO = background as unknown as Phaser.GameObjects.GameObject & {
-      setInteractive?: () => Phaser.GameObjects.GameObject;
-      on?: (event: string, handler: (...args: unknown[]) => void) => void;
-    };
-    backgroundGO.setInteractive?.();
-    backgroundGO.on?.(
+    const backgroundGO = background as unknown as Phaser.GameObjects.GameObject;
+    backgroundGO.setInteractive();
+    backgroundGO.on(
       Phaser.Input.Events.POINTER_DOWN,
-      (_pointer: unknown, _x: unknown, _y: unknown, event: Phaser.Types.Input.EventData) => {
+      (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
         event.stopPropagation();
       }
     );
-    backgroundGO.on?.(
+    backgroundGO.on(
       Phaser.Input.Events.POINTER_UP,
-      (_pointer: unknown, _x: unknown, _y: unknown, event: Phaser.Types.Input.EventData) => {
+      (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
         event.stopPropagation();
       }
     );

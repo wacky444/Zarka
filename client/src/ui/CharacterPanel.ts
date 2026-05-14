@@ -213,6 +213,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     this.setReadyState(!this.readyState, true);
   };
+  private readyPointerIsDown = false;
+  private readonly handleReadyPointerDown = () => {
+    this.readyPointerIsDown = true;
+  };
+  private readonly handleReadyPointerOut = () => {
+    this.readyPointerIsDown = false;
+  };
+  private readonly handleReadyPointerUp = () => {
+    if (this.readyPointerIsDown) {
+      this.readyPointerIsDown = false;
+      this.handleReadyToggle();
+    }
+  };
   private readonly handleSecondaryActionSelection = (
     actionId: string | null,
   ) => {
@@ -398,19 +411,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       })
       .setOrigin(0, 0);
     this.readyToggle.setInteractive({ useHandCursor: true });
-    let readyPointerIsDown = false;
-    this.readyToggle.on(Phaser.Input.Events.POINTER_DOWN, () => {
-      readyPointerIsDown = true;
-    });
-    this.readyToggle.on(Phaser.Input.Events.POINTER_OUT, () => {
-      readyPointerIsDown = false;
-    });
-    this.readyToggle.on(Phaser.Input.Events.POINTER_UP, () => {
-      if (readyPointerIsDown) {
-        readyPointerIsDown = false;
-        this.handleReadyToggle();
-      }
-    });
+    this.readyToggle.on(Phaser.Input.Events.POINTER_DOWN, this.handleReadyPointerDown);
+    this.readyToggle.on(Phaser.Input.Events.POINTER_OUT, this.handleReadyPointerOut);
+    this.readyToggle.on(Phaser.Input.Events.POINTER_UP, this.handleReadyPointerUp);
     this.add(this.readyToggle);
     this.setReadyEnabled(false);
 
@@ -867,9 +870,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.handleSecondaryPlayerSelection,
     );
     this.secondaryPlayerSelector.hideDropdown();
-    this.readyToggle?.off(Phaser.Input.Events.POINTER_DOWN);
-    this.readyToggle?.off(Phaser.Input.Events.POINTER_OUT);
-    this.readyToggle?.off(Phaser.Input.Events.POINTER_UP);
+    this.readyToggle?.off(Phaser.Input.Events.POINTER_DOWN, this.handleReadyPointerDown);
+    this.readyToggle?.off(Phaser.Input.Events.POINTER_OUT, this.handleReadyPointerOut);
+    this.readyToggle?.off(Phaser.Input.Events.POINTER_UP, this.handleReadyPointerUp);
     this.logView?.destroy();
     this.chatView?.destroy();
     this.scrollPanel?.clearMask?.();
