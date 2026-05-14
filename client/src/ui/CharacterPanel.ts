@@ -64,6 +64,7 @@ const PORTRAIT_SIZE = 96;
 const BAR_HEIGHT = 20;
 const BOX_HEIGHT = 180;
 const NO_TEAM_LABEL = "No Team";
+const PLAYER_LIST_LABEL_PADDING = 10;
 const PRIMARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
   .filter(
     (definition) =>
@@ -2072,16 +2073,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
           .setStrokeStyle(1, 0x2f3a5d, 1)
           .setInteractive({ useHandCursor: true });
         const label = this.scene.add
-          .text(10, y + rowHeight / 2, option.label, {
+          .text(PLAYER_LIST_LABEL_PADDING, y + rowHeight / 2, option.label, {
             fontSize: "14px",
             color: "#ffffff",
           })
-          .setOrigin(0, 0.5)
-          .setInteractive({ useHandCursor: true });
+          .setOrigin(0, 0.5);
         button.on(Phaser.Input.Events.POINTER_UP, () => {
-          this.handlePlayerCardRequest(option.id);
-        });
-        label.on(Phaser.Input.Events.POINTER_UP, () => {
           this.handlePlayerCardRequest(option.id);
         });
         this.playersTabListContainer.add(button);
@@ -2158,7 +2155,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     );
     const conditions = character?.statuses?.conditions ?? [];
     const statusText =
-      Array.isArray(conditions) && conditions.length > 0
+      conditions.length > 0
         ? conditions.join(", ")
         : "No conditions";
     this.playersTabCardStatus.setText(`Status: ${statusText}`);
