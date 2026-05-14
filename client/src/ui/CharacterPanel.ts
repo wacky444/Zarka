@@ -213,6 +213,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     this.setReadyState(!this.readyState, true);
   };
+  private readyPointerIsDown = false;
+  private readonly handleReadyPointerDown = () => {
+    this.readyPointerIsDown = true;
+  };
+  private readonly handleReadyPointerOut = () => {
+    this.readyPointerIsDown = false;
+  };
+  private readonly handleReadyPointerUp = () => {
+    if (this.readyPointerIsDown) {
+      this.readyPointerIsDown = false;
+      this.handleReadyToggle();
+    }
+  };
   private readonly handleSecondaryActionSelection = (
     actionId: string | null,
   ) => {
@@ -323,6 +336,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         })
         .setOrigin(0, 0)
         .setInteractive({ useHandCursor: true });
+      const badge = scene.add
+        .rectangle(
+          index * tabWidth + tabWidth - 10,
+          6,
+          8,
+          8,
+          0xff6600,
+        )
+        .setOrigin(0.5, 0)
+        .setVisible(false);
       rect.on(Phaser.Input.Events.POINTER_UP, () => {
         this.handleTabRequest(tab.key as TabKey);
       });
@@ -331,7 +354,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       });
       this.add(rect);
       this.add(text);
-      this.tabs.push({ key: tab.key as TabKey, rect, text });
+      this.add(badge);
+      this.tabs.push({ key: tab.key as TabKey, rect, text, badge });
     });
     const contentTop = TAB_HEIGHT + MARGIN;
     const portraitScale = PORTRAIT_SIZE / 16;
@@ -387,7 +411,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       })
       .setOrigin(0, 0);
     this.readyToggle.setInteractive({ useHandCursor: true });
-    this.readyToggle.on("pointerup", this.handleReadyToggle);
+    this.readyToggle.on(Phaser.Input.Events.POINTER_DOWN, this.handleReadyPointerDown);
+    this.readyToggle.on(Phaser.Input.Events.POINTER_OUT, this.handleReadyPointerOut);
+    this.readyToggle.on(Phaser.Input.Events.POINTER_UP, this.handleReadyPointerUp);
     this.add(this.readyToggle);
     this.setReadyEnabled(false);
 
@@ -433,7 +459,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         pointerOutRelease: true,
       },
       mouseWheelScroller: {
-        focus: false,
+        focus: true,
         speed: 0.35,
       },
       space: { left: 0, right: 0, top: 0, bottom: 0 },
@@ -784,6 +810,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.inventoryGrid.setActive(false);
       },
       onChatTabShow: () => {
+        this.tabsController.setTabUnread("chat", false);
         this.chatView.handleVisibilityChange(true);
         this.emit("chat-tab-opened");
       },
@@ -843,7 +870,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.handleSecondaryPlayerSelection,
     );
     this.secondaryPlayerSelector.hideDropdown();
-    this.readyToggle?.off("pointerup", this.handleReadyToggle);
+    this.readyToggle?.off(Phaser.Input.Events.POINTER_DOWN, this.handleReadyPointerDown);
+    this.readyToggle?.off(Phaser.Input.Events.POINTER_OUT, this.handleReadyPointerOut);
+    this.readyToggle?.off(Phaser.Input.Events.POINTER_UP, this.handleReadyPointerUp);
     this.logView?.destroy();
     this.chatView?.destroy();
     this.scrollPanel?.clearMask?.();
@@ -931,6 +960,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   appendChatMessage(message: ChatMessageViewModel) {
     this.chatView?.appendMessage(message);
+  }
+
+  markChatUnread(unread: boolean) {
+    if (unread && this.tabsController?.getActiveTab() === "chat") {
+      return;
+    }
+    this.tabsController?.setTabUnread("chat", unread);
   }
 
   setChatConnectionState(state: ChatConnectionState, message?: string) {
