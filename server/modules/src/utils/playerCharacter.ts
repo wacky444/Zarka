@@ -23,6 +23,7 @@ export function createDefaultCharacter(userId: string): PlayerCharacter {
       },
       speed: 0,
       sympathy: 0,
+      baseViewRange: 0,
     },
     progression: {
       level: 1,
@@ -61,7 +62,7 @@ export function createDefaultCharacter(userId: string): PlayerCharacter {
 
 export function ensurePlayerCharacter(
   match: MatchRecord,
-  userId: string
+  userId: string,
 ): PlayerCharacter {
   if (!match.playerCharacters) {
     match.playerCharacters = {};
@@ -103,7 +104,7 @@ export function ensureAllPlayerCharacters(match: MatchRecord): boolean {
 }
 
 export function isCharacterDead(
-  character: PlayerCharacter | null | undefined
+  character: PlayerCharacter | null | undefined,
 ): boolean {
   const conditions = character?.statuses?.conditions;
   if (!Array.isArray(conditions)) {
@@ -113,7 +114,7 @@ export function isCharacterDead(
 }
 
 export function isCharacterIncapacitated(
-  character: PlayerCharacter | null | undefined
+  character: PlayerCharacter | null | undefined,
 ): boolean {
   if (!character) {
     return false;
@@ -126,6 +127,8 @@ export function isCharacterIncapacitated(
 }
 
 type RandomFn = () => number;
+const TWO_PI = Math.PI * 2;
+const SPAWN_RING_RADIUS_FACTOR = 3;
 
 function hashSeed(seed: string): number {
   let h = 2166136261;
@@ -144,24 +147,103 @@ function createSeededRandom(seed: string): RandomFn {
   };
 }
 
-function shuffleInPlace<T>(items: T[], rng: RandomFn): void {
-  for (let i = items.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(rng() * (i + 1));
-    const tmp = items[i];
-    items[i] = items[j];
-    items[j] = tmp;
+interface SpawnTile {
+  id: string;
+  coord: {
+    q: number;
+    r: number;
+  };
+}
+
+function distanceSquared(
+  tile: SpawnTile,
+  targetQ: number,
+  targetR: number,
+): number {
+  const dq = tile.coord.q - targetQ;
+  const dr = tile.coord.r - targetR;
+  return dq * dq + dr * dr;
+}
+
+function radialDistance(
+  tile: SpawnTile,
+  centerQ: number,
+  centerR: number,
+): number {
+  const dq = tile.coord.q - centerQ;
+  const dr = tile.coord.r - centerR;
+  return Math.sqrt(dq * dq + dr * dr);
+}
+
+function buildSpawnPool(
+  walkableTiles: SpawnTile[],
+  cols: number,
+  rows: number,
+  playerCount: number,
+  rng: RandomFn,
+): SpawnTile[] {
+  if (walkableTiles.length <= 1 || playerCount <= 0) {
+    return walkableTiles.slice();
   }
+
+  const safeCols = cols > 0 ? cols : 1;
+  const safeRows = rows > 0 ? rows : 1;
+  const centerQ = (safeCols - 1) / 2;
+  const centerR = (safeRows - 1) / 2;
+  const radius = Math.max(
+    1,
+    Math.min(safeCols, safeRows) / SPAWN_RING_RADIUS_FACTOR,
+  );
+  const angleOffset = rng() * TWO_PI;
+  const slots = Math.min(playerCount, walkableTiles.length);
+  const remaining = walkableTiles.slice();
+  const ordered: SpawnTile[] = [];
+
+  for (let i = 0; i < slots; i += 1) {
+    const angle = angleOffset + (i / slots) * TWO_PI;
+    const targetQ = centerQ + Math.cos(angle) * radius;
+    const targetR = centerR + Math.sin(angle) * radius;
+    let bestIndex = 0;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (let index = 0; index < remaining.length; index += 1) {
+      const candidate = remaining[index];
+      const candidateDistance = distanceSquared(candidate, targetQ, targetR);
+      if (
+        candidateDistance < bestDistance ||
+        (candidateDistance === bestDistance &&
+          candidate.id < remaining[bestIndex].id)
+      ) {
+        bestDistance = candidateDistance;
+        bestIndex = index;
+      }
+    }
+    ordered.push(remaining[bestIndex]);
+    remaining.splice(bestIndex, 1);
+  }
+
+  remaining.sort((left, right) => {
+    const leftDelta = Math.abs(radialDistance(left, centerQ, centerR) - radius);
+    const rightDelta = Math.abs(
+      radialDistance(right, centerQ, centerR) - radius,
+    );
+    if (leftDelta !== rightDelta) {
+      return leftDelta - rightDelta;
+    }
+    return left.id.localeCompare(right.id);
+  });
+
+  return ordered.concat(remaining);
 }
 
 export function assignSpawnPositions(
   match: MatchRecord,
-  logger: nkruntime.Logger
+  logger: nkruntime.Logger,
 ): boolean {
   const map = match.map;
   if (!map || !Array.isArray(map.tiles) || map.tiles.length === 0) {
     logger.warn(
       "assignSpawnPositions: missing map for match %s",
-      match.match_id
+      match.match_id,
     );
     return false;
   }
@@ -188,7 +270,7 @@ export function assignSpawnPositions(
   if (walkableTiles.length === 0) {
     logger.warn(
       "assignSpawnPositions: no walkable tiles available for match %s",
-      match.match_id
+      match.match_id,
     );
     return mutated;
   }
@@ -199,8 +281,13 @@ export function assignSpawnPositions(
   }
 
   const rng = createSeededRandom(`${map.seed}:${match.match_id}`);
-  const pool = walkableTiles.slice();
-  shuffleInPlace(pool, rng);
+  const pool = buildSpawnPool(
+    walkableTiles,
+    map.cols,
+    map.rows,
+    roster.length,
+    rng,
+  );
 
   const used: Record<string, boolean> = {};
 
@@ -222,9 +309,9 @@ export function assignSpawnPositions(
     }
   }
 
-  const nextAvailableTile = (): (typeof walkableTiles)[number] | undefined => {
+  const nextAvailableTile = (): SpawnTile | undefined => {
     while (pool.length > 0) {
-      const tile = pool.pop();
+      const tile = pool.shift();
       if (tile && !used[tile.id]) {
         return tile;
       }
@@ -259,7 +346,7 @@ export function assignSpawnPositions(
       logger.warn(
         "assignSpawnPositions: insufficient spawn tiles for player %s in match %s",
         playerId,
-        match.match_id
+        match.match_id,
       );
       break;
     }

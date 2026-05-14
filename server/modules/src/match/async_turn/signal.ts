@@ -16,6 +16,7 @@ import { tailorReplayEvents } from "../replay/tailorReplay";
 import {
   tailorMapForCharacter,
   tailorMatchItemsForCharacter,
+  tailorPlayerCharactersForViewer,
 } from "../../utils/matchView";
 
 export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState> =
@@ -221,6 +222,10 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
               const payload = JSON.stringify({
                 ...payloadBase,
                 replay: tailored,
+                playerCharacters: tailorPlayerCharactersForViewer(
+                  msg.playerCharacters,
+                  playerId,
+                ),
                 map: tailorMapForCharacter(
                   msg.map,
                   msg.playerCharacters?.[playerId] ?? null,

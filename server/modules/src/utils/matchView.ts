@@ -1,5 +1,6 @@
 import type { GameMap, MatchItemRecord, PlayerCharacter } from "@shared";
 import type { MatchRecord } from "../models/types";
+import { axialDistance } from "./location";
 
 type FoundLookup = Record<string, true>;
 
@@ -64,6 +65,57 @@ function filterItemsByFoundLookup(
   return filtered.map((item) => ({ ...item }));
 }
 
+function computeViewRange(
+  character: PlayerCharacter | undefined | null
+): number {
+  const raw = character?.stats?.baseViewRange;
+  if (typeof raw !== "number" || !isFinite(raw)) {
+    return 0;
+  }
+  return Math.max(0, Math.floor(raw));
+}
+
+export function tailorPlayerCharactersForViewer(
+  playerCharacters: Record<string, PlayerCharacter> | undefined,
+  viewerId: string | undefined | null
+): Record<string, PlayerCharacter> | undefined {
+  if (!playerCharacters) {
+    return playerCharacters;
+  }
+  const viewerKey = typeof viewerId === "string" ? viewerId : "";
+  if (!viewerKey) {
+    return { ...playerCharacters };
+  }
+  const viewer = playerCharacters[viewerKey];
+  if (!viewer) {
+    return { ...playerCharacters };
+  }
+  const viewerCoord = viewer.position?.coord;
+  const viewRange = computeViewRange(viewer);
+  const filtered: Record<string, PlayerCharacter> = {};
+  for (const id in playerCharacters) {
+    if (!Object.prototype.hasOwnProperty.call(playerCharacters, id)) {
+      continue;
+    }
+    const candidate = playerCharacters[id];
+    if (id === viewerKey) {
+      filtered[id] = candidate;
+      continue;
+    }
+    if (!viewerCoord) {
+      continue;
+    }
+    const candidateCoord = candidate?.position?.coord;
+    if (!candidateCoord) {
+      continue;
+    }
+    if (axialDistance(viewerCoord, candidateCoord) <= viewRange) {
+      filtered[id] = candidate;
+    }
+  }
+  return filtered;
+}
+
 export function tailorMapForCharacter(
   map: GameMap | undefined,
   character: PlayerCharacter | undefined | null
@@ -91,8 +143,13 @@ export function tailorMatchForPlayer(
   const found = buildFoundItemLookup(character);
   const map = filterMapByFoundLookup(match.map, found);
   const items = filterItemsByFoundLookup(match.items, found);
+  const playerCharacters = tailorPlayerCharactersForViewer(
+    match.playerCharacters,
+    playerId
+  );
   return {
     ...match,
+    playerCharacters: playerCharacters ?? {},
     map,
     items,
   };

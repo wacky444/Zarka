@@ -63,6 +63,10 @@ export class GameScene extends Phaser.Scene {
   private uiCam!: Phaser.Cameras.Scene2D.Camera;
   private currentMatch: MatchRecord | null = null;
   private tilePositions: Record<string, { x: number; y: number }> = {};
+  private mapTileSprites: Array<{
+    tile: HexTile;
+    image: Phaser.GameObjects.Image;
+  }> = [];
   private playerSprites = new Map<string, SkinContainer>();
   private playerNameLabels = new Map<string, Phaser.GameObjects.Text>();
   private playerNameMap: Record<string, string> = {};
@@ -80,6 +84,9 @@ export class GameScene extends Phaser.Scene {
   private pendingReadyState: boolean | undefined;
   private locationSelectionActive = false;
   private locationSelectionPointerId: number | null = null;
+  private locationSelectionActionId: ActionId | null = null;
+  private locationSelectionHoveredTileId: string | null = null;
+  private locationSelectionHoverText: Phaser.GameObjects.Text | null = null;
   private replayQueue: ReplayEvent[][] = [];
   private replayPlaying = false;
   private logReplayCache = new Map<number, ReplayEvent[]>();
@@ -103,6 +110,8 @@ export class GameScene extends Phaser.Scene {
   private currentPlayerSkin: import("@shared").Skin | null = null;
   private playerSkinMap = new Map<string, import("@shared").Skin>();
   private accountService: AccountService | null = null;
+  private playerViewRange: number = 0;
+  private playerCoordForTinting: Axial | null = null;
   private readonly turnAdvancedHandler = (
     payload: TurnAdvancedMessagePayload,
   ) => {
@@ -341,6 +350,9 @@ export class GameScene extends Phaser.Scene {
         container.destroy(true);
       }
       this.tileItemContainers.clear();
+      this.mapTileSprites = [];
+      this.locationSelectionHoverText?.destroy();
+      this.locationSelectionHoverText = null;
       this.itemTooltip?.destroy();
       this.itemTooltip = null;
       if (this.turnService) {
@@ -416,6 +428,68 @@ export class GameScene extends Phaser.Scene {
     return generated.map;
   }
 
+  private getCurrentPlayerViewRange(): number {
+    if (!this.currentMatch || !this.currentUserId) {
+      return 0;
+    }
+    const character = this.currentMatch.playerCharacters?.[this.currentUserId];
+    const viewRange = character?.stats?.baseViewRange;
+    return typeof viewRange === "number" && isFinite(viewRange)
+      ? Math.max(0, Math.floor(viewRange))
+      : 0;
+  }
+
+  private isOutOfViewRange(coord: Axial): boolean {
+    if (!this.playerCoordForTinting) {
+      return false;
+    }
+    const distance = this.axialDistance(this.playerCoordForTinting, coord);
+    return distance > this.playerViewRange;
+  }
+
+  private updateTileTintState(
+    image: Phaser.GameObjects.Image,
+    tile: HexTile,
+    options: {
+      isLocationSelectionActive?: boolean;
+      isInActionRange?: boolean;
+      isHovered?: boolean;
+    } = {},
+  ): void {
+    const isOutOfRange = this.isOutOfViewRange(tile.coord);
+    const dimTint = 0x666666; // Darker gray for out-of-view tiles
+    const { isLocationSelectionActive, isInActionRange, isHovered } = options;
+
+    // Base: apply dim tint if out of view range
+    if (isOutOfRange) {
+      image.setTint(dimTint);
+      image.setAlpha(1);
+    } else {
+      image.clearTint();
+      image.setAlpha(1);
+    }
+
+    // If location selection is active, apply selection tints on top of dimness
+    if (isLocationSelectionActive) {
+      if (isInActionRange) {
+        image.setTint(isOutOfRange ? dimTint | 0x7dd3fc : 0x7dd3fc);
+      } else {
+        image.setTint(isOutOfRange ? dimTint | 0x334155 : 0x334155);
+        image.setAlpha(0.8);
+      }
+    }
+
+    // Hover state overrides selection tints
+    if (isHovered) {
+      const hoverTint = isInActionRange ? 0xfacc15 : 0xfb7185;
+      image.setTint(hoverTint);
+      image.setAlpha(1);
+      image.setScale(1.03);
+    } else {
+      image.setScale(1);
+    }
+  }
+
   private renderMap(map: GameMap) {
     const tileW = GameScene.TILE_WIDTH;
     const tileH = GameScene.TILE_HEIGHT;
@@ -424,6 +498,12 @@ export class GameScene extends Phaser.Scene {
     const texture = this.textures.get("hex");
     const sprites: Phaser.GameObjects.Image[] = [];
     this.tilePositions = {};
+    this.mapTileSprites = [];
+
+    const playerCoord = this.getCurrentPlayerCoord();
+    const viewRange = this.getCurrentPlayerViewRange();
+    this.playerCoordForTinting = playerCoord;
+    this.playerViewRange = viewRange;
 
     for (const snapshot of map.tiles) {
       let tile: HexTile;
@@ -444,7 +524,19 @@ export class GameScene extends Phaser.Scene {
       const y = row * dy + tileH;
       const img = this.add.image(x, y, "hex", frame);
       img.setData("tile", tile);
+
+      // Apply base tint (view range dimming)
+      this.updateTileTintState(img, tile);
+
       img.setInteractive({ useHandCursor: false });
+      img.on(Phaser.Input.Events.POINTER_OVER, () => {
+        this.setLocationSelectionHoveredTile(tile.id);
+      });
+      img.on(Phaser.Input.Events.POINTER_OUT, () => {
+        if (this.locationSelectionHoveredTileId === tile.id) {
+          this.setLocationSelectionHoveredTile(null);
+        }
+      });
       img.on(
         Phaser.Input.Events.POINTER_UP,
         (pointer: Phaser.Input.Pointer) => {
@@ -468,6 +560,7 @@ export class GameScene extends Phaser.Scene {
         },
       );
       sprites.push(img);
+      this.mapTileSprites.push({ tile, image: img });
       this.tilePositions[tile.id] = { x, y };
     }
 
@@ -613,6 +706,8 @@ export class GameScene extends Phaser.Scene {
         this.playerNameLabels.delete(playerId);
       }
     }
+    // Ensure tile tinting reflects the current player's position/view
+    this.refreshAllTileTints();
   }
 
   private renderItems(map: GameMap) {
@@ -794,7 +889,7 @@ export class GameScene extends Phaser.Scene {
     // No-op handlers removed
 
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
-      if (!p.isDown || this.pointerDownInUI) return;
+      if (!p.isDown || this.pointerDownInUI || this.gridModalActive) return;
 
       // const { x, y } = p.velocity; // camStart.x - dx
       const diffX = p.position.x - p.prevPosition.x;
@@ -1128,6 +1223,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.characterPanel.appendChatMessage(this.toChatViewModel(message));
+    this.characterPanel.markChatUnread(true);
   }
 
   private syncChatMessagesToPanel() {
@@ -1632,14 +1728,20 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.locationSelectionActive = true;
+    this.locationSelectionActionId = selection.actionId as ActionId;
+    this.locationSelectionHoveredTileId = null;
     this.locationSelectionPointerId = null;
     this.characterPanel?.setLocationSelectionPending(true);
+    this.refreshLocationSelectionVisuals();
     this.input.setDefaultCursor("crosshair");
   }
 
   private cancelMainActionLocationPick() {
     if (this.locationSelectionActive) {
       this.locationSelectionActive = false;
+      this.locationSelectionActionId = null;
+      this.locationSelectionHoveredTileId = null;
+      this.refreshLocationSelectionVisuals();
       this.input.setDefaultCursor("default");
     }
     this.locationSelectionPointerId = null;
@@ -1910,10 +2012,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   private axialDistance(a: Axial, b: Axial): number {
-    const dq = a.q - b.q;
-    const dr = a.r - b.r;
-    const ds = -dq - dr;
-    return Math.max(Math.abs(dq), Math.abs(dr), Math.abs(ds));
+    const aCube = this.offsetToCube(a);
+    const bCube = this.offsetToCube(b);
+    const dx = Math.abs(aCube.x - bCube.x);
+    const dy = Math.abs(aCube.y - bCube.y);
+    const dz = Math.abs(aCube.z - bCube.z);
+    return Math.max(dx, dy, dz);
+  }
+
+  private offsetToCube(coord: Axial): { x: number; y: number; z: number } {
+    const x = coord.q - (coord.r - (coord.r & 1)) / 2;
+    const z = coord.r;
+    const y = -x - z;
+    return { x, y, z };
   }
 
   private isLocationInRange(actionId: ActionId, target: Axial): boolean {
@@ -1926,6 +2037,101 @@ export class GameScene extends Phaser.Scene {
     }
     const distance = this.axialDistance(origin, target);
     return allowed.indexOf(distance) !== -1;
+  }
+
+  private setLocationSelectionHoveredTile(tileId: string | null) {
+    if (this.locationSelectionHoveredTileId === tileId) {
+      return;
+    }
+    this.locationSelectionHoveredTileId = tileId;
+    this.refreshLocationSelectionVisuals();
+  }
+
+  private refreshLocationSelectionVisuals() {
+    const active =
+      this.locationSelectionActive && !!this.locationSelectionActionId;
+    const actionId = this.locationSelectionActionId;
+    const hovered = this.locationSelectionHoveredTileId;
+    for (const entry of this.mapTileSprites) {
+      const { tile, image } = entry;
+      const isHovered = hovered === tile.id;
+      const isInRange =
+        active && actionId
+          ? this.isLocationInRange(actionId, tile.coord)
+          : false;
+      this.updateTileTintState(image, tile, {
+        isLocationSelectionActive: active,
+        isInActionRange: isInRange,
+        isHovered,
+      });
+    }
+    this.updateLocationSelectionHoverText();
+  }
+
+  private refreshAllTileTints(): void {
+    // Update stored player coord/range then refresh all tile tints
+    this.playerCoordForTinting = this.getCurrentPlayerCoord();
+    this.playerViewRange = this.getCurrentPlayerViewRange();
+    const active =
+      this.locationSelectionActive && !!this.locationSelectionActionId;
+    const actionId = this.locationSelectionActionId;
+    const hovered = this.locationSelectionHoveredTileId;
+
+    for (const entry of this.mapTileSprites) {
+      const { tile, image } = entry;
+      const isHovered = hovered === tile.id;
+      const isInRange =
+        active && actionId
+          ? this.isLocationInRange(actionId, tile.coord)
+          : false;
+      this.updateTileTintState(image, tile, {
+        isLocationSelectionActive: active,
+        isInActionRange: isInRange,
+        isHovered,
+      });
+    }
+  }
+
+  private updateLocationSelectionHoverText() {
+    if (!this.locationSelectionHoveredTileId) {
+      if (this.locationSelectionHoverText) {
+        this.locationSelectionHoverText.setVisible(false);
+      }
+      return;
+    }
+    const entry = this.mapTileSprites.find(
+      (candidate) => candidate.tile.id === this.locationSelectionHoveredTileId,
+    );
+    if (!entry) {
+      if (this.locationSelectionHoverText) {
+        this.locationSelectionHoverText.setVisible(false);
+      }
+      return;
+    }
+    if (!this.locationSelectionHoverText) {
+      this.locationSelectionHoverText = this.add
+        .text(0, 0, "", {
+          fontFamily: "Arial",
+          fontSize: "14px",
+          color: "#ffffff",
+          backgroundColor: "#0f172a",
+          padding: { x: 6, y: 4 },
+        })
+        .setDepth(1000);
+      this.uiCam.ignore(this.locationSelectionHoverText);
+    }
+    const { tile, image } = entry;
+    this.locationSelectionHoverText.setText(
+      `${tile.cellType.localizationType}\n(${tile.coord.q}, ${tile.coord.r})`,
+    );
+    this.locationSelectionHoverText.setPosition(
+      image.x - this.locationSelectionHoverText.width / 2,
+      image.y -
+        image.displayHeight / 2 -
+        this.locationSelectionHoverText.height -
+        8,
+    );
+    this.locationSelectionHoverText.setVisible(true);
   }
 
   private handleLogTabOpened() {

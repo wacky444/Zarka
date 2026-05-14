@@ -9,6 +9,7 @@ import type { AdvanceTurnResult } from "../match/advanceTurn";
 import {
   tailorMapForCharacter,
   tailorMatchItemsForCharacter,
+  tailorPlayerCharactersForViewer,
 } from "../utils/matchView";
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
 import { resolveTurnForMatch } from "../match/turnResolution";
@@ -190,7 +191,10 @@ export function updateReadyStateRpc(
     turn: match.current_turn,
     readyStates: match.readyStates,
     advanced,
-    playerCharacters: match.playerCharacters,
+    playerCharacters: tailorPlayerCharactersForViewer(
+      match.playerCharacters,
+      ctx.userId,
+    ),
     map: tailorMapForCharacter(match.map, viewerCharacter),
     items: tailorMatchItemsForCharacter(match.items, viewerCharacter),
   };

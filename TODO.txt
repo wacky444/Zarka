@@ -1,1 +1,25 @@
-- when the host removes the game, it doesn't notify the clients, so they are left in a broken state. 
+X when the host removes the game, it doesn't notify the clients, so they are left in a broken state. 
+- randomize the location of the buildings on the map
+- spawn the players in a circle around the center of the map
+- implement the players list tab, clicking opens a player card, also including teams
+- clicking on a player opens player card
+- visual effect when there is a unread chat in the chat tab
+- when picking target cell
+    -, visual effect on the cells that are in range of the action, also hovering a cell should highlight it
+    - bug, can't select some cells, the first player can't select the right bottom cell, the second player can't select the top left cell
+
+- only view players in current cell
+- Actions selector:
+    - first time scrolling the actions doesn't show the text
+    - when draggint the scrollbar, if mouse is outside of the scrollbar, it closes
+        - all mouse up outside the scrollbar closes it, it shouldn't
+    - when clicking the window title/ borders of the actions window it also closes the window
+    - when scrolling with drag, it also moves the map
+    - when mousewheel the map to zoom also scrolls the character tab
+    - increase scrollwheel step
+    - if the character tab is scrolled to the bottom, clicking the ready button clicks the button behind it instead the ready
+
+- show the cell coordinates when hovering a cell
+
+- when using scare, if no target defined, it selected a player that is not in the current cell, it should only select players in the current cell
+    - it should have two range properties in the ActionLibrary.ts

@@ -33,6 +33,15 @@ function createRng(seed: string) {
   };
 }
 
+function shuffleInPlace<T>(values: T[], rng: () => number): void {
+  for (let i = values.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = values[i];
+    values[i] = values[j];
+    values[j] = tmp;
+  }
+}
+
 function nextType(
   entries: Array<[LocalizationType, CellType]>,
   counts: Record<string, number>,
@@ -104,6 +113,8 @@ export function generateGameMap(
     allocation.push(key);
     counts[key] = (counts[key] || 0) + 1;
   }
+
+  shuffleInPlace(allocation, rng);
 
   const tiles = [];
   const items: MatchItemRecord[] = [];
