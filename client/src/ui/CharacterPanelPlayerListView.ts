@@ -30,9 +30,6 @@ export class CharacterPanelPlayerListView {
   private playersTabCardBackground: Phaser.GameObjects.Rectangle;
   private playersTabCardName: Phaser.GameObjects.Text;
   private playersTabCardTeam: Phaser.GameObjects.Text;
-  private playersTabCardHealth: Phaser.GameObjects.Text;
-  private playersTabCardEnergy: Phaser.GameObjects.Text;
-  private playersTabCardStatus: Phaser.GameObjects.Text;
   private playersTabEmpty: Phaser.GameObjects.Text;
   private readonly elements: Phaser.GameObjects.GameObject[];
 
@@ -106,33 +103,6 @@ export class CharacterPanelPlayerListView {
       .setVisible(false);
     parent.add(this.playersTabCardTeam);
 
-    this.playersTabCardHealth = scene.add
-      .text(layout.margin + 24, playersBoxY + playersBoxHeight - 88, "", {
-        fontSize: "14px",
-        color: "#cbd5f5",
-      })
-      .setOrigin(0, 0)
-      .setVisible(false);
-    parent.add(this.playersTabCardHealth);
-
-    this.playersTabCardEnergy = scene.add
-      .text(layout.margin + 24, playersBoxY + playersBoxHeight - 66, "", {
-        fontSize: "14px",
-        color: "#cbd5f5",
-      })
-      .setOrigin(0, 0)
-      .setVisible(false);
-    parent.add(this.playersTabCardEnergy);
-
-    this.playersTabCardStatus = scene.add
-      .text(layout.margin + 24, playersBoxY + playersBoxHeight - 44, "", {
-        fontSize: "13px",
-        color: "#94a3d4",
-      })
-      .setOrigin(0, 0)
-      .setVisible(false);
-    parent.add(this.playersTabCardStatus);
-
     this.playersTabEmpty = scene.add
       .text(layout.margin + 24, playersBoxY + 70, "No players found.", {
         fontSize: "14px",
@@ -149,9 +119,6 @@ export class CharacterPanelPlayerListView {
       this.playersTabCardBackground,
       this.playersTabCardName,
       this.playersTabCardTeam,
-      this.playersTabCardHealth,
-      this.playersTabCardEnergy,
-      this.playersTabCardStatus,
       this.playersTabEmpty,
     ];
   }
@@ -173,7 +140,10 @@ export class CharacterPanelPlayerListView {
       playersBoxHeight,
     );
     this.playersTabListTitle.setPosition(options.margin + 12, playersBoxY + 12);
-    this.playersTabListContainer.setPosition(options.margin + 12, playersBoxY + 44);
+    this.playersTabListContainer.setPosition(
+      options.margin + 12,
+      playersBoxY + 44,
+    );
     this.playersTabCardBackground.setPosition(
       options.margin + 12,
       playersBoxY + playersBoxHeight - 150,
@@ -187,18 +157,6 @@ export class CharacterPanelPlayerListView {
     this.playersTabCardTeam.setPosition(
       options.margin + 24,
       playersBoxY + playersBoxHeight - 112,
-    );
-    this.playersTabCardHealth.setPosition(
-      options.margin + 24,
-      playersBoxY + playersBoxHeight - 88,
-    );
-    this.playersTabCardEnergy.setPosition(
-      options.margin + 24,
-      playersBoxY + playersBoxHeight - 66,
-    );
-    this.playersTabCardStatus.setPosition(
-      options.margin + 24,
-      playersBoxY + playersBoxHeight - 44,
     );
     this.playersTabEmpty.setPosition(options.margin + 24, playersBoxY + 70);
     this.refresh();
@@ -214,7 +172,10 @@ export class CharacterPanelPlayerListView {
     const match = this.currentMatch;
     const list = this.playerOptions;
     const availableIds = new Set(list.map((option) => option.id));
-    if (!this.playersTabSelection || !availableIds.has(this.playersTabSelection)) {
+    if (
+      !this.playersTabSelection ||
+      !availableIds.has(this.playersTabSelection)
+    ) {
       this.playersTabSelection = list[0]?.id ?? null;
     }
     for (const entry of this.playersTabEntries) {
@@ -230,9 +191,6 @@ export class CharacterPanelPlayerListView {
       this.playersTabEmpty.setVisible(true);
       this.playersTabCardName.setText("");
       this.playersTabCardTeam.setText("");
-      this.playersTabCardHealth.setText("");
-      this.playersTabCardEnergy.setText("");
-      this.playersTabCardStatus.setText("");
       return;
     }
     this.playersTabEmpty.setVisible(false);
@@ -261,7 +219,10 @@ export class CharacterPanelPlayerListView {
     const rowHeight = 30;
     const rowSpacing = 6;
     const sectionSpacing = 12;
-    const containerWidth = Math.max(120, this.playersTabListBackground.width - 24);
+    const containerWidth = Math.max(
+      120,
+      this.playersTabListBackground.width - 24,
+    );
     const itemWidth = Math.max(80, containerWidth - 14);
     let y = 0;
     let reachedMaxHeight = false;
@@ -391,9 +352,6 @@ export class CharacterPanelPlayerListView {
     if (!selectedId || !match) {
       this.playersTabCardName.setText("");
       this.playersTabCardTeam.setText("");
-      this.playersTabCardHealth.setText("");
-      this.playersTabCardEnergy.setText("");
-      this.playersTabCardStatus.setText("");
       return;
     }
     const character = match.playerCharacters?.[selectedId] ?? null;
@@ -403,17 +361,5 @@ export class CharacterPanelPlayerListView {
     this.playersTabCardName.setText(displayName);
     const teamId = character?.teamId?.trim() || NO_TEAM_LABEL;
     this.playersTabCardTeam.setText(`Team: ${teamId}`);
-    const health = character?.stats?.health;
-    const energy = character?.stats?.energy;
-    this.playersTabCardHealth.setText(
-      health ? `Health: ${health.current}/${health.max}` : "Health: N/A",
-    );
-    this.playersTabCardEnergy.setText(
-      energy ? `Energy: ${energy.current}/${energy.max}` : "Energy: N/A",
-    );
-    const conditions = character?.statuses?.conditions ?? [];
-    const statusText =
-      conditions.length > 0 ? conditions.join(", ") : "No conditions";
-    this.playersTabCardStatus.setText(`Status: ${statusText}`);
   }
 }
