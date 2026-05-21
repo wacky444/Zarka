@@ -13,6 +13,7 @@ import {
   type ItemDefinition,
   DEFAULT_SKIN,
   Skin,
+  PlayerCharacterUnknown,
 } from "@shared";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
 import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
@@ -340,13 +341,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         .setOrigin(0, 0)
         .setInteractive({ useHandCursor: true });
       const badge = scene.add
-        .rectangle(
-          index * tabWidth + tabWidth - 10,
-          6,
-          8,
-          8,
-          0xff6600,
-        )
+        .rectangle(index * tabWidth + tabWidth - 10, 6, 8, 8, 0xff6600)
         .setOrigin(0.5, 0)
         .setVisible(false);
       rect.on(Phaser.Input.Events.POINTER_UP, () => {
@@ -414,9 +409,18 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       })
       .setOrigin(0, 0);
     this.readyToggle.setInteractive({ useHandCursor: true });
-    this.readyToggle.on(Phaser.Input.Events.POINTER_DOWN, this.handleReadyPointerDown);
-    this.readyToggle.on(Phaser.Input.Events.POINTER_OUT, this.handleReadyPointerOut);
-    this.readyToggle.on(Phaser.Input.Events.POINTER_UP, this.handleReadyPointerUp);
+    this.readyToggle.on(
+      Phaser.Input.Events.POINTER_DOWN,
+      this.handleReadyPointerDown,
+    );
+    this.readyToggle.on(
+      Phaser.Input.Events.POINTER_OUT,
+      this.handleReadyPointerOut,
+    );
+    this.readyToggle.on(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleReadyPointerUp,
+    );
     this.add(this.readyToggle);
     this.setReadyEnabled(false);
 
@@ -887,9 +891,18 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.handleSecondaryPlayerSelection,
     );
     this.secondaryPlayerSelector.hideDropdown();
-    this.readyToggle?.off(Phaser.Input.Events.POINTER_DOWN, this.handleReadyPointerDown);
-    this.readyToggle?.off(Phaser.Input.Events.POINTER_OUT, this.handleReadyPointerOut);
-    this.readyToggle?.off(Phaser.Input.Events.POINTER_UP, this.handleReadyPointerUp);
+    this.readyToggle?.off(
+      Phaser.Input.Events.POINTER_DOWN,
+      this.handleReadyPointerDown,
+    );
+    this.readyToggle?.off(
+      Phaser.Input.Events.POINTER_OUT,
+      this.handleReadyPointerOut,
+    );
+    this.readyToggle?.off(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleReadyPointerUp,
+    );
     this.logView?.destroy();
     this.chatView?.destroy();
     this.scrollPanel?.clearMask?.();
@@ -1037,7 +1050,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     this.currentTurn = match.current_turn ?? 0;
     const characters = match.playerCharacters ?? {};
-    const character = characters[currentUserId] ?? null;
+    // Current character is always received as PlayerCharacter type
+    const character = (characters[currentUserId] as PlayerCharacter) ?? null;
     const name = userMap[currentUserId] ?? null;
     const ready = match.readyStates?.[currentUserId] ?? false;
     this.applyCharacter(character, name, ready);
@@ -2022,7 +2036,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const options: ItemPriorityOption[] = [];
     if (match && currentUserId) {
       const character = match.playerCharacters?.[currentUserId] ?? null;
-      const tileId = character?.position?.tileId ?? null;
+      // Character of type PlayerCharacterUnknown won't have position or inventory info, so this will be null and skip the item option population, which is expected in that case.
+      let tileId;
+      if (character && "position" in character && "inventory" in character) {
+        tileId = character?.position?.tileId ?? null;
+      }
       if (tileId) {
         const tiles = Array.isArray(match.map?.tiles) ? match.map!.tiles : [];
         const tile = tiles.find((entry) => entry && entry.id === tileId);
@@ -2094,7 +2112,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private resolvePlayerSpriteInfo(
     playerId: string,
-    _character: PlayerCharacter | null,
+    _character: PlayerCharacter | PlayerCharacterUnknown | null,
     accountSkin: Skin | null,
     scale: number,
   ) {

@@ -1,4 +1,10 @@
-import type { GameMap, MatchItemRecord, PlayerCharacter } from "@shared";
+import type {
+  GameMap,
+  MatchItemRecord,
+  MatchRecord as SharedMatchRecord,
+  PlayerCharacter,
+  PlayerCharacterUnknown
+} from "@shared";
 import type { MatchRecord } from "../models/types";
 import { axialDistance } from "./location";
 
@@ -34,12 +40,12 @@ function filterMapByFoundLookup(
           ? tile.itemIds.filter((itemId) =>
               Object.prototype.hasOwnProperty.call(found, itemId)
             )
-          : [],
+          : []
       }))
     : [];
   return {
     ...map,
-    tiles,
+    tiles
   };
 }
 
@@ -78,7 +84,7 @@ function computeViewRange(
 export function tailorPlayerCharactersForViewer(
   playerCharacters: Record<string, PlayerCharacter> | undefined,
   viewerId: string | undefined | null
-): Record<string, PlayerCharacter> | undefined {
+): Record<string, PlayerCharacter | PlayerCharacterUnknown> | undefined {
   if (!playerCharacters) {
     return playerCharacters;
   }
@@ -92,28 +98,29 @@ export function tailorPlayerCharactersForViewer(
   }
   const viewerCoord = viewer.position?.coord;
   const viewRange = computeViewRange(viewer);
-  const filtered: Record<string, PlayerCharacter> = {};
+  const tailored: Record<string, PlayerCharacter | PlayerCharacterUnknown> = {};
   for (const id in playerCharacters) {
     if (!Object.prototype.hasOwnProperty.call(playerCharacters, id)) {
       continue;
     }
     const candidate = playerCharacters[id];
     if (id === viewerKey) {
-      filtered[id] = candidate;
-      continue;
-    }
-    if (!viewerCoord) {
+      tailored[id] = candidate;
       continue;
     }
     const candidateCoord = candidate?.position?.coord;
-    if (!candidateCoord) {
-      continue;
-    }
-    if (axialDistance(viewerCoord, candidateCoord) <= viewRange) {
-      filtered[id] = candidate;
-    }
+    const isVisible =
+      !!viewerCoord &&
+      !!candidateCoord &&
+      axialDistance(viewerCoord, candidateCoord) <= viewRange;
+    tailored[id] = isVisible
+      ? candidate
+      : {
+          id: candidate.id,
+          name: candidate.name
+        };
   }
-  return filtered;
+  return tailored;
 }
 
 export function tailorMapForCharacter(
@@ -135,7 +142,7 @@ export function tailorMatchItemsForCharacter(
 export function tailorMatchForPlayer(
   match: MatchRecord,
   playerId: string | undefined | null
-): MatchRecord {
+): SharedMatchRecord {
   const character =
     playerId && match.playerCharacters
       ? match.playerCharacters[playerId]
@@ -151,6 +158,6 @@ export function tailorMatchForPlayer(
     ...match,
     playerCharacters: playerCharacters ?? {},
     map,
-    items,
+    items
   };
 }

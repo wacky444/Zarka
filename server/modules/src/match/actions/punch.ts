@@ -5,7 +5,7 @@ import type {
   ActionId,
   ReplayActionDone,
   ReplayActionTarget,
-  ReplayPlayerEvent,
+  ReplayPlayerEvent
 } from "@shared";
 import { ReplayActionEffect } from "@shared";
 import {
@@ -16,7 +16,7 @@ import {
   isTargetProtected,
   resolveGuardedDamage,
   shuffleParticipants,
-  type PlannedActionParticipant,
+  type PlannedActionParticipant
 } from "./utils";
 import { collectTargets } from "./targeting";
 
@@ -49,7 +49,7 @@ export function executePunchAction(
       const {
         result: healthChange,
         character: updatedTarget,
-        event,
+        event
       } = applyHealthDelta(target, -dealtAmount);
       mergeCharacterState(target, updatedTarget);
       match.playerCharacters[targetId] = target;
@@ -66,7 +66,7 @@ export function executePunchAction(
       const targetEntry: ReplayActionTarget = {
         targetId,
         damageTaken: applied,
-        effects: buildGuardedEffectMask(guarded),
+        effects: buildGuardedEffectMask(guarded)
       };
       if (eliminated) {
         targetEntry.eliminated = true;
@@ -80,7 +80,7 @@ export function executePunchAction(
     const action: ReplayActionDone = {
       actionId,
       damageDealt: totalDamage,
-      effects: ReplayActionEffect.Hit,
+      effects: ReplayActionEffect.Hit
     };
     if (participant.character.position?.coord) {
       action.originLocation = participant.character.position.coord;
@@ -92,7 +92,7 @@ export function executePunchAction(
       kind: "player",
       actorId: participant.playerId,
       action,
-      targets: targetEntries,
+      targets: targetEntries
     });
     if (postEvents.length > 0) {
       events.push(...postEvents);

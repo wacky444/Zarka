@@ -17,6 +17,7 @@ type CharacterPanelPlayerListViewLayout = {
 
 const BOX_HEIGHT = 180;
 const NO_TEAM_LABEL = "No Team";
+const UNKNOWN_TEAM_LABEL = "Unknown Team";
 const PLAYER_LIST_LABEL_PADDING = 10;
 
 export class CharacterPanelPlayerListView {
@@ -197,8 +198,13 @@ export class CharacterPanelPlayerListView {
     const entriesByTeam = new Map<string, PlayerOption[]>();
     const order: string[] = [];
     for (const option of list) {
-      const teamId =
-        match.playerCharacters?.[option.id]?.teamId?.trim() || NO_TEAM_LABEL;
+      let teamId;
+      const character = match?.playerCharacters?.[option.id];
+      if (character && "position" in character && "inventory" in character) {
+        teamId = character.teamId?.trim() || NO_TEAM_LABEL;
+      } else {
+        teamId = UNKNOWN_TEAM_LABEL;
+      }
       if (!entriesByTeam.has(teamId)) {
         entriesByTeam.set(teamId, []);
         order.push(teamId);
@@ -359,7 +365,12 @@ export class CharacterPanelPlayerListView {
       this.playerOptions.find((option) => option.id === selectedId)?.label ??
       selectedId;
     this.playersTabCardName.setText(displayName);
-    const teamId = character?.teamId?.trim() || NO_TEAM_LABEL;
+    let teamId;
+    if (character && "position" in character && "inventory" in character) {
+      teamId = character?.teamId?.trim() || NO_TEAM_LABEL;
+    } else {
+      teamId = UNKNOWN_TEAM_LABEL;
+    }
     this.playersTabCardTeam.setText(`Team: ${teamId}`);
   }
 }

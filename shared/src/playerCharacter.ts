@@ -17,6 +17,18 @@ export interface PlayerCharacter {
   foundItems?: string[];
 }
 
+export interface PlayerCharacterUnknown {
+  id: string;
+  name: string;
+}
+
+// TODO use this method
+export const isPlayerCharacterUnknown = (
+  character: PlayerCharacter | PlayerCharacterUnknown
+): character is PlayerCharacterUnknown => {
+  return !(character && "position" in character && "inventory" in character);
+};
+
 export interface PlayerCharacterStats {
   health: PlayerHealthTrack;
   energy: PlayerEnergyTrack;

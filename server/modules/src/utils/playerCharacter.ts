@@ -1,6 +1,10 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import type { MatchRecord, PlayerCharacter } from "@shared";
+import type {
+  MatchRecord,
+  PlayerCharacter,
+  PlayerCharacterUnknown
+} from "@shared";
 
 export function createDefaultCharacter(userId: string): PlayerCharacter {
   return {
@@ -11,59 +15,59 @@ export function createDefaultCharacter(userId: string): PlayerCharacter {
         current: 10,
         max: 12,
         knockoutThreshold: 5,
-        injuredMax: 5,
+        injuredMax: 5
       },
       energy: {
         current: 10,
-        max: 20,
+        max: 20
       },
       load: {
         current: 14,
-        max: 25,
+        max: 25
       },
       speed: 0,
       sympathy: 0,
-      baseViewRange: 0,
+      baseViewRange: 0
     },
     progression: {
       level: 1,
       experience: 0,
       experienceForNextLevel: 10,
       availableSkillPoints: 10,
-      spentSkillPoints: 0,
+      spentSkillPoints: 0
     },
     economy: {
       zarkans: 3,
       pendingZarkans: 0,
-      incomeInterval: 5,
+      incomeInterval: 5
     },
     inventory: {
       carriedItems: [
         {
           itemId: "food",
           quantity: 1,
-          weight: 3,
-        },
+          weight: 3
+        }
       ],
-      stash: [],
+      stash: []
     },
     abilities: [],
     relationships: {
       confirmedTeammates: [],
       alliances: [],
-      representatives: [],
+      representatives: []
     },
     statuses: {
-      conditions: [],
+      conditions: []
     },
-    foundItems: [],
+    foundItems: []
   };
 }
 
 export function ensurePlayerCharacter(
   match: MatchRecord,
-  userId: string,
-): PlayerCharacter {
+  userId: string
+): PlayerCharacter | PlayerCharacterUnknown {
   if (!match.playerCharacters) {
     match.playerCharacters = {};
   }
@@ -104,7 +108,7 @@ export function ensureAllPlayerCharacters(match: MatchRecord): boolean {
 }
 
 export function isCharacterDead(
-  character: PlayerCharacter | null | undefined,
+  character: PlayerCharacter | null | undefined
 ): boolean {
   const conditions = character?.statuses?.conditions;
   if (!Array.isArray(conditions)) {
@@ -114,7 +118,7 @@ export function isCharacterDead(
 }
 
 export function isCharacterIncapacitated(
-  character: PlayerCharacter | null | undefined,
+  character: PlayerCharacter | null | undefined
 ): boolean {
   if (!character) {
     return false;
@@ -158,7 +162,7 @@ interface SpawnTile {
 function distanceSquared(
   tile: SpawnTile,
   targetQ: number,
-  targetR: number,
+  targetR: number
 ): number {
   const dq = tile.coord.q - targetQ;
   const dr = tile.coord.r - targetR;
@@ -168,7 +172,7 @@ function distanceSquared(
 function radialDistance(
   tile: SpawnTile,
   centerQ: number,
-  centerR: number,
+  centerR: number
 ): number {
   const dq = tile.coord.q - centerQ;
   const dr = tile.coord.r - centerR;
@@ -180,7 +184,7 @@ function buildSpawnPool(
   cols: number,
   rows: number,
   playerCount: number,
-  rng: RandomFn,
+  rng: RandomFn
 ): SpawnTile[] {
   if (walkableTiles.length <= 1 || playerCount <= 0) {
     return walkableTiles.slice();
@@ -192,7 +196,7 @@ function buildSpawnPool(
   const centerR = (safeRows - 1) / 2;
   const radius = Math.max(
     1,
-    Math.min(safeCols, safeRows) / SPAWN_RING_RADIUS_FACTOR,
+    Math.min(safeCols, safeRows) / SPAWN_RING_RADIUS_FACTOR
   );
   const angleOffset = rng() * TWO_PI;
   const slots = Math.min(playerCount, walkableTiles.length);
@@ -224,7 +228,7 @@ function buildSpawnPool(
   remaining.sort((left, right) => {
     const leftDelta = Math.abs(radialDistance(left, centerQ, centerR) - radius);
     const rightDelta = Math.abs(
-      radialDistance(right, centerQ, centerR) - radius,
+      radialDistance(right, centerQ, centerR) - radius
     );
     if (leftDelta !== rightDelta) {
       return leftDelta - rightDelta;
@@ -237,13 +241,13 @@ function buildSpawnPool(
 
 export function assignSpawnPositions(
   match: MatchRecord,
-  logger: nkruntime.Logger,
+  logger: nkruntime.Logger
 ): boolean {
   const map = match.map;
   if (!map || !Array.isArray(map.tiles) || map.tiles.length === 0) {
     logger.warn(
       "assignSpawnPositions: missing map for match %s",
-      match.match_id,
+      match.match_id
     );
     return false;
   }
@@ -270,7 +274,7 @@ export function assignSpawnPositions(
   if (walkableTiles.length === 0) {
     logger.warn(
       "assignSpawnPositions: no walkable tiles available for match %s",
-      match.match_id,
+      match.match_id
     );
     return mutated;
   }
@@ -286,7 +290,7 @@ export function assignSpawnPositions(
     map.cols,
     map.rows,
     roster.length,
-    rng,
+    rng
   );
 
   const used: Record<string, boolean> = {};
@@ -294,6 +298,9 @@ export function assignSpawnPositions(
   for (const playerId of roster) {
     const character = match.playerCharacters?.[playerId];
     if (!character) {
+      continue;
+    }
+    if (!("position" in character) || !("inventory" in character)) {
       continue;
     }
     const position = character.position;
@@ -324,6 +331,9 @@ export function assignSpawnPositions(
     if (!character) {
       continue;
     }
+    if (!("position" in character) || !("inventory" in character)) {
+      continue;
+    }
     const position = character.position;
     if (
       position &&
@@ -346,14 +356,14 @@ export function assignSpawnPositions(
       logger.warn(
         "assignSpawnPositions: insufficient spawn tiles for player %s in match %s",
         playerId,
-        match.match_id,
+        match.match_id
       );
       break;
     }
 
     character.position = {
       tileId: tile.id,
-      coord: { ...tile.coord },
+      coord: { ...tile.coord }
     };
     used[tile.id] = true;
     mutated = true;

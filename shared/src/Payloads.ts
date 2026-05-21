@@ -1,6 +1,9 @@
 import type { MatchItemRecord, MatchRecord, TurnRecord } from "./match";
 import type { GameMap, Axial } from "./hexTile";
-import type { PlayerCharacter } from "./playerCharacter";
+import type {
+  PlayerCharacter,
+  PlayerCharacterUnknown
+} from "./playerCharacter";
 import type { ReplayEvent } from "./Replay";
 import type { MatchChatMessage } from "./chat";
 import type { Skin, UserAccount } from "./UserAccount";
@@ -65,7 +68,7 @@ export type UpdateReadyStatePayload = {
   turn?: number;
   readyStates?: Record<string, boolean>;
   advanced?: boolean;
-  playerCharacters?: Record<string, PlayerCharacter>;
+  playerCharacters?: Record<string, PlayerCharacter | PlayerCharacterUnknown>;
   map?: GameMap;
   items?: MatchItemRecord[];
   error?: string;
@@ -150,7 +153,7 @@ export type TurnAdvancedMessagePayload = {
   match_id: string;
   turn: number;
   readyStates?: Record<string, boolean>;
-  playerCharacters?: Record<string, PlayerCharacter>;
+  playerCharacters?: Record<string, PlayerCharacter | PlayerCharacterUnknown>;
   advanced?: boolean;
   replay?: ReplayEvent[];
   viewDistance?: number;

@@ -8,13 +8,13 @@ import {
   type Axial,
   type HexTileSnapshot,
   type PlayerCharacter,
-  type PlayerPlannedAction,
+  type PlayerPlannedAction
 } from "@shared";
 import { MatchRecord } from "src/models/types";
 import { hasFeedConsumable } from "./actions/feed";
 import {
   isActionOnCooldown,
-  updateCharacterCooldowns,
+  updateCharacterCooldowns
 } from "./actions/cooldowns";
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
 
@@ -22,14 +22,14 @@ export enum BotPersonality {
   Safe = "Safe",
   Aggressive = "Aggressive",
   Hoarder = "Hoarder",
-  Random = "Random",
+  Random = "Random"
 }
 
 const PERSONALITY_ROTATION: BotPersonality[] = [
   BotPersonality.Safe,
   BotPersonality.Aggressive,
   BotPersonality.Hoarder,
-  BotPersonality.Random,
+  BotPersonality.Random
 ];
 
 const DEFAULT_TAG_WEIGHTS: Partial<Record<ActionTag, number>> = {
@@ -45,7 +45,7 @@ const DEFAULT_TAG_WEIGHTS: Partial<Record<ActionTag, number>> = {
   Status: 1,
   Economy: 0.7,
   SingleTarget: 1,
-  TargetItems: 1.1,
+  TargetItems: 1.1
 };
 
 const PERSONALITY_TAG_MULTIPLIERS: Record<
@@ -56,22 +56,22 @@ const PERSONALITY_TAG_MULTIPLIERS: Record<
     Movement: 2,
     Support: 1.5,
     Logistics: 1.2,
-    Attack: 0.4,
+    Attack: 0.4
   },
   [BotPersonality.Aggressive]: {
     Attack: 2.2,
     Movement: 1.2,
     Support: 0.9,
-    Logistics: 0.6,
+    Logistics: 0.6
   },
   [BotPersonality.Hoarder]: {
     Logistics: 2.3,
     TargetItems: 1.8,
     Recon: 1.3,
     Movement: 0.9,
-    Attack: 0.5,
+    Attack: 0.5
   },
-  [BotPersonality.Random]: {},
+  [BotPersonality.Random]: {}
 };
 
 const SUPPORTED_ACTION_IDS: ActionId[] = [
@@ -85,7 +85,7 @@ const SUPPORTED_ACTION_IDS: ActionId[] = [
   ActionLibrary.sleep.id,
   ActionLibrary.recover.id,
   ActionLibrary.scare.id,
-  ActionLibrary.punch.id,
+  ActionLibrary.punch.id
 ];
 
 function getSupportedDevelopedActions(): ActionDefinition[] {
@@ -158,7 +158,7 @@ export function processBotActions(match: MatchRecord, logger: any): void {
       map,
       currentTurn,
       personality,
-      rng,
+      rng
     };
     const candidates = buildExecutableActionCandidates(context).filter(
       (candidate) => candidate.weight > 0
@@ -344,7 +344,7 @@ function createMoveCandidate(
   }
   const plan: PlayerPlannedAction = {
     actionId: definition.id,
-    targetLocationId: destination.coord,
+    targetLocationId: destination.coord
   };
   const weight = computeBaseWeight(definition, context.personality) * 1.1;
   return { definition, plan, weight };
@@ -364,7 +364,7 @@ function createPickUpCandidate(
   }
   const plan: PlayerPlannedAction = {
     actionId: definition.id,
-    targetItemIds: visibleItems.slice(0, 3),
+    targetItemIds: visibleItems.slice(0, 3)
   };
   const weight =
     computeBaseWeight(definition, context.personality) *
@@ -385,7 +385,7 @@ function createSearchCandidate(
     return null;
   }
   const plan: PlayerPlannedAction = {
-    actionId: definition.id,
+    actionId: definition.id
   };
   const weight =
     computeBaseWeight(definition, context.personality) *
@@ -407,7 +407,7 @@ function createFeedCandidate(
   }
   const plan: PlayerPlannedAction = {
     actionId: definition.id,
-    targetPlayerIds: [context.playerId],
+    targetPlayerIds: [context.playerId]
   };
   const weight =
     computeBaseWeight(definition, context.personality) * (1 + deficit / 8);
@@ -424,7 +424,7 @@ function createFocusCandidate(
     return null;
   }
   const plan: PlayerPlannedAction = {
-    actionId: definition.id,
+    actionId: definition.id
   };
   const weight =
     computeBaseWeight(definition, context.personality) * (1 + deficit / 10);
@@ -445,7 +445,7 @@ function createBandageCandidate(
   }
   const plan: PlayerPlannedAction = {
     actionId: definition.id,
-    targetPlayerIds: [context.playerId],
+    targetPlayerIds: [context.playerId]
   };
   const weight =
     computeBaseWeight(definition, context.personality) * (1 + deficit / 5);
@@ -465,7 +465,7 @@ function createProtectCandidate(
   const deficit = Math.max(0, healthStats.max - healthStats.current);
   const plan: PlayerPlannedAction = {
     actionId: definition.id,
-    targetPlayerIds: [context.playerId],
+    targetPlayerIds: [context.playerId]
   };
   const weight =
     computeBaseWeight(definition, context.personality) *
@@ -483,7 +483,7 @@ function createSleepCandidate(
     return null;
   }
   const plan: PlayerPlannedAction = {
-    actionId: definition.id,
+    actionId: definition.id
   };
   const weight =
     computeBaseWeight(definition, context.personality) * (1 + deficit / 6);
@@ -503,7 +503,7 @@ function createRecoverCandidate(
     return null;
   }
   const plan: PlayerPlannedAction = {
-    actionId: definition.id,
+    actionId: definition.id
   };
   const weight =
     computeBaseWeight(definition, context.personality) * (1 + deficit / 4);
@@ -536,7 +536,7 @@ function createScareCandidate(
   const plan: PlayerPlannedAction = {
     actionId: definition.id,
     targetPlayerIds: [target.id],
-    targetLocationId: destination.coord,
+    targetLocationId: destination.coord
   };
   const weight =
     computeBaseWeight(definition, context.personality) * (1 + targets.length);
@@ -557,7 +557,7 @@ function createPunchCandidate(
   }
   const plan: PlayerPlannedAction = {
     actionId: definition.id,
-    targetPlayerIds: [target.id],
+    targetPlayerIds: [target.id]
   };
   const weight =
     computeBaseWeight(definition, context.personality) *

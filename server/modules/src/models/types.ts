@@ -3,10 +3,13 @@
 import type {
   GameMap,
   MatchRecord as SharedMatchRecord,
-  TurnRecord as SharedTurnRecord,
+  PlayerCharacter,
+  TurnRecord as SharedTurnRecord
 } from "@shared";
 
-export type MatchRecord = SharedMatchRecord;
+export type MatchRecord = Omit<SharedMatchRecord, "playerCharacters"> & {
+  playerCharacters: Record<string, PlayerCharacter>;
+};
 export type TurnRecord = SharedTurnRecord;
 
 export interface AsyncTurnState extends nkruntime.MatchState {

@@ -3,7 +3,7 @@
 import {
   DEFAULT_REPLAY_VIEW_DISTANCE,
   type GetReplayPayload,
-  type ReplayEvent,
+  type ReplayEvent
 } from "@shared";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
@@ -86,7 +86,7 @@ export function getReplayRpc(
     match_id: matchId,
     turn,
     max_turn: maxTurn,
-    events,
+    events
   };
 
   return JSON.stringify(response);

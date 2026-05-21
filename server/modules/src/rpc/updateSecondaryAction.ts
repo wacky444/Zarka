@@ -9,7 +9,7 @@ import type { ActionSubmission, Axial, PlayerPlannedAction } from "@shared";
 import {
   getActionCooldownRemaining,
   isActionOnCooldown,
-  updateCharacterCooldowns,
+  updateCharacterCooldowns
 } from "../match/actions/cooldowns";
 import { clearSecondaryPlan } from "../match/actions/utils";
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
@@ -194,7 +194,7 @@ export function updateSecondaryActionRpc(
     targetItemIds:
       clearAction || !targetItemIds || targetItemIds.length === 0
         ? undefined
-        : targetItemIds,
+        : targetItemIds
   };
   return JSON.stringify(response);
 }
