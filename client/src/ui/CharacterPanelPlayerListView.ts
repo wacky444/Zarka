@@ -1,0 +1,419 @@
+import Phaser from "phaser";
+import type { MatchRecord } from "@shared";
+import type { PlayerOption } from "./PlayerSelector";
+
+type PlayerTabListEntry = {
+  playerId: string;
+  button: Phaser.GameObjects.Rectangle;
+  label: Phaser.GameObjects.Text;
+};
+
+type CharacterPanelPlayerListViewLayout = {
+  margin: number;
+  contentTop: number;
+  boxWidth: number;
+  panelHeight: number;
+};
+
+const BOX_HEIGHT = 180;
+const NO_TEAM_LABEL = "No Team";
+const PLAYER_LIST_LABEL_PADDING = 10;
+
+export class CharacterPanelPlayerListView {
+  private playersTabEntries: PlayerTabListEntry[] = [];
+  private playersTabSelection: string | null = null;
+  private currentMatch: MatchRecord | null = null;
+  private playerOptions: PlayerOption[] = [];
+  private playersTabListContainer: Phaser.GameObjects.Container;
+  private playersTabListBackground: Phaser.GameObjects.Rectangle;
+  private playersTabListTitle: Phaser.GameObjects.Text;
+  private playersTabCardBackground: Phaser.GameObjects.Rectangle;
+  private playersTabCardName: Phaser.GameObjects.Text;
+  private playersTabCardTeam: Phaser.GameObjects.Text;
+  private playersTabCardHealth: Phaser.GameObjects.Text;
+  private playersTabCardEnergy: Phaser.GameObjects.Text;
+  private playersTabCardStatus: Phaser.GameObjects.Text;
+  private playersTabEmpty: Phaser.GameObjects.Text;
+  private readonly elements: Phaser.GameObjects.GameObject[];
+
+  constructor(
+    private readonly scene: Phaser.Scene,
+    private readonly parent: Phaser.GameObjects.Container,
+    layout: CharacterPanelPlayerListViewLayout,
+  ) {
+    const playersBoxY = layout.contentTop;
+    const playersBoxWidth = layout.boxWidth;
+    const playersBoxHeight = Math.max(
+      BOX_HEIGHT * 2,
+      layout.panelHeight - playersBoxY - layout.margin,
+    );
+
+    this.playersTabListBackground = scene.add
+      .rectangle(
+        layout.margin,
+        playersBoxY,
+        playersBoxWidth,
+        playersBoxHeight,
+        0x1b2440,
+      )
+      .setOrigin(0, 0)
+      .setVisible(false);
+    this.playersTabListBackground.setStrokeStyle?.(1, 0x253055, 0.8);
+    parent.add(this.playersTabListBackground);
+
+    this.playersTabListTitle = scene.add
+      .text(layout.margin + 12, playersBoxY + 12, "Players", {
+        fontSize: "16px",
+        color: "#ffffff",
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    parent.add(this.playersTabListTitle);
+
+    this.playersTabListContainer = scene.add
+      .container(layout.margin + 12, playersBoxY + 44)
+      .setVisible(false);
+    parent.add(this.playersTabListContainer);
+
+    this.playersTabCardBackground = scene.add
+      .rectangle(
+        layout.margin + 12,
+        playersBoxY + playersBoxHeight - 150,
+        playersBoxWidth - 24,
+        138,
+        0x141c33,
+      )
+      .setOrigin(0, 0)
+      .setVisible(false);
+    this.playersTabCardBackground.setStrokeStyle?.(1, 0x253055, 0.8);
+    parent.add(this.playersTabCardBackground);
+
+    this.playersTabCardName = scene.add
+      .text(layout.margin + 24, playersBoxY + playersBoxHeight - 138, "", {
+        fontSize: "18px",
+        color: "#ffffff",
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    parent.add(this.playersTabCardName);
+
+    this.playersTabCardTeam = scene.add
+      .text(layout.margin + 24, playersBoxY + playersBoxHeight - 112, "", {
+        fontSize: "13px",
+        color: "#a0b7ff",
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    parent.add(this.playersTabCardTeam);
+
+    this.playersTabCardHealth = scene.add
+      .text(layout.margin + 24, playersBoxY + playersBoxHeight - 88, "", {
+        fontSize: "14px",
+        color: "#cbd5f5",
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    parent.add(this.playersTabCardHealth);
+
+    this.playersTabCardEnergy = scene.add
+      .text(layout.margin + 24, playersBoxY + playersBoxHeight - 66, "", {
+        fontSize: "14px",
+        color: "#cbd5f5",
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    parent.add(this.playersTabCardEnergy);
+
+    this.playersTabCardStatus = scene.add
+      .text(layout.margin + 24, playersBoxY + playersBoxHeight - 44, "", {
+        fontSize: "13px",
+        color: "#94a3d4",
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    parent.add(this.playersTabCardStatus);
+
+    this.playersTabEmpty = scene.add
+      .text(layout.margin + 24, playersBoxY + 70, "No players found.", {
+        fontSize: "14px",
+        color: "#94a3d4",
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    parent.add(this.playersTabEmpty);
+
+    this.elements = [
+      this.playersTabListBackground,
+      this.playersTabListTitle,
+      this.playersTabListContainer,
+      this.playersTabCardBackground,
+      this.playersTabCardName,
+      this.playersTabCardTeam,
+      this.playersTabCardHealth,
+      this.playersTabCardEnergy,
+      this.playersTabCardStatus,
+      this.playersTabEmpty,
+    ];
+  }
+
+  getElements(): Phaser.GameObjects.GameObject[] {
+    return this.elements;
+  }
+
+  layout(options: CharacterPanelPlayerListViewLayout): void {
+    const playersBoxY = options.contentTop;
+    const playersBoxHeight = Math.max(
+      BOX_HEIGHT * 2,
+      options.panelHeight - playersBoxY - options.margin,
+    );
+    this.playersTabListBackground.setPosition(options.margin, playersBoxY);
+    this.playersTabListBackground.setSize(options.boxWidth, playersBoxHeight);
+    this.playersTabListBackground.setDisplaySize(
+      options.boxWidth,
+      playersBoxHeight,
+    );
+    this.playersTabListTitle.setPosition(options.margin + 12, playersBoxY + 12);
+    this.playersTabListContainer.setPosition(options.margin + 12, playersBoxY + 44);
+    this.playersTabCardBackground.setPosition(
+      options.margin + 12,
+      playersBoxY + playersBoxHeight - 150,
+    );
+    this.playersTabCardBackground.setSize(options.boxWidth - 24, 138);
+    this.playersTabCardBackground.setDisplaySize(options.boxWidth - 24, 138);
+    this.playersTabCardName.setPosition(
+      options.margin + 24,
+      playersBoxY + playersBoxHeight - 138,
+    );
+    this.playersTabCardTeam.setPosition(
+      options.margin + 24,
+      playersBoxY + playersBoxHeight - 112,
+    );
+    this.playersTabCardHealth.setPosition(
+      options.margin + 24,
+      playersBoxY + playersBoxHeight - 88,
+    );
+    this.playersTabCardEnergy.setPosition(
+      options.margin + 24,
+      playersBoxY + playersBoxHeight - 66,
+    );
+    this.playersTabCardStatus.setPosition(
+      options.margin + 24,
+      playersBoxY + playersBoxHeight - 44,
+    );
+    this.playersTabEmpty.setPosition(options.margin + 24, playersBoxY + 70);
+    this.refresh();
+  }
+
+  update(match: MatchRecord | null, players: PlayerOption[]): void {
+    this.currentMatch = match;
+    this.playerOptions = players;
+    this.refresh();
+  }
+
+  refresh(): void {
+    const match = this.currentMatch;
+    const list = this.playerOptions;
+    const availableIds = new Set(list.map((option) => option.id));
+    if (!this.playersTabSelection || !availableIds.has(this.playersTabSelection)) {
+      this.playersTabSelection = list[0]?.id ?? null;
+    }
+    for (const entry of this.playersTabEntries) {
+      entry.button.destroy();
+      entry.label.destroy();
+    }
+    this.playersTabEntries = [];
+    for (const child of [...this.playersTabListContainer.list]) {
+      child.destroy();
+    }
+    this.playersTabListContainer.removeAll(false);
+    if (!match || list.length === 0) {
+      this.playersTabEmpty.setVisible(true);
+      this.playersTabCardName.setText("");
+      this.playersTabCardTeam.setText("");
+      this.playersTabCardHealth.setText("");
+      this.playersTabCardEnergy.setText("");
+      this.playersTabCardStatus.setText("");
+      return;
+    }
+    this.playersTabEmpty.setVisible(false);
+    const entriesByTeam = new Map<string, PlayerOption[]>();
+    const order: string[] = [];
+    for (const option of list) {
+      const teamId =
+        match.playerCharacters?.[option.id]?.teamId?.trim() || NO_TEAM_LABEL;
+      if (!entriesByTeam.has(teamId)) {
+        entriesByTeam.set(teamId, []);
+        order.push(teamId);
+      }
+      entriesByTeam.get(teamId)?.push(option);
+    }
+    order.sort((a, b) => {
+      const rank = (value: string) => (value === NO_TEAM_LABEL ? 1 : 0);
+      const rankDiff = rank(a) - rank(b);
+      if (rankDiff !== 0) {
+        return rankDiff;
+      }
+      return a.localeCompare(b);
+    });
+    const listTop = this.playersTabListContainer.y;
+    const cardTop = this.playersTabCardBackground.y;
+    const maxListHeight = Math.max(0, cardTop - listTop - 12);
+    const rowHeight = 30;
+    const rowSpacing = 6;
+    const sectionSpacing = 12;
+    const containerWidth = Math.max(120, this.playersTabListBackground.width - 24);
+    const itemWidth = Math.max(80, containerWidth - 14);
+    let y = 0;
+    let reachedMaxHeight = false;
+    for (const teamId of order) {
+      if (reachedMaxHeight) {
+        break;
+      }
+      const teamLabel = this.scene.add
+        .text(0, y, `Team ${teamId}`, {
+          fontSize: "13px",
+          color: "#a0b7ff",
+        })
+        .setOrigin(0, 0);
+      this.playersTabListContainer.add(teamLabel);
+      y += 18;
+      const members = entriesByTeam.get(teamId) ?? [];
+      members.sort((a, b) => a.label.localeCompare(b.label));
+      for (const option of members) {
+        if (y + rowHeight > maxListHeight) {
+          reachedMaxHeight = true;
+          break;
+        }
+        const button = this.scene.add
+          .rectangle(0, y, itemWidth, rowHeight, 0x202b4a, 0.95)
+          .setOrigin(0, 0)
+          .setStrokeStyle(1, 0x2f3a5d, 1)
+          .setInteractive({ useHandCursor: true });
+        const label = this.scene.add
+          .text(PLAYER_LIST_LABEL_PADDING, y + rowHeight / 2, option.label, {
+            fontSize: "14px",
+            color: "#ffffff",
+          })
+          .setOrigin(0, 0.5);
+        this.fitPlayerListLabelWidth(
+          label,
+          option.label,
+          itemWidth - PLAYER_LIST_LABEL_PADDING * 2,
+        );
+        button.on(Phaser.Input.Events.POINTER_UP, () => {
+          this.playersTabSelection = option.id;
+          this.refresh();
+        });
+        this.playersTabListContainer.add(button);
+        this.playersTabListContainer.add(label);
+        this.playersTabEntries.push({
+          playerId: option.id,
+          button,
+          label,
+        });
+        y += rowHeight + rowSpacing;
+      }
+      y += sectionSpacing;
+    }
+    if (reachedMaxHeight) {
+      const moreLabel = this.scene.add
+        .text(0, Math.max(0, maxListHeight - 16), "...more players", {
+          fontSize: "12px",
+          color: "#94a3d4",
+        })
+        .setOrigin(0, 0);
+      this.playersTabListContainer.add(moreLabel);
+    }
+    this.applySelectionStyles();
+    this.refreshPlayerCard();
+  }
+
+  openPlayerCard(playerId: string): boolean {
+    const normalized = this.normalizePlayerId(playerId);
+    if (!normalized) {
+      return false;
+    }
+    const availableIds = new Set(this.playerOptions.map((option) => option.id));
+    if (!availableIds.has(normalized)) {
+      return false;
+    }
+    this.playersTabSelection = normalized;
+    this.refresh();
+    return true;
+  }
+
+  clearSelectionStyles(): void {
+    for (const entry of this.playersTabEntries) {
+      entry.button.setFillStyle(0x202b4a, 0.95);
+      entry.button.setStrokeStyle(1, 0x2f3a5d, 1);
+      entry.label.setColor("#ffffff");
+    }
+  }
+
+  private normalizePlayerId(value: string | null | undefined): string | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private fitPlayerListLabelWidth(
+    label: Phaser.GameObjects.Text,
+    value: string,
+    maxWidth: number,
+  ): void {
+    if (label.width <= maxWidth) {
+      return;
+    }
+    let truncated = value;
+    while (truncated.length > 1) {
+      truncated = truncated.slice(0, -1).trimEnd();
+      label.setText(`${truncated}…`);
+      if (label.width <= maxWidth) {
+        return;
+      }
+    }
+  }
+
+  private applySelectionStyles(): void {
+    for (const entry of this.playersTabEntries) {
+      const selected = entry.playerId === this.playersTabSelection;
+      entry.button.setFillStyle(selected ? 0x2f5e88 : 0x202b4a, 0.95);
+      entry.button.setStrokeStyle(selected ? 2 : 1, 0x6ea8d6, 1);
+      entry.label.setColor(selected ? "#d8f0ff" : "#ffffff");
+    }
+  }
+
+  private refreshPlayerCard(): void {
+    const selectedId = this.playersTabSelection;
+    const match = this.currentMatch;
+    if (!selectedId || !match) {
+      this.playersTabCardName.setText("");
+      this.playersTabCardTeam.setText("");
+      this.playersTabCardHealth.setText("");
+      this.playersTabCardEnergy.setText("");
+      this.playersTabCardStatus.setText("");
+      return;
+    }
+    const character = match.playerCharacters?.[selectedId] ?? null;
+    const displayName =
+      this.playerOptions.find((option) => option.id === selectedId)?.label ??
+      selectedId;
+    this.playersTabCardName.setText(displayName);
+    const teamId = character?.teamId?.trim() || NO_TEAM_LABEL;
+    this.playersTabCardTeam.setText(`Team: ${teamId}`);
+    const health = character?.stats?.health;
+    const energy = character?.stats?.energy;
+    this.playersTabCardHealth.setText(
+      health ? `Health: ${health.current}/${health.max}` : "Health: N/A",
+    );
+    this.playersTabCardEnergy.setText(
+      energy ? `Energy: ${energy.current}/${energy.max}` : "Energy: N/A",
+    );
+    const conditions = character?.statuses?.conditions ?? [];
+    const statusText =
+      conditions.length > 0 ? conditions.join(", ") : "No conditions";
+    this.playersTabCardStatus.setText(`Status: ${statusText}`);
+  }
+}
