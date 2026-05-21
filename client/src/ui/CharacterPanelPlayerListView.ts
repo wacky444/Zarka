@@ -19,6 +19,8 @@ const BOX_HEIGHT = 180;
 const NO_TEAM_LABEL = "No Team";
 const UNKNOWN_TEAM_LABEL = "Unknown Team";
 const PLAYER_LIST_LABEL_PADDING = 10;
+const CARD_SPRITE_SIZE = 64;
+const CARD_SPRITE_PADDING = 16;
 
 export class CharacterPanelPlayerListView {
   private playersTabEntries: PlayerTabListEntry[] = [];
@@ -31,6 +33,7 @@ export class CharacterPanelPlayerListView {
   private playersTabCardBackground: Phaser.GameObjects.Rectangle;
   private playersTabCardName: Phaser.GameObjects.Text;
   private playersTabCardTeam: Phaser.GameObjects.Text;
+  private playersTabCardSprite: Phaser.GameObjects.Image;
   private playersTabEmpty: Phaser.GameObjects.Text;
   private readonly elements: Phaser.GameObjects.GameObject[];
 
@@ -104,6 +107,17 @@ export class CharacterPanelPlayerListView {
       .setVisible(false);
     parent.add(this.playersTabCardTeam);
 
+    const cardRight =
+      this.playersTabCardBackground.x + this.playersTabCardBackground.width;
+    const cardCenterY =
+      this.playersTabCardBackground.y + this.playersTabCardBackground.height / 2;
+    this.playersTabCardSprite = scene.add
+      .image(cardRight - CARD_SPRITE_PADDING, cardCenterY, "char")
+      .setOrigin(1, 0.5)
+      .setDisplaySize(CARD_SPRITE_SIZE, CARD_SPRITE_SIZE)
+      .setVisible(false);
+    parent.add(this.playersTabCardSprite);
+
     this.playersTabEmpty = scene.add
       .text(layout.margin + 24, playersBoxY + 70, "No players found.", {
         fontSize: "14px",
@@ -120,6 +134,7 @@ export class CharacterPanelPlayerListView {
       this.playersTabCardBackground,
       this.playersTabCardName,
       this.playersTabCardTeam,
+      this.playersTabCardSprite,
       this.playersTabEmpty,
     ];
   }
@@ -158,6 +173,14 @@ export class CharacterPanelPlayerListView {
     this.playersTabCardTeam.setPosition(
       options.margin + 24,
       playersBoxY + playersBoxHeight - 112,
+    );
+    const cardRight =
+      this.playersTabCardBackground.x + this.playersTabCardBackground.width;
+    const cardCenterY =
+      this.playersTabCardBackground.y + this.playersTabCardBackground.height / 2;
+    this.playersTabCardSprite.setPosition(
+      cardRight - CARD_SPRITE_PADDING,
+      cardCenterY,
     );
     this.playersTabEmpty.setPosition(options.margin + 24, playersBoxY + 70);
     this.refresh();
@@ -358,6 +381,7 @@ export class CharacterPanelPlayerListView {
     if (!selectedId || !match) {
       this.playersTabCardName.setText("");
       this.playersTabCardTeam.setText("");
+      this.playersTabCardSprite.setVisible(false);
       return;
     }
     const character = match.playerCharacters?.[selectedId] ?? null;
@@ -372,5 +396,17 @@ export class CharacterPanelPlayerListView {
       teamId = UNKNOWN_TEAM_LABEL;
     }
     this.playersTabCardTeam.setText(`Team: ${teamId}`);
+
+    const option = this.playerOptions.find((entry) => entry.id === selectedId);
+    const texture = option?.texture ?? "char";
+    const frame = option?.frame;
+    if (this.scene.textures.exists(texture)) {
+      this.playersTabCardSprite.setTexture(texture, frame);
+    } else {
+      this.playersTabCardSprite.setTexture("char");
+    }
+    this.playersTabCardSprite
+      .setDisplaySize(CARD_SPRITE_SIZE, CARD_SPRITE_SIZE)
+      .setVisible(true);
   }
 }
