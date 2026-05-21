@@ -3,3 +3,5 @@ X randomize the location of the buildings on the map
 - spawn the players in a circle around the center of the map
 - implement the players list tab, clicking opens a player card, also including teams
 - clicking on a player opens player card
+
+- autoadvance time should increase when the turn advances to the next day if time left is less than 1 day, and decrease when the turn advances to the next night if time left is more than 1 day

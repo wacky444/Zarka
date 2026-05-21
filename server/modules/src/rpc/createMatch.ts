@@ -38,7 +38,7 @@ export function createMatchRpc(
   if (!ctx || !ctx.userId) {
     throw {
       message: "No user context",
-      code: nkruntime.Codes.INVALID_ARGUMENT,
+      code: nkruntime.Codes.INVALID_ARGUMENT
     } as nkruntime.Error;
   }
 
@@ -83,7 +83,7 @@ export function createMatchRpc(
   if (creatorMatchCount >= 3) {
     throw {
       message: "Maximum of 3 matches per user reached",
-      code: nkruntime.Codes.RESOURCE_EXHAUSTED,
+      code: nkruntime.Codes.RESOURCE_EXHAUSTED
     } as nkruntime.Error;
   }
 
@@ -94,7 +94,7 @@ export function createMatchRpc(
     cols: String(DEFAULT_MAP_COLS),
     rows: String(DEFAULT_MAP_ROWS),
     roundTime,
-    autoSkip: String(autoSkip),
+    autoSkip: String(autoSkip)
   };
 
   const matchId = nkWrapper.matchCreate("async_turn", params);
@@ -103,6 +103,7 @@ export function createMatchRpc(
     match_id: matchId,
     players: [],
     playerCharacters: {},
+    playerList: {},
     readyStates: {},
     size,
     cols: DEFAULT_MAP_COLS,
@@ -114,7 +115,7 @@ export function createMatchRpc(
     creator: ctx.userId,
     name,
     started: false,
-    removed: 0,
+    removed: 0
   };
 
   storage.writeMatch(record);
@@ -123,7 +124,7 @@ export function createMatchRpc(
     match_id: matchId,
     size,
     name,
-    started: false,
+    started: false
   };
 
   return JSON.stringify(response);

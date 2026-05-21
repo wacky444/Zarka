@@ -13,7 +13,8 @@ export interface MatchItemRecord {
 export interface MatchRecord {
   match_id: string;
   players: string[];
-  playerCharacters: Record<string, PlayerCharacter | PlayerCharacterUnknown>;
+  playerCharacters: Record<string, PlayerCharacter>;
+  playerList: Record<string, PlayerCharacterUnknown>;
   readyStates?: Record<string, boolean>;
   size: number;
   cols?: number;

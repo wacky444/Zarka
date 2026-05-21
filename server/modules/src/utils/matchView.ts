@@ -84,7 +84,7 @@ function computeViewRange(
 export function tailorPlayerCharactersForViewer(
   playerCharacters: Record<string, PlayerCharacter> | undefined,
   viewerId: string | undefined | null
-): Record<string, PlayerCharacter | PlayerCharacterUnknown> | undefined {
+): Record<string, PlayerCharacter> | undefined {
   if (!playerCharacters) {
     return playerCharacters;
   }
@@ -98,29 +98,28 @@ export function tailorPlayerCharactersForViewer(
   }
   const viewerCoord = viewer.position?.coord;
   const viewRange = computeViewRange(viewer);
-  const tailored: Record<string, PlayerCharacter | PlayerCharacterUnknown> = {};
+  const filtered: Record<string, PlayerCharacter> = {};
   for (const id in playerCharacters) {
     if (!Object.prototype.hasOwnProperty.call(playerCharacters, id)) {
       continue;
     }
     const candidate = playerCharacters[id];
     if (id === viewerKey) {
-      tailored[id] = candidate;
+      filtered[id] = candidate;
+      continue;
+    }
+    if (!viewerCoord) {
       continue;
     }
     const candidateCoord = candidate?.position?.coord;
-    const isVisible =
-      !!viewerCoord &&
-      !!candidateCoord &&
-      axialDistance(viewerCoord, candidateCoord) <= viewRange;
-    tailored[id] = isVisible
-      ? candidate
-      : {
-          id: candidate.id,
-          name: candidate.name
-        };
+    if (!candidateCoord) {
+      continue;
+    }
+    if (axialDistance(viewerCoord, candidateCoord) <= viewRange) {
+      filtered[id] = candidate;
+    }
   }
-  return tailored;
+  return filtered;
 }
 
 export function tailorMapForCharacter(
@@ -154,9 +153,21 @@ export function tailorMatchForPlayer(
     match.playerCharacters,
     playerId
   );
+  const playerList: Record<string, PlayerCharacterUnknown> = {};
+  for (const id in match.playerCharacters) {
+    if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, id)) {
+      continue;
+    }
+    const character = match.playerCharacters[id];
+    playerList[id] = {
+      id: character.id,
+      name: character.name
+    };
+  }
   return {
     ...match,
     playerCharacters: playerCharacters ?? {},
+    playerList: playerList ?? {},
     map,
     items
   };

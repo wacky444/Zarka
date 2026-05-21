@@ -1576,6 +1576,10 @@ export class GameScene extends Phaser.Scene {
           this.currentMatch.playerCharacters = payload.playerCharacters;
           this.renderPlayerCharacters(this.currentMatch);
         }
+        if (payload.playerList) {
+          // this.currentMatch.players = payload.playerList;
+          debugger;
+        }
         if (Array.isArray(payload.items)) {
           this.currentMatch.items = payload.items;
         }
