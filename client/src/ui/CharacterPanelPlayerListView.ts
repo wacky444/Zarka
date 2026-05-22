@@ -433,6 +433,7 @@ export class CharacterPanelPlayerListView {
     const option = this.playerOptions.find((entry) => entry.id === selectedId);
     const texture = option?.texture ?? "char";
     const frame = option?.frame;
+    const shouldShowSprite = this.playersTabCardBackground.visible;
     if (this.scene.textures.exists(texture)) {
       this.playersTabCardSprite.setTexture(texture, frame);
     } else {
@@ -440,6 +441,10 @@ export class CharacterPanelPlayerListView {
     }
     this.playersTabCardSprite
       .setDisplaySize(CARD_SPRITE_SIZE, CARD_SPRITE_SIZE)
+<<<<<<< HEAD
       .setVisible(this.playersTabListBackground.visible);
+=======
+      .setVisible(shouldShowSprite);
+>>>>>>> 62e647036f138ac6e3ec67e92b6ab1e761a7aaec
   }
 }
