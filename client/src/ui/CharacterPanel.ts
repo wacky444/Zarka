@@ -38,6 +38,10 @@ import {
   type ChatConnectionState,
   type ChatMessageViewModel,
 } from "./CharacterPanelChatView";
+import {
+  CharacterPanelPlayerListView,
+  type PlayerListRowModel,
+} from "./CharacterPanelPlayerListView";
 export type {
   ChatMessageViewModel,
   ChatConnectionState,
@@ -117,10 +121,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private tabs: CharacterPanelTabEntry[] = [];
   private characterElements: Phaser.GameObjects.GameObject[] = [];
   private itemsElements: Phaser.GameObjects.GameObject[] = [];
+  private playersElements: Phaser.GameObjects.GameObject[] = [];
   private chatElements: Phaser.GameObjects.GameObject[] = [];
   private tabsController!: CharacterPanelTabs;
   private logView!: CharacterPanelLogView;
   private chatView!: CharacterPanelChatView;
+  private playersView!: CharacterPanelPlayerListView;
   private portrait: SkinContainer;
   private nameText: Phaser.GameObjects.Text;
   private healthLabel: Phaser.GameObjects.Text;
@@ -643,6 +649,18 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.itemsTitle,
       this.inventoryGrid,
     ];
+    this.playersView = new CharacterPanelPlayerListView({ scene });
+    this.playersElements = this.playersView.getElements();
+    for (const element of this.playersElements) {
+      this.add(element);
+    }
+    this.playersView.handleVisibilityChange(false);
+    this.playersView.layout({
+      margin: MARGIN,
+      contentTop,
+      boxWidth,
+      panelHeight: this.panelHeight,
+    });
     const logControlY = contentTop;
     const baseX = MARGIN + 12;
     const logPrevButton = scene.add
@@ -773,6 +791,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       defaultKey: "character",
       characterElements: this.characterElements,
       itemsElements: this.itemsElements,
+      playersElements: this.playersElements,
       chatElements: this.chatElements,
       onCharacterTabShow: () => {
         this.mainActionDropdown.setVisible(true);
@@ -808,6 +827,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       },
       onItemsTabHide: () => {
         this.inventoryGrid.setActive(false);
+      },
+      onPlayersTabShow: () => {
+        this.playersView.handleVisibilityChange(true);
+      },
+      onPlayersTabHide: () => {
+        this.playersView.handleVisibilityChange(false);
       },
       onChatTabShow: () => {
         this.tabsController.setTabUnread("chat", false);
@@ -875,6 +900,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.readyToggle?.off(Phaser.Input.Events.POINTER_UP, this.handleReadyPointerUp);
     this.logView?.destroy();
     this.chatView?.destroy();
+    this.playersView?.destroy();
     this.scrollPanel?.clearMask?.();
     this.scrollMask?.destroy();
     this.scrollMaskShape?.destroy();
@@ -952,6 +978,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         panelHeight: height,
       });
     }
+    if (this.playersView) {
+      this.playersView.layout({
+        margin: MARGIN,
+        contentTop,
+        boxWidth,
+        panelHeight: height,
+      });
+    }
   }
 
   setChatMessages(messages: ChatMessageViewModel[]) {
@@ -1004,6 +1038,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.currentMatch = match ?? null;
     this.currentUserId = currentUserId ?? null;
     this.updatePlayerOptions(match ?? null, userMap, currentUserId);
+    this.updatePlayersTab(match ?? null);
     this.updateItemOptions(match ?? null, currentUserId);
     if (!match || !currentUserId) {
       this.currentTurn = 0;
@@ -1885,6 +1920,66 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.secondaryPlayerSelector.setValue(
       this.secondaryActionTargetPlayerId ?? null,
     );
+  }
+
+  private updatePlayersTab(match: MatchRecord | null): void {
+    if (!this.playersView) {
+      return;
+    }
+    if (!match) {
+      this.playersView.setPlayers([]);
+      return;
+    }
+    const optionsById = new Map<string, PlayerOption>();
+    for (const option of this.playerOptions) {
+      optionsById.set(option.id, option);
+    }
+    const orderedIds: string[] = [];
+    const seen = new Set<string>();
+    const pushId = (id: string | null | undefined) => {
+      if (!id) {
+        return;
+      }
+      const trimmed = id.trim();
+      if (!trimmed || seen.has(trimmed)) {
+        return;
+      }
+      seen.add(trimmed);
+      orderedIds.push(trimmed);
+    };
+    if (Array.isArray(match.players)) {
+      for (const id of match.players) {
+        if (typeof id === "string") {
+          pushId(id);
+        }
+      }
+    }
+    if (match.playerCharacters) {
+      for (const id of Object.keys(match.playerCharacters)) {
+        pushId(id);
+      }
+    }
+    for (const option of this.playerOptions) {
+      pushId(option.id);
+    }
+
+    const models: PlayerListRowModel[] = orderedIds.map((id) => {
+      const option =
+        optionsById.get(id) ??
+        ({
+          id,
+          label: id,
+          texture: "char",
+          frame: DEFAULT_SKIN.body,
+          iconScale: 1,
+        } satisfies PlayerOption);
+      const character = match.playerCharacters?.[id] ?? null;
+      const dead = character?.statuses?.conditions?.includes("dead") === true;
+      const ready = match.readyStates?.[id] ?? false;
+      return { ...option, ready, dead };
+    });
+
+    this.playersView.setPlayers(models);
   }
 
   private selectedActionCanTargetSelf(): boolean {
