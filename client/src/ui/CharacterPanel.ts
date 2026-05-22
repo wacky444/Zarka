@@ -2036,11 +2036,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const options: ItemPriorityOption[] = [];
     if (match && currentUserId) {
       const character = match.playerCharacters?.[currentUserId] ?? null;
-      // Character of type PlayerCharacterUnknown won't have position or inventory info, so this will be null and skip the item option population, which is expected in that case.
-      let tileId;
-      if (character && "position" in character && "inventory" in character) {
-        tileId = character?.position?.tileId ?? null;
-      }
+      const tileId = character?.position?.tileId ?? null;
       if (tileId) {
         const tiles = Array.isArray(match.map?.tiles) ? match.map!.tiles : [];
         const tile = tiles.find((entry) => entry && entry.id === tileId);

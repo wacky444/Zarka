@@ -72,9 +72,6 @@ export function collectTargets(
       continue;
     }
     const character = roster[playerId];
-    if (!(character && "position" in character && "inventory" in character)) {
-      continue;
-    }
     const coord = character?.position?.coord;
     if (!coord) {
       continue;

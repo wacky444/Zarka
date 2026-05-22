@@ -271,13 +271,8 @@ export class CharacterPanelPlayerListView {
     const entriesByTeam = new Map<string, PlayerOption[]>();
     const order: string[] = [];
     for (const option of list) {
-      let teamId;
       const character = match?.playerCharacters?.[option.id];
-      if (character && "position" in character && "inventory" in character) {
-        teamId = character.teamId?.trim() || NO_TEAM_LABEL;
-      } else {
-        teamId = UNKNOWN_TEAM_LABEL;
-      }
+      const teamId = character?.teamId?.trim() || UNKNOWN_TEAM_LABEL;
       if (!entriesByTeam.has(teamId)) {
         entriesByTeam.set(teamId, []);
         order.push(teamId);
@@ -422,12 +417,7 @@ export class CharacterPanelPlayerListView {
       this.playerOptions.find((option) => option.id === selectedId)?.label ??
       selectedId;
     this.playersTabCardName.setText(displayName);
-    let teamId;
-    if (character && "position" in character && "inventory" in character) {
-      teamId = character?.teamId?.trim() || NO_TEAM_LABEL;
-    } else {
-      teamId = UNKNOWN_TEAM_LABEL;
-    }
+    const teamId = character?.teamId?.trim() || UNKNOWN_TEAM_LABEL;
     this.playersTabCardTeam.setText(`Team: ${teamId}`);
 
     const option = this.playerOptions.find((entry) => entry.id === selectedId);

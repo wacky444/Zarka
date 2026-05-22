@@ -300,9 +300,6 @@ export function assignSpawnPositions(
     if (!character) {
       continue;
     }
-    if (!("position" in character) || !("inventory" in character)) {
-      continue;
-    }
     const position = character.position;
     if (!position) {
       continue;
@@ -329,9 +326,6 @@ export function assignSpawnPositions(
   for (const playerId of roster) {
     const character = match.playerCharacters?.[playerId];
     if (!character) {
-      continue;
-    }
-    if (!("position" in character) || !("inventory" in character)) {
       continue;
     }
     const position = character.position;
