@@ -1,4 +1,10 @@
-import type { GameMap, MatchItemRecord, PlayerCharacter } from "@shared";
+import type {
+  GameMap,
+  MatchItemRecord,
+  MatchRecord as SharedMatchRecord,
+  PlayerCharacter,
+  PlayerCharacterUnknown
+} from "@shared";
 import type { MatchRecord } from "../models/types";
 import { axialDistance } from "./location";
 
@@ -34,12 +40,12 @@ function filterMapByFoundLookup(
           ? tile.itemIds.filter((itemId) =>
               Object.prototype.hasOwnProperty.call(found, itemId)
             )
-          : [],
+          : []
       }))
     : [];
   return {
     ...map,
-    tiles,
+    tiles
   };
 }
 
@@ -135,7 +141,7 @@ export function tailorMatchItemsForCharacter(
 export function tailorMatchForPlayer(
   match: MatchRecord,
   playerId: string | undefined | null
-): MatchRecord {
+): SharedMatchRecord {
   const character =
     playerId && match.playerCharacters
       ? match.playerCharacters[playerId]
@@ -147,10 +153,22 @@ export function tailorMatchForPlayer(
     match.playerCharacters,
     playerId
   );
+  const playerList: Record<string, PlayerCharacterUnknown> = {};
+  for (const id in match.playerCharacters) {
+    if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, id)) {
+      continue;
+    }
+    const character = match.playerCharacters[id];
+    playerList[id] = {
+      id: character.id,
+      name: character.name
+    };
+  }
   return {
     ...match,
     playerCharacters: playerCharacters ?? {},
+    playerList: playerList ?? {},
     map,
-    items,
+    items
   };
 }

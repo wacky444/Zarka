@@ -17,6 +17,11 @@ export interface PlayerCharacter {
   foundItems?: string[];
 }
 
+export interface PlayerCharacterUnknown {
+  id: string;
+  name: string;
+}
+
 export interface PlayerCharacterStats {
   health: PlayerHealthTrack;
   energy: PlayerEnergyTrack;

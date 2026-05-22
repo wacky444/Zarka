@@ -25,7 +25,7 @@ function coordsEqual(a: Axial | undefined, b: Axial | undefined): boolean {
 
 function pushUnique(
   target: TargetCandidate[],
-  candidate: TargetCandidate,
+  candidate: TargetCandidate
 ): void {
   if (target.some((entry) => entry.id === candidate.id)) {
     return;
@@ -35,7 +35,7 @@ function pushUnique(
 
 function findCandidate(
   list: TargetCandidate[],
-  id: string,
+  id: string
 ): TargetCandidate | undefined {
   for (const entry of list) {
     if (entry.id === id) {
@@ -72,6 +72,9 @@ export function collectTargets(
       continue;
     }
     const character = roster[playerId];
+    if (!(character && "position" in character && "inventory" in character)) {
+      continue;
+    }
     const coord = character?.position?.coord;
     if (!coord) {
       continue;

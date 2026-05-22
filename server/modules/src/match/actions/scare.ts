@@ -4,14 +4,14 @@ import type {
   PlayerCharacter,
   ReplayActionDone,
   ReplayActionTarget,
-  ReplayPlayerEvent,
+  ReplayPlayerEvent
 } from "@shared";
 import {
   clearPlanByKey,
   isTargetProtected,
   resolvePlanDestination,
   shuffleParticipants,
-  type PlannedActionParticipant,
+  type PlannedActionParticipant
 } from "./utils";
 import { collectTargets } from "./targeting";
 
@@ -48,7 +48,7 @@ export function executeScareAction(
           allowMultiple: false,
           filter: (candidate) =>
             !isTargetProtected(candidate.character) &&
-            candidate.distance === CURRENT_CELL_DISTANCE,
+            candidate.distance === CURRENT_CELL_DISTANCE
         })
       : [];
     clearPlanByKey(participant.character, participant.planKey);
@@ -63,7 +63,7 @@ export function executeScareAction(
     const previous = target.position;
     target.position = {
       tileId: destination.tileId,
-      coord: destination.coord,
+      coord: destination.coord
     };
     const energyLost = reduceEnergy(target, 3);
     if (!match.playerCharacters) {
@@ -73,24 +73,24 @@ export function executeScareAction(
     const action: ReplayActionDone = {
       actionId,
       originLocation: origin,
-      targetLocation: destination.coord,
+      targetLocation: destination.coord
     };
     const metadata: Record<string, unknown> = {
       movedTo: destination.coord,
-      energyLost,
+      energyLost
     };
     if (previous?.coord) {
       metadata.movedFrom = previous.coord;
     }
     const targetEvent: ReplayActionTarget = {
       targetId: targetSelection.id,
-      metadata,
+      metadata
     };
     events.push({
       kind: "player",
       actorId: participant.playerId,
       action,
-      targets: [targetEvent],
+      targets: [targetEvent]
     });
   }
   return events;

@@ -9,7 +9,7 @@ import {
   CellLibrary,
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
-  generateGameMap,
+  generateGameMap
 } from "@shared";
 import { tailorMapForCharacter } from "../utils/matchView";
 
@@ -103,7 +103,7 @@ export function startMatchRpc(
       match_id: matchId,
       started: true,
       already_started: true,
-      map: tailored,
+      map: tailored
     };
     return JSON.stringify(already);
   }
@@ -122,7 +122,7 @@ export function startMatchRpc(
     nkWrapper.matchSignal(
       matchId,
       JSON.stringify({
-        type: "start_match",
+        type: "start_match"
       })
     );
   } catch (e) {
@@ -135,7 +135,7 @@ export function startMatchRpc(
     ok: true,
     match_id: matchId,
     started: true,
-    map: tailored,
+    map: tailored
   };
 
   return JSON.stringify(response);

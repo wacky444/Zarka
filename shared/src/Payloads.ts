@@ -1,6 +1,9 @@
 import type { MatchItemRecord, MatchRecord, TurnRecord } from "./match";
 import type { GameMap, Axial } from "./hexTile";
-import type { PlayerCharacter } from "./playerCharacter";
+import type {
+  PlayerCharacter,
+  PlayerCharacterUnknown
+} from "./playerCharacter";
 import type { ReplayEvent } from "./Replay";
 import type { MatchChatMessage } from "./chat";
 import type { Skin, UserAccount } from "./UserAccount";

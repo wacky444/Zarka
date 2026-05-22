@@ -50,3 +50,5 @@ server/local.yml
 
 server/Caddyfile
 Zarka Tabletop game.md
+.clawpatch/
+team-implementation.md
