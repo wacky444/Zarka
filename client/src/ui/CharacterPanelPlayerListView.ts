@@ -441,10 +441,6 @@ export class CharacterPanelPlayerListView {
     }
     this.playersTabCardSprite
       .setDisplaySize(CARD_SPRITE_SIZE, CARD_SPRITE_SIZE)
-<<<<<<< HEAD
-      .setVisible(this.playersTabListBackground.visible);
-=======
       .setVisible(shouldShowSprite);
->>>>>>> 62e647036f138ac6e3ec67e92b6ab1e761a7aaec
   }
 }
