@@ -18,7 +18,7 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   setOrigin?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
   setPosition?: (x: number, y: number) => Phaser.GameObjects.GameObject;
   setMask?: (
-    mask: Phaser.Display.Masks.BitmapMask | Phaser.Display.Masks.GeometryMask,
+    mask: Phaser.Display.Masks.BitmapMask | Phaser.Display.Masks.GeometryMask
   ) => Phaser.GameObjects.GameObject;
   clearMask?: (destroyMask?: boolean) => Phaser.GameObjects.GameObject;
 };
@@ -56,13 +56,13 @@ export class CharacterPanelPlayerListView {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly parent: Phaser.GameObjects.Container,
-    layout: CharacterPanelPlayerListViewLayout,
+    layout: CharacterPanelPlayerListViewLayout
   ) {
     const playersBoxY = layout.contentTop;
     const playersBoxWidth = layout.boxWidth;
     const playersBoxHeight = Math.max(
       BOX_HEIGHT * 2,
-      layout.panelHeight - playersBoxY - layout.margin,
+      layout.panelHeight - playersBoxY - layout.margin
     );
 
     this.playersTabListBackground = scene.add
@@ -71,7 +71,7 @@ export class CharacterPanelPlayerListView {
         playersBoxY,
         playersBoxWidth,
         playersBoxHeight,
-        0x1b2440,
+        0x1b2440
       )
       .setOrigin(0, 0)
       .setVisible(false);
@@ -81,7 +81,7 @@ export class CharacterPanelPlayerListView {
     this.playersTabListTitle = scene.add
       .text(layout.margin + 12, playersBoxY + 12, "Players", {
         fontSize: "16px",
-        color: "#ffffff",
+        color: "#ffffff"
       })
       .setOrigin(0, 0)
       .setVisible(false);
@@ -93,7 +93,7 @@ export class CharacterPanelPlayerListView {
         playersBoxY + playersBoxHeight - 150,
         playersBoxWidth - 24,
         138,
-        0x141c33,
+        0x141c33
       )
       .setOrigin(0, 0)
       .setVisible(false);
@@ -103,7 +103,7 @@ export class CharacterPanelPlayerListView {
     this.playersTabCardName = scene.add
       .text(layout.margin + 24, playersBoxY + playersBoxHeight - 138, "", {
         fontSize: "18px",
-        color: "#ffffff",
+        color: "#ffffff"
       })
       .setOrigin(0, 0)
       .setVisible(false);
@@ -112,7 +112,7 @@ export class CharacterPanelPlayerListView {
     this.playersTabCardTeam = scene.add
       .text(layout.margin + 24, playersBoxY + playersBoxHeight - 112, "", {
         fontSize: "13px",
-        color: "#a0b7ff",
+        color: "#a0b7ff"
       })
       .setOrigin(0, 0)
       .setVisible(false);
@@ -131,20 +131,20 @@ export class CharacterPanelPlayerListView {
       scrollMode: 0,
       panel: {
         child: this.playersTabListContent,
-        mask: { padding: 1 },
+        mask: { padding: 1 }
       },
       slider: false,
       scroller: {
         threshold: 10,
         slidingDeceleration: 5000,
         backDeceleration: 2000,
-        pointerOutRelease: true,
+        pointerOutRelease: true
       },
       mouseWheelScroller: {
         focus: true,
-        speed: 0.35,
+        speed: 0.35
       },
-      space: { left: 0, right: 0, top: 0, bottom: 0 },
+      space: { left: 0, right: 0, top: 0, bottom: 0 }
     }) as ScrollablePanelInstance;
     this.playersTabListScrollPanel.setOrigin?.(0, 0);
     this.playersTabListScrollPanel.setVisible?.(false);
@@ -153,7 +153,8 @@ export class CharacterPanelPlayerListView {
     const cardRight =
       this.playersTabCardBackground.x + this.playersTabCardBackground.width;
     const cardCenterY =
-      this.playersTabCardBackground.y + this.playersTabCardBackground.height / 2;
+      this.playersTabCardBackground.y +
+      this.playersTabCardBackground.height / 2;
     this.playersTabCardSprite = scene.add
       .image(cardRight - CARD_SPRITE_PADDING, cardCenterY, "char")
       .setOrigin(1, 0.5)
@@ -164,7 +165,7 @@ export class CharacterPanelPlayerListView {
     this.playersTabEmpty = scene.add
       .text(layout.margin + 24, playersBoxY + 70, "No players found.", {
         fontSize: "14px",
-        color: "#94a3d4",
+        color: "#94a3d4"
       })
       .setOrigin(0, 0)
       .setVisible(false);
@@ -178,7 +179,7 @@ export class CharacterPanelPlayerListView {
       this.playersTabCardName,
       this.playersTabCardTeam,
       this.playersTabCardSprite,
-      this.playersTabEmpty,
+      this.playersTabEmpty
     ];
   }
 
@@ -190,37 +191,38 @@ export class CharacterPanelPlayerListView {
     const playersBoxY = options.contentTop;
     const playersBoxHeight = Math.max(
       BOX_HEIGHT * 2,
-      options.panelHeight - playersBoxY - options.margin,
+      options.panelHeight - playersBoxY - options.margin
     );
     this.playersTabListBackground.setPosition(options.margin, playersBoxY);
     this.playersTabListBackground.setSize(options.boxWidth, playersBoxHeight);
     this.playersTabListBackground.setDisplaySize(
       options.boxWidth,
-      playersBoxHeight,
+      playersBoxHeight
     );
     this.playersTabListTitle.setPosition(options.margin + 12, playersBoxY + 12);
     const listTop = playersBoxY + 44;
     this.playersTabCardBackground.setPosition(
       options.margin + 12,
-      playersBoxY + playersBoxHeight - 150,
+      playersBoxY + playersBoxHeight - 150
     );
     this.playersTabCardBackground.setSize(options.boxWidth - 24, 138);
     this.playersTabCardBackground.setDisplaySize(options.boxWidth - 24, 138);
     this.playersTabCardName.setPosition(
       options.margin + 24,
-      playersBoxY + playersBoxHeight - 138,
+      playersBoxY + playersBoxHeight - 138
     );
     this.playersTabCardTeam.setPosition(
       options.margin + 24,
-      playersBoxY + playersBoxHeight - 112,
+      playersBoxY + playersBoxHeight - 112
     );
     const cardRight =
       this.playersTabCardBackground.x + this.playersTabCardBackground.width;
     const cardCenterY =
-      this.playersTabCardBackground.y + this.playersTabCardBackground.height / 2;
+      this.playersTabCardBackground.y +
+      this.playersTabCardBackground.height / 2;
     this.playersTabCardSprite.setPosition(
       cardRight - CARD_SPRITE_PADDING,
-      cardCenterY,
+      cardCenterY
     );
     const cardTop = this.playersTabCardBackground.y;
     const listHeight = Math.max(0, cardTop - listTop - 12);
@@ -295,7 +297,7 @@ export class CharacterPanelPlayerListView {
     const sectionSpacing = 12;
     const containerWidth = Math.max(
       120,
-      this.playersTabListBackground.width - 24,
+      this.playersTabListBackground.width - 24
     );
     const itemWidth = Math.max(80, containerWidth - 2);
     let y = 0;
@@ -303,7 +305,7 @@ export class CharacterPanelPlayerListView {
       const teamLabel = this.scene.add
         .text(0, y, `Team ${teamId}`, {
           fontSize: "13px",
-          color: "#a0b7ff",
+          color: "#a0b7ff"
         })
         .setOrigin(0, 0);
       this.playersTabListContent.add(teamLabel);
@@ -319,13 +321,13 @@ export class CharacterPanelPlayerListView {
         const label = this.scene.add
           .text(PLAYER_LIST_LABEL_PADDING, y + rowHeight / 2, option.label, {
             fontSize: "14px",
-            color: "#ffffff",
+            color: "#ffffff"
           })
           .setOrigin(0, 0.5);
         this.fitPlayerListLabelWidth(
           label,
           option.label,
-          itemWidth - PLAYER_LIST_LABEL_PADDING * 2,
+          itemWidth - PLAYER_LIST_LABEL_PADDING * 2
         );
         button.on(Phaser.Input.Events.POINTER_UP, () => {
           this.playersTabSelection = option.id;
@@ -337,7 +339,7 @@ export class CharacterPanelPlayerListView {
         this.playersTabEntries.push({
           playerId: option.id,
           button,
-          label,
+          label
         });
         y += rowHeight + rowSpacing;
       }
@@ -382,7 +384,7 @@ export class CharacterPanelPlayerListView {
   private fitPlayerListLabelWidth(
     label: Phaser.GameObjects.Text,
     value: string,
-    maxWidth: number,
+    maxWidth: number
   ): void {
     if (label.width <= maxWidth) {
       return;
@@ -438,6 +440,6 @@ export class CharacterPanelPlayerListView {
     }
     this.playersTabCardSprite
       .setDisplaySize(CARD_SPRITE_SIZE, CARD_SPRITE_SIZE)
-      .setVisible(true);
+      .setVisible(this.playersTabListBackground.visible);
   }
 }
