@@ -5,6 +5,7 @@ import {
   DEFAULT_REPLAY_VIEW_DISTANCE,
   OPCODE_MATCH_REMOVED,
   OPCODE_MATCH_ENDED,
+  OPCODE_READY_STATE_UPDATE,
   OPCODE_SETTINGS_UPDATE,
   OPCODE_TURN_ADVANCED,
 } from "@shared";
@@ -244,6 +245,20 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
               );
             }
           }
+        } catch {}
+      } else if (msg && msg.type === "ready_state_changed") {
+        try {
+          const payload = JSON.stringify({
+            match_id: msg.match_id ?? ctx.matchId,
+            readyStates: msg.readyStates ?? {},
+          });
+          dispatcher.broadcastMessage(
+            OPCODE_READY_STATE_UPDATE,
+            payload,
+            null,
+            null,
+            true,
+          );
         } catch {}
       } else if (msg && msg.type === "match_removed") {
         try {

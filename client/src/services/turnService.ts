@@ -3,12 +3,14 @@ import { getEnv } from "./nakama";
 import {
   OPCODE_MATCH_REMOVED,
   OPCODE_MATCH_ENDED,
+  OPCODE_READY_STATE_UPDATE,
   OPCODE_SETTINGS_UPDATE,
   OPCODE_TURN_ADVANCED,
   type InMatchSettings,
   type ActionSubmission,
   type TurnAdvancedMessagePayload,
   type MatchEndedMessagePayload,
+  type ReadyStateUpdateMessagePayload,
   type SaveChatMessageRequest,
   type GetUserAccountPayload,
   type Skin,
@@ -39,6 +41,7 @@ export class TurnService {
   private onMatchRemoved?: () => void;
   private onMatchEnded?: (payload: MatchEndedMessagePayload) => void;
   private onTurnAdvanced?: (payload: TurnAdvancedMessagePayload) => void;
+  private onReadyStateUpdate?: (payload: ReadyStateUpdateMessagePayload) => void;
   private usernameCache = new Map<string, string>();
 
   constructor(
@@ -299,6 +302,17 @@ export class TurnService {
           } catch (e) {
             console.warn("Failed to parse turn advanced message", e);
           }
+        } else if (m.op_code === OPCODE_READY_STATE_UPDATE) {
+          try {
+            const payload = JSON.parse(
+              new TextDecoder().decode(m.data),
+            ) as ReadyStateUpdateMessagePayload;
+            if (this.onReadyStateUpdate) {
+              this.onReadyStateUpdate(payload);
+            }
+          } catch (e) {
+            console.warn("Failed to parse ready state update message", e);
+          }
         }
       };
     }
@@ -370,6 +384,10 @@ export class TurnService {
     this.onTurnAdvanced = cb;
   }
 
+  setOnReadyStateUpdate(cb?: (payload: ReadyStateUpdateMessagePayload) => void) {
+    this.onReadyStateUpdate = cb;
+  }
+
   // Optionally allow callers to pre-connect the socket
   async connectSocket(): Promise<void> {
     await this.ensureSocketConnected();
@@ -389,6 +407,7 @@ export class TurnService {
     this.onMatchRemoved = undefined;
     this.onMatchEnded = undefined;
     this.onTurnAdvanced = undefined;
+    this.onReadyStateUpdate = undefined;
   }
 
   // Getters for client and session (used in MainScene)

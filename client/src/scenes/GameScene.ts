@@ -28,6 +28,7 @@ import {
   type UpdateSecondaryActionPayload,
   type UpdateReadyStatePayload,
   type TurnAdvancedMessagePayload,
+  type ReadyStateUpdateMessagePayload,
   type ReplayEvent,
   type GetReplayPayload,
   type MatchChatMessage,
@@ -122,6 +123,11 @@ export class GameScene extends Phaser.Scene {
   ) => {
     this.handleMatchEnded(payload);
   };
+  private readonly readyStateUpdateHandler = (
+    payload: ReadyStateUpdateMessagePayload
+  ) => {
+    this.handleReadyStateUpdate(payload);
+  };
   private readonly pointerDownHandler = (pointer: Phaser.Input.Pointer) => {
     const overUI = this.isPointerOverUI(pointer);
     this.pointerDownInUI = overUI;
@@ -199,6 +205,7 @@ export class GameScene extends Phaser.Scene {
     if (this.turnService) {
       this.turnService.setOnTurnAdvanced(this.turnAdvancedHandler);
       this.turnService.setOnMatchEnded(this.matchEndedHandler);
+      this.turnService.setOnReadyStateUpdate(this.readyStateUpdateHandler);
       this.accountService = this.registry.get(
         "accountService"
       ) as AccountService | null;
@@ -358,6 +365,7 @@ export class GameScene extends Phaser.Scene {
       if (this.turnService) {
         this.turnService.setOnTurnAdvanced();
         this.turnService.setOnMatchEnded();
+        this.turnService.setOnReadyStateUpdate();
       }
       this.topBanner?.destroy();
       this.topBanner = null;
@@ -1612,6 +1620,22 @@ export class GameScene extends Phaser.Scene {
         void this.handleReadyStateChange(next);
       }
     }
+  }
+
+  private handleReadyStateUpdate(payload: ReadyStateUpdateMessagePayload) {
+    if (!payload || typeof payload.match_id !== "string") {
+      return;
+    }
+    const matchId = this.registry.get("currentMatchId") as string | null;
+    if (!matchId || payload.match_id !== matchId) {
+      return;
+    }
+    const match = this.currentMatch;
+    if (!match) {
+      return;
+    }
+    match.readyStates = payload.readyStates;
+    this.updateCharacterPanel(match);
   }
 
   private handleTurnAdvancedUpdate(payload: TurnAdvancedMessagePayload) {

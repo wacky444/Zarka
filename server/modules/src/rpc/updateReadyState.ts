@@ -124,6 +124,24 @@ export function updateReadyStateRpc(
     }
   }
 
+  if (!advanced) {
+    try {
+      nkWrapper.matchSignal(
+        matchId,
+        JSON.stringify({
+          type: "ready_state_changed",
+          match_id: matchId,
+          readyStates: match.readyStates,
+        }),
+      );
+    } catch (e) {
+      logger.debug(
+        "update_ready_state ready_state_changed signal failed: %s",
+        (e as Error).message,
+      );
+    }
+  }
+
   if (advanced) {
     const viewDistance = DEFAULT_REPLAY_VIEW_DISTANCE;
     const events = advanceResult?.events ?? [];
