@@ -6,6 +6,7 @@ type PlayerTabListEntry = {
   playerId: string;
   button: Phaser.GameObjects.Rectangle;
   label: Phaser.GameObjects.Text;
+  readyIcon: Phaser.GameObjects.Text;
 };
 
 type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
@@ -254,6 +255,7 @@ export class CharacterPanelPlayerListView {
     for (const entry of this.playersTabEntries) {
       entry.button.destroy();
       entry.label.destroy();
+      entry.readyIcon.destroy();
     }
     this.playersTabEntries = [];
     for (const child of [...this.playersTabListContent.list]) {
@@ -313,6 +315,15 @@ export class CharacterPanelPlayerListView {
           .setOrigin(0, 0)
           .setStrokeStyle(1, 0x2f3a5d, 1)
           .setInteractive({ useHandCursor: true });
+        const isBot = /^bot\d+$/i.test(option.id);
+        const isReady = isBot || match?.readyStates?.[option.id] === true;
+        const readyIcon = this.scene.add
+          .text(itemWidth - PLAYER_LIST_LABEL_PADDING, y + rowHeight / 2, "✓", {
+            fontSize: "14px",
+            color: "#22c55e"
+          })
+          .setOrigin(1, 0.5)
+          .setVisible(isReady);
         const label = this.scene.add
           .text(PLAYER_LIST_LABEL_PADDING, y + rowHeight / 2, option.label, {
             fontSize: "14px",
@@ -322,7 +333,7 @@ export class CharacterPanelPlayerListView {
         this.fitPlayerListLabelWidth(
           label,
           option.label,
-          itemWidth - PLAYER_LIST_LABEL_PADDING * 2
+          itemWidth - PLAYER_LIST_LABEL_PADDING * 2 - (isReady ? 20 : 0)
         );
         button.on(Phaser.Input.Events.POINTER_UP, () => {
           this.playersTabSelection = option.id;
@@ -331,10 +342,12 @@ export class CharacterPanelPlayerListView {
         });
         this.playersTabListContent.add(button);
         this.playersTabListContent.add(label);
+        this.playersTabListContent.add(readyIcon);
         this.playersTabEntries.push({
           playerId: option.id,
           button,
-          label
+          label,
+          readyIcon
         });
         y += rowHeight + rowSpacing;
       }
