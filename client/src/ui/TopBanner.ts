@@ -29,6 +29,8 @@ export class TopBanner {
   private readonly margin: number;
   private readonly height: number;
   private timer: Phaser.Time.TimerEvent | null = null;
+  private queue: TopBannerPayload[] = [];
+  private showing = false;
 
   constructor(scene: Phaser.Scene, options: TopBannerOptions = {}) {
     this.scene = scene;
@@ -79,6 +81,19 @@ export class TopBanner {
   }
 
   show(payload: TopBannerPayload): void {
+    this.queue.push(payload);
+    if (!this.showing) {
+      this.showNext();
+    }
+  }
+
+  private showNext(): void {
+    const payload = this.queue.shift();
+    if (!payload) {
+      this.hide();
+      return;
+    }
+    this.showing = true;
     if (payload.texture && payload.frame) {
       this.portrait.setTexture(payload.texture, payload.frame);
       this.portrait.setVisible(true);
@@ -93,11 +108,12 @@ export class TopBanner {
     }
     this.timer = this.scene.time.addEvent({
       delay: this.duration,
-      callback: () => this.hide(),
+      callback: () => this.showNext(),
     });
   }
 
   hide(): void {
+    this.showing = false;
     this.container.setVisible(false);
     this.timer = null;
   }
@@ -126,6 +142,8 @@ export class TopBanner {
   destroy(): void {
     this.timer?.remove();
     this.timer = null;
+    this.queue = [];
+    this.showing = false;
     this.container.destroy(true);
   }
 }

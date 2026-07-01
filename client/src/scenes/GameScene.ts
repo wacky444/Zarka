@@ -1691,6 +1691,7 @@ export class GameScene extends Phaser.Scene {
       typeof payload.turn === "number"
         ? payload.turn
         : (match.current_turn ?? 0);
+    this.topBanner?.show({ text: `Turn ${turnNumber}` });
     if (replayEvents.length > 0) {
       this.logReplayCache.set(turnNumber, replayEvents);
       this.enqueueReplay(replayEvents);
