@@ -10,13 +10,13 @@ import type {
   UpdateSkinPayload,
   UserAccount,
   Skin,
-  SkinCategory,
+  SkinCategory
 } from "@shared";
 import { SKIN_OPTIONS, SKIN_CATEGORIES, DEFAULT_SKIN } from "@shared";
 import {
   createSkinLayers,
   updateSkinLayers,
-  type SkinLayers,
+  type SkinLayers
 } from "../ui/PlayerSkinRenderer";
 
 function buildSkinItems(category: SkinCategory): GridSelectItem[] {
@@ -28,7 +28,7 @@ function buildSkinItems(category: SkinCategory): GridSelectItem[] {
       name,
       texture: "char",
       frame,
-      iconScale: 2,
+      iconScale: 2
     };
   });
 }
@@ -58,7 +58,7 @@ export class AccountScene extends Phaser.Scene {
       this.load.atlasXML(
         "char",
         assetPath("assets/spritesheets/roguelikeChar_transparent.png"),
-        assetPath("assets/spritesheets/roguelikeChar_transparent.xml"),
+        assetPath("assets/spritesheets/roguelikeChar_transparent.xml")
       );
     }
   }
@@ -76,35 +76,28 @@ export class AccountScene extends Phaser.Scene {
       .text(400, 30, "Account Settings", {
         color: "#ffffff",
         fontSize: "28px",
-        fontStyle: "bold",
+        fontStyle: "bold"
       })
       .setOrigin(0.5);
 
     this.statusText = this.add
       .text(400, 60, "", {
         color: "#cccccc",
-        fontSize: "16px",
-      })
-      .setOrigin(0.5);
-
-    this.add
-      .text(400, 90, "Account Information", {
-        color: "#ffffff",
-        fontSize: "18px",
+        fontSize: "16px"
       })
       .setOrigin(0.5);
 
     this.userInfoText = this.add
       .text(400, 115, "", {
         color: "#cccccc",
-        fontSize: "13px",
+        fontSize: "13px"
       })
       .setOrigin(0.5);
 
     this.add
       .text(400, 155, "Player Stats", {
         color: "#ffffff",
-        fontSize: "18px",
+        fontSize: "18px"
       })
       .setOrigin(0.5);
 
@@ -113,14 +106,14 @@ export class AccountScene extends Phaser.Scene {
         color: "#cccccc",
         fontSize: "13px",
         align: "center",
-        wordWrap: { width: 740 },
+        wordWrap: { width: 740 }
       })
       .setOrigin(0.5);
 
     this.add
       .text(400, 230, "Skin Customization", {
         color: "#ffffff",
-        fontSize: "18px",
+        fontSize: "18px"
       })
       .setOrigin(0.5);
 
@@ -131,14 +124,14 @@ export class AccountScene extends Phaser.Scene {
     this.add
       .text(400, fbY, "Facebook Account", {
         color: "#ffffff",
-        fontSize: "18px",
+        fontSize: "18px"
       })
       .setOrigin(0.5);
 
     this.facebookStatusText = this.add
       .text(400, fbY + 25, "Checking Facebook link status...", {
         color: "#cccccc",
-        fontSize: "13px",
+        fontSize: "13px"
       })
       .setOrigin(0.5);
 
@@ -153,7 +146,7 @@ export class AccountScene extends Phaser.Scene {
     makeButton(this, 400, 570, "Back to Game", () => {
       this.scene.start("MainScene", {
         client: this.client,
-        session: this.session,
+        session: this.session
       });
     }).setOrigin(0.5);
 
@@ -164,7 +157,7 @@ export class AccountScene extends Phaser.Scene {
     this.add
       .text(x, y - 80, "Preview", {
         color: "#aaaaaa",
-        fontSize: "13px",
+        fontSize: "13px"
       })
       .setOrigin(0.5);
 
@@ -181,7 +174,7 @@ export class AccountScene extends Phaser.Scene {
     const gap = 4;
 
     const categoriesToShow = SKIN_CATEGORIES.filter(
-      (cat) => SKIN_OPTIONS[cat].length > 0,
+      (cat) => SKIN_OPTIONS[cat].length > 0
     );
 
     for (let i = 0; i < categoriesToShow.length; i++) {
@@ -198,7 +191,7 @@ export class AccountScene extends Phaser.Scene {
         cellHeight: 96,
         modalWidth: 500,
         modalHeight: 380,
-        autoSelectFirst: false,
+        autoSelectFirst: false
       });
 
       const items = buildSkinItems(cat);
@@ -233,7 +226,7 @@ export class AccountScene extends Phaser.Scene {
     this.saving = true;
     try {
       const rpcRes = await this.client.rpc(this.session, "update_skin", {
-        skin: this.currentSkin,
+        skin: this.currentSkin
       });
       const raw = (rpcRes as unknown as { payload?: unknown }).payload;
       const result = (typeof raw === "string" ? JSON.parse(raw) : raw) as
@@ -261,7 +254,7 @@ export class AccountScene extends Phaser.Scene {
         const rpcRes = await this.client.rpc(
           this.session,
           "get_user_account",
-          {},
+          {}
         );
         const raw = (rpcRes as unknown as { payload?: unknown }).payload;
         const rpcPayload = (typeof raw === "string" ? JSON.parse(raw) : raw) as
@@ -293,13 +286,13 @@ export class AccountScene extends Phaser.Scene {
 
         const lines: string[] = [];
         lines.push(
-          `Matches: ${s.matchesPlayed} | Wins: ${s.wins} | Losses: ${s.losses} | Draws: ${s.draws}`,
+          `Matches: ${s.matchesPlayed} | Wins: ${s.wins} | Losses: ${s.losses} | Draws: ${s.draws}`
         );
         lines.push(
-          `ELO: ${s.elo} (peak ${s.highestElo}) | Rank: ${s.rankTier ?? "unranked"}`,
+          `ELO: ${s.elo} (peak ${s.highestElo}) | Rank: ${s.rankTier ?? "unranked"}`
         );
         lines.push(
-          `Win streak: ${s.currentWinStreak} (best ${s.bestWinStreak})`,
+          `Win streak: ${s.currentWinStreak} (best ${s.bestWinStreak})`
         );
 
         this.playerStatsText.setText(lines.join("\n"));
@@ -313,12 +306,12 @@ export class AccountScene extends Phaser.Scene {
       }
 
       const hasFacebook = account.devices?.some((device) =>
-        device.id?.startsWith("facebook:"),
+        device.id?.startsWith("facebook:")
       );
       this.facebookStatusText.setText(
         hasFacebook
           ? "✓ Facebook account is linked"
-          : "Facebook account is not linked",
+          : "Facebook account is not linked"
       );
     } catch (error) {
       console.error("Error loading user info:", error);
@@ -345,7 +338,7 @@ export class AccountScene extends Phaser.Scene {
       await SessionManager.linkFacebookAccount(
         this.client,
         this.session,
-        authResponse.accessToken,
+        authResponse.accessToken
       );
 
       this.statusText.setText("Facebook account linked successfully!");

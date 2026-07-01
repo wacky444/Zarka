@@ -7,7 +7,7 @@ import {
   ToggleHandle,
   addLabeledTimeInput,
   TimeInputHandle,
-  UIButton,
+  UIButton
 } from "../ui/button";
 import { InMatchSettings } from "@shared";
 
@@ -60,31 +60,31 @@ export class LobbyView {
       .setVisible(false)
       .setActive(false);
 
-    this.title = scene.add.text(10, 10, "Match Lobby", {
+    this.title = scene.add.text(10, 30, "Match Lobby", {
       color: "#ffffff",
-      fontSize: "20px",
+      fontSize: "20px"
     });
     this.container.add(this.title);
 
-    this.matchIdText = scene.add.text(10, 40, "Match: -", {
-      color: "#cccccc",
+    this.matchIdText = scene.add.text(10, 60, "Match: -", {
+      color: "#cccccc"
     });
     this.container.add(this.matchIdText);
 
-    this.matchNameText = scene.add.text(10, 60, `Name: ${this.matchName}`, {
-      color: "#cccccc",
+    this.matchNameText = scene.add.text(10, 80, `Name: ${this.matchName}`, {
+      color: "#cccccc"
     });
     this.container.add(this.matchNameText);
 
-    this.creatorText = scene.add.text(300, 40, "Creator: -", {
-      color: "#cccccc",
+    this.creatorText = scene.add.text(560, 60, "Creator: -", {
+      color: "#cccccc"
     });
     this.container.add(this.creatorText);
 
     this.renameButton = makeButton(
       scene,
       300,
-      58,
+      78,
       "Rename",
       async () => {
         this.promptRename();
@@ -94,7 +94,7 @@ export class LobbyView {
     this.container.add(this.renameButton);
     this.setRenameEnabled(this.isHost);
 
-    let y = 80;
+    let y = 120;
 
     const leaveBtn = makeButton(
       scene,
@@ -186,7 +186,7 @@ export class LobbyView {
     this.colsStepper = addLabeledStepper(
       this.scene,
       this.container,
-      230,
+      280,
       y,
       "Columns",
       1,
@@ -203,7 +203,7 @@ export class LobbyView {
     this.rowsStepper = addLabeledStepper(
       this.scene,
       this.container,
-      470,
+      560,
       y,
       "Rows",
       1,
@@ -224,7 +224,7 @@ export class LobbyView {
       this.container,
       10,
       y,
-      "Round Time",
+      "Skip Time",
       () => this.roundTime,
       (v) => {
         this.roundTime = v;
@@ -237,9 +237,9 @@ export class LobbyView {
     this.autoSkipToggle = addLabeledToggle(
       this.scene,
       this.container,
-      230,
+      280,
       y,
-      "Auto-skip",
+      "Skip",
       () => this.autoSkip,
       (v) => {
         this.autoSkip = v;
@@ -252,9 +252,9 @@ export class LobbyView {
     this.botPlayersStepper = addLabeledStepper(
       this.scene,
       this.container,
-      470,
+      560,
       y,
-      "Bot Players",
+      "Bots",
       0,
       10,
       () => this.botPlayers,
@@ -270,12 +270,12 @@ export class LobbyView {
 
     this.playerListTitle = scene.add.text(10, y, "Players", {
       color: "#a0ffa0",
-      fontSize: "18px",
+      fontSize: "18px"
     });
     this.container.add(this.playerListTitle);
 
     this.playerListText = scene.add.text(10, y + 24, "Waiting for players...", {
-      color: "#cccccc",
+      color: "#cccccc"
     });
     this.container.add(this.playerListText);
 
@@ -342,8 +342,8 @@ export class LobbyView {
     const label = isSelf
       ? "You"
       : normalizedName && normalizedName.length > 0
-      ? normalizedName
-      : creatorId ?? "-";
+        ? normalizedName
+        : (creatorId ?? "-");
     this.creatorText.setText(`Creator: ${label}`);
     this.isHost = !!isSelf;
     const enabled = this.isHost;
@@ -418,7 +418,7 @@ export class LobbyView {
       roundTime: this.roundTime,
       autoSkip: this.autoSkip,
       botPlayers: this.botPlayers,
-      name: this.matchName,
+      name: this.matchName
     };
   }
 
@@ -530,8 +530,8 @@ export class LobbyView {
       const label = this.started
         ? "[ Match Started ]"
         : this.startMatchBusy
-        ? "[ Starting... ]"
-        : "[ Start Match ]";
+          ? "[ Starting... ]"
+          : "[ Start Match ]";
       this.startMatchButton.setText(label);
       this.startMatchButton.setAlpha(this.started ? 0.6 : 0.5);
       this.startMatchButton.disableInteractive();

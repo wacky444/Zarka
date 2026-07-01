@@ -26,14 +26,14 @@ export class MatchesListView {
       .setVisible(false)
       .setActive(false);
 
-    const title = scene.add.text(10, 10, "Matches", {
+    const title = scene.add.text(10, 30, "Matches", {
       color: "#ffffff",
-      fontSize: "20px",
+      fontSize: "20px"
     });
     this.container.add(title);
 
-    this.statusText = scene.add.text(10, 40, "Fetching...", {
-      color: "#cccccc",
+    this.statusText = scene.add.text(10, 50, "Fetching...", {
+      color: "#cccccc"
     });
     this.container.add(this.statusText);
   }
@@ -115,7 +115,7 @@ export class MatchesListView {
               const text = line + status;
               const lineY = y + idx * pad;
               const lineObj = this.scene.add.text(10, lineY, text, {
-                color: "#00ffcc",
+                color: "#00ffcc"
               });
               this.container.add(lineObj);
               this.listItems.push(lineObj);
@@ -148,7 +148,7 @@ export class MatchesListView {
       const text = stateTag ? `${textBase} | ${stateTag}` : textBase;
       const lineY = y + idx * pad;
       const line = this.scene.add.text(10, lineY, text, {
-        color: "#00ffcc",
+        color: "#00ffcc"
       });
       this.container.add(line);
       this.listItems.push(line);

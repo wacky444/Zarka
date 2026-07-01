@@ -35,14 +35,14 @@ export class MyMatchesListView {
       .setVisible(false)
       .setActive(false);
 
-    const title = scene.add.text(10, 10, "My Matches", {
+    const title = scene.add.text(10, 30, "My Matches", {
       color: "#ffffff",
-      fontSize: "20px",
+      fontSize: "20px"
     });
     this.container.add(title);
 
-    this.statusText = scene.add.text(10, 40, "Fetching...", {
-      color: "#cccccc",
+    this.statusText = scene.add.text(10, 50, "Fetching...", {
+      color: "#cccccc"
     });
     this.container.add(this.statusText);
   }
@@ -124,7 +124,7 @@ export class MyMatchesListView {
       }. ${matchName} | ${playerCount}/${maxPlayers} players | ${turns} turns | ${stateLabel}${hostTag}`;
       const lineY = y + idx * pad;
       const line = this.scene.add.text(10, lineY, text, {
-        color: "#00ccff",
+        color: "#00ccff"
       });
       this.container.add(line);
       this.listItems.push(line);

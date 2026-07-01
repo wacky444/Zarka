@@ -29,7 +29,7 @@ export function makeButton(
     .text(x, y, `[ ${label} ]`, {
       color: "#00ff88",
       backgroundColor: "#00332a",
-      fontSize: "16px",
+      fontSize: "16px"
     })
     .setPadding(6)
     .setInteractive({ useHandCursor: true })
@@ -71,7 +71,7 @@ export function addLabeledStepper(
   container.add(lab);
 
   const valText = scene.add.text(x + 80, y, `${getter()}`, {
-    color: "#ffff88",
+    color: "#ffff88"
   });
   container.add(valText);
 
@@ -128,7 +128,7 @@ export function addLabeledStepper(
     setDisplayValue: (v: number) => {
       const clamped = Math.max(min, Math.min(max, v));
       valText.setText(`${clamped}`);
-    },
+    }
   };
 }
 
@@ -148,7 +148,7 @@ export function addLabeledToggle(
   container.add(lab);
 
   const valText = scene.add.text(x + 80, y, getter() ? "ON" : "OFF", {
-    color: "#ffff88",
+    color: "#ffff88"
   });
   container.add(valText);
 
@@ -188,7 +188,7 @@ export function addLabeledToggle(
     },
     setDisplayValue: (v: boolean) => {
       valText.setText(v ? "ON" : "OFF");
-    },
+    }
   };
 }
 
@@ -207,14 +207,14 @@ export function addLabeledTimeInput(
   const lab = scene.add.text(x, y, `${label}:`, { color: "#ffffff" });
   container.add(lab);
 
-  const valText = scene.add.text(x + 80, y, getter(), {
-    color: "#ffff88",
+  const valText = scene.add.text(x + 110, y, getter(), {
+    color: "#ffff88"
   });
   container.add(valText);
 
   const editBtn = makeButton(
     scene,
-    x + 130,
+    x + 160,
     y - 2,
     "Edit",
     () => {
@@ -254,6 +254,6 @@ export function addLabeledTimeInput(
     },
     setDisplayValue: (v: string) => {
       valText.setText(v);
-    },
+    }
   };
 }
