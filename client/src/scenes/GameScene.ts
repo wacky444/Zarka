@@ -1334,7 +1334,8 @@ export class GameScene extends Phaser.Scene {
       actionId: selection?.actionId ?? null,
       targetLocation: this.normalizeAxial(selection?.targetLocation),
       targetPlayerIds: normalizedPlayers,
-      targetItemIds: normalizedItems
+      targetItemIds: normalizedItems,
+      extraExecutions: typeof selection?.extraExecutions === "number" ? selection.extraExecutions : undefined
     };
     const character =
       this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
@@ -1354,7 +1355,8 @@ export class GameScene extends Phaser.Scene {
         normalizedSelection.targetPlayerIds,
         previousPlayers
       ) &&
-      this.isSameTargetItems(normalizedSelection.targetItemIds, previousItems)
+      this.isSameTargetItems(normalizedSelection.targetItemIds, previousItems) &&
+      (normalizedSelection.extraExecutions ?? 0) === (previousPlan?.extraExecutions ?? 0)
     ) {
       return;
     }
@@ -1370,7 +1372,8 @@ export class GameScene extends Phaser.Scene {
             normalizedSelection.actionId,
             normalizedSelection.targetLocation,
             normalizedSelection.targetPlayerIds,
-            normalizedSelection.targetItemIds
+            normalizedSelection.targetItemIds,
+            normalizedSelection.extraExecutions
           )
         : null;
       const res = await this.turnService.updateMainAction(matchId, submission);
@@ -1417,6 +1420,11 @@ export class GameScene extends Phaser.Scene {
           nextPlan.targetItemIds = [...payload.targetItemIds];
         } else if (nextPlan.targetItemIds) {
           delete nextPlan.targetItemIds;
+        }
+        if (typeof payload.extraExecutions === "number" && payload.extraExecutions > 0) {
+          nextPlan.extraExecutions = payload.extraExecutions;
+        } else if (nextPlan.extraExecutions) {
+          delete nextPlan.extraExecutions;
         }
         target.actionPlan.main = nextPlan;
       }
@@ -1807,7 +1815,8 @@ export class GameScene extends Phaser.Scene {
     actionId: string,
     target: Axial | null,
     targetPlayerIds: string[] | undefined,
-    targetItemIds: string[] | undefined
+    targetItemIds: string[] | undefined,
+    extraExecutions?: number
   ): ActionSubmission {
     const typedId = actionId as ActionId;
     const definition = ActionLibrary[typedId] ?? null;
@@ -1827,6 +1836,9 @@ export class GameScene extends Phaser.Scene {
     if (targetItemIds !== undefined) {
       submission.targetItemIds =
         targetItemIds.length > 0 ? [...targetItemIds] : [];
+    }
+    if (typeof extraExecutions === "number" && extraExecutions > 0) {
+      submission.extraExecutions = extraExecutions;
     }
     return submission;
   }

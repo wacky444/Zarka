@@ -47,6 +47,7 @@ export function updateMainActionRpc(
   let targetLocation: Axial | undefined;
   let targetPlayerIds: string[] | undefined;
   let targetItemIds: string[] | undefined;
+  let extraExecutions: number | undefined;
   if (submission) {
     actionId = normalizeActionId(submission.actionId);
     if (actionId.length === 0) {
@@ -106,6 +107,23 @@ export function updateMainActionRpc(
         filtered.push(trimmed);
       }
       targetItemIds = filtered.length > 0 ? filtered : undefined;
+    }
+    const rawExtraExecutions = submission.extraExecutions;
+    if (
+      typeof rawExtraExecutions === "number" &&
+      isFinite(rawExtraExecutions)
+    ) {
+      const maxRepetitions =
+        definition?.extraExecution?.maxRepetitions ??
+        (definition?.extraExecution ? 1 : 0);
+      const clamped = Math.max(
+        0,
+        Math.min(maxRepetitions, Math.floor(rawExtraExecutions))
+      );
+      if (!definition?.extraExecution && clamped > 0) {
+        throw makeNakamaError("extra_execution_not_supported", 3);
+      }
+      extraExecutions = clamped > 0 ? clamped : undefined;
     }
   }
   const clearAction = !submission;
@@ -177,6 +195,11 @@ export function updateMainActionRpc(
     } else if (nextPlan.targetItemIds) {
       delete nextPlan.targetItemIds;
     }
+    if (extraExecutions !== undefined) {
+      nextPlan.extraExecutions = extraExecutions;
+    } else if (nextPlan.extraExecutions) {
+      delete nextPlan.extraExecutions;
+    }
     character.actionPlan.main = nextPlan;
   }
   storage.writeMatch(match, read.version);
@@ -193,7 +216,8 @@ export function updateMainActionRpc(
     targetItemIds:
       clearAction || !targetItemIds || targetItemIds.length === 0
         ? undefined
-        : targetItemIds
+        : targetItemIds,
+    extraExecutions: clearAction ? undefined : extraExecutions
   };
   return JSON.stringify(response);
 }

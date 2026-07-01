@@ -120,6 +120,7 @@ export interface PlayerActionPlan {
 
 export interface PlayerPlannedAction {
   actionId: string;
+  extraExecutions?: number;
   extraEffort?: number;
   conditions?: Array<ActionCondition>;
   targetLocationId?: Axial;

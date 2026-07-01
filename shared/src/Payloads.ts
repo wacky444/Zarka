@@ -47,6 +47,7 @@ export type UpdateMainActionPayload = {
   targetLocationId?: Axial;
   targetPlayerIds?: string[];
   targetItemIds?: string[];
+  extraExecutions?: number;
   error?: string;
 };
 

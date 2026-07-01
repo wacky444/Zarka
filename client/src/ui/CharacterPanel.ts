@@ -19,6 +19,7 @@ import { GridSelect, type GridSelectItem } from "./GridSelect";
 import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
 import { ProgressBar } from "./ProgressBar";
 import { LocationSelector } from "./LocationSelector";
+import { ExtraExecutionSelector } from "./ExtraExecutionSelector";
 import { PlayerSelector, type PlayerOption } from "./PlayerSelector";
 import {
   ItemPrioritySelector,
@@ -84,6 +85,7 @@ export type MainActionSelection = {
   targetLocation: Axial | null;
   targetPlayerIds?: string[];
   targetItemIds?: string[];
+  extraExecutions?: number;
 };
 
 export type SecondaryActionSelection = {
@@ -139,6 +141,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private mainActionDropdownWidth: number;
   private secondaryActionDropdown: GridSelect;
   private secondaryActionDropdownWidth: number;
+  private extraExecutionSelector: ExtraExecutionSelector;
+  private mainExtraExecutions = 0;
   private locationSelector: LocationSelector;
   private playerSelector: PlayerSelector;
   private itemSelector: ItemPrioritySelector;
@@ -183,6 +187,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     string,
     { textureKey: string; signature: string }
   >();
+  private readonly handleMainExtraExecutionChange = (reps: number) => {
+    this.mainExtraExecutions = reps;
+    this.emitMainActionChange();
+  };
   private readonly handleMainActionSelection = (actionId: string | null) => {
     this.mainActionSelection = actionId ?? null;
     this.lastMainActionItem = this.mainActionDropdown.getSelectedItem() ?? null;
@@ -192,6 +200,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.setMainActionPriorityItems([], false);
     }
     this.refreshPlayerOptionsForSelectors();
+    this.refreshExtraExecutionSelectorState();
     this.refreshLocationSelectorState();
     this.refreshPlayerSelectorState();
     this.emitMainActionChange();
@@ -502,6 +511,20 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.mainActionDropdown.on("change", this.handleMainActionSelection);
     this.mainActionDropdown.on("modal-open", this.handleActionModalOpen);
     this.mainActionDropdown.on("modal-close", this.handleActionModalClose);
+    this.extraExecutionSelector = new ExtraExecutionSelector(
+      scene,
+      0,
+      0,
+      this.mainActionDropdownWidth
+    );
+    this.extraExecutionSelector.setEnabled(false);
+    this.extraExecutionSelector.setVisible(false);
+    this.extraExecutionSelector.setActive(false);
+    this.extraExecutionSelector.on(
+      "change",
+      this.handleMainExtraExecutionChange
+    );
+    this.scrollContent.add(this.extraExecutionSelector);
     this.locationSelector = new LocationSelector(
       scene,
       0,
@@ -792,6 +815,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       onCharacterTabShow: () => {
         this.mainActionDropdown.setVisible(true);
         this.mainActionDropdown.setActive(true);
+        this.refreshExtraExecutionSelectorState();
         this.refreshLocationSelectorState();
         this.refreshPlayerSelectorState();
         this.secondaryActionDropdown.setVisible(true);
@@ -803,6 +827,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       onCharacterTabHide: () => {
         this.mainActionDropdown.setVisible(false);
         this.mainActionDropdown.setActive(false);
+        this.extraExecutionSelector.setVisible(false);
+        this.extraExecutionSelector.setActive(false);
         this.locationSelector.setVisible(false);
         this.locationSelector.setActive(false);
         this.playerSelector.hideDropdown();
@@ -865,6 +891,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.mainActionDropdown.off("change", this.handleMainActionSelection);
     this.mainActionDropdown.off("modal-open", this.handleActionModalOpen);
     this.mainActionDropdown.off("modal-close", this.handleActionModalClose);
+    this.extraExecutionSelector.off(
+      "change",
+      this.handleMainExtraExecutionChange
+    );
     this.locationSelector.off("pick-request", this.handleLocationPickRequest);
     this.locationSelector.off("clear-request", this.handleLocationClear);
     this.playerSelector.off("change", this.handlePlayerSelection);
@@ -1134,7 +1164,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     );
     const actions = this.collectMainActions(character);
     const mainActionId = character.actionPlan?.main?.actionId ?? null;
-    this.applyMainActions(actions, mainActionId, character);
+    const mainExtraExecutions =
+      character.actionPlan?.main?.extraExecutions ?? 0;
+    this.applyMainActions(
+      actions,
+      mainActionId,
+      character,
+      mainExtraExecutions
+    );
     const targetLocation = character.actionPlan?.main?.targetLocationId ?? null;
     const normalizedTargetLocation = this.normalizeAxial(targetLocation);
     this.setMainActionTarget(normalizedTargetLocation, false);
@@ -1346,7 +1383,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private applyMainActions(
     actions: ActionId[],
     preferredId: string | null,
-    character: PlayerCharacter | null
+    character: PlayerCharacter | null,
+    storedExtraExecutions = 0
   ) {
     const items = this.buildMainActionItems(
       actions,
@@ -1368,6 +1406,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.setMainActionTarget(null, false);
       this.setMainActionTargetPlayer(null, false);
     }
+    this.refreshExtraExecutionSelectorState(storedExtraExecutions);
     this.refreshLocationSelectorState();
     this.refreshPlayerSelectorState();
     this.refreshItemSelectorState();
@@ -1539,6 +1578,38 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     };
   }
 
+  private refreshExtraExecutionSelectorState(initialReps = 0) {
+    const definition = this.mainActionSelection
+      ? (ActionLibrary[this.mainActionSelection as ActionId] ?? null)
+      : null;
+    const extraExecution = definition?.extraExecution ?? null;
+    const supports = extraExecution !== null;
+    this.extraExecutionSelector.setVisible(supports);
+    this.extraExecutionSelector.setActive(supports);
+    if (!supports) {
+      if (this.mainExtraExecutions !== 0) {
+        this.mainExtraExecutions = 0;
+      }
+      this.extraExecutionSelector.setValue(0);
+      this.extraExecutionSelector.setEnabled(false);
+      this.updateScrollLayout();
+      return;
+    }
+    this.extraExecutionSelector.configure({
+      baseCost: definition!.energyCost,
+      extraCostPerRep: extraExecution.cost,
+      maxReps: extraExecution.maxRepetitions ?? 1,
+      description: extraExecution.description
+    });
+    if (initialReps > 0) {
+      this.mainExtraExecutions = initialReps;
+      this.extraExecutionSelector.setValue(initialReps);
+    }
+    const hasSelection = this.mainActionSelection !== null;
+    this.extraExecutionSelector.setEnabled(hasSelection);
+    this.updateScrollLayout();
+  }
+
   private refreshLocationSelectorState() {
     this.lastMainActionItem = this.mainActionDropdown.getSelectedItem() ?? null;
     const supports = this.selectedActionSupportsLocation();
@@ -1704,6 +1775,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       box: Phaser.GameObjects.Rectangle,
       label: Phaser.GameObjects.Text,
       dropdown: GridSelect,
+      extraExecutionSelector: ExtraExecutionSelector | null,
       locationSelector: LocationSelector,
       playerSelector: PlayerSelector,
       itemSelector: ItemPrioritySelector
@@ -1715,6 +1787,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       dropdown.setPosition(horizontalPadding, cursorY + 48);
       dropdown.setDisplayWidth(width - horizontalPadding * 2);
       let innerCursor = cursorY + 48 + dropdown.height + 12;
+      if (extraExecutionSelector) {
+        extraExecutionSelector.setSelectorWidth(width - horizontalPadding * 2);
+        extraExecutionSelector.setPosition(horizontalPadding, innerCursor);
+        if (extraExecutionSelector.visible) {
+          innerCursor += extraExecutionSelector.height + 8;
+        }
+      }
       locationSelector.setSelectorWidth(width - horizontalPadding * 2);
       locationSelector.setPosition(horizontalPadding, innerCursor);
       if (locationSelector.visible) {
@@ -1740,6 +1819,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.mainActionBox,
       this.mainActionLabel,
       this.mainActionDropdown,
+      this.extraExecutionSelector,
       this.locationSelector,
       this.playerSelector,
       this.itemSelector
@@ -1749,6 +1829,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.secondaryActionBox,
       this.secondaryActionLabel,
       this.secondaryActionDropdown,
+      null,
       this.secondaryLocationSelector,
       this.secondaryPlayerSelector,
       this.secondaryItemSelector
@@ -2213,10 +2294,20 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     return this.lastSecondaryActionItem?.tags?.includes("TargetItems") ?? false;
   }
 
+  private selectedActionSupportsExtraExecution(): boolean {
+    if (!this.mainActionSelection) {
+      return false;
+    }
+    const definition =
+      ActionLibrary[this.mainActionSelection as ActionId] ?? null;
+    return definition?.extraExecution !== undefined;
+  }
+
   private emitMainActionChange() {
     const supportsLocation = this.selectedActionSupportsLocation();
     const supportsPlayer = this.selectedActionSupportsSingleTarget();
     const supportsItems = this.selectedActionSupportsItemPriority();
+    const supportsExtra = this.selectedActionSupportsExtraExecution();
     const payload: MainActionSelection = {
       actionId: this.mainActionSelection,
       targetLocation:
@@ -2230,7 +2321,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         : undefined,
       targetItemIds: supportsItems
         ? [...this.mainActionPriorityItems]
-        : undefined
+        : undefined,
+      extraExecutions: supportsExtra ? this.mainExtraExecutions : undefined
     };
     this.emit("main-action-change", payload);
   }

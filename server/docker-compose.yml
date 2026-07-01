@@ -34,6 +34,7 @@ services:
     environment:
       - NAKAMA_DATABASE_ADDRESS=nakama:localdev@postgres:5432/nakama0000
       - runtime.environment.ROUND_TIME_OFFSET_MINUTES=60
+      - TZ=Europe/Madrid
     volumes:
       - ./modules:/nakama/data/modules
       - ./local.yml:/nakama/data/local.yml:ro
