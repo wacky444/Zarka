@@ -233,7 +233,11 @@ export class GameScene extends Phaser.Scene {
     this.characterPanel.on("log-tab-opened", this.handleLogTabOpened, this);
     this.characterPanel.on("log-tab-closed", this.handleLogTabClosed, this);
     this.characterPanel.on("log-turn-request", this.handleLogTurnRequest, this);
-    this.characterPanel.on("log-play", this.handleLogPlayRequest, this);
+    this.characterPanel.on(
+      "log-play-manual",
+      this.handleLogPlayRequestManual,
+      this
+    );
     this.characterPanel.on("grid-modal-open", this.gridModalOpenHandler);
     this.characterPanel.on("grid-modal-close", this.gridModalCloseHandler);
     this.characterPanel.on(
@@ -335,7 +339,11 @@ export class GameScene extends Phaser.Scene {
         this.handleLogTurnRequest,
         this
       );
-      this.characterPanel?.off("log-play", this.handleLogPlayRequest, this);
+      this.characterPanel?.off(
+        "log-play-manual",
+        this.handleLogPlayRequestManual,
+        this
+      );
       this.characterPanel?.off("grid-modal-open", this.gridModalOpenHandler);
       this.characterPanel?.off("grid-modal-close", this.gridModalCloseHandler);
       this.characterPanel?.off(
@@ -2241,11 +2249,11 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private async handleLogPlayRequest(turn: number) {
+  private async handleLogPlayRequestManual(turn: number) {
     if (!this.logTabActive) {
       return;
     }
-    if (this.replayPlaying || this.manualReplayPlaying) {
+    if (this.replayPlaying) {
       return;
     }
     const events = this.logReplayCache.get(turn);

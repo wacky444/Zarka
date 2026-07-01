@@ -736,7 +736,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.emit("log-turn-request", turn);
       },
       onPlay: (turn) => {
-        this.emit("log-play", turn);
+        this.emit("log-play-manual", turn);
       },
       formatActionName: (id) => this.formatActionName(id),
       onElimination: this.handleLogElimination

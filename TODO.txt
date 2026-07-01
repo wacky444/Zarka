@@ -9,3 +9,5 @@ X randomize the location of the buildings on the map
 - in match settings fields are overlapped
 
 - notificcation when turn advances, new banner to show notifs?
+
+- auto advance turn when time has ran out, doesn't work, the timer just reset
