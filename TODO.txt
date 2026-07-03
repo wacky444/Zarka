@@ -9,3 +9,7 @@ X randomize the location of the buildings on the map
 - auto advance turn when time has ran out, doesn't work, the timer just reset
 
 - sleep that coest 0 energy reduced health in 1, only reduce health when energy is used
+
+- when atleast 1 energy, extra effort can be used at full without risk, alrady loses 1 hp
+
+- breakfast left me with 18 energy instead of 20, also damaged me

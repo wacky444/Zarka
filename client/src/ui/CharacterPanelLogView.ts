@@ -457,14 +457,23 @@ export class CharacterPanelLogView {
                   movedTo?: unknown;
                   movedFrom?: unknown;
                   energyLost?: unknown;
+                  energyRestored?: unknown;
                 };
             const movedTo = readAxialMetadata(metadata?.movedTo);
             const energyLost =
               typeof metadata?.energyLost === "number"
                 ? metadata.energyLost
                 : null;
+            const energyRestored =
+              typeof metadata?.energyRestored === "number"
+                ? metadata.energyRestored
+                : null;
             if (healed && healed > 0) {
               lines.push(`${targetName} recovered ${healed} health`);
+              continue;
+            }
+            if (energyRestored && energyRestored > 0) {
+              lines.push(`${targetName} recovered ${energyRestored} energy`);
               continue;
             }
             if (

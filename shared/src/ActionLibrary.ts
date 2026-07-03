@@ -96,6 +96,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 1,
     cooldown: 3,
+    developed: true,
     texture: "Board Game Icons",
     frame: "resource_apple.png",
     actionOrder: 1,

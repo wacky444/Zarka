@@ -1,6 +1,7 @@
 import { ActionLibrary, type ReplayEvent } from "@shared";
 import type { MoveReplayContext } from "./MoveReplayContext";
 import { animateFeedEvent } from "./replayActions/FeedAnimation";
+import { animateBreakfastEvent } from "./replayActions/BreakfastAnimation";
 import { animateDeathEvent } from "./replayActions/DeathAnimation";
 import { animateMoveEvent } from "./replayActions/MoveAnimation";
 import { animatePickUpEvent } from "./replayActions/PickUpAnimation";
@@ -35,6 +36,8 @@ export async function playReplayEvents(
       await animateSleepEvent(context, event);
     } else if (actionId === ActionLibrary.recover.id) {
       await animateRecoverEvent(context, event);
+    } else if (actionId === ActionLibrary.breakfast.id) {
+      await animateBreakfastEvent(context, event);
     } else if (actionId === ActionLibrary.feed.id) {
       await animateFeedEvent(context, event);
     } else if (actionId === ActionLibrary.protect.id) {
