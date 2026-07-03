@@ -12,6 +12,7 @@ import { MatchChatService } from "../services/chatService";
 import {
   ActionLibrary,
   ActionCategory,
+  ExtraExecutionEffect,
   CellLibrary,
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
@@ -1802,7 +1803,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const actionId = selection.actionId as ActionId;
-    const inRange = this.isLocationInRange(actionId, coord);
+    const inRange = this.isLocationInRange(actionId, coord, selection.extraExecutions);
     this.locationSelectionPointerId = null;
     this.cancelMainActionLocationPick();
     if (!inRange) {
@@ -2072,10 +2073,29 @@ export class GameScene extends Phaser.Scene {
     return { x, y, z };
   }
 
-  private isLocationInRange(actionId: ActionId, target: Axial): boolean {
+  private isLocationInRange(
+    actionId: ActionId,
+    target: Axial,
+    extraExecutions = 0
+  ): boolean {
     const definition = ActionLibrary[actionId];
-    const allowed =
-      definition?.range && definition.range.length > 0 ? definition.range : [0];
+    let allowed =
+      definition?.range && definition.range.length > 0
+        ? [...definition.range]
+        : [0];
+    if (
+      definition?.extraExecution &&
+      definition.extraExecution.effectType === ExtraExecutionEffect.IncreaseRange &&
+      extraExecutions > 0
+    ) {
+      const maxRange = Math.max(...allowed) + extraExecutions;
+      const minRange = Math.min(...allowed);
+      const newAllowed: number[] = [];
+      for (let r = minRange; r <= maxRange; r++) {
+        newAllowed.push(r);
+      }
+      allowed = newAllowed;
+    }
     const origin = this.getCurrentPlayerCoord();
     if (!origin) {
       return false;
@@ -2097,12 +2117,14 @@ export class GameScene extends Phaser.Scene {
       this.locationSelectionActive && !!this.locationSelectionActionId;
     const actionId = this.locationSelectionActionId;
     const hovered = this.locationSelectionHoveredTileId;
+    const selection = this.characterPanel?.getMainActionSelection();
+    const extraExecutions = selection?.extraExecutions ?? 0;
     for (const entry of this.mapTileSprites) {
       const { tile, image } = entry;
       const isHovered = hovered === tile.id;
       const isInRange =
         active && actionId
-          ? this.isLocationInRange(actionId, tile.coord)
+          ? this.isLocationInRange(actionId, tile.coord, extraExecutions)
           : false;
       this.updateTileTintState(image, tile, {
         isLocationSelectionActive: active,
@@ -2121,13 +2143,15 @@ export class GameScene extends Phaser.Scene {
       this.locationSelectionActive && !!this.locationSelectionActionId;
     const actionId = this.locationSelectionActionId;
     const hovered = this.locationSelectionHoveredTileId;
+    const selection = this.characterPanel?.getMainActionSelection();
+    const extraExecutions = selection?.extraExecutions ?? 0;
 
     for (const entry of this.mapTileSprites) {
       const { tile, image } = entry;
       const isHovered = hovered === tile.id;
       const isInRange =
         active && actionId
-          ? this.isLocationInRange(actionId, tile.coord)
+          ? this.isLocationInRange(actionId, tile.coord, extraExecutions)
           : false;
       this.updateTileTintState(image, tile, {
         isLocationSelectionActive: active,

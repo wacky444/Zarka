@@ -8,7 +8,7 @@ import {
   shuffleParticipants,
   type PlannedActionParticipant,
 } from "./utils";
-import { ActionLibrary } from "@shared";
+import { ActionLibrary, ExtraExecutionEffect } from "@shared";
 import { axialDistance } from "../../utils/location";
 
 export function executeMoveAction(
@@ -27,8 +27,22 @@ export function executeMoveAction(
       continue;
     }
     const definition = ActionLibrary[actionId];
-    const allowedRange =
-      definition?.range && definition.range.length > 0 ? definition.range : [0];
+    let allowedRange =
+      definition?.range && definition.range.length > 0 ? [...definition.range] : [0];
+    const extraExecutions = entry.plan.extraExecutions ?? 0;
+    if (
+      definition?.extraExecution &&
+      definition.extraExecution.effectType === ExtraExecutionEffect.IncreaseRange &&
+      extraExecutions > 0
+    ) {
+      const maxRange = Math.max(...allowedRange) + extraExecutions;
+      const minRange = Math.min(...allowedRange);
+      const newAllowed: number[] = [];
+      for (let r = minRange; r <= maxRange; r++) {
+        newAllowed.push(r);
+      }
+      allowedRange = newAllowed;
+    }
     const distance = axialDistance(originCoord, destination.coord);
     if (allowedRange.indexOf(distance) === -1) {
       clearPlanByKey(entry.character, entry.planKey);

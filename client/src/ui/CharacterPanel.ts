@@ -2475,6 +2475,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   getMainActionSelection(): MainActionSelection {
     const supportsLocation = this.selectedActionSupportsLocation();
     const supportsPlayer = this.selectedActionSupportsSingleTarget();
+    const supportsItems = this.selectedActionSupportsItemPriority();
+    const supportsExtra = this.selectedActionSupportsExtraExecution();
     return {
       actionId: this.mainActionSelection,
       targetLocation:
@@ -2485,7 +2487,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         ? this.mainActionTargetPlayerId
           ? [this.mainActionTargetPlayerId]
           : []
-        : undefined
+        : undefined,
+      targetItemIds: supportsItems
+        ? [...this.mainActionPriorityItems]
+        : undefined,
+      extraExecutions: supportsExtra ? this.mainExtraExecutions : undefined
     };
   }
 
