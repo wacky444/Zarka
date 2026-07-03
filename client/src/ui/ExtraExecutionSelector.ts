@@ -19,6 +19,7 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
   private maxReps = 0;
   private currentReps = 0;
   private maxTotalCost = 0;
+  private currentEnergy = 0;
   private enabled = false;
   private preferredWidth: number;
   private disposed = false;
@@ -94,10 +95,12 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
     extraCostPerRep: number;
     maxReps: number;
     description: string;
+    energy: number;
   }): void {
     if (this.disposed) {
       return;
     }
+    this.currentEnergy = opts.energy;
     this.baseCost = opts.baseCost;
     this.extraCostPerRep = opts.extraCostPerRep;
     this.maxReps = Math.max(0, opts.maxReps);
@@ -126,7 +129,8 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
     if (this.disposed) {
       return;
     }
-    const clamped = Math.max(0, Math.min(this.maxReps, reps));
+    const maxAllowed = this.currentEnergy <= 0 ? 0 : this.maxReps;
+    const clamped = Math.max(0, Math.min(maxAllowed, reps));
     if (this.currentReps === clamped) {
       return;
     }
@@ -149,7 +153,8 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
     if (!this.enabled || this.disposed) {
       return;
     }
-    const next = Math.max(0, Math.min(this.maxReps, this.currentReps + delta));
+    const maxAllowed = this.currentEnergy <= 0 ? 0 : this.maxReps;
+    const next = Math.max(0, Math.min(maxAllowed, this.currentReps + delta));
     if (next === this.currentReps) {
       return;
     }
@@ -177,8 +182,9 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
     if (this.disposed) {
       return;
     }
+    const maxAllowed = this.currentEnergy <= 0 ? 0 : this.maxReps;
     const canDec = this.enabled && this.currentReps > 0;
-    const canInc = this.enabled && this.currentReps < this.maxReps;
+    const canInc = this.enabled && this.currentReps < maxAllowed;
 
     if (canDec) {
       this.decButton.setAlpha(1);

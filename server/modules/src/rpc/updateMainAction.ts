@@ -196,6 +196,12 @@ export function updateMainActionRpc(
       delete nextPlan.targetItemIds;
     }
     if (extraExecutions !== undefined) {
+      if (extraExecutions > 0) {
+        const currentEnergy = character.stats?.energy?.current ?? 0;
+        if (currentEnergy <= 0) {
+          throw makeNakamaError("insufficient_energy_for_extra_effort", 9);
+        }
+      }
       nextPlan.extraExecutions = extraExecutions;
     } else if (nextPlan.extraExecutions) {
       delete nextPlan.extraExecutions;

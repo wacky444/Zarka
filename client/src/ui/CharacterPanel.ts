@@ -1578,6 +1578,15 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     };
   }
 
+  private getCurrentEnergy(): number {
+    if (!this.currentMatch || !this.currentUserId) {
+      return 0;
+    }
+    const characters = this.currentMatch.playerCharacters ?? {};
+    const character = characters[this.currentUserId] as PlayerCharacter | undefined;
+    return character?.stats?.energy?.current ?? 0;
+  }
+
   private refreshExtraExecutionSelectorState(initialReps = 0) {
     const definition = this.mainActionSelection
       ? (ActionLibrary[this.mainActionSelection as ActionId] ?? null)
@@ -1595,11 +1604,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.updateScrollLayout();
       return;
     }
+    const energy = this.getCurrentEnergy();
     this.extraExecutionSelector.configure({
       baseCost: definition!.energyCost,
       extraCostPerRep: extraExecution.cost,
       maxReps: extraExecution.maxRepetitions ?? 1,
-      description: extraExecution.description
+      description: extraExecution.description,
+      energy
     });
     if (initialReps > 0) {
       this.mainExtraExecutions = initialReps;

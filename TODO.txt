@@ -7,3 +7,5 @@ X randomize the location of the buildings on the map
 - autoadvance time should increase when the turn advances to the next day if time left is less than 1 day, and decrease when the turn advances to the next night if time left is more than 1 day
 
 - auto advance turn when time has ran out, doesn't work, the timer just reset
+
+- sleep that coest 0 energy reduced health in 1, only reduce health when energy is used
