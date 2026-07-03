@@ -1,7 +1,8 @@
 import {
   ActionCategory,
+  ExtraExecutionEffect,
   type ActionId,
-  type ActionLibraryDefinition,
+  type ActionLibraryDefinition
 } from "./Action";
 
 export const ActionLibrary: ActionLibraryDefinition = {
@@ -18,19 +19,19 @@ export const ActionLibrary: ActionLibraryDefinition = {
     actionSubOrder: 0,
     requiredItems: ["fuel"],
     requirements: [
-      { description: "Consume 2 combustibles.", consumesResource: true },
+      { description: "Consume 2 combustibles.", consumesResource: true }
     ],
     effects: [
       {
         description:
-          "Genera un incendio que inflige [color=#f97373]2[/color] de vida a quienes actúan en la localización durante los próximos 3 turnos.",
-      },
+          "Genera un incendio que inflige [color=#f97373]2[/color] de vida a quienes actúan en la localización durante los próximos 3 turnos."
+      }
     ],
     notes: [
       "Gastando 3 combustibles adicionales el incendio puede iniciarse en una localización adyacente.",
-      "Solo jugadores con Percepción 4 detectan el incendio en el turno en que se crea.",
+      "Solo jugadores con Percepción 4 detectan el incendio en el turno en que se crea."
     ],
-    tags: ["Attack", "Area", "Ranged"],
+    tags: ["Attack", "Area", "Ranged"]
   },
   recover: {
     id: "recover",
@@ -46,10 +47,10 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requirements: [{ description: "Debe realizarse en el hospital." }],
     effects: [
       {
-        description: "Recupera [color=#4ade80]5[/color] puntos de vida.",
-      },
+        description: "Recupera [color=#4ade80]5[/color] puntos de vida."
+      }
     ],
-    tags: ["Support", "Status"],
+    tags: ["Support", "Status"]
   },
   feed: {
     id: "feed",
@@ -65,29 +66,29 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requirements: [
       {
         description:
-          "Requiere tener comida, bebida o estar hambriento junto a un cadáver visible.",
-      },
+          "Requiere tener comida, bebida o estar hambriento junto a un cadáver visible."
+      }
     ],
     effects: [
       {
         description:
-          "Recupera [color=#facc15]20[/color] de esfuerzo con comida o cadáver, [color=#facc15]12[/color] con bebida; comer cadáver resta [color=#f97373]1[/color] de vida.",
+          "Recupera [color=#facc15]20[/color] de esfuerzo con comida o cadáver, [color=#facc15]12[/color] con bebida; comer cadáver resta [color=#f97373]1[/color] de vida."
       },
       {
         description:
-          "Puede alimentar a otro personaje en la misma localización.",
-      },
+          "Puede alimentar a otro personaje en la misma localización."
+      }
     ],
     extraExecution: {
       cost: 2,
       maxRepetitions: 1,
       description:
-        "Permite consumir una segunda ración en la misma acción, incluidos cadáveres si se es caníbal.",
+        "Permite consumir una segunda ración en la misma acción, incluidos cadáveres si se es caníbal."
     },
     notes: [
-      "Si no se dispone de esfuerzo suficiente al ejecutar la acción se pierde [color=#f97373]1[/color] punto de vida adicional tras completarla.",
+      "Si no se dispone de esfuerzo suficiente al ejecutar la acción se pierde [color=#f97373]1[/color] punto de vida adicional tras completarla."
     ],
-    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"],
+    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"]
   },
   breakfast: {
     id: "breakfast",
@@ -103,10 +104,10 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Recupera [color=#facc15]20[/color] puntos de esfuerzo sin consumir recursos propios.",
-      },
+          "Recupera [color=#facc15]20[/color] puntos de esfuerzo sin consumir recursos propios."
+      }
     ],
-    tags: ["Support", "Status"],
+    tags: ["Support", "Status"]
   },
   use_bandage: {
     id: "use_bandage",
@@ -123,21 +124,21 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requirements: [
       {
         description: "Requiere tener una venda disponible.",
-        consumesResource: true,
-      },
+        consumesResource: true
+      }
     ],
     effects: [
       {
         description:
-          "Recupera [color=#4ade80]5[/color] puntos de vida y puede aplicarse a un aliado en la misma localización.",
-      },
+          "Recupera [color=#4ade80]5[/color] puntos de vida y puede aplicarse a un aliado en la misma localización."
+      }
     ],
     extraExecution: {
       cost: 2,
       maxRepetitions: 1,
-      description: "Permite gastar una segunda venda en la misma acción.",
+      description: "Permite gastar una segunda venda en la misma acción."
     },
-    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"],
+    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"]
   },
   use_medicine: {
     id: "use_medicine",
@@ -151,20 +152,20 @@ export const ActionLibrary: ActionLibraryDefinition = {
     actionSubOrder: 4,
     requiredItems: ["medicine"],
     requirements: [
-      { description: "Requiere tener un medicamento.", consumesResource: true },
+      { description: "Requiere tener un medicamento.", consumesResource: true }
     ],
     effects: [
       {
         description:
-          "Recupera [color=#4ade80]8[/color] puntos de vida y puede aplicarse a otro personaje en la misma localización.",
-      },
+          "Recupera [color=#4ade80]8[/color] puntos de vida y puede aplicarse a otro personaje en la misma localización."
+      }
     ],
     extraExecution: {
       cost: 1,
       maxRepetitions: 1,
-      description: "Permite emplear un segundo medicamento.",
+      description: "Permite emplear un segundo medicamento."
     },
-    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"],
+    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"]
   },
   talk: {
     id: "talk",
@@ -173,19 +174,19 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 1,
     cooldown: 1,
     requirements: [
-      { description: "Debe verse a un personaje neutral o a un sicario." },
+      { description: "Debe verse a un personaje neutral o a un sicario." }
     ],
     effects: [
       {
         description:
-          "Permite interactuar con neutrales o sicarios; la conversación se oye en la localización sin revelar el contenido.",
-      },
+          "Permite interactuar con neutrales o sicarios; la conversación se oye en la localización sin revelar el contenido."
+      }
     ],
     texture: "Board Game Icons",
     frame: "book_open.png",
     actionOrder: 2,
     actionSubOrder: 0,
-    tags: ["Utility", "Support"],
+    tags: ["Utility", "Support"]
   },
   place_tracker: {
     id: "place_tracker",
@@ -198,24 +199,24 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requirements: [
       {
         description: "Requiere disponer de un localizador.",
-        consumesResource: true,
-      },
+        consumesResource: true
+      }
     ],
     effects: [
       {
         description:
-          "Otorga visibilidad durante 6 turnos de la posición del objetivo; puede colocarse en una localización adyacente con visión o enlaces de walkie talkie.",
-      },
+          "Otorga visibilidad durante 6 turnos de la posición del objetivo; puede colocarse en una localización adyacente con visión o enlaces de walkie talkie."
+      }
     ],
     extraExecution: {
       cost: 1,
-      description: "Permite colocar un segundo localizador en el mismo turno.",
+      description: "Permite colocar un segundo localizador en el mismo turno."
     },
     texture: "Board Game Icons",
     frame: "token.png",
     actionOrder: 2,
     actionSubOrder: 1,
-    tags: ["Recon", "Utility", "Ranged", "SingleTarget"],
+    tags: ["Recon", "Utility", "Ranged", "SingleTarget"]
   },
   place_c4: {
     id: "place_c4",
@@ -227,24 +228,24 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requirements: [
       {
         description: "Requiere tener una carga de C4.",
-        consumesResource: true,
-      },
+        consumesResource: true
+      }
     ],
     effects: [
       {
         description:
-          "Instala un explosivo en la localización actual que podrá detonarse en turnos posteriores.",
-      },
+          "Instala un explosivo en la localización actual que podrá detonarse en turnos posteriores."
+      }
     ],
     extraExecution: {
       cost: 2,
-      description: "Permite colocar una segunda carga de C4.",
+      description: "Permite colocar una segunda carga de C4."
     },
     texture: "Board Game Icons",
     frame: "exploding.png",
     actionOrder: 2,
     actionSubOrder: 2,
-    tags: ["Attack", "Area", "Logistics"],
+    tags: ["Attack", "Area", "Logistics"]
   },
   place_trap: {
     id: "place_trap",
@@ -254,23 +255,23 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     requiredItems: ["trap"],
     requirements: [
-      { description: "Requiere tener una trampa.", consumesResource: true },
+      { description: "Requiere tener una trampa.", consumesResource: true }
     ],
     effects: [
       {
         description:
-          "Instala una trampa en una entrada que inflige [color=#f97373]7[/color] de vida al primer personaje que entre o salga por ella.",
-      },
+          "Instala una trampa en una entrada que inflige [color=#f97373]7[/color] de vida al primer personaje que entre o salga por ella."
+      }
     ],
     extraExecution: {
       cost: 2,
-      description: "Permite colocar una trampa adicional.",
+      description: "Permite colocar una trampa adicional."
     },
     texture: "Board Game Icons",
     frame: "puzzle.png",
     actionOrder: 2,
     actionSubOrder: 3,
-    tags: ["Attack", "Logistics"],
+    tags: ["Attack", "Logistics"]
   },
   protect: {
     id: "protect",
@@ -281,19 +282,19 @@ export const ActionLibrary: ActionLibraryDefinition = {
     developed: true,
     experience: {
       base: 0,
-      conditional: [{ value: 3, condition: "Si la protección evita daño." }],
+      conditional: [{ value: 3, condition: "Si la protección evita daño." }]
     },
     effects: [
       {
         description:
-          "Reduce un tercio del daño recibido y puede asignarse a otro personaje; bloquea asaltos, robos y registros salvo consentimiento.",
-      },
+          "Reduce un tercio del daño recibido y puede asignarse a otro personaje; bloquea asaltos, robos y registros salvo consentimiento."
+      }
     ],
     texture: "Board Game Icons",
     frame: "shield.png",
     actionOrder: 3,
     actionSubOrder: 0,
-    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"],
+    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"]
   },
   dodge: {
     id: "dodge",
@@ -303,23 +304,23 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     experience: {
       base: 0,
-      conditional: [{ value: 5, condition: "Si la esquiva tiene éxito." }],
+      conditional: [{ value: 5, condition: "Si la esquiva tiene éxito." }]
     },
     effects: [
       {
         description:
-          "Otorga un 25% de probabilidad de evitar la primera agresión recibida; no afecta a daños de área como incendios o C4.",
-      },
+          "Otorga un 25% de probabilidad de evitar la primera agresión recibida; no afecta a daños de área como incendios o C4."
+      }
     ],
     extraExecution: {
       cost: 2,
-      description: "Permite intentar esquivar una agresión adicional.",
+      description: "Permite intentar esquivar una agresión adicional."
     },
     texture: "Board Game Icons",
     frame: "pawn_skip.png",
     actionOrder: 3,
     actionSubOrder: 1,
-    tags: ["Support", "Status"],
+    tags: ["Support", "Status"]
   },
   knife_attack: {
     id: "knife_attack",
@@ -332,28 +333,28 @@ export const ActionLibrary: ActionLibraryDefinition = {
       base: 1,
       conditional: [
         { value: 2, condition: "Si causa daño." },
-        { value: 5, condition: "Si mata al objetivo." },
-      ],
+        { value: 5, condition: "Si mata al objetivo." }
+      ]
     },
     requiredItems: ["knife"],
     requirements: [{ description: "Requiere portar un cuchillo." }],
     effects: [
       {
         description:
-          "Inflige [color=#f97373]4[/color] puntos de vida al objetivo.",
-      },
+          "Inflige [color=#f97373]4[/color] puntos de vida al objetivo."
+      }
     ],
     extraExecution: {
       cost: 3,
       maxRepetitions: 3,
       description:
-        "Cada repetición aumenta el daño en [color=#f97373]1[/color] punto, hasta +[color=#f97373]3[/color].",
+        "Cada repetición aumenta el daño en [color=#f97373]1[/color] punto, hasta +[color=#f97373]3[/color]."
     },
     texture: "Board Game Icons",
     frame: "hand_cross.png",
     actionOrder: 4,
     actionSubOrder: 0,
-    tags: ["Attack", "SingleTarget"],
+    tags: ["Attack", "SingleTarget"]
   },
   move: {
     id: "move",
@@ -367,14 +368,15 @@ export const ActionLibrary: ActionLibraryDefinition = {
     extraExecution: {
       cost: 3,
       maxRepetitions: 3,
+      effectType: ExtraExecutionEffect.IncreaseRange,
       description:
-        "Cada repetición permite avanzar una localización adicional indicando el recorrido.",
+        "Cada repetición permite avanzar una localización adicional indicando el recorrido."
     },
     texture: "Board Game Icons",
     frame: "arrow_right.png",
     actionOrder: 5,
     actionSubOrder: 0,
-    tags: ["Movement", "Ranged"],
+    tags: ["Movement", "Ranged"]
   },
   refuel: {
     id: "refuel",
@@ -388,7 +390,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "tokens.png",
     actionOrder: 6,
     actionSubOrder: 0,
-    tags: ["Logistics", "Economy"],
+    tags: ["Logistics", "Economy"]
   },
   pick_up: {
     id: "pick_up",
@@ -402,13 +404,13 @@ export const ActionLibrary: ActionLibraryDefinition = {
     extraExecution: {
       cost: 1,
       maxRepetitions: 3,
-      description: "Cada repetición añade un objeto adicional.",
+      description: "Cada repetición añade un objeto adicional."
     },
     texture: "Board Game Icons",
     frame: "hand_token.png",
     actionOrder: 6,
     actionSubOrder: 1,
-    tags: ["Logistics", "TargetItems"],
+    tags: ["Logistics", "TargetItems"]
   },
   search: {
     id: "search",
@@ -421,13 +423,13 @@ export const ActionLibrary: ActionLibraryDefinition = {
     extraExecution: {
       cost: 1,
       maxRepetitions: 3,
-      description: "Cada repetición descubre un objeto adicional.",
+      description: "Cada repetición descubre un objeto adicional."
     },
     texture: "Board Game Icons",
     frame: "cards_seek.png",
     actionOrder: 6,
     actionSubOrder: 2,
-    tags: ["Recon", "Logistics"],
+    tags: ["Recon", "Logistics"]
   },
   manipulate: {
     id: "manipulate",
@@ -440,13 +442,13 @@ export const ActionLibrary: ActionLibraryDefinition = {
     extraExecution: {
       cost: 1,
       maxRepetitions: 3,
-      description: "Permite realizar manipulaciones adicionales.",
+      description: "Permite realizar manipulaciones adicionales."
     },
     texture: "Board Game Icons",
     frame: "card_flip.png",
     actionOrder: 6,
     actionSubOrder: 3,
-    tags: ["Crafting"],
+    tags: ["Crafting"]
   },
   give: {
     id: "give",
@@ -459,13 +461,13 @@ export const ActionLibrary: ActionLibraryDefinition = {
     extraExecution: {
       cost: 1,
       maxRepetitions: 3,
-      description: "Permite entregar objetos adicionales en la misma acción.",
+      description: "Permite entregar objetos adicionales en la misma acción."
     },
     texture: "Board Game Icons",
     frame: "token_give.png",
     actionOrder: 6,
     actionSubOrder: 4,
-    tags: ["Support", "Logistics", "SingleTarget"],
+    tags: ["Support", "Logistics", "SingleTarget"]
   },
   poison_food: {
     id: "poison_food",
@@ -475,34 +477,34 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     experience: {
       base: 0,
-      conditional: [{ value: 3, condition: "Si alguien resulta intoxicado." }],
+      conditional: [{ value: 3, condition: "Si alguien resulta intoxicado." }]
     },
     requiredItems: ["poison"],
     requirements: [
       {
         description: "Requiere veneno y un objetivo con alimento.",
-        consumesResource: true,
-      },
+        consumesResource: true
+      }
     ],
     effects: [
       {
         description:
-          "Envenena una ración, bebida o alimento visible; al consumirlo el objetivo pierde [color=#f97373]1[/color] de vida durante 5 acciones y duplica su esfuerzo extra.",
-      },
+          "Envenena una ración, bebida o alimento visible; al consumirlo el objetivo pierde [color=#f97373]1[/color] de vida durante 5 acciones y duplica su esfuerzo extra."
+      }
     ],
     extraExecution: {
       cost: 1,
-      description: "Permite envenenar un segundo alimento.",
+      description: "Permite envenenar un segundo alimento."
     },
     notes: [
       "Si el objetivo ya estaba intoxicado se desmaya; si estaba herido muere.",
-      "Otorga 5 zarkans en el siguiente turno múltiplo de 5 cuando el veneno se activa sin pacto previo.",
+      "Otorga 5 zarkans en el siguiente turno múltiplo de 5 cuando el veneno se activa sin pacto previo."
     ],
     texture: "Board Game Icons",
     frame: "skull.png",
     actionOrder: 7,
     actionSubOrder: 0,
-    tags: ["Attack", "Status"],
+    tags: ["Attack", "Status"]
   },
   drop: {
     id: "drop",
@@ -514,19 +516,19 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Permite soltar un objeto en la localización o almacenarlo en taquilla para venta diferida.",
-      },
+          "Permite soltar un objeto en la localización o almacenarlo en taquilla para venta diferida."
+      }
     ],
     extraExecution: {
       cost: 1,
       maxRepetitions: 3,
-      description: "Permite dejar objetos adicionales.",
+      description: "Permite dejar objetos adicionales."
     },
     texture: "Board Game Icons",
     frame: "token_remove.png",
     actionOrder: 8,
     actionSubOrder: 0,
-    tags: ["Logistics"],
+    tags: ["Logistics"]
   },
   throw_object: {
     id: "throw_object",
@@ -539,26 +541,26 @@ export const ActionLibrary: ActionLibraryDefinition = {
       base: 1,
       conditional: [
         { value: 2, condition: "Si impacta." },
-        { value: 5, condition: "Si mata." },
-      ],
+        { value: 5, condition: "Si mata." }
+      ]
     },
     requirements: [{ description: "Debe poseer el objeto que lanza." }],
     effects: [
       {
         description:
-          "Inflige [color=#f97373]4[/color] de vida si es un molotov o [color=#f97373]1[/color] con otro objeto; puede lanzarse a la misma localización o a una adyacente sin priorizar salvo visión especial.",
-      },
+          "Inflige [color=#f97373]4[/color] de vida si es un molotov o [color=#f97373]1[/color] con otro objeto; puede lanzarse a la misma localización o a una adyacente sin priorizar salvo visión especial."
+      }
     ],
     extraExecution: {
       cost: 2,
       maxRepetitions: 3,
-      description: "Permite lanzar objetos adicionales.",
+      description: "Permite lanzar objetos adicionales."
     },
     texture: "Board Game Icons",
     frame: "hand.png",
     actionOrder: 8,
     actionSubOrder: 1,
-    tags: ["Attack", "Area", "Ranged"],
+    tags: ["Attack", "Area", "Ranged"]
   },
   use_chemical_weapon: {
     id: "use_chemical_weapon",
@@ -570,24 +572,24 @@ export const ActionLibrary: ActionLibraryDefinition = {
       base: 1,
       conditional: [
         { value: 1, condition: "Por cada objetivo afectado." },
-        { value: 5, condition: "Si alguna víctima muere." },
-      ],
+        { value: 5, condition: "Si alguna víctima muere." }
+      ]
     },
     requiredItems: ["chemical_weapon"],
     requirements: [
-      { description: "Requiere un arma química.", consumesResource: true },
+      { description: "Requiere un arma química.", consumesResource: true }
     ],
     effects: [
       {
         description:
-          "Inflige [color=#f97373]9[/color] de vida a todos en la localización (excepto al usuario) o [color=#f97373]11[/color] a un único objetivo; no puede esquivarse.",
-      },
+          "Inflige [color=#f97373]9[/color] de vida a todos en la localización (excepto al usuario) o [color=#f97373]11[/color] a un único objetivo; no puede esquivarse."
+      }
     ],
     texture: "Board Game Icons",
     frame: "flask_full.png",
     actionOrder: 9,
     actionSubOrder: 0,
-    tags: ["Attack", "Area"],
+    tags: ["Attack", "Area"]
   },
   scare: {
     id: "scare",
@@ -600,20 +602,20 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Obliga al objetivo a huir a una localización aleatoria adyacente y le hace perder [color=#facc15]3[/color] de esfuerzo.",
-      },
+          "Obliga al objetivo a huir a una localización aleatoria adyacente y le hace perder [color=#facc15]3[/color] de esfuerzo."
+      }
     ],
     extraExecution: {
       cost: 3,
       maxRepetitions: 1,
       description:
-        "Permite elegir la dirección o asustar a un segundo personaje.",
+        "Permite elegir la dirección o asustar a un segundo personaje."
     },
     texture: "Board Game Icons",
     frame: "character_lift.png",
     actionOrder: 10,
     actionSubOrder: 0,
-    tags: ["Attack", "Utility", "Ranged", "SingleTarget"],
+    tags: ["Attack", "Utility", "Ranged", "SingleTarget"]
   },
   detonate_c4: {
     id: "detonate_c4",
@@ -623,23 +625,23 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     requiredItems: ["detonator"],
     requirements: [
-      { description: "Requiere portar el detonador vinculado al C4." },
+      { description: "Requiere portar el detonador vinculado al C4." }
     ],
     effects: [
       {
         description:
-          "Activa todas las cargas colocadas por el usuario en esa localización infligiendo [color=#f97373]12[/color] de vida; la explosión se oye a dos casillas.",
-      },
+          "Activa todas las cargas colocadas por el usuario en esa localización infligiendo [color=#f97373]12[/color] de vida; la explosión se oye a dos casillas."
+      }
     ],
     extraExecution: {
       cost: 1,
-      description: "Permite detonar una segunda carga independiente.",
+      description: "Permite detonar una segunda carga independiente."
     },
     texture: "Board Game Icons",
     frame: "exploding_6.png",
     actionOrder: 11,
     actionSubOrder: 0,
-    tags: ["Attack", "Area"],
+    tags: ["Attack", "Area"]
   },
   axe_attack: {
     id: "axe_attack",
@@ -652,27 +654,27 @@ export const ActionLibrary: ActionLibraryDefinition = {
       base: 1,
       conditional: [
         { value: 2, condition: "Si causa daño." },
-        { value: 5, condition: "Si mata." },
-      ],
+        { value: 5, condition: "Si mata." }
+      ]
     },
     requiredItems: ["axe"],
     requirements: [{ description: "Requiere tener un hacha." }],
     effects: [
       {
-        description: "Inflige [color=#f97373]8[/color] de vida al objetivo.",
-      },
+        description: "Inflige [color=#f97373]8[/color] de vida al objetivo."
+      }
     ],
     extraExecution: {
       cost: 3,
       maxRepetitions: 3,
       description:
-        "Cada repetición añade [color=#f97373]1[/color] punto de daño adicional hasta +[color=#f97373]3[/color].",
+        "Cada repetición añade [color=#f97373]1[/color] punto de daño adicional hasta +[color=#f97373]3[/color]."
     },
     texture: "Board Game Icons",
     frame: "sword.png",
     actionOrder: 11,
     actionSubOrder: 1,
-    tags: ["Attack", "SingleTarget"],
+    tags: ["Attack", "SingleTarget"]
   },
   bat_attack: {
     id: "bat_attack",
@@ -684,28 +686,28 @@ export const ActionLibrary: ActionLibraryDefinition = {
       base: 1,
       conditional: [
         { value: 1, condition: "Por cada objetivo impactado." },
-        { value: 5, condition: "Si mata." },
-      ],
+        { value: 5, condition: "Si mata." }
+      ]
     },
     requiredItems: ["bat"],
     requirements: [{ description: "Requiere tener un bate." }],
     effects: [
       {
         description:
-          "Inflige [color=#f97373]5[/color] de vida a todos en la localización ([color=#f97373]7[/color] con bate de clavos) permitiendo excluir objetivos específicos.",
-      },
+          "Inflige [color=#f97373]5[/color] de vida a todos en la localización ([color=#f97373]7[/color] con bate de clavos) permitiendo excluir objetivos específicos."
+      }
     ],
     extraExecution: {
       cost: 3,
       maxRepetitions: 3,
       description:
-        "Cada repetición aumenta el daño en [color=#f97373]1[/color] punto.",
+        "Cada repetición aumenta el daño en [color=#f97373]1[/color] punto."
     },
     texture: "Board Game Icons",
     frame: "sword.png",
     actionOrder: 11,
     actionSubOrder: 2,
-    tags: ["Attack", "Area"],
+    tags: ["Attack", "Area"]
   },
   chainsaw_attack: {
     id: "chainsaw_attack",
@@ -717,21 +719,21 @@ export const ActionLibrary: ActionLibraryDefinition = {
       base: 1,
       conditional: [
         { value: 1, condition: "Si causa daño." },
-        { value: 5, condition: "Si mata." },
-      ],
+        { value: 5, condition: "Si mata." }
+      ]
     },
     requiredItems: ["chainsaw"],
     requirements: [
       {
-        description: "Requiere una motosierra encendida durante el turno.",
-      },
+        description: "Requiere una motosierra encendida durante el turno."
+      }
     ],
     effects: [{ description: "Elimina de inmediato al objetivo." }],
     texture: "Board Game Icons",
     frame: "sword.png",
     actionOrder: 11,
     actionSubOrder: 4,
-    tags: ["Attack", "SingleTarget"],
+    tags: ["Attack", "SingleTarget"]
   },
   start_chainsaw: {
     id: "start_chainsaw",
@@ -743,20 +745,20 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requirements: [
       {
         description: "Requiere motosierra y 1 unidad de combustible.",
-        consumesResource: true,
-      },
+        consumesResource: true
+      }
     ],
     effects: [
       {
         description:
-          "Activa la motosierra durante 5 turnos; el sonido se escucha en la localización.",
-      },
+          "Activa la motosierra durante 5 turnos; el sonido se escucha en la localización."
+      }
     ],
     texture: "Board Game Icons",
     frame: "spinner.png",
     actionOrder: 11,
     actionSubOrder: 3,
-    tags: ["Logistics"],
+    tags: ["Logistics"]
   },
   shoot_pistol: {
     id: "shoot_pistol",
@@ -769,29 +771,29 @@ export const ActionLibrary: ActionLibraryDefinition = {
       base: 1,
       conditional: [
         { value: 2, condition: "Si impacta." },
-        { value: 5, condition: "Si mata." },
-      ],
+        { value: 5, condition: "Si mata." }
+      ]
     },
     requiredItems: ["pistol", "bullet"],
     requirements: [
-      { description: "Requiere pistola y bala.", consumesResource: true },
+      { description: "Requiere pistola y bala.", consumesResource: true }
     ],
     effects: [
       {
         description:
-          "Inflige [color=#f97373]10[/color] de vida a un objetivo en la misma localización o adyacente; el disparo se oye a una casilla salvo silenciador.",
-      },
+          "Inflige [color=#f97373]10[/color] de vida a un objetivo en la misma localización o adyacente; el disparo se oye a una casilla salvo silenciador."
+      }
     ],
     extraExecution: {
       cost: 2,
       maxRepetitions: 1,
-      description: "Permite disparar una segunda bala.",
+      description: "Permite disparar una segunda bala."
     },
     texture: "Board Game Icons",
     frame: "dice_sword.png",
     actionOrder: 11,
     actionSubOrder: 5,
-    tags: ["Attack", "Ranged", "SingleTarget"],
+    tags: ["Attack", "Ranged", "SingleTarget"]
   },
   shoot_harpoon: {
     id: "shoot_harpoon",
@@ -804,29 +806,29 @@ export const ActionLibrary: ActionLibraryDefinition = {
       base: 1,
       conditional: [
         { value: 2, condition: "Si impacta." },
-        { value: 5, condition: "Si mata." },
-      ],
+        { value: 5, condition: "Si mata." }
+      ]
     },
     requiredItems: ["harpoon", "arrow"],
     requirements: [
-      { description: "Requiere arpón y flecha.", consumesResource: true },
+      { description: "Requiere arpón y flecha.", consumesResource: true }
     ],
     effects: [
       {
         description:
-          "Inflige [color=#f97373]7[/color] de vida en la misma localización o [color=#f97373]6[/color] a una adyacente sin generar ruido.",
-      },
+          "Inflige [color=#f97373]7[/color] de vida en la misma localización o [color=#f97373]6[/color] a una adyacente sin generar ruido."
+      }
     ],
     extraExecution: {
       cost: 2,
       maxRepetitions: 1,
-      description: "Permite disparar una segunda flecha.",
+      description: "Permite disparar una segunda flecha."
     },
     texture: "Board Game Icons",
     frame: "bow.png",
     actionOrder: 11,
     actionSubOrder: 6,
-    tags: ["Attack", "Ranged", "SingleTarget"],
+    tags: ["Attack", "Ranged", "SingleTarget"]
   },
   fire_rocket_launcher: {
     id: "fire_rocket_launcher",
@@ -839,24 +841,24 @@ export const ActionLibrary: ActionLibraryDefinition = {
       base: 1,
       conditional: [
         { value: 1, condition: "Por cada objetivo afectado." },
-        { value: 5, condition: "Si mata." },
-      ],
+        { value: 5, condition: "Si mata." }
+      ]
     },
     requiredItems: ["rocket_launcher"],
     requirements: [
-      { description: "Requiere un lanzacohetes.", consumesResource: true },
+      { description: "Requiere un lanzacohetes.", consumesResource: true }
     ],
     effects: [
       {
         description:
-          "Destruye la localización objetivo y todos los objetos, infligiendo [color=#f97373]20[/color] de vida a cada presencia; visible desde todo el pueblo.",
-      },
+          "Destruye la localización objetivo y todos los objetos, infligiendo [color=#f97373]20[/color] de vida a cada presencia; visible desde todo el pueblo."
+      }
     ],
     texture: "Board Game Icons",
     frame: "exploding.png",
     actionOrder: 11,
     actionSubOrder: 7,
-    tags: ["Attack", "Area", "Ranged"],
+    tags: ["Attack", "Area", "Ranged"]
   },
   punch: {
     id: "punch",
@@ -869,25 +871,25 @@ export const ActionLibrary: ActionLibraryDefinition = {
       base: 1,
       conditional: [
         { value: 2, condition: "Si impacta." },
-        { value: 5, condition: "Si mata." },
-      ],
+        { value: 5, condition: "Si mata." }
+      ]
     },
     effects: [
       {
-        description: "Inflige [color=#f97373]2[/color] puntos de vida.",
-      },
+        description: "Inflige [color=#f97373]2[/color] puntos de vida."
+      }
     ],
     extraExecution: {
       cost: 3,
       maxRepetitions: 3,
       description:
-        "Cada repetición añade [color=#f97373]1[/color] punto de daño.",
+        "Cada repetición añade [color=#f97373]1[/color] punto de daño."
     },
     texture: "Board Game Icons",
     frame: "hand.png",
     actionOrder: 11,
     actionSubOrder: 8,
-    tags: ["Attack", "SingleTarget"],
+    tags: ["Attack", "SingleTarget"]
   },
   pick_lock: {
     id: "pick_lock",
@@ -897,21 +899,21 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     experience: {
       base: 0,
-      conditional: [{ value: 2, condition: "Si la cerradura se abre." }],
+      conditional: [{ value: 2, condition: "Si la cerradura se abre." }]
     },
     requirements: [{ description: "Debe ver una caja fuerte." }],
     effects: [
       {
         description:
-          "Tras 4 turnos continuados revela los contenidos de la caja fuerte; moverse interrumpe el proceso.",
-      },
+          "Tras 4 turnos continuados revela los contenidos de la caja fuerte; moverse interrumpe el proceso."
+      }
     ],
     notes: ["Ganzúas o la habilidad Destreza 1 reducen el tiempo requerido."],
     texture: "Board Game Icons",
     frame: "lock_open.png",
     actionOrder: 12,
     actionSubOrder: 0,
-    tags: ["Logistics", "Recon"],
+    tags: ["Logistics", "Recon"]
   },
   steal: {
     id: "steal",
@@ -921,24 +923,24 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     experience: {
       base: 0,
-      conditional: [{ value: 4, condition: "Por cada objeto robado." }],
+      conditional: [{ value: 4, condition: "Por cada objeto robado." }]
     },
     effects: [
       {
         description:
-          "Sustrae un objeto aleatorio o uno identificado previamente mediante registro; puede aplicarse a desmayados o muertos.",
-      },
+          "Sustrae un objeto aleatorio o uno identificado previamente mediante registro; puede aplicarse a desmayados o muertos."
+      }
     ],
     extraExecution: {
       cost: 3,
       maxRepetitions: 1,
-      description: "Permite realizar un segundo robo en la misma acción.",
+      description: "Permite realizar un segundo robo en la misma acción."
     },
     texture: "Board Game Icons",
     frame: "pouch_remove.png",
     actionOrder: 13,
     actionSubOrder: 0,
-    tags: ["Attack", "Economy", "SingleTarget"],
+    tags: ["Attack", "Economy", "SingleTarget"]
   },
   fabricate: {
     id: "fabricate",
@@ -949,20 +951,20 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requirements: [
       {
         description:
-          "Debe realizarse en el taller salvo que se posea la habilidad Destreza 4.",
-      },
+          "Debe realizarse en el taller salvo que se posea la habilidad Destreza 4."
+      }
     ],
     effects: [
       {
         description:
-          "Permite fabricar pistola, bala, molotov, bate, hacha, cuchillo, arpón, flecha, trampa o C4 siguiendo las recetas del juego.",
-      },
+          "Permite fabricar pistola, bala, molotov, bate, hacha, cuchillo, arpón, flecha, trampa o C4 siguiendo las recetas del juego."
+      }
     ],
     texture: "Board Game Icons",
     frame: "cards_stack.png",
     actionOrder: 14,
     actionSubOrder: 0,
-    tags: ["Crafting", "Logistics"],
+    tags: ["Crafting", "Logistics"]
   },
   black_market_trade: {
     id: "black_market_trade",
@@ -974,14 +976,14 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Permite vender hasta 4 objetos obteniendo 1 zarkan adicional por cada uno; el pago es inmediato.",
-      },
+          "Permite vender hasta 4 objetos obteniendo 1 zarkan adicional por cada uno; el pago es inmediato."
+      }
     ],
     texture: "Board Game Icons",
     frame: "dollar.png",
     actionOrder: 14,
     actionSubOrder: 1,
-    tags: ["Economy", "Logistics"],
+    tags: ["Economy", "Logistics"]
   },
   inspect: {
     id: "inspect",
@@ -992,19 +994,19 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Descubre 3 objetos que porta un personaje vivo o muerto; puede usarse en uno mismo para localizar rastreadores.",
-      },
+          "Descubre 3 objetos que porta un personaje vivo o muerto; puede usarse en uno mismo para localizar rastreadores."
+      }
     ],
     extraExecution: {
       cost: 2,
       description:
-        "Permite realizar un segundo registro o revelar 3 objetos adicionales.",
+        "Permite realizar un segundo registro o revelar 3 objetos adicionales."
     },
     texture: "Board Game Icons",
     frame: "notepad.png",
     actionOrder: 14,
     actionSubOrder: 2,
-    tags: ["Recon", "Logistics", "SingleTarget", "CanTargetSelf"],
+    tags: ["Recon", "Logistics", "SingleTarget", "CanTargetSelf"]
   },
   focus: {
     id: "focus",
@@ -1016,23 +1018,23 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Otorga [color=#facc15]6[/color] puntos de esfuerzo gratuito para el próximo turno.",
-      },
+          "Otorga [color=#facc15]6[/color] puntos de esfuerzo gratuito para el próximo turno."
+      }
     ],
     extraExecution: {
       cost: 1,
       maxRepetitions: 3,
       description:
-        "Por cada punto de vida sacrificado se recuperan [color=#facc15]3[/color] puntos de esfuerzo, hasta [color=#facc15]9[/color] puntos totales.",
+        "Por cada punto de vida sacrificado se recuperan [color=#facc15]3[/color] puntos de esfuerzo, hasta [color=#facc15]9[/color] puntos totales."
     },
     notes: [
-      "Concentrarse no provoca pérdida de vida adicional si se está intoxicado.",
+      "Concentrarse no provoca pérdida de vida adicional si se está intoxicado."
     ],
     texture: "Board Game Icons",
     frame: "hourglass.png",
     actionOrder: 15,
     actionSubOrder: 0,
-    tags: ["Support", "Status"],
+    tags: ["Support", "Status"]
   },
   train: {
     id: "train",
@@ -1044,13 +1046,13 @@ export const ActionLibrary: ActionLibraryDefinition = {
     extraExecution: {
       cost: 3,
       maxRepetitions: 1,
-      description: "Añade 3 puntos de experiencia adicionales.",
+      description: "Añade 3 puntos de experiencia adicionales."
     },
     texture: "Board Game Icons",
     frame: "award.png",
     actionOrder: 15,
     actionSubOrder: 1,
-    tags: ["Support", "Status"],
+    tags: ["Support", "Status"]
   },
   activate_cameras: {
     id: "activate_cameras",
@@ -1062,14 +1064,14 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Permite ver a los personajes visibles en todas las localizaciones salvo casas e industria; todos perciben que las cámaras están encendidas.",
-      },
+          "Permite ver a los personajes visibles en todas las localizaciones salvo casas e industria; todos perciben que las cámaras están encendidas."
+      }
     ],
     texture: "Board Game Icons",
     frame: "hand_token_open.png",
     actionOrder: 16,
     actionSubOrder: 0,
-    tags: ["Recon", "Utility"],
+    tags: ["Recon", "Utility"]
   },
   look_through_window: {
     id: "look_through_window",
@@ -1082,14 +1084,14 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Permite ver a los personajes visibles de una localización adyacente; no distingue desmayados.",
-      },
+          "Permite ver a los personajes visibles de una localización adyacente; no distingue desmayados."
+      }
     ],
     texture: "Board Game Icons",
     frame: "hexagon_question.png",
     actionOrder: 16,
     actionSubOrder: 1,
-    tags: ["Recon", "Ranged"],
+    tags: ["Recon", "Ranged"]
   },
   use_binoculars: {
     id: "use_binoculars",
@@ -1103,19 +1105,19 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Revela los personajes visibles de una localización adyacente; no distingue desmayados.",
-      },
+          "Revela los personajes visibles de una localización adyacente; no distingue desmayados."
+      }
     ],
     extraExecution: {
       cost: 2,
       maxRepetitions: 1,
-      description: "Permite observar una localización a 2 de distancia.",
+      description: "Permite observar una localización a 2 de distancia."
     },
     texture: "Board Game Icons",
     frame: "card_target.png",
     actionOrder: 16,
     actionSubOrder: 2,
-    tags: ["Recon", "Ranged"],
+    tags: ["Recon", "Ranged"]
   },
   detect: {
     id: "detect",
@@ -1127,18 +1129,18 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Identifica todos los personajes de la misma localización y los que se encuentren a una distancia de 1 (sin precisar ubicación exacta).",
-      },
+          "Identifica todos los personajes de la misma localización y los que se encuentren a una distancia de 1 (sin precisar ubicación exacta)."
+      }
     ],
     extraExecution: {
       cost: 3,
-      description: "Permite detectar también a distancia 2.",
+      description: "Permite detectar también a distancia 2."
     },
     texture: "Board Game Icons",
     frame: "hexagon_tile.png",
     actionOrder: 16,
     actionSubOrder: 3,
-    tags: ["Recon"],
+    tags: ["Recon"]
   },
   use_antidote: {
     id: "use_antidote",
@@ -1147,24 +1149,24 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 1,
     cooldown: 3,
     requirements: [
-      { description: "Requiere poseer un antídoto.", consumesResource: true },
+      { description: "Requiere poseer un antídoto.", consumesResource: true }
     ],
     requiredItems: ["antidote"],
     effects: [
       {
         description:
-          "Cura una intoxicación propia o de un aliado en la misma localización, evitando pérdida de vida posterior.",
-      },
+          "Cura una intoxicación propia o de un aliado en la misma localización, evitando pérdida de vida posterior."
+      }
     ],
     extraExecution: {
       cost: 2,
-      description: "Permite aplicar un segundo antídoto.",
+      description: "Permite aplicar un segundo antídoto."
     },
     texture: "Board Game Icons",
     frame: "flask_half.png",
     actionOrder: 17,
     actionSubOrder: 0,
-    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"],
+    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"]
   },
   inject_virus: {
     id: "inject_virus",
@@ -1175,21 +1177,21 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requirements: [
       {
         description: "Requiere tener un vial de virus.",
-        consumesResource: true,
-      },
+        consumesResource: true
+      }
     ],
     requiredItems: ["virus"],
     effects: [
       {
         description:
-          "Infecta al objetivo; quienes compartan localización al final del turno pierden [color=#f97373]1[/color] de vida salvo desmayados o el propio infectado.",
-      },
+          "Infecta al objetivo; quienes compartan localización al final del turno pierden [color=#f97373]1[/color] de vida salvo desmayados o el propio infectado."
+      }
     ],
     texture: "Board Game Icons",
     frame: "flask_full.png",
     actionOrder: 17,
     actionSubOrder: 1,
-    tags: ["Attack", "Area", "Status", "SingleTarget", "CanTargetSelf"],
+    tags: ["Attack", "Area", "Status", "SingleTarget", "CanTargetSelf"]
   },
   inject_vaccine: {
     id: "inject_vaccine",
@@ -1198,20 +1200,20 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 1,
     cooldown: 3,
     requirements: [
-      { description: "Requiere tener una vacuna.", consumesResource: true },
+      { description: "Requiere tener una vacuna.", consumesResource: true }
     ],
     requiredItems: ["vaccine"],
     effects: [
       {
         description:
-          "Otorga inmunidad frente a pérdidas de vida por virus ajenos; puede aplicarse a otro personaje en la misma localización.",
-      },
+          "Otorga inmunidad frente a pérdidas de vida por virus ajenos; puede aplicarse a otro personaje en la misma localización."
+      }
     ],
     texture: "Board Game Icons",
     frame: "flask_half.png",
     actionOrder: 17,
     actionSubOrder: 2,
-    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"],
+    tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"]
   },
   sleep: {
     id: "sleep",
@@ -1223,25 +1225,25 @@ export const ActionLibrary: ActionLibraryDefinition = {
     experience: {
       base: 0,
       conditional: [
-        { value: 4, condition: "Si se realiza con esfuerzo extra compartido." },
-      ],
+        { value: 4, condition: "Si se realiza con esfuerzo extra compartido." }
+      ]
     },
     effects: [
       {
-        description: "Recupera [color=#4ade80]2[/color] puntos de vida.",
-      },
+        description: "Recupera [color=#4ade80]2[/color] puntos de vida."
+      }
     ],
     extraExecution: {
       cost: 2,
       maxRepetitions: 1,
       description:
-        "Si otro personaje duerme con esfuerzo se recuperan [color=#4ade80]5[/color] puntos de vida adicionales.",
+        "Si otro personaje duerme con esfuerzo se recuperan [color=#4ade80]5[/color] puntos de vida adicionales."
     },
     texture: "Board Game Icons",
     frame: "pawn_table.png",
     actionOrder: 17,
     actionSubOrder: 3,
-    tags: ["Support", "Status"],
+    tags: ["Support", "Status"]
   },
   status_dead: {
     id: "status_dead",
@@ -1256,7 +1258,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     actionOrder: 99,
     actionSubOrder: 1,
     notes: ["Evento automático cuando un personaje pierde toda su vida."],
-    tags: ["Status"],
+    tags: ["Status"]
   },
   status_unconscious: {
     id: "status_unconscious",
@@ -1271,9 +1273,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     actionOrder: 99,
     actionSubOrder: 0,
     notes: [
-      "Evento automático cuando un personaje desciende a 5 puntos de vida o menos y no muere.",
+      "Evento automático cuando un personaje desciende a 5 puntos de vida o menos y no muere."
     ],
-    tags: ["Status"],
+    tags: ["Status"]
   },
   failedAction: {
     id: "failedAction",
@@ -1288,10 +1290,10 @@ export const ActionLibrary: ActionLibraryDefinition = {
     actionOrder: 99,
     actionSubOrder: 2,
     notes: [
-      "Evento automático cuando una acción no cumple los requisitos mínimos.",
+      "Evento automático cuando una acción no cumple los requisitos mínimos."
     ],
-    tags: ["Status"],
-  },
+    tags: ["Status"]
+  }
 };
 
 for (const actionId in ActionLibrary) {

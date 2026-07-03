@@ -3,12 +3,12 @@ import type { ItemId } from "./Item";
 
 export enum ActionCategory {
   Primary = "Primary",
-  Secondary = "Secondary",
+  Secondary = "Secondary"
 }
 
 export enum ConditionKind {
   Avoid = "Avoid",
-  Prioritize = "Prioritize",
+  Prioritize = "Prioritize"
 }
 
 export enum ConditionTargetType {
@@ -17,7 +17,7 @@ export enum ConditionTargetType {
   Ally = "Ally",
   Enemy = "Enemy",
   Location = "Location",
-  Group = "Group",
+  Group = "Group"
 }
 
 export type ActionId =
@@ -102,6 +102,7 @@ export interface ActionExtraExecution {
   cost: number;
   maxRepetitions?: number;
   description: string;
+  effectType?: ExtraExecutionEffect;
 }
 
 export interface ActionExperienceReward {
@@ -153,4 +154,8 @@ export interface ActionSubmission {
   conditions?: ActionCondition[];
   notes?: string;
   targetItemIds?: string[];
+}
+
+export enum ExtraExecutionEffect {
+  IncreaseRange = "IncreaseRange"
 }
