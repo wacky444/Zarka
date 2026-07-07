@@ -133,6 +133,7 @@ export interface ActionDefinition {
   notes?: string[];
   tags?: ActionTag[];
   range?: number[];
+  rangeType?: RangeType;
 }
 
 export type ActionLibraryDefinition = Record<ActionId, ActionDefinition>;
@@ -157,5 +158,10 @@ export interface ActionSubmission {
 }
 
 export enum ExtraExecutionEffect {
-  IncreaseRange = "IncreaseRange"
+  IncreaseRange = "IncreaseRange",
+  IncreaseAreaRange = "IncreaseAreaRange"
+}
+
+export enum RangeType {
+  Area = "Area"
 }

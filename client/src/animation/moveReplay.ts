@@ -16,6 +16,7 @@ import { animateSleepEvent } from "./replayActions/SleepAnimation";
 import { animateUseBandageEvent } from "./replayActions/UseBandageAnimation";
 import { animateFocusEvent } from "./replayActions/FocusAnimation";
 import { animateFailedActionEvent } from "./replayActions/FailedActionAnimation";
+import { animateDetectEvent } from "./replayActions/DetectAnimation";
 
 export async function playReplayEvents(
   context: MoveReplayContext,
@@ -58,6 +59,8 @@ export async function playReplayEvents(
       await animateDeathEvent(context, event);
     } else if (actionId === ActionLibrary.failedAction.id) {
       await animateFailedActionEvent(context, event);
+    } else if (actionId === ActionLibrary.detect.id) {
+      await animateDetectEvent(context, event);
     }
   }
 }

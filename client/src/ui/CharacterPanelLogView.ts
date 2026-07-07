@@ -411,7 +411,15 @@ export class CharacterPanelLogView {
           const { q, r } = event.action.targetLocation;
           lines.push(`${actor} moved to (${q}, ${r})`);
         } else {
-          lines.push(`${actor} used ${actionName}`);
+          const extraExecutions =
+            typeof (event.action.metadata as { extraExecutions?: unknown })
+              ?.extraExecutions === "number"
+              ? ((event.action.metadata as { extraExecutions: number })
+                  .extraExecutions ?? 0)
+              : 0;
+          const extraLabel =
+            extraExecutions > 0 ? ` (+${extraExecutions} extra)` : "";
+          lines.push(`${actor} used ${actionName}${extraLabel}`);
           if (actionId === "axe_attack" || actionId === "knife_attack") {
             const totalDamage =
               typeof event.action.damageDealt === "number"
@@ -434,6 +442,24 @@ export class CharacterPanelLogView {
               lines.push(`${actor} found ${foundItems.join(", ")}`);
             } else if (this.didSearchFindNothing(event.action.metadata)) {
               lines.push(`${actor} found nothing`);
+            }
+          } else if (actionId === "detect") {
+            if (Array.isArray(event.targets) && event.targets.length > 0) {
+              for (const target of event.targets) {
+                const targetName = this.resolvePlayerName(target.targetId);
+                const distance =
+                  (target.metadata as { distance?: number } | undefined)
+                    ?.distance ?? -1;
+                const locationLabel =
+                  distance === 0
+                    ? "(same location)"
+                    : distance > 0
+                    ? `(distance ${distance})`
+                    : "(nearby)";
+                lines.push(`Detected ${targetName} ${locationLabel}`);
+              }
+            } else {
+              lines.push(`${actor} detected nobody`);
             }
           } else if (actionId === "pick_up") {
             const pickedItems = this.extractPickedItemNames(

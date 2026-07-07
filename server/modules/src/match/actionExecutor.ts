@@ -31,6 +31,7 @@ import {
   hasCarriedItem,
   type PlannedActionParticipant,
 } from "./actions/utils";
+import { executeDetectAction } from "./actions/detect";
 
 export type TileLookup = Record<string, HexTileSnapshot>;
 
@@ -555,6 +556,30 @@ export function executeAction(
         logger,
       );
       const actionEvents = executePunchAction(participants, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.detect.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = executeDetectAction(participants, match);
       eventsForAction = energyEvents.length
         ? [...energyEvents, ...actionEvents]
         : actionEvents;

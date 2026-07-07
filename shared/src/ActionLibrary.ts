@@ -1,6 +1,7 @@
 import {
   ActionCategory,
   ExtraExecutionEffect,
+  RangeType,
   type ActionId,
   type ActionLibraryDefinition
 } from "./Action";
@@ -1123,10 +1124,12 @@ export const ActionLibrary: ActionLibraryDefinition = {
   detect: {
     id: "detect",
     name: "Detectar",
+    developed: true,
     category: ActionCategory.Primary,
     energyCost: 3,
     cooldown: 3,
     range: [0, 1, 2],
+    rangeType: RangeType.Area,
     effects: [
       {
         description:
@@ -1135,6 +1138,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     extraExecution: {
       cost: 3,
+      effectType: ExtraExecutionEffect.IncreaseAreaRange,
       description: "Permite detectar también a distancia 2."
     },
     texture: "Board Game Icons",
