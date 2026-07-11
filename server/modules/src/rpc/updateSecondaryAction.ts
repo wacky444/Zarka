@@ -48,6 +48,7 @@ export function updateSecondaryActionRpc(
   let targetLocation: Axial | undefined;
   let targetPlayerIds: string[] | undefined;
   let targetItemIds: string[] | undefined;
+  let extraExecutions: number | undefined;
   if (submission) {
     actionId = normalizeActionId(submission.actionId);
     if (actionId.length === 0) {
@@ -114,6 +115,30 @@ export function updateSecondaryActionRpc(
       }
       targetItemIds = filtered.length > 0 ? filtered : undefined;
     }
+    const rawExtraExecutions = submission.extraExecutions;
+    if (
+      typeof rawExtraExecutions === "number" &&
+      isFinite(rawExtraExecutions)
+    ) {
+      const clamped = Math.max(0, Math.floor(rawExtraExecutions));
+      const extraExecutionDef = definition.extraExecution;
+      if (clamped > 0 && !extraExecutionDef) {
+        throw makeNakamaError(
+          "action_does_not_support_extra_execution",
+          nkruntime.Codes.INVALID_ARGUMENT
+        );
+      }
+      if (
+        clamped > 0 &&
+        clamped > (extraExecutionDef?.maxRepetitions ?? 1)
+      ) {
+        throw makeNakamaError(
+          "too_many_extra_executions",
+          nkruntime.Codes.INVALID_ARGUMENT
+        );
+      }
+      extraExecutions = clamped > 0 ? clamped : undefined;
+    }
   }
   const clearAction = !submission;
   const nkWrapper = createNakamaWrapper(nk);
@@ -178,6 +203,15 @@ export function updateSecondaryActionRpc(
     } else if (nextPlan.targetItemIds) {
       delete nextPlan.targetItemIds;
     }
+    if (extraExecutions !== undefined) {
+      if (extraExecutions > 0) {
+        nextPlan.extraExecutions = extraExecutions;
+      } else if (nextPlan.extraExecutions) {
+        delete nextPlan.extraExecutions;
+      }
+    } else if (nextPlan.extraExecutions) {
+      delete nextPlan.extraExecutions;
+    }
     character.actionPlan.secondary = nextPlan;
   }
   storage.writeMatch(match, read.version);
@@ -194,7 +228,8 @@ export function updateSecondaryActionRpc(
     targetItemIds:
       clearAction || !targetItemIds || targetItemIds.length === 0
         ? undefined
-        : targetItemIds
+        : targetItemIds,
+    extraExecutions: clearAction ? undefined : extraExecutions
   };
   return JSON.stringify(response);
 }

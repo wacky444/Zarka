@@ -1336,7 +1336,10 @@ export class GameScene extends Phaser.Scene {
       targetLocation: this.normalizeAxial(selection?.targetLocation),
       targetPlayerIds: normalizedPlayers,
       targetItemIds: normalizedItems,
-      extraExecutions: typeof selection?.extraExecutions === "number" ? selection.extraExecutions : undefined
+      extraExecutions:
+        typeof selection?.extraExecutions === "number"
+          ? selection.extraExecutions
+          : undefined
     };
     const character =
       this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
@@ -1356,8 +1359,12 @@ export class GameScene extends Phaser.Scene {
         normalizedSelection.targetPlayerIds,
         previousPlayers
       ) &&
-      this.isSameTargetItems(normalizedSelection.targetItemIds, previousItems) &&
-      (normalizedSelection.extraExecutions ?? 0) === (previousPlan?.extraExecutions ?? 0)
+      this.isSameTargetItems(
+        normalizedSelection.targetItemIds,
+        previousItems
+      ) &&
+      (normalizedSelection.extraExecutions ?? 0) ===
+        (previousPlan?.extraExecutions ?? 0)
     ) {
       return;
     }
@@ -1422,7 +1429,10 @@ export class GameScene extends Phaser.Scene {
         } else if (nextPlan.targetItemIds) {
           delete nextPlan.targetItemIds;
         }
-        if (typeof payload.extraExecutions === "number" && payload.extraExecutions > 0) {
+        if (
+          typeof payload.extraExecutions === "number" &&
+          payload.extraExecutions > 0
+        ) {
           nextPlan.extraExecutions = payload.extraExecutions;
         } else if (nextPlan.extraExecutions) {
           delete nextPlan.extraExecutions;
@@ -1460,7 +1470,11 @@ export class GameScene extends Phaser.Scene {
       actionId: selection?.actionId ?? null,
       targetLocation: this.normalizeAxial(selection?.targetLocation),
       targetPlayerIds: normalizedPlayers,
-      targetItemIds: normalizedItems
+      targetItemIds: normalizedItems,
+      extraExecutions:
+        typeof selection?.extraExecutions === "number"
+          ? selection.extraExecutions
+          : undefined
     };
     const character =
       this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
@@ -1482,7 +1496,12 @@ export class GameScene extends Phaser.Scene {
         normalizedSelection.targetPlayerIds,
         previousPlayers
       ) &&
-      this.isSameTargetItems(normalizedSelection.targetItemIds, previousItems)
+      this.isSameTargetItems(
+        normalizedSelection.targetItemIds,
+        previousItems
+      ) &&
+      (normalizedSelection.extraExecutions ?? 0) ===
+        (previousPlan?.extraExecutions ?? 0)
     ) {
       return;
     }
@@ -1498,7 +1517,8 @@ export class GameScene extends Phaser.Scene {
             normalizedSelection.actionId,
             normalizedSelection.targetLocation,
             normalizedSelection.targetPlayerIds,
-            normalizedSelection.targetItemIds
+            normalizedSelection.targetItemIds,
+            normalizedSelection.extraExecutions
           )
         : null;
       const res = await this.turnService.updateSecondaryAction(
@@ -1548,6 +1568,14 @@ export class GameScene extends Phaser.Scene {
           nextPlan.targetItemIds = [...payload.targetItemIds];
         } else if (nextPlan.targetItemIds) {
           delete nextPlan.targetItemIds;
+        }
+        if (
+          typeof payload.extraExecutions === "number" &&
+          payload.extraExecutions > 0
+        ) {
+          nextPlan.extraExecutions = payload.extraExecutions;
+        } else if (nextPlan.extraExecutions) {
+          delete nextPlan.extraExecutions;
         }
         target.actionPlan.secondary = nextPlan;
       }
@@ -1803,7 +1831,11 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const actionId = selection.actionId as ActionId;
-    const inRange = this.isLocationInRange(actionId, coord, selection.extraExecutions);
+    const inRange = this.isLocationInRange(
+      actionId,
+      coord,
+      selection.extraExecutions
+    );
     this.locationSelectionPointerId = null;
     this.cancelMainActionLocationPick();
     if (!inRange) {
@@ -1848,7 +1880,8 @@ export class GameScene extends Phaser.Scene {
     actionId: string,
     target: Axial | null,
     targetPlayerIds: string[] | undefined,
-    targetItemIds: string[] | undefined
+    targetItemIds: string[] | undefined,
+    extraExecutions?: number
   ): ActionSubmission {
     const typedId = actionId as ActionId;
     const definition = ActionLibrary[typedId] ?? null;
@@ -1868,6 +1901,9 @@ export class GameScene extends Phaser.Scene {
     if (targetItemIds !== undefined) {
       submission.targetItemIds =
         targetItemIds.length > 0 ? [...targetItemIds] : [];
+    }
+    if (typeof extraExecutions === "number" && extraExecutions > 0) {
+      submission.extraExecutions = extraExecutions;
     }
     return submission;
   }
@@ -2085,7 +2121,8 @@ export class GameScene extends Phaser.Scene {
         : [0];
     if (
       definition?.extraExecution &&
-      definition.extraExecution.effectType === ExtraExecutionEffect.IncreaseRange &&
+      definition.extraExecution.effectType ===
+        ExtraExecutionEffect.IncreaseRange &&
       extraExecutions > 0
     ) {
       const maxRange = Math.max(...allowed) + extraExecutions;

@@ -59,6 +59,7 @@ export type UpdateSecondaryActionPayload = {
   targetLocationId?: Axial;
   targetPlayerIds?: string[];
   targetItemIds?: string[];
+  extraExecutions?: number;
   error?: string;
 };
 

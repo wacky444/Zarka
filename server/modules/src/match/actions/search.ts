@@ -7,8 +7,9 @@ import type {
   MatchItemRecord,
   PlayerCharacter,
   ReplayActionDone,
-  ReplayPlayerEvent,
+  ReplayPlayerEvent
 } from "@shared";
+import { ActionLibrary, ExtraExecutionEffect } from "@shared";
 import { clearPlanByKey, type PlannedActionParticipant } from "./utils";
 
 const BASE_DISCOVERY_COUNT = 5;
@@ -83,10 +84,23 @@ function computeDiscoveryCount(
   plan: PlannedActionParticipant["plan"],
   available: number
 ): number {
-  const extra =
-    typeof plan.extraEffort === "number" && isFinite(plan.extraEffort)
-      ? Math.floor(Math.max(0, plan.extraEffort))
-      : 0;
+  const definition = ActionLibrary[plan.actionId as ActionId];
+  const hasIncreaseScope =
+    definition?.extraExecution?.effectType ===
+    ExtraExecutionEffect.IncreaseScope;
+  let extraReps = 0;
+  if (
+    typeof plan.extraExecutions === "number" &&
+    isFinite(plan.extraExecutions)
+  ) {
+    extraReps = Math.floor(Math.max(0, plan.extraExecutions));
+  } else if (
+    typeof plan.extraEffort === "number" &&
+    isFinite(plan.extraEffort)
+  ) {
+    extraReps = Math.floor(Math.max(0, plan.extraEffort));
+  }
+  const extra = hasIncreaseScope ? extraReps : 0;
   const baseTarget = BASE_DISCOVERY_COUNT + extra;
   return Math.min(available, baseTarget > 0 ? baseTarget : 0);
 }
@@ -119,6 +133,18 @@ export function executeSearchAction(
           (itemId) => !Object.prototype.hasOwnProperty.call(lookup, itemId)
         )
       : [];
+    let extraReps = 0;
+    if (
+      typeof participant.plan.extraExecutions === "number" &&
+      isFinite(participant.plan.extraExecutions)
+    ) {
+      extraReps = Math.floor(Math.max(0, participant.plan.extraExecutions));
+    } else if (
+      typeof participant.plan.extraEffort === "number" &&
+      isFinite(participant.plan.extraEffort)
+    ) {
+      extraReps = Math.floor(Math.max(0, participant.plan.extraEffort));
+    }
     const discoveryCount = tile
       ? computeDiscoveryCount(participant.plan, undiscovered.length)
       : 0;
@@ -150,12 +176,13 @@ export function executeSearchAction(
         discoveredItemIds: discovered,
         discoveredItems: discovered.map((itemId) => ({
           id: itemId,
-          itemType: itemLookup[itemId]?.item_type ?? null,
+          itemType: itemLookup[itemId]?.item_type ?? null
         })),
         revealedCount: discovered.length,
         remainingHidden,
         totalItems: tileItems.length,
-      },
+        extraExecutions: extraReps
+      }
     };
 
     clearPlanByKey(participant.character, participant.planKey);
@@ -164,7 +191,7 @@ export function executeSearchAction(
     events.push({
       kind: "player",
       actorId: participant.playerId,
-      action,
+      action
     });
   }
 

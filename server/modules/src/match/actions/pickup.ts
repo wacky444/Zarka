@@ -1,5 +1,7 @@
 import type { MatchRecord } from "../../models/types";
 import {
+  ActionLibrary,
+  ExtraExecutionEffect,
   ItemLibrary,
   type ActionId,
   type HexTileSnapshot,
@@ -44,11 +46,23 @@ function normalizePriorityIds(
 
 function computePickupLimit(plan: PlannedActionParticipant["plan"]): number {
   const base = 3;
-  const extra =
-    typeof plan.extraEffort === "number" && isFinite(plan.extraEffort)
-      ? Math.max(0, Math.floor(plan.extraEffort))
-      : 0;
-  const limit = base + extra;
+  const definition = ActionLibrary[plan.actionId as ActionId];
+  const hasIncreaseScope =
+    definition?.extraExecution?.effectType ===
+    ExtraExecutionEffect.IncreaseScope;
+  let extraReps = 0;
+  if (
+    typeof plan.extraExecutions === "number" &&
+    isFinite(plan.extraExecutions)
+  ) {
+    extraReps = Math.floor(Math.max(0, plan.extraExecutions));
+  } else if (
+    typeof plan.extraEffort === "number" &&
+    isFinite(plan.extraEffort)
+  ) {
+    extraReps = Math.floor(Math.max(0, plan.extraEffort));
+  }
+  const limit = base + (hasIncreaseScope ? extraReps : 0);
   return limit > 0 ? limit : 0;
 }
 
@@ -261,6 +275,18 @@ export function executePickUpAction(
     const coord = position?.coord;
     const priorities = normalizePriorityIds(participant.plan);
     const limit = computePickupLimit(participant.plan);
+    let extraReps = 0;
+    if (
+      typeof participant.plan.extraExecutions === "number" &&
+      isFinite(participant.plan.extraExecutions)
+    ) {
+      extraReps = Math.floor(Math.max(0, participant.plan.extraExecutions));
+    } else if (
+      typeof participant.plan.extraEffort === "number" &&
+      isFinite(participant.plan.extraEffort)
+    ) {
+      extraReps = Math.floor(Math.max(0, participant.plan.extraEffort));
+    }
     const picked: PickupItem[] = [];
     const skippedByLoad: PickupItem[] = [];
     const missingPriorityLookup: Record<string, true> = {};
@@ -329,6 +355,7 @@ export function executePickUpAction(
       pickLimit: limit,
       pickedAny: picked.length > 0,
       pickedCount: picked.length,
+      extraExecutions: extraReps,
     };
     if (picked.length > 0) {
       metadata.pickedItemIds = picked.map((entry) => entry.id);

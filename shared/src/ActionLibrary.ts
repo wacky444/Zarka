@@ -406,6 +406,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     extraExecution: {
       cost: 1,
       maxRepetitions: 3,
+      effectType: ExtraExecutionEffect.IncreaseScope,
       description: "Cada repetición añade un objeto adicional."
     },
     texture: "Board Game Icons",
@@ -425,6 +426,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     extraExecution: {
       cost: 1,
       maxRepetitions: 3,
+      effectType: ExtraExecutionEffect.IncreaseScope,
       description: "Cada repetición descubre un objeto adicional."
     },
     texture: "Board Game Icons",

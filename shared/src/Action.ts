@@ -159,7 +159,8 @@ export interface ActionSubmission {
 
 export enum ExtraExecutionEffect {
   IncreaseRange = "IncreaseRange",
-  IncreaseAreaRange = "IncreaseAreaRange"
+  IncreaseAreaRange = "IncreaseAreaRange",
+  IncreaseScope = "IncreaseScope"
 }
 
 export enum RangeType {
