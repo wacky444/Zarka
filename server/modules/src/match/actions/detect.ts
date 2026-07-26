@@ -8,6 +8,7 @@ import type {
 import { ActionLibrary, ExtraExecutionEffect } from "@shared";
 import { clearPlanByKey, type PlannedActionParticipant } from "./utils";
 import { axialDistance } from "../../utils/location";
+import { getUsableExtraExecutions } from "../../utils/energy";
 
 const BASE_MAX_RANGE = 1;
 
@@ -44,7 +45,11 @@ export function executeDetectAction(
       clearPlanByKey(participant.character, participant.planKey);
       continue;
     }
-    const extraExecutions = participant.plan.extraExecutions ?? 0;
+    const extraExecutions = getUsableExtraExecutions(
+      participant.character,
+      participant.plan,
+      ActionLibrary.detect
+    );
     const allowedRange = buildAllowedRange(extraExecutions);
     const targets: ReplayActionTarget[] = [];
 

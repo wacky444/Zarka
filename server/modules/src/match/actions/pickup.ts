@@ -13,6 +13,7 @@ import {
 } from "@shared";
 import { clearPlanByKey, type PlannedActionParticipant } from "./utils";
 import { buildItemLookup, findTileById } from "./search";
+import { getUsableExtraExecutions } from "../../utils/energy";
 
 type ItemLookup = Record<string, MatchItemRecord>;
 
@@ -24,44 +25,30 @@ type PickupItem = {
 function normalizePriorityIds(
   plan: PlannedActionParticipant["plan"]
 ): string[] {
-  const raw = plan.targetItemIds;
-  if (!Array.isArray(raw) || raw.length === 0) {
-    return [];
-  }
-  const seen: Record<string, true> = {};
-  const list: string[] = [];
-  for (const entry of raw) {
-    if (typeof entry !== "string") {
+  const list = Array.isArray(plan.targetItemIds) ? plan.targetItemIds : [];
+  const normalized: string[] = [];
+  const lookup: Record<string, true> = {};
+  for (const entry of list) {
+    if (typeof entry !== "string" || entry.length === 0) {
       continue;
     }
-    const trimmed = entry.trim();
-    if (!trimmed || Object.prototype.hasOwnProperty.call(seen, trimmed)) {
+    if (Object.prototype.hasOwnProperty.call(lookup, entry)) {
       continue;
     }
-    seen[trimmed] = true;
-    list.push(trimmed);
+    lookup[entry] = true;
+    normalized.push(entry);
   }
-  return list;
+  return normalized;
 }
 
-function computePickupLimit(plan: PlannedActionParticipant["plan"]): number {
+function computePickupLimit(
+  extraReps: number,
+  definition: import("@shared").ActionDefinition | undefined
+): number {
   const base = 3;
-  const definition = ActionLibrary[plan.actionId as ActionId];
   const hasIncreaseScope =
     definition?.extraExecution?.effectType ===
     ExtraExecutionEffect.IncreaseScope;
-  let extraReps = 0;
-  if (
-    typeof plan.extraExecutions === "number" &&
-    isFinite(plan.extraExecutions)
-  ) {
-    extraReps = Math.floor(Math.max(0, plan.extraExecutions));
-  } else if (
-    typeof plan.extraEffort === "number" &&
-    isFinite(plan.extraEffort)
-  ) {
-    extraReps = Math.floor(Math.max(0, plan.extraEffort));
-  }
   const limit = base + (hasIncreaseScope ? extraReps : 0);
   return limit > 0 ? limit : 0;
 }
@@ -274,19 +261,13 @@ export function executePickUpAction(
     const tileId = position?.tileId;
     const coord = position?.coord;
     const priorities = normalizePriorityIds(participant.plan);
-    const limit = computePickupLimit(participant.plan);
-    let extraReps = 0;
-    if (
-      typeof participant.plan.extraExecutions === "number" &&
-      isFinite(participant.plan.extraExecutions)
-    ) {
-      extraReps = Math.floor(Math.max(0, participant.plan.extraExecutions));
-    } else if (
-      typeof participant.plan.extraEffort === "number" &&
-      isFinite(participant.plan.extraEffort)
-    ) {
-      extraReps = Math.floor(Math.max(0, participant.plan.extraEffort));
-    }
+    const definition = ActionLibrary[actionId];
+    const extraReps = getUsableExtraExecutions(
+      participant.character,
+      participant.plan,
+      definition
+    );
+    const limit = computePickupLimit(extraReps, definition);
     const picked: PickupItem[] = [];
     const skippedByLoad: PickupItem[] = [];
     const missingPriorityLookup: Record<string, true> = {};

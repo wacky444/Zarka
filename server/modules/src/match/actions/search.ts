@@ -2,6 +2,7 @@
 
 import type { MatchRecord } from "../../models/types";
 import type {
+  ActionDefinition,
   ActionId,
   HexTileSnapshot,
   MatchItemRecord,
@@ -11,6 +12,7 @@ import type {
 } from "@shared";
 import { ActionLibrary, ExtraExecutionEffect } from "@shared";
 import { clearPlanByKey, type PlannedActionParticipant } from "./utils";
+import { getUsableExtraExecutions } from "../../utils/energy";
 
 const BASE_DISCOVERY_COUNT = 5;
 
@@ -36,14 +38,14 @@ export function buildItemLookup(match: MatchRecord): ItemLookup {
 export function findTileById(
   match: MatchRecord,
   tileId: string
-): HexTileSnapshot | null {
+): HexTileSnapshot | undefined {
   const tiles = match.map?.tiles ?? [];
   for (const tile of tiles) {
     if (tile && tile.id === tileId) {
       return tile;
     }
   }
-  return null;
+  return undefined;
 }
 
 function ensureFoundTracking(character: PlayerCharacter): FoundTracking {
@@ -66,40 +68,18 @@ function ensureFoundTracking(character: PlayerCharacter): FoundTracking {
   return { list, lookup };
 }
 
-function sampleItems(source: string[], count: number): string[] {
-  if (count <= 0 || source.length === 0) {
-    return [];
-  }
-  const pool = source.slice();
-  for (let i = pool.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = pool[i];
-    pool[i] = pool[j];
-    pool[j] = tmp;
-  }
+function sampleItems(pool: string[], count: number): string[] {
   return pool.slice(0, Math.min(count, pool.length));
 }
 
 function computeDiscoveryCount(
-  plan: PlannedActionParticipant["plan"],
+  extraReps: number,
+  definition: ActionDefinition | undefined,
   available: number
 ): number {
-  const definition = ActionLibrary[plan.actionId as ActionId];
   const hasIncreaseScope =
     definition?.extraExecution?.effectType ===
     ExtraExecutionEffect.IncreaseScope;
-  let extraReps = 0;
-  if (
-    typeof plan.extraExecutions === "number" &&
-    isFinite(plan.extraExecutions)
-  ) {
-    extraReps = Math.floor(Math.max(0, plan.extraExecutions));
-  } else if (
-    typeof plan.extraEffort === "number" &&
-    isFinite(plan.extraEffort)
-  ) {
-    extraReps = Math.floor(Math.max(0, plan.extraEffort));
-  }
   const extra = hasIncreaseScope ? extraReps : 0;
   const baseTarget = BASE_DISCOVERY_COUNT + extra;
   return Math.min(available, baseTarget > 0 ? baseTarget : 0);
@@ -133,20 +113,14 @@ export function executeSearchAction(
           (itemId) => !Object.prototype.hasOwnProperty.call(lookup, itemId)
         )
       : [];
-    let extraReps = 0;
-    if (
-      typeof participant.plan.extraExecutions === "number" &&
-      isFinite(participant.plan.extraExecutions)
-    ) {
-      extraReps = Math.floor(Math.max(0, participant.plan.extraExecutions));
-    } else if (
-      typeof participant.plan.extraEffort === "number" &&
-      isFinite(participant.plan.extraEffort)
-    ) {
-      extraReps = Math.floor(Math.max(0, participant.plan.extraEffort));
-    }
+    const definition = ActionLibrary[actionId];
+    const extraReps = getUsableExtraExecutions(
+      participant.character,
+      participant.plan,
+      definition
+    );
     const discoveryCount = tile
-      ? computeDiscoveryCount(participant.plan, undiscovered.length)
+      ? computeDiscoveryCount(extraReps, definition, undiscovered.length)
       : 0;
     const discovered =
       discoveryCount > 0 ? sampleItems(undiscovered, discoveryCount) : [];

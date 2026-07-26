@@ -10,6 +10,7 @@ import {
 } from "./utils";
 import { ActionLibrary, ExtraExecutionEffect } from "@shared";
 import { axialDistance } from "../../utils/location";
+import { getUsableExtraExecutions } from "../../utils/energy";
 
 export function executeMoveAction(
   participants: PlannedActionParticipant[],
@@ -29,7 +30,11 @@ export function executeMoveAction(
     const definition = ActionLibrary[actionId];
     let allowedRange =
       definition?.range && definition.range.length > 0 ? [...definition.range] : [0];
-    const extraExecutions = entry.plan.extraExecutions ?? 0;
+    const extraExecutions = getUsableExtraExecutions(
+      entry.character,
+      entry.plan,
+      definition
+    );
     if (
       definition?.extraExecution &&
       definition.extraExecution.effectType === ExtraExecutionEffect.IncreaseRange &&
