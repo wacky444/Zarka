@@ -1,6 +1,8 @@
 import {
   HexTile,
   LocalizationType,
+  axialDistance,
+  type Axial,
   type CellLibraryDefinition,
   type CellType,
   type GameMap,
@@ -70,11 +72,94 @@ export interface GeneratedGameMap {
   items: MatchItemRecord[];
 }
 
+export function assignShrinkScheduleToMap(
+  map: GameMap,
+  turnsToBeAt1Tile: number = 30
+): void {
+  const safeTurns = Math.max(1, Math.floor(turnsToBeAt1Tile));
+  const cols = map.cols;
+  const rows = map.rows;
+  const total = map.tiles.length;
+  if (total <= 1) {
+    return;
+  }
+
+  const minCol = Math.floor((cols - 1) / 2);
+  const maxCol = Math.ceil((cols - 1) / 2);
+  const minRow = Math.floor((rows - 1) / 2);
+  const maxRow = Math.ceil((rows - 1) / 2);
+
+  const middles: Axial[] = [];
+  for (let c = minCol; c <= maxCol; c++) {
+    for (let r = minRow; r <= maxRow; r++) {
+      middles.push({ q: c, r });
+    }
+  }
+
+  const getMinDistToMiddle = (coord: Axial) => {
+    let minD = Infinity;
+    for (const m of middles) {
+      const d = axialDistance(coord, m);
+      if (d < minD) minD = d;
+    }
+    return minD;
+  };
+
+  const rng = createRng(map.seed + "_shrink");
+
+  const centerCandidates = map.tiles.filter(
+    (t) => getMinDistToMiddle(t.coord) === 0
+  );
+  const chosenCenter =
+    centerCandidates.length > 0
+      ? centerCandidates[Math.floor(rng() * centerCandidates.length)]
+      : map.tiles[0];
+
+  const destructibleTiles = map.tiles.filter((t) => t.id !== chosenCenter.id);
+
+  const tileData = destructibleTiles.map((t) => ({
+    tile: t,
+    dist: getMinDistToMiddle(t.coord),
+    rnd: rng(),
+  }));
+
+  tileData.sort((a, b) => {
+    if (b.dist !== a.dist) {
+      return b.dist - a.dist;
+    }
+    return a.rnd - b.rnd;
+  });
+
+  const waveInterval = 5;
+  const numWaves = Math.max(1, Math.floor(safeTurns / waveInterval));
+  const tilesToDestroy = tileData.length;
+
+  const baseCount = Math.floor(tilesToDestroy / numWaves);
+  const remainder = tilesToDestroy % numWaves;
+
+  let currentIdx = 0;
+  for (let wave = 1; wave <= numWaves; wave++) {
+    const count = baseCount + (wave <= remainder ? 1 : 0);
+    const destructionTurn = Math.min(safeTurns, wave * waveInterval);
+    const warningTurn =
+      wave === 1 ? 1 : Math.min(safeTurns, (wave - 1) * waveInterval);
+
+    for (let i = 0; i < count && currentIdx < tileData.length; i++) {
+      const targetTile = tileData[currentIdx].tile;
+      targetTile.meta = targetTile.meta ?? {};
+      targetTile.meta.destructionTurn = destructionTurn;
+      targetTile.meta.warningTurn = warningTurn;
+      currentIdx++;
+    }
+  }
+}
+
 export function generateGameMap(
   cols: number,
   rows: number,
   library: CellLibraryDefinition,
-  seed?: string
+  seed?: string,
+  turnsToBeAt1Tile: number = 30
 ): GeneratedGameMap {
   const width = toDimension(cols, DEFAULT_MAP_COLS);
   const height = toDimension(rows, DEFAULT_MAP_ROWS);
@@ -151,13 +236,17 @@ export function generateGameMap(
     }
   }
 
+  const mapResult: GameMap = {
+    cols: width,
+    rows: height,
+    seed: finalSeed,
+    tiles,
+  };
+
+  assignShrinkScheduleToMap(mapResult, turnsToBeAt1Tile);
+
   return {
-    map: {
-      cols: width,
-      rows: height,
-      seed: finalSeed,
-      tiles,
-    },
+    map: mapResult,
     items,
   };
 }

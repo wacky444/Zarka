@@ -44,6 +44,7 @@ import {
 } from "../animation/moveReplay";
 import { collectItemSpriteInfos, resolveItemTexture } from "../ui/itemIcons";
 import { ItemTooltipManager, composeItemDescription } from "../ui/ItemTooltip";
+import { HoverTooltip } from "../ui/HoverTooltip";
 import { TopBanner, type TopBannerPayload } from "../ui/TopBanner";
 import { assetPath } from "../utils/assetPath";
 import { createSkinContainer, SkinContainer } from "../ui/PlayerSkinRenderer";
@@ -68,6 +69,7 @@ export class GameScene extends Phaser.Scene {
   private mapTileSprites: Array<{
     tile: HexTile;
     image: Phaser.GameObjects.Image;
+    skullImage?: Phaser.GameObjects.Image;
   }> = [];
   private playerSprites = new Map<string, SkinContainer>();
   private playerNameLabels = new Map<string, Phaser.GameObjects.Text>();
@@ -99,6 +101,7 @@ export class GameScene extends Phaser.Scene {
   private gridModalActive = false;
   private tileItemContainers = new Map<string, Phaser.GameObjects.Container>();
   private itemTooltip: ItemTooltipManager | null = null;
+  private hoverTooltip: HoverTooltip | null = null;
   private topBanner: TopBanner | null = null;
   private autoAdvanceText: Phaser.GameObjects.Text | null = null;
   private autoAdvanceTimer: Phaser.Time.TimerEvent | null = null;
@@ -201,6 +204,7 @@ export class GameScene extends Phaser.Scene {
     this.uiCam.setScroll(0, 0);
     this.uiCam.setZoom(1);
     this.itemTooltip = new ItemTooltipManager(this);
+    this.hoverTooltip = new HoverTooltip(this);
     this.turnService = this.registry.get("turnService") as TurnService | null;
     this.currentUserId = this.registry.get("currentUserId") as string | null;
     if (this.turnService) {
@@ -371,6 +375,8 @@ export class GameScene extends Phaser.Scene {
       this.locationSelectionHoverText = null;
       this.itemTooltip?.destroy();
       this.itemTooltip = null;
+      this.hoverTooltip?.destroy();
+      this.hoverTooltip = null;
       if (this.turnService) {
         this.turnService.setOnTurnAdvanced();
         this.turnService.setOnMatchEnded();
@@ -473,6 +479,22 @@ export class GameScene extends Phaser.Scene {
       isHovered?: boolean;
     } = {}
   ): void {
+    const currentTurn = this.currentMatch?.current_turn ?? 0;
+    const destructionTurn =
+      typeof tile.meta?.destructionTurn === "number"
+        ? tile.meta.destructionTurn
+        : undefined;
+    const isDestroyed =
+      tile.meta?.destroyed === true ||
+      (typeof destructionTurn === "number" && currentTurn >= destructionTurn);
+
+    if (isDestroyed) {
+      image.setTint(0x333333);
+      image.setAlpha(0.6);
+      image.setScale(1);
+      return;
+    }
+
     const isOutOfRange = this.isOutOfViewRange(tile.coord);
     const dimTint = 0x666666; // Darker gray for out-of-view tiles
     const { isLocationSelectionActive, isInActionRange, isHovered } = options;
@@ -507,7 +529,16 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private clearMapTileSprites(): void {
+    for (const entry of this.mapTileSprites) {
+      entry.image.destroy();
+      entry.skullImage?.destroy();
+    }
+    this.mapTileSprites = [];
+  }
+
   private renderMap(map: GameMap) {
+    this.clearMapTileSprites();
     const tileW = GameScene.TILE_WIDTH;
     const tileH = GameScene.TILE_HEIGHT;
     const dx = tileW;
@@ -515,12 +546,13 @@ export class GameScene extends Phaser.Scene {
     const texture = this.textures.get("hex");
     const sprites: Phaser.GameObjects.Image[] = [];
     this.tilePositions = {};
-    this.mapTileSprites = [];
 
     const playerCoord = this.getCurrentPlayerCoord();
     const viewRange = this.getCurrentPlayerViewRange();
     this.playerCoordForTinting = playerCoord;
     this.playerViewRange = viewRange;
+
+    const currentTurn = this.currentMatch?.current_turn ?? 0;
 
     for (const snapshot of map.tiles) {
       let tile: HexTile;
@@ -542,14 +574,48 @@ export class GameScene extends Phaser.Scene {
       const img = this.add.image(x, y, "hex", frame);
       img.setData("tile", tile);
 
+      const destructionTurn =
+        typeof tile.meta?.destructionTurn === "number"
+          ? tile.meta.destructionTurn
+          : undefined;
+      const warningTurn =
+        typeof tile.meta?.warningTurn === "number"
+          ? tile.meta.warningTurn
+          : undefined;
+      const isDestroyed =
+        tile.meta?.destroyed === true ||
+        (typeof destructionTurn === "number" && currentTurn >= destructionTurn);
+      const isWarning =
+        !isDestroyed &&
+        typeof warningTurn === "number" &&
+        typeof destructionTurn === "number" &&
+        currentTurn >= warningTurn &&
+        currentTurn < destructionTurn;
+
+      let skullImage: Phaser.GameObjects.Image | undefined;
+      if (isWarning && this.textures.exists("board_icon_skull")) {
+        skullImage = this.add.image(x + 35, y - 30, "board_icon_skull");
+        skullImage.setDisplaySize(28, 28);
+        skullImage.setDepth(10);
+        sprites.push(skullImage);
+      }
+
       // Apply base tint (view range dimming)
       this.updateTileTintState(img, tile);
 
       img.setInteractive({ useHandCursor: false });
-      img.on(Phaser.Input.Events.POINTER_OVER, () => {
+      img.on(Phaser.Input.Events.POINTER_OVER, (pointer: Phaser.Input.Pointer) => {
         this.setLocationSelectionHoveredTile(tile.id);
+        if (isWarning && typeof destructionTurn === "number") {
+          const turnsLeft = destructionTurn - currentTurn;
+          this.hoverTooltip?.show(pointer.x, pointer.y, {
+            title: "Incoming Destruction",
+            body: `Destroyed in ${turnsLeft} ${turnsLeft === 1 ? "turn" : "turns"}`,
+          });
+        }
       });
       img.on(Phaser.Input.Events.POINTER_OUT, () => {
+        this.hoverTooltip?.hide();
         if (this.locationSelectionHoveredTileId === tile.id) {
           this.setLocationSelectionHoveredTile(null);
         }
@@ -577,7 +643,7 @@ export class GameScene extends Phaser.Scene {
         }
       );
       sprites.push(img);
-      this.mapTileSprites.push({ tile, image: img });
+      this.mapTileSprites.push({ tile, image: img, skullImage });
       this.tilePositions[tile.id] = { x, y };
     }
 
@@ -950,6 +1016,11 @@ export class GameScene extends Phaser.Scene {
       frame: payload.frame
     };
     this.topBanner?.show(bannerPayload);
+    if (this.currentMatch && payload.playerId) {
+      this.currentMatch.deadCharacters = this.currentMatch.deadCharacters ?? {};
+      this.currentMatch.deadCharacters[payload.playerId] = true;
+      this.updateCharacterPanel(this.currentMatch);
+    }
   }
 
   private handleMatchEnded(
@@ -1680,6 +1751,9 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     match.readyStates = payload.readyStates;
+    if (payload.deadCharacters) {
+      match.deadCharacters = payload.deadCharacters;
+    }
     this.updateCharacterPanel(match);
   }
 
@@ -1701,6 +1775,9 @@ export class GameScene extends Phaser.Scene {
     if (payload.readyStates) {
       match.readyStates = payload.readyStates;
     }
+    if (payload.deadCharacters) {
+      match.deadCharacters = payload.deadCharacters;
+    }
     if (payload.playerCharacters) {
       match.playerCharacters = payload.playerCharacters;
     }
@@ -1709,9 +1786,9 @@ export class GameScene extends Phaser.Scene {
     }
     if (payload.map) {
       match.map = payload.map;
-      this.renderItems(payload.map);
+      this.renderMap(payload.map);
     } else if (match.map) {
-      this.renderItems(match.map);
+      this.renderMap(match.map);
     }
 
     const eventsFromField = Array.isArray(payload.replay)
@@ -1781,6 +1858,7 @@ export class GameScene extends Phaser.Scene {
       positionLabel: (label, sprite) => this.positionNameLabel(label, sprite),
       currentMatch: this.currentMatch,
       scene: this,
+      showTileDestroyedBanner: (cell) => this.showTileDestroyedBanner(cell),
       ignoreUI: (object) => {
         if (this.uiCam) {
           this.uiCam.ignore(object);
@@ -2109,11 +2187,51 @@ export class GameScene extends Phaser.Scene {
     return { x, y, z };
   }
 
+  showTileDestroyedBanner(cell: Axial): void {
+    const bannerPayload: TopBannerPayload = {
+      text: `Tile destroyed at (${cell.q}, ${cell.r})`,
+      texture: "board_icon_skull",
+    };
+    this.topBanner?.show(bannerPayload);
+    if (this.currentMatch?.map) {
+      const tile = this.currentMatch.map.tiles.find(
+        (t) => t.coord.q === cell.q && t.coord.r === cell.r
+      );
+      if (tile) {
+        tile.meta = tile.meta ?? {};
+        tile.meta.destroyed = true;
+        tile.walkable = false;
+      }
+    }
+    this.refreshTileVisuals();
+  }
+
+  private refreshTileVisuals(): void {
+    for (const entry of this.mapTileSprites) {
+      this.updateTileTintState(entry.image, entry.tile);
+    }
+  }
+
   private isLocationInRange(
     actionId: ActionId,
     target: Axial,
     extraExecutions = 0
   ): boolean {
+    const targetTile = this.currentMatch?.map?.tiles.find(
+      (t) => t.coord.q === target.q && t.coord.r === target.r
+    );
+    const currentTurn = this.currentMatch?.current_turn ?? 0;
+    const destructionTurn =
+      typeof targetTile?.meta?.destructionTurn === "number"
+        ? targetTile.meta.destructionTurn
+        : undefined;
+    const isDestroyed =
+      targetTile?.meta?.destroyed === true ||
+      (typeof destructionTurn === "number" && currentTurn >= destructionTurn);
+    if (isDestroyed) {
+      return false;
+    }
+
     const definition = ActionLibrary[actionId];
     let allowed =
       definition?.range && definition.range.length > 0

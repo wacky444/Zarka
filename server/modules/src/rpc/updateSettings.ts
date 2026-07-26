@@ -7,6 +7,7 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { normalizeMatchName } from "../utils/normalize";
 import { clampNumber, validateTime } from "../utils/validation";
+import { assignShrinkScheduleToMap } from "@shared";
 
 export function updateSettingsRpc(
   ctx: nkruntime.Context,
@@ -64,6 +65,7 @@ export function updateSettingsRpc(
   const newAutoSkip =
     typeof settings.autoSkip === "boolean" ? settings.autoSkip : undefined;
   const newBotPlayers = clampNumber(settings.botPlayers, 0, 10);
+  const newTurnsToBeAt1Tile = clampNumber(settings.turnsToBeAt1Tile, 1, 500);
   const newName =
     typeof settings.name === "string"
       ? normalizeMatchName(settings.name, match.name ?? DEFAULT_MATCH_NAME)
@@ -75,6 +77,12 @@ export function updateSettingsRpc(
   if (typeof newRoundTime === "string") match.roundTime = newRoundTime;
   if (typeof newAutoSkip === "boolean") match.autoSkip = newAutoSkip;
   if (typeof newBotPlayers === "number") match.botPlayers = newBotPlayers;
+  if (typeof newTurnsToBeAt1Tile === "number") {
+    match.turnsToBeAt1Tile = newTurnsToBeAt1Tile;
+    if (match.map) {
+      assignShrinkScheduleToMap(match.map, match.turnsToBeAt1Tile);
+    }
+  }
   if (typeof newName === "string") match.name = newName;
 
   try {
@@ -90,6 +98,7 @@ export function updateSettingsRpc(
           roundTime: match.roundTime,
           autoSkip: match.autoSkip,
           botPlayers: match.botPlayers,
+          turnsToBeAt1Tile: match.turnsToBeAt1Tile,
           name: match.name,
           started: match.started,
         })
@@ -113,6 +122,7 @@ export function updateSettingsRpc(
     roundTime: match.roundTime,
     autoSkip: match.autoSkip,
     botPlayers: match.botPlayers,
+    turnsToBeAt1Tile: match.turnsToBeAt1Tile,
     name: match.name,
     started: match.started,
   };

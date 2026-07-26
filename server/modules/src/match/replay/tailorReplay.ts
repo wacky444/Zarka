@@ -56,6 +56,9 @@ function filterMapEvent(
   viewer: Axial | null,
   viewDistance: number
 ): boolean {
+  if (event.action === "destroyed") {
+    return true;
+  }
   if (!viewer) {
     return false;
   }

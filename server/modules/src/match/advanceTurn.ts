@@ -108,6 +108,9 @@ function removeStateFromAllCharacters(
   }
 }
 
+import { applyHealthDelta } from "./actions/utils";
+import { isCharacterDead } from "../utils/playerCharacter";
+
 export function advanceTurn(
   match: MatchRecord,
   resolvedTurn: number,
@@ -141,6 +144,65 @@ export function advanceTurn(
     }
   }
   // removeProtectedState(match);
+
+  if (match.map?.tiles) {
+    for (const tile of match.map.tiles) {
+      if (tile.meta?.destructionTurn === resolvedTurn) {
+        tile.meta.destroyed = true;
+        tile.walkable = false;
+        replayEvents.push({
+          kind: "map",
+          cell: tile.coord,
+          action: "destroyed",
+        });
+      }
+    }
+  }
+
+  for (const playerId in characters) {
+    if (!Object.prototype.hasOwnProperty.call(characters, playerId)) {
+      continue;
+    }
+    const character = characters[playerId];
+    if (!character || isCharacterDead(character)) {
+      continue;
+    }
+    const coord = character.position?.coord;
+    if (!coord) {
+      continue;
+    }
+    let standingTile: HexTileSnapshot | undefined;
+    if (match.map?.tiles) {
+      for (const t of match.map.tiles) {
+        if (t.coord.q === coord.q && t.coord.r === coord.r) {
+          standingTile = t;
+          break;
+        }
+      }
+    }
+    if (
+      standingTile &&
+      (standingTile.meta?.destroyed === true ||
+        (typeof standingTile.meta?.destructionTurn === "number" &&
+          standingTile.meta.destructionTurn <= resolvedTurn))
+    ) {
+      const outcome = applyHealthDelta(character, -999, true, logger);
+      match.playerCharacters[playerId] = outcome.character;
+      replayEvents.push({
+        kind: "player",
+        actorId: character.id,
+        action: {
+          actionId: "status_dead",
+        },
+        targets: [
+          {
+            targetId: character.id,
+            eliminated: true,
+          },
+        ],
+      });
+    }
+  }
 
   if (nk) {
     finalizeMatchIfEnded(match, nk, logger);

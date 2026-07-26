@@ -29,6 +29,7 @@ export class LobbyView {
   private roundTime = "23:00";
   private autoSkip = true;
   private botPlayers = 0;
+  private turnsToBeAt1Tile = 30;
   private matchName = LobbyView.DEFAULT_MATCH_NAME;
   private maxPlayers = 2;
   private isHost = false;
@@ -39,6 +40,7 @@ export class LobbyView {
   private roundTimeInput?: TimeInputHandle;
   private autoSkipToggle?: ToggleHandle;
   private botPlayersStepper?: StepperHandle;
+  private turnsToBeAt1TileStepper?: StepperHandle;
   private renameButton?: UIButton;
   private startMatchButton?: UIButton;
   private removeMatchButton?: UIButton;
@@ -266,6 +268,25 @@ export class LobbyView {
       this.isHost
     );
 
+    y += 40;
+
+    this.turnsToBeAt1TileStepper = addLabeledStepper(
+      this.scene,
+      this.container,
+      10,
+      y,
+      "Destroy",
+      5,
+      200,
+      () => this.turnsToBeAt1Tile,
+      (v) => {
+        this.turnsToBeAt1Tile = Phaser.Math.Clamp(v, 5, 200);
+        this.emitSettings();
+      },
+      true,
+      this.isHost
+    );
+
     y += 60;
 
     this.playerListTitle = scene.add.text(10, y, "Players", {
@@ -334,7 +355,7 @@ export class LobbyView {
     this.applyMatchName(matchName);
   }
 
-  setCreator(creatorId?: string, isSelf = false, creatorName?: string) {
+  setCreator(creatorId?: string, isSelf?: boolean, creatorName?: string) {
     const normalizedName =
       typeof creatorName === "string"
         ? creatorName.trim().replace(/\s+/g, " ")
@@ -353,6 +374,7 @@ export class LobbyView {
     this.roundTimeInput?.setEnabled(enabled);
     this.autoSkipToggle?.setEnabled(enabled);
     this.botPlayersStepper?.setEnabled(enabled);
+    this.turnsToBeAt1TileStepper?.setEnabled(enabled);
     this.setRenameEnabled(enabled);
     this.setRemoveMatchEnabled(enabled);
     this.updateStartButtonState();
@@ -365,6 +387,7 @@ export class LobbyView {
     roundTime?: string;
     autoSkip?: boolean;
     botPlayers?: number;
+    turnsToBeAt1Tile?: number;
     name?: string;
     started?: boolean;
   }) {
@@ -393,6 +416,14 @@ export class LobbyView {
       this.botPlayers = Phaser.Math.Clamp(partial.botPlayers, 0, 10);
       this.botPlayersStepper?.setDisplayValue(this.botPlayers);
     }
+    if (typeof partial.turnsToBeAt1Tile === "number") {
+      this.turnsToBeAt1Tile = Phaser.Math.Clamp(
+        partial.turnsToBeAt1Tile,
+        5,
+        200
+      );
+      this.turnsToBeAt1TileStepper?.setDisplayValue(this.turnsToBeAt1Tile);
+    }
     if (typeof partial.name === "string") {
       this.applyMatchName(partial.name);
     }
@@ -418,6 +449,7 @@ export class LobbyView {
       roundTime: this.roundTime,
       autoSkip: this.autoSkip,
       botPlayers: this.botPlayers,
+      turnsToBeAt1Tile: this.turnsToBeAt1Tile,
       name: this.matchName
     };
   }

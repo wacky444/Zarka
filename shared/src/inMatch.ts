@@ -5,6 +5,7 @@ export type InMatchSettings = {
   roundTime: string; // Time of day to force next round, default "23:00"
   autoSkip: boolean; // Auto-skip if someone has moved and time limit passed, default true
   botPlayers: number; // Number of bot players, default 0
+  turnsToBeAt1Tile?: number; // Total turns to shrink map to 1 tile, default 30
   name: string;
   seed?: string; // Map generation seed
 };

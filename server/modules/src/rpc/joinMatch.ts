@@ -81,7 +81,13 @@ export function joinMatchRpc(
       }
       return false;
     }
-    const generated = generateGameMap(cols, rows, CellLibrary, existing?.seed);
+    const generated = generateGameMap(
+      cols,
+      rows,
+      CellLibrary,
+      existing?.seed,
+      match.turnsToBeAt1Tile ?? 30
+    );
     match.map = generated.map;
     match.cols = generated.map.cols;
     match.rows = generated.map.rows;

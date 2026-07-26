@@ -46,6 +46,7 @@ export function createMatchRpc(
   let name = DEFAULT_MATCH_NAME;
   let roundTime = "23:00";
   let autoSkip = true;
+  let turnsToBeAt1Tile = 30;
 
   if (payload && payload !== "") {
     try {
@@ -64,6 +65,9 @@ export function createMatchRpc(
       }
       if (json && typeof json.autoSkip === "boolean") {
         autoSkip = json.autoSkip;
+      }
+      if (json && typeof json.turnsToBeAt1Tile === "number") {
+        turnsToBeAt1Tile = Math.max(1, Math.floor(json.turnsToBeAt1Tile));
       }
     } catch (err) {
       logger.debug(
@@ -94,7 +98,8 @@ export function createMatchRpc(
     cols: String(DEFAULT_MAP_COLS),
     rows: String(DEFAULT_MAP_ROWS),
     roundTime,
-    autoSkip: String(autoSkip)
+    autoSkip: String(autoSkip),
+    turnsToBeAt1Tile: String(turnsToBeAt1Tile)
   };
 
   const matchId = nkWrapper.matchCreate("async_turn", params);
@@ -110,6 +115,7 @@ export function createMatchRpc(
     rows: DEFAULT_MAP_ROWS,
     roundTime,
     autoSkip,
+    turnsToBeAt1Tile,
     created_at: Math.floor(Date.now() / 1000),
     current_turn: 0,
     creator: ctx.userId,
@@ -123,6 +129,7 @@ export function createMatchRpc(
   const response: import("@shared").CreateMatchPayload = {
     match_id: matchId,
     size,
+    turnsToBeAt1Tile,
     name,
     started: false
   };

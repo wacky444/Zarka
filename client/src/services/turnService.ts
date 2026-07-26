@@ -121,8 +121,11 @@ export class TurnService {
     return result;
   }
 
-  async createMatch(size = 2, name?: string) {
-    const payload: { size: number; name?: string } = { size };
+  async createMatch(size = 2, name?: string, turnsToBeAt1Tile = 30) {
+    const payload: { size: number; name?: string; turnsToBeAt1Tile?: number } = {
+      size,
+      turnsToBeAt1Tile,
+    };
     if (typeof name === "string" && name.trim()) {
       payload.name = name;
     }

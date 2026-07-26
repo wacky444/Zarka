@@ -71,7 +71,8 @@ export function startMatchRpc(
       targetCols,
       targetRows,
       CellLibrary,
-      existingMap?.seed
+      existingMap?.seed,
+      match.turnsToBeAt1Tile ?? 30
     );
     match.map = generated.map;
     match.cols = generated.map.cols;

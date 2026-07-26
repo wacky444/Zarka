@@ -23,6 +23,12 @@ export async function playReplayEvents(
   events: ReplayEvent[]
 ): Promise<void> {
   for (const event of events) {
+    if (event.kind === "map" && event.action === "destroyed" && event.cell) {
+      if (context.showTileDestroyedBanner) {
+        context.showTileDestroyedBanner(event.cell);
+      }
+      continue;
+    }
     if (event.kind !== "player") {
       continue;
     }

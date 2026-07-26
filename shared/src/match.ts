@@ -23,6 +23,7 @@ export interface MatchRecord {
   roundTime?: string;
   autoSkip?: boolean;
   botPlayers?: number;
+  turnsToBeAt1Tile?: number;
   created_at: number;
   current_turn: number;
   creator?: string;

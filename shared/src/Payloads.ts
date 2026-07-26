@@ -17,6 +17,7 @@ export const OPCODE_READY_STATE_UPDATE = 104;
 export type CreateMatchPayload = {
   match_id: string;
   size: number;
+  turnsToBeAt1Tile?: number;
   name?: string;
   error?: string;
   started?: boolean;
@@ -112,6 +113,7 @@ export type UpdateSettingsPayload = {
   roundTime?: string;
   autoSkip?: boolean;
   botPlayers?: number;
+  turnsToBeAt1Tile?: number;
   name?: string;
   started?: boolean;
   error?: string;
@@ -132,6 +134,7 @@ export type ListMyMatchesPayload = {
     roundTime?: string;
     autoSkip?: boolean;
     botPlayers?: number;
+    turnsToBeAt1Tile?: number;
     name?: string;
     started?: boolean;
   }>;
@@ -175,6 +178,7 @@ export type MatchEndedMessagePayload = {
 export type ReadyStateUpdateMessagePayload = {
   match_id: string;
   readyStates: Record<string, boolean>;
+  deadCharacters?: Record<string, boolean>;
 };
 
 export type SaveChatMessagePayload = {
