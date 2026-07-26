@@ -153,6 +153,7 @@ export function updateReadyStateRpc(
           turn: match.current_turn,
           match_id: matchId,
           readyStates: match.readyStates,
+          deadCharacters: match.deadCharacters,
           playerCharacters: match.playerCharacters,
           events,
           viewDistance,
@@ -208,6 +209,7 @@ export function updateReadyStateRpc(
     all_ready: allReady,
     turn: match.current_turn,
     readyStates: match.readyStates,
+    deadCharacters: match.deadCharacters,
     advanced,
     playerCharacters: tailorPlayerCharactersForViewer(
       match.playerCharacters,

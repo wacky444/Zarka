@@ -7,6 +7,7 @@ import type {
 } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { axialDistance } from "./location";
+import { isCharacterDead } from "./playerCharacter";
 
 type FoundLookup = Record<string, true>;
 
@@ -154,20 +155,27 @@ export function tailorMatchForPlayer(
     playerId
   );
   const playerList: Record<string, PlayerCharacterUnknown> = {};
+  const deadCharacters: Record<string, boolean> = {};
   for (const id in match.playerCharacters) {
     if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, id)) {
       continue;
     }
-    const character = match.playerCharacters[id];
+    const char = match.playerCharacters[id];
     playerList[id] = {
-      id: character.id,
-      name: character.name
+      id: char.id,
+      name: char.name
     };
+    const isDead =
+      isCharacterDead(char) ||
+      (typeof char.stats?.health?.current === "number" &&
+        char.stats.health.current <= 0);
+    deadCharacters[id] = !!isDead;
   }
   return {
     ...match,
     playerCharacters: playerCharacters ?? {},
     playerList: playerList ?? {},
+    deadCharacters,
     map,
     items
   };

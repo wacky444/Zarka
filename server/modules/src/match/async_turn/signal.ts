@@ -183,6 +183,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             match_id: ctx.matchId,
             turn: msg.turn,
             readyStates: msg.readyStates,
+            deadCharacters: msg.deadCharacters,
             playerCharacters: msg.playerCharacters,
             advanced: true,
             viewDistance,

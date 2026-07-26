@@ -16,6 +16,7 @@ export interface MatchRecord {
   playerCharacters: Record<string, PlayerCharacter>;
   playerList: Record<string, PlayerCharacterUnknown>;
   readyStates?: Record<string, boolean>;
+  deadCharacters?: Record<string, boolean>;
   size: number;
   cols?: number;
   rows?: number;

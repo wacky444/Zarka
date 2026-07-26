@@ -263,12 +263,27 @@ export class CharacterPanelPlayerListView {
     }
     this.playersTabListContent.removeAll(false);
     if (!match || list.length === 0) {
+      this.playersTabListTitle.setText("Players");
       this.playersTabEmpty.setVisible(true);
       this.playersTabCardName.setText("");
       this.playersTabCardTeam.setText("");
       this.playersTabCardSprite.setVisible(false);
       return;
     }
+    const totalPlayers = list.length;
+    let aliveCount = 0;
+    for (const option of list) {
+      const character = match.playerCharacters?.[option.id];
+      const isDead =
+        match.deadCharacters?.[option.id] === true ||
+        character?.statuses?.conditions?.includes("dead") ||
+        (typeof character?.stats?.health?.current === "number" &&
+          character.stats.health.current <= 0);
+      if (!isDead) {
+        aliveCount += 1;
+      }
+    }
+    this.playersTabListTitle.setText(`Players (${aliveCount}/${totalPlayers})`);
     this.playersTabEmpty.setVisible(false);
     const entriesByTeam = new Map<string, PlayerOption[]>();
     const order: string[] = [];
@@ -315,8 +330,15 @@ export class CharacterPanelPlayerListView {
           .setOrigin(0, 0)
           .setStrokeStyle(1, 0x2f3a5d, 1)
           .setInteractive({ useHandCursor: true });
+        const character = match?.playerCharacters?.[option.id];
+        const isDead =
+          match?.deadCharacters?.[option.id] === true ||
+          character?.statuses?.conditions?.includes("dead") ||
+          (typeof character?.stats?.health?.current === "number" &&
+            character.stats.health.current <= 0);
         const isBot = /^bot\d+$/i.test(option.id);
-        const isReady = isBot || match?.readyStates?.[option.id] === true;
+        const isReady =
+          !isDead && (isBot || match?.readyStates?.[option.id] === true);
         const readyIcon = this.scene.add
           .text(itemWidth - PLAYER_LIST_LABEL_PADDING, y + rowHeight / 2, "✓", {
             fontSize: "14px",
@@ -409,10 +431,23 @@ export class CharacterPanelPlayerListView {
 
   private applySelectionStyles(): void {
     for (const entry of this.playersTabEntries) {
+      const character = this.currentMatch?.playerCharacters?.[entry.playerId];
+      const isDead =
+        this.currentMatch?.deadCharacters?.[entry.playerId] === true ||
+        character?.statuses?.conditions?.includes("dead") ||
+        (typeof character?.stats?.health?.current === "number" &&
+          character.stats.health.current <= 0);
       const selected = entry.playerId === this.playersTabSelection;
-      entry.button.setFillStyle(selected ? 0x2f5e88 : 0x202b4a, 0.95);
-      entry.button.setStrokeStyle(selected ? 2 : 1, 0x6ea8d6, 1);
-      entry.label.setColor(selected ? "#d8f0ff" : "#ffffff");
+
+      if (isDead) {
+        entry.button.setFillStyle(selected ? 0x6e2424 : 0x4a1818, 0.95);
+        entry.button.setStrokeStyle(selected ? 2 : 1, 0xd65858, 1);
+        entry.label.setColor(selected ? "#ffcccc" : "#ff9999");
+      } else {
+        entry.button.setFillStyle(selected ? 0x2f5e88 : 0x202b4a, 0.95);
+        entry.button.setStrokeStyle(selected ? 2 : 1, 0x6ea8d6, 1);
+        entry.label.setColor(selected ? "#d8f0ff" : "#ffffff");
+      }
     }
   }
 
