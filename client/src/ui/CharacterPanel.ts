@@ -2694,14 +2694,28 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private describeAction(definition: ActionDefinition) {
+    const parts: string[] = [];
+    if (definition.requirements?.length) {
+      const reqDescs = definition.requirements
+        .map((r) => r.description)
+        .filter((d): d is string => Boolean(d && d.trim().length > 0));
+      if (reqDescs.length > 0) {
+        parts.push(reqDescs.join("\n"));
+      }
+    }
     if (definition.effects?.length) {
-      return definition.effects[0].description;
+      const effDescs = definition.effects
+        .map((e) => e.description)
+        .filter((d): d is string => Boolean(d && d.trim().length > 0));
+      if (effDescs.length > 0) {
+        parts.push(effDescs.join("\n"));
+      }
+    }
+    if (parts.length > 0) {
+      return parts.join("\n\n");
     }
     if (definition.notes?.length) {
       return definition.notes[0];
-    }
-    if (definition.requirements?.length) {
-      return definition.requirements[0].description;
     }
     return "Description coming soon.";
   }
