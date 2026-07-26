@@ -189,18 +189,6 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
           (error as Error).message,
         );
       }
-      try {
-        nkWrapper.matchSignal(
-          ctx.matchId,
-          JSON.stringify({ type: "match_removed" }),
-        );
-      } catch (error) {
-        logger.debug(
-          "autoskip match_removed signal failed for %s: %s",
-          ctx.matchId,
-          (error as Error).message,
-        );
-      }
     }
 
     state.lastAutoAdvanceAt = match.lastAutoAdvanceAt;

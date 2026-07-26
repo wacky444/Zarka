@@ -49,6 +49,8 @@ import { TopBanner, type TopBannerPayload } from "../ui/TopBanner";
 import { assetPath } from "../utils/assetPath";
 import { createSkinContainer, SkinContainer } from "../ui/PlayerSkinRenderer";
 import { AccountService } from "../services/AccountService";
+import { VictoryOverlay } from "../ui/VictoryOverlay";
+
 
 type PlayerEliminationBannerEvent = {
   playerId: string;
@@ -117,6 +119,9 @@ export class GameScene extends Phaser.Scene {
   private accountService: AccountService | null = null;
   private playerViewRange: number = 0;
   private playerCoordForTinting: Axial | null = null;
+  private victoryOverlay: VictoryOverlay | null = null;
+  private pendingMatchEndPayload: import("@shared").MatchEndedMessagePayload | null = null;
+
   private readonly turnAdvancedHandler = (
     payload: TurnAdvancedMessagePayload
   ) => {
@@ -272,6 +277,20 @@ export class GameScene extends Phaser.Scene {
     this.topBanner = new TopBanner(this, {
       camera: this.cam
     });
+    this.victoryOverlay = new VictoryOverlay(this, {
+      onReturnToMenu: () => {
+        this.scene.stop("GameScene");
+        if (this.scene.isSleeping("MainScene")) {
+          this.scene.wake("MainScene");
+        } else {
+          this.scene.start("MainScene");
+        }
+      }
+    });
+    if (this.uiCam) {
+      this.victoryOverlay.ignoreCamera(this.cam);
+    }
+
 
     this.autoAdvanceText = this.add
       .text(10, 10, "", {
@@ -303,6 +322,22 @@ export class GameScene extends Phaser.Scene {
     }
     this.updateCharacterPanel(match);
     this.configureAutoAdvanceTimer(match);
+
+    if (match) {
+      const isEnded = match.started === false || match.removed !== 0;
+      if (isEnded && this.currentUserId) {
+        const dead = match.deadCharacters ?? {};
+        const players = Object.keys(match.playerCharacters ?? {});
+        const alive = players.filter((id) => !dead[id]);
+        const winnerId = alive.length === 1 ? alive[0] : undefined;
+        this.triggerVictoryOverlay({
+          match_id: match.match_id,
+          winnerId,
+          reason: alive.length === 0 ? "all_dead" : "last_alive"
+        });
+      }
+    }
+
 
     this.enableDragPan();
     this.enableWheelZoom();
@@ -384,6 +419,9 @@ export class GameScene extends Phaser.Scene {
       }
       this.topBanner?.destroy();
       this.topBanner = null;
+      this.victoryOverlay?.destroy();
+      this.victoryOverlay = null;
+
       if (this.autoAdvanceTimer) {
         this.autoAdvanceTimer.remove(false);
         this.autoAdvanceTimer = null;
@@ -1036,10 +1074,45 @@ export class GameScene extends Phaser.Scene {
     if (!this.currentUserId) {
       return;
     }
-    if (payload.winnerId && payload.winnerId !== this.currentUserId) {
-      this.topBanner?.show({ text: "You lost the match." });
+    if (this.replayPlaying) {
+      this.pendingMatchEndPayload = payload;
+    } else {
+      this.triggerVictoryOverlay(payload);
     }
   }
+
+  private triggerVictoryOverlay(
+    payload: import("@shared").MatchEndedMessagePayload
+  ) {
+    if (!this.victoryOverlay || !this.currentUserId) {
+      return;
+    }
+    const isWinner = payload.winnerId === this.currentUserId;
+    const isDraw = !payload.winnerId || payload.reason === "all_dead";
+    const result: import("../ui/VictoryOverlay").MatchEndResultType = isWinner
+      ? "win"
+      : isDraw
+      ? "draw"
+      : "loss";
+
+    let winnerName: string | undefined = undefined;
+    if (payload.winnerId) {
+      winnerName = this.playerNameMap[payload.winnerId] ?? payload.winnerId;
+    }
+
+    const turns = this.currentMatch?.current_turn ?? 0;
+    this.victoryOverlay.show({
+      result,
+      winnerName,
+      winnerId: payload.winnerId,
+      turns
+    });
+  }
+
+  isVictoryOverlayActive(): boolean {
+    return this.victoryOverlay?.isShowing() ?? false;
+  }
+
 
   private configureAutoAdvanceTimer(match: MatchRecord | null) {
     const roundTime =
@@ -1164,7 +1237,9 @@ export class GameScene extends Phaser.Scene {
       this.autoAdvanceText.setPosition(10, 10);
     }
     this.topBanner?.layout(width);
+    this.victoryOverlay?.layout(width, height);
   }
+
 
   private handleResize(gameSize: Phaser.Structs.Size) {
     const width = gameSize.width ?? this.scale.width;
@@ -1847,7 +1922,13 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.replayPlaying = false;
+    if (this.pendingMatchEndPayload) {
+      const payload = this.pendingMatchEndPayload;
+      this.pendingMatchEndPayload = null;
+      this.triggerVictoryOverlay(payload);
+    }
   }
+
 
   private createMoveReplayContext(): MoveReplayContext {
     return {

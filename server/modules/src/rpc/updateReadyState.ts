@@ -188,17 +188,6 @@ export function updateReadyStateRpc(
           (e as Error).message,
         );
       }
-      try {
-        nkWrapper.matchSignal(
-          matchId,
-          JSON.stringify({ type: "match_removed" }),
-        );
-      } catch (e) {
-        logger.debug(
-          "update_ready_state match_removed signal failed: %s",
-          (e as Error).message,
-        );
-      }
     }
   }
 

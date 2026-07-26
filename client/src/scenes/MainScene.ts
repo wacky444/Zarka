@@ -224,6 +224,10 @@ export class MainScene extends Phaser.Scene {
         }
       });
       this.turnService.setOnMatchRemoved(() => {
+        const gameScene = this.scene.get("GameScene") as import("./GameScene").GameScene | undefined;
+        if (gameScene && gameScene.isVictoryOverlayActive()) {
+          return;
+        }
         this.statusText.setText(
           "Match has been removed by the host. Returning to main menu."
         );

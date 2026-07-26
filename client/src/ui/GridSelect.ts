@@ -634,7 +634,14 @@ export class GridSelect extends Phaser.GameObjects.Container {
     } else {
       this.overlay.setVisible(false);
       this.overlay.setActive(false);
-      this.modalCover?.disableInteractive();
+      const coverScene = this.modalCover?.scene as unknown as { sys?: unknown } | undefined;
+      if (this.modalCover && coverScene?.sys) {
+        try {
+          this.modalCover.disableInteractive();
+        } catch (e) {
+          console.warn("disableInteractive skipped during teardown", e);
+        }
+      }
       this.tooltip?.hide();
     }
     if (wasVisible) {

@@ -922,7 +922,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.locationSelector.off("pick-request", this.handleLocationPickRequest);
     this.locationSelector.off("clear-request", this.handleLocationClear);
     this.playerSelector.off("change", this.handlePlayerSelection);
-    this.playerSelector.hideDropdown();
+    try {
+      this.playerSelector.hideDropdown();
+    } catch (e) {
+      console.warn("hideDropdown playerSelector skipped during teardown", e);
+    }
     this.secondaryActionDropdown.off(
       "change",
       this.handleSecondaryActionSelection
@@ -948,7 +952,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       "change",
       this.handleSecondaryPlayerSelection
     );
-    this.secondaryPlayerSelector.hideDropdown();
+    try {
+      this.secondaryPlayerSelector.hideDropdown();
+    } catch (e) {
+      console.warn("hideDropdown secondaryPlayerSelector skipped during teardown", e);
+    }
     this.readyToggle?.off(
       Phaser.Input.Events.POINTER_DOWN,
       this.handleReadyPointerDown
