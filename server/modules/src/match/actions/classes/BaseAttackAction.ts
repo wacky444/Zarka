@@ -16,6 +16,8 @@ import {
   resolveGuardedDamage,
   type PlannedActionParticipant,
 } from "../utils";
+import { ActionLibrary } from "@shared";
+import { getUsableExtraExecutions } from "../../../utils/energy";
 import { collectTargets } from "../targeting";
 import { BaseAction } from "./BaseAction";
 
@@ -24,11 +26,17 @@ export abstract class BaseAttackAction extends BaseAction {
   readonly effectType: ReplayActionEffect = ReplayActionEffect.Hit;
 
   protected getBaseDamage(
-    _participant: PlannedActionParticipant,
+    participant: PlannedActionParticipant,
     _targetId: string,
     _match: MatchRecord
   ): number {
-    return this.baseDamage;
+    const actionId = participant.plan.actionId as ActionId;
+    const definition = actionId ? ActionLibrary[actionId] : undefined;
+    const usableExtra = definition
+      ? getUsableExtraExecutions(participant.character, participant.plan, definition)
+      : 0;
+
+    return this.baseDamage + usableExtra;
   }
 
   protected processRoster(
