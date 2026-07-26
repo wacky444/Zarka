@@ -1,61 +1,19 @@
 /// <reference path="../../../node_modules/nakama-runtime/index.d.ts" />
 
 import type { MatchRecord } from "../../models/types";
-import type {
-  ActionId,
-  PlayerCharacter,
-  ReplayActionDone,
-  ReplayActionTarget,
-  ReplayPlayerEvent,
-} from "@shared";
-import { ReplayActionEffect } from "@shared";
-import {
-  applyHealthDelta,
-  clearPlanByKey,
-  mergeCharacterState,
-  shuffleParticipants,
-  type PlannedActionParticipant,
-} from "./utils";
+import type { ReplayPlayerEvent } from "@shared";
+import type { PlannedActionParticipant } from "./utils";
+import { BaseSelfHealAction } from "./classes/BaseSelfHealAction";
+
+export class RecoverAction extends BaseSelfHealAction {
+  readonly healAmount = 5;
+}
+
+const recoverAction = new RecoverAction();
 
 export function executeRecoverAction(
   participants: PlannedActionParticipant[],
   match: MatchRecord
 ): ReplayPlayerEvent[] {
-  const roster = shuffleParticipants(participants);
-  const events: ReplayPlayerEvent[] = [];
-  for (const participant of roster) {
-    const actionId = participant.plan.actionId as ActionId;
-    if (!actionId) {
-      clearPlanByKey(participant.character, participant.planKey);
-      continue;
-    }
-    const { result: healthChange, character: updatedCharacter } =
-      applyHealthDelta(participant.character, 5);
-    mergeCharacterState(participant.character, updatedCharacter);
-    const restored = Math.max(0, healthChange.delta);
-    const action: ReplayActionDone = {
-      actionId,
-      effects: ReplayActionEffect.Heal,
-      metadata: { healed: restored },
-    };
-    if (participant.character.position?.coord) {
-      action.originLocation = participant.character.position.coord;
-    }
-    const target: ReplayActionTarget = {
-      targetId: participant.playerId,
-      effects: ReplayActionEffect.Heal,
-      metadata: { healed: restored },
-    };
-    clearPlanByKey(participant.character, participant.planKey);
-    if (match.playerCharacters) {
-      match.playerCharacters[participant.playerId] = participant.character;
-    }
-    events.push({
-      kind: "player",
-      actorId: participant.playerId,
-      action,
-      targets: [target],
-    });
-  }
-  return events;
+  return recoverAction.execute(participants, match);
 }

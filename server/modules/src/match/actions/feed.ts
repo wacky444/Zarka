@@ -11,7 +11,8 @@ import {
   type ReplayActionTarget,
   type ReplayPlayerEvent,
 } from "@shared";
-import { clearPlanByKey, type PlannedActionParticipant } from "./utils";
+import { type PlannedActionParticipant } from "./utils";
+import { BaseAction } from "./classes/BaseAction";
 
 const FEED_ITEM_PRIORITY: ItemId[] = ["food", "drink"];
 
@@ -126,60 +127,72 @@ function consumeFeedItem(character: PlayerCharacter): ItemId | null {
   return null;
 }
 
+export class FeedAction extends BaseAction {
+  protected override readonly shouldShuffleParticipants = false;
+
+  protected processRoster(
+    roster: PlannedActionParticipant[],
+    match: MatchRecord
+  ): ReplayPlayerEvent[] {
+    const events: ReplayPlayerEvent[] = [];
+    for (const participant of roster) {
+      const actionId = participant.plan.actionId as ActionId;
+      if (!actionId) {
+        this.clearPlan(participant);
+        if (match.playerCharacters) {
+          match.playerCharacters[participant.playerId] = participant.character;
+        }
+        continue;
+      }
+      const consumedItemId = consumeFeedItem(participant.character);
+      if (!consumedItemId) {
+        this.clearPlan(participant);
+        if (match.playerCharacters) {
+          match.playerCharacters[participant.playerId] = participant.character;
+        }
+        continue;
+      }
+      const energyGain = getEnergyGain(consumedItemId);
+      const restored = applyEnergy(participant.character, energyGain);
+      const action: ReplayActionDone = {
+        actionId,
+        effects: ReplayActionEffect.Heal,
+        metadata: {
+          consumedItemId,
+          energyRestored: restored,
+        },
+      };
+      if (participant.character.position?.coord) {
+        action.originLocation = participant.character.position.coord;
+      }
+      const target: ReplayActionTarget = {
+        targetId: participant.playerId,
+        effects: ReplayActionEffect.Heal,
+        metadata: {
+          consumedItemId,
+          energyRestored: restored,
+        },
+      };
+      this.clearPlan(participant);
+      if (match.playerCharacters) {
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
+      events.push({
+        kind: "player",
+        actorId: participant.playerId,
+        action,
+        targets: [target],
+      });
+    }
+    return events;
+  }
+}
+
+const feedAction = new FeedAction();
+
 export function executeFeedAction(
   participants: PlannedActionParticipant[],
   match: MatchRecord
 ): ReplayPlayerEvent[] {
-  const roster = participants.slice();
-  const events: ReplayPlayerEvent[] = [];
-  for (const participant of roster) {
-    const actionId = participant.plan.actionId as ActionId;
-    if (!actionId) {
-      clearPlanByKey(participant.character, participant.planKey);
-      if (match.playerCharacters) {
-        match.playerCharacters[participant.playerId] = participant.character;
-      }
-      continue;
-    }
-    const consumedItemId = consumeFeedItem(participant.character);
-    if (!consumedItemId) {
-      clearPlanByKey(participant.character, participant.planKey);
-      if (match.playerCharacters) {
-        match.playerCharacters[participant.playerId] = participant.character;
-      }
-      continue;
-    }
-    const energyGain = getEnergyGain(consumedItemId);
-    const restored = applyEnergy(participant.character, energyGain);
-    const action: ReplayActionDone = {
-      actionId,
-      effects: ReplayActionEffect.Heal,
-      metadata: {
-        consumedItemId,
-        energyRestored: restored,
-      },
-    };
-    if (participant.character.position?.coord) {
-      action.originLocation = participant.character.position.coord;
-    }
-    const target: ReplayActionTarget = {
-      targetId: participant.playerId,
-      effects: ReplayActionEffect.Heal,
-      metadata: {
-        consumedItemId,
-        energyRestored: restored,
-      },
-    };
-    clearPlanByKey(participant.character, participant.planKey);
-    if (match.playerCharacters) {
-      match.playerCharacters[participant.playerId] = participant.character;
-    }
-    events.push({
-      kind: "player",
-      actorId: participant.playerId,
-      action,
-      targets: [target],
-    });
-  }
-  return events;
+  return feedAction.execute(participants, match);
 }

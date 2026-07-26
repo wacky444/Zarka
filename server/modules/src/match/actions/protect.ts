@@ -13,11 +13,10 @@ import type {
 } from "@shared";
 import { ReplayActionEffect } from "@shared";
 import {
-  clearPlanByKey,
   collectPlanTargetIds,
-  shuffleParticipants,
   type PlannedActionParticipant,
 } from "./utils";
+import { BaseAction } from "./classes/BaseAction";
 
 function ensureStatusState(character: PlayerCharacter): PlayerStatusState {
   if (!character.statuses) {
@@ -44,53 +43,62 @@ function guardEffectMask(): ReplayActionEffectMask {
   return ReplayActionEffect.Guard;
 }
 
+export class ProtectAction extends BaseAction {
+  protected processRoster(
+    roster: PlannedActionParticipant[],
+    match: MatchRecord
+  ): ReplayPlayerEvent[] {
+    const events: ReplayPlayerEvent[] = [];
+    for (const participant of roster) {
+      const actionId = participant.plan.actionId as ActionId;
+      if (!actionId) {
+        this.clearPlan(participant);
+        continue;
+      }
+      const targets = collectPlanTargetIds(participant, match);
+      const appliedTargets: ReplayActionTarget[] = [];
+      for (const targetId of targets) {
+        const target = match.playerCharacters?.[targetId];
+        if (!target) {
+          continue;
+        }
+        applyProtection(target);
+        match.playerCharacters[targetId] = target;
+        appliedTargets.push({
+          targetId,
+          effects: guardEffectMask(),
+        });
+      }
+      this.clearPlan(participant);
+      if (appliedTargets.length === 0) {
+        continue;
+      }
+      const action: ReplayActionDone = {
+        actionId,
+      };
+      if (participant.character.position?.coord) {
+        action.originLocation = participant.character.position.coord;
+      }
+      if (participant.plan.targetLocationId) {
+        action.targetLocation = participant.plan.targetLocationId;
+      }
+      action.effects = guardEffectMask();
+      events.push({
+        kind: "player",
+        actorId: participant.playerId,
+        action,
+        targets: appliedTargets,
+      });
+    }
+    return events;
+  }
+}
+
+const protectAction = new ProtectAction();
+
 export function executeProtectAction(
   participants: PlannedActionParticipant[],
   match: MatchRecord
 ): ReplayPlayerEvent[] {
-  const roster = shuffleParticipants(participants);
-
-  const events: ReplayPlayerEvent[] = [];
-  for (const participant of roster) {
-    const actionId = participant.plan.actionId as ActionId;
-    if (!actionId) {
-      clearPlanByKey(participant.character, participant.planKey);
-      continue;
-    }
-    const targets = collectPlanTargetIds(participant, match);
-    const appliedTargets: ReplayActionTarget[] = [];
-    for (const targetId of targets) {
-      const target = match.playerCharacters?.[targetId];
-      if (!target) {
-        continue;
-      }
-      applyProtection(target);
-      match.playerCharacters[targetId] = target;
-      appliedTargets.push({
-        targetId,
-        effects: guardEffectMask(),
-      });
-    }
-    clearPlanByKey(participant.character, participant.planKey);
-    if (appliedTargets.length === 0) {
-      continue;
-    }
-    const action: ReplayActionDone = {
-      actionId,
-    };
-    if (participant.character.position?.coord) {
-      action.originLocation = participant.character.position.coord;
-    }
-    if (participant.plan.targetLocationId) {
-      action.targetLocation = participant.plan.targetLocationId;
-    }
-    action.effects = guardEffectMask();
-    events.push({
-      kind: "player",
-      actorId: participant.playerId,
-      action,
-      targets: appliedTargets,
-    });
-  }
-  return events;
+  return protectAction.execute(participants, match);
 }

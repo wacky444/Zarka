@@ -9,11 +9,8 @@ import type {
   ReplayPlayerEvent,
 } from "@shared";
 import { ReplayActionEffect } from "@shared";
-import {
-  clearPlanByKey,
-  shuffleParticipants,
-  type PlannedActionParticipant,
-} from "./utils";
+import { type PlannedActionParticipant } from "./utils";
+import { BaseAction } from "./classes/BaseAction";
 
 function applyEnergy(character: PlayerCharacter, amount: number): number {
   if (amount <= 0) {
@@ -31,45 +28,55 @@ function applyEnergy(character: PlayerCharacter, amount: number): number {
   return next - current;
 }
 
+export class BreakfastAction extends BaseAction {
+  protected processRoster(
+    roster: PlannedActionParticipant[],
+    match: MatchRecord
+  ): ReplayPlayerEvent[] {
+    const events: ReplayPlayerEvent[] = [];
+    for (const participant of roster) {
+      const actionId = participant.plan.actionId as ActionId;
+      if (!actionId) {
+        this.clearPlan(participant);
+        if (match.playerCharacters) {
+          match.playerCharacters[participant.playerId] = participant.character;
+        }
+        continue;
+      }
+      const restored = applyEnergy(participant.character, 20);
+      const action: ReplayActionDone = {
+        actionId,
+        effects: ReplayActionEffect.Heal,
+        metadata: { energyRestored: restored },
+      };
+      if (participant.character.position?.coord) {
+        action.originLocation = participant.character.position.coord;
+      }
+      const target: ReplayActionTarget = {
+        targetId: participant.playerId,
+        effects: ReplayActionEffect.Heal,
+        metadata: { energyRestored: restored },
+      };
+      this.clearPlan(participant);
+      if (match.playerCharacters) {
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
+      events.push({
+        kind: "player",
+        actorId: participant.playerId,
+        action,
+        targets: [target],
+      });
+    }
+    return events;
+  }
+}
+
+const breakfastAction = new BreakfastAction();
+
 export function executeBreakfastAction(
   participants: PlannedActionParticipant[],
   match: MatchRecord
 ): ReplayPlayerEvent[] {
-  const roster = shuffleParticipants(participants);
-  const events: ReplayPlayerEvent[] = [];
-  for (const participant of roster) {
-    const actionId = participant.plan.actionId as ActionId;
-    if (!actionId) {
-      clearPlanByKey(participant.character, participant.planKey);
-      if (match.playerCharacters) {
-        match.playerCharacters[participant.playerId] = participant.character;
-      }
-      continue;
-    }
-    const restored = applyEnergy(participant.character, 20);
-    const action: ReplayActionDone = {
-      actionId,
-      effects: ReplayActionEffect.Heal,
-      metadata: { energyRestored: restored },
-    };
-    if (participant.character.position?.coord) {
-      action.originLocation = participant.character.position.coord;
-    }
-    const target: ReplayActionTarget = {
-      targetId: participant.playerId,
-      effects: ReplayActionEffect.Heal,
-      metadata: { energyRestored: restored },
-    };
-    clearPlanByKey(participant.character, participant.planKey);
-    if (match.playerCharacters) {
-      match.playerCharacters[participant.playerId] = participant.character;
-    }
-    events.push({
-      kind: "player",
-      actorId: participant.playerId,
-      action,
-      targets: [target],
-    });
-  }
-  return events;
+  return breakfastAction.execute(participants, match);
 }

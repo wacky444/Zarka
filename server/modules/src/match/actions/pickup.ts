@@ -11,11 +11,10 @@ import {
   type ReplayActionDone,
   type ReplayPlayerEvent,
 } from "@shared";
-import { clearPlanByKey, type PlannedActionParticipant } from "./utils";
+import { type PlannedActionParticipant } from "./utils";
 import { buildItemLookup, findTileById } from "./search";
 import { getUsableExtraExecutions } from "../../utils/energy";
-
-type ItemLookup = Record<string, MatchItemRecord>;
+import { BaseAction } from "./classes/BaseAction";
 
 type PickupItem = {
   id: string;
@@ -243,151 +242,164 @@ function getLoadSnapshot(
   return snapshot;
 }
 
+export class PickUpAction extends BaseAction {
+  protected override readonly shouldShuffleParticipants = false;
+
+  protected processRoster(
+    roster: PlannedActionParticipant[],
+    match: MatchRecord
+  ): ReplayPlayerEvent[] {
+    const events: ReplayPlayerEvent[] = [];
+    const itemLookup = buildItemLookup(match);
+
+    for (const participant of roster) {
+      const actionId = participant.plan.actionId as ActionId;
+      if (!actionId) {
+        this.clearPlan(participant);
+        continue;
+      }
+
+      const position = participant.character.position;
+      const tileId = position?.tileId;
+      const coord = position?.coord;
+      const priorities = normalizePriorityIds(participant.plan);
+      const definition = ActionLibrary[actionId];
+      const extraReps = getUsableExtraExecutions(
+        participant.character,
+        participant.plan,
+        definition
+      );
+      const limit = computePickupLimit(extraReps, definition);
+      const picked: PickupItem[] = [];
+      const skippedByLoad: PickupItem[] = [];
+      const missingPriorityLookup: Record<string, true> = {};
+      const attempted: string[] = [];
+      let visibleBefore: string[] = [];
+      let remainingAfter: string[] = [];
+      let missingTile = false;
+
+      if (!tileId) {
+        missingTile = true;
+      } else {
+        const tile = findTileById(match, tileId);
+        if (!tile) {
+          missingTile = true;
+        } else {
+          const tileItems = Array.isArray(tile.itemIds)
+            ? tile.itemIds.slice()
+            : [];
+          const visible = filterVisibleItems(tileItems, participant.character);
+          visibleBefore = visible.slice();
+          if (priorities.length > 0) {
+            for (const id of priorities) {
+              if (visible.indexOf(id) === -1) {
+                missingPriorityLookup[id] = true;
+              }
+            }
+          }
+          if (limit > 0 && visible.length > 0) {
+            const queue = buildPickupQueue(visible, priorities);
+            for (const itemId of queue) {
+              if (picked.length >= limit) {
+                break;
+              }
+              attempted.push(itemId);
+              const record = itemLookup[itemId];
+              if (!record) {
+                if (priorities.indexOf(itemId) !== -1) {
+                  missingPriorityLookup[itemId] = true;
+                }
+                continue;
+              }
+              const itemType = record.item_type;
+              const weight = resolveItemWeight(itemType);
+              // TODO check for exceeding load capacity to reduce health
+              addItemToInventory(participant.character, itemType, weight);
+              incrementLoad(participant.character, weight);
+              removeItemFromTile(tile, itemId);
+              removeItemFromMatch(match, itemId);
+              delete itemLookup[itemId];
+              removeFoundItem(participant.character, itemId);
+              picked.push({ id: itemId, itemType });
+            }
+          }
+          remainingAfter = Array.isArray(tile.itemIds)
+            ? tile.itemIds.slice()
+            : [];
+        }
+      }
+
+      this.clearPlan(participant);
+      if (match.playerCharacters) {
+        match.playerCharacters[participant.playerId] = participant.character;
+      }
+
+      const metadata: Record<string, unknown> = {
+        pickLimit: limit,
+        pickedAny: picked.length > 0,
+        pickedCount: picked.length,
+        extraExecutions: extraReps,
+      };
+      if (picked.length > 0) {
+        metadata.pickedItemIds = picked.map((entry) => entry.id);
+        metadata.pickedItems = picked.map((entry) => ({
+          id: entry.id,
+          itemType: entry.itemType,
+        }));
+      }
+      if (skippedByLoad.length > 0) {
+        metadata.skippedDueToLoad = skippedByLoad.map((entry) => ({
+          id: entry.id,
+          itemType: entry.itemType,
+        }));
+      }
+      if (priorities.length > 0) {
+        metadata.requestedItemIds = priorities;
+      }
+      if (attempted.length > 0) {
+        metadata.attemptedItemIds = attempted;
+      }
+      if (visibleBefore.length > 0) {
+        metadata.visibleItemIds = visibleBefore;
+      }
+      if (remainingAfter.length > 0) {
+        metadata.remainingItemIds = remainingAfter;
+      }
+      const missingPriorityIds = Object.keys(missingPriorityLookup);
+      if (missingPriorityIds.length > 0) {
+        metadata.missingPriorityItemIds = missingPriorityIds;
+      }
+      const loadSnapshot = getLoadSnapshot(participant.character);
+      if (loadSnapshot) {
+        metadata.load = loadSnapshot;
+      }
+      if (missingTile) {
+        metadata.missingTile = true;
+      }
+
+      const action: ReplayActionDone = {
+        actionId,
+        originLocation: coord,
+        targetLocation: coord,
+        metadata,
+      };
+
+      events.push({
+        kind: "player",
+        actorId: participant.playerId,
+        action,
+      });
+    }
+
+    return events;
+  }
+}
+
+const pickUpAction = new PickUpAction();
+
 export function executePickUpAction(
   participants: PlannedActionParticipant[],
   match: MatchRecord
 ): ReplayPlayerEvent[] {
-  const events: ReplayPlayerEvent[] = [];
-  const itemLookup = buildItemLookup(match);
-
-  for (const participant of participants) {
-    const actionId = participant.plan.actionId as ActionId;
-    if (!actionId) {
-      clearPlanByKey(participant.character, participant.planKey);
-      continue;
-    }
-
-    const position = participant.character.position;
-    const tileId = position?.tileId;
-    const coord = position?.coord;
-    const priorities = normalizePriorityIds(participant.plan);
-    const definition = ActionLibrary[actionId];
-    const extraReps = getUsableExtraExecutions(
-      participant.character,
-      participant.plan,
-      definition
-    );
-    const limit = computePickupLimit(extraReps, definition);
-    const picked: PickupItem[] = [];
-    const skippedByLoad: PickupItem[] = [];
-    const missingPriorityLookup: Record<string, true> = {};
-    const attempted: string[] = [];
-    let visibleBefore: string[] = [];
-    let remainingAfter: string[] = [];
-    let missingTile = false;
-
-    if (!tileId) {
-      missingTile = true;
-    } else {
-      const tile = findTileById(match, tileId);
-      if (!tile) {
-        missingTile = true;
-      } else {
-        const tileItems = Array.isArray(tile.itemIds)
-          ? tile.itemIds.slice()
-          : [];
-        const visible = filterVisibleItems(tileItems, participant.character);
-        visibleBefore = visible.slice();
-        if (priorities.length > 0) {
-          for (const id of priorities) {
-            if (visible.indexOf(id) === -1) {
-              missingPriorityLookup[id] = true;
-            }
-          }
-        }
-        if (limit > 0 && visible.length > 0) {
-          const queue = buildPickupQueue(visible, priorities);
-          for (const itemId of queue) {
-            if (picked.length >= limit) {
-              break;
-            }
-            attempted.push(itemId);
-            const record = itemLookup[itemId];
-            if (!record) {
-              if (priorities.indexOf(itemId) !== -1) {
-                missingPriorityLookup[itemId] = true;
-              }
-              continue;
-            }
-            const itemType = record.item_type;
-            const weight = resolveItemWeight(itemType);
-            // TODO check for exceeding load capacity to reduce health
-            addItemToInventory(participant.character, itemType, weight);
-            incrementLoad(participant.character, weight);
-            removeItemFromTile(tile, itemId);
-            removeItemFromMatch(match, itemId);
-            delete itemLookup[itemId];
-            removeFoundItem(participant.character, itemId);
-            picked.push({ id: itemId, itemType });
-          }
-        }
-        remainingAfter = Array.isArray(tile.itemIds)
-          ? tile.itemIds.slice()
-          : [];
-      }
-    }
-
-    clearPlanByKey(participant.character, participant.planKey);
-    if (match.playerCharacters) {
-      match.playerCharacters[participant.playerId] = participant.character;
-    }
-
-    const metadata: Record<string, unknown> = {
-      pickLimit: limit,
-      pickedAny: picked.length > 0,
-      pickedCount: picked.length,
-      extraExecutions: extraReps,
-    };
-    if (picked.length > 0) {
-      metadata.pickedItemIds = picked.map((entry) => entry.id);
-      metadata.pickedItems = picked.map((entry) => ({
-        id: entry.id,
-        itemType: entry.itemType,
-      }));
-    }
-    if (skippedByLoad.length > 0) {
-      metadata.skippedDueToLoad = skippedByLoad.map((entry) => ({
-        id: entry.id,
-        itemType: entry.itemType,
-      }));
-    }
-    if (priorities.length > 0) {
-      metadata.requestedItemIds = priorities;
-    }
-    if (attempted.length > 0) {
-      metadata.attemptedItemIds = attempted;
-    }
-    if (visibleBefore.length > 0) {
-      metadata.visibleItemIds = visibleBefore;
-    }
-    if (remainingAfter.length > 0) {
-      metadata.remainingItemIds = remainingAfter;
-    }
-    const missingPriorityIds = Object.keys(missingPriorityLookup);
-    if (missingPriorityIds.length > 0) {
-      metadata.missingPriorityItemIds = missingPriorityIds;
-    }
-    const loadSnapshot = getLoadSnapshot(participant.character);
-    if (loadSnapshot) {
-      metadata.load = loadSnapshot;
-    }
-    if (missingTile) {
-      metadata.missingTile = true;
-    }
-
-    const action: ReplayActionDone = {
-      actionId,
-      originLocation: coord,
-      targetLocation: coord,
-      metadata,
-    };
-
-    events.push({
-      kind: "player",
-      actorId: participant.playerId,
-      action,
-    });
-  }
-
-  return events;
+  return pickUpAction.execute(participants, match);
 }

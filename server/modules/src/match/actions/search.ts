@@ -8,11 +8,12 @@ import type {
   MatchItemRecord,
   PlayerCharacter,
   ReplayActionDone,
-  ReplayPlayerEvent
+  ReplayPlayerEvent,
 } from "@shared";
 import { ActionLibrary, ExtraExecutionEffect } from "@shared";
-import { clearPlanByKey, type PlannedActionParticipant } from "./utils";
+import { type PlannedActionParticipant } from "./utils";
 import { getUsableExtraExecutions } from "../../utils/energy";
+import { BaseAction } from "./classes/BaseAction";
 
 const BASE_DISCOVERY_COUNT = 5;
 
@@ -85,89 +86,102 @@ function computeDiscoveryCount(
   return Math.min(available, baseTarget > 0 ? baseTarget : 0);
 }
 
+export class SearchAction extends BaseAction {
+  protected override readonly shouldShuffleParticipants = false;
+
+  protected processRoster(
+    roster: PlannedActionParticipant[],
+    match: MatchRecord
+  ): ReplayPlayerEvent[] {
+    const events: ReplayPlayerEvent[] = [];
+    const itemLookup = buildItemLookup(match);
+    match.playerCharacters = match.playerCharacters ?? {};
+
+    for (const participant of roster) {
+      const actionId = participant.plan.actionId as ActionId;
+      if (!actionId) {
+        this.clearPlan(participant);
+        continue;
+      }
+      const position = participant.character.position;
+      const tileId = position?.tileId;
+      if (!tileId) {
+        this.clearPlan(participant);
+        continue;
+      }
+      const tile = findTileById(match, tileId);
+      const tileItems = Array.isArray(tile?.itemIds) ? tile!.itemIds : [];
+      const { list, lookup } = ensureFoundTracking(participant.character);
+      const undiscovered = tile
+        ? tileItems.filter(
+            (itemId) => !Object.prototype.hasOwnProperty.call(lookup, itemId)
+          )
+        : [];
+      const definition = ActionLibrary[actionId];
+      const extraReps = getUsableExtraExecutions(
+        participant.character,
+        participant.plan,
+        definition
+      );
+      const discoveryCount = tile
+        ? computeDiscoveryCount(extraReps, definition, undiscovered.length)
+        : 0;
+      const discovered =
+        discoveryCount > 0 ? sampleItems(undiscovered, discoveryCount) : [];
+
+      if (discovered.length > 0) {
+        for (const itemId of discovered) {
+          if (Object.prototype.hasOwnProperty.call(lookup, itemId)) {
+            continue;
+          }
+          lookup[itemId] = true;
+          list.push(itemId);
+        }
+        participant.character.foundItems = list;
+      }
+      const remainingHidden = Math.max(
+        0,
+        undiscovered.length - discovered.length
+      );
+      const action: ReplayActionDone = {
+        actionId,
+        originLocation: position?.coord,
+        targetLocation: position?.coord,
+        metadata: {
+          tileId,
+          tileMissing: !tile,
+          foundAny: discovered.length > 0,
+          discoveredItemIds: discovered,
+          discoveredItems: discovered.map((itemId) => ({
+            id: itemId,
+            itemType: itemLookup[itemId]?.item_type ?? null,
+          })),
+          revealedCount: discovered.length,
+          remainingHidden,
+          totalItems: tileItems.length,
+          extraExecutions: extraReps,
+        },
+      };
+
+      this.clearPlan(participant);
+      match.playerCharacters[participant.playerId] = participant.character;
+
+      events.push({
+        kind: "player",
+        actorId: participant.playerId,
+        action,
+      });
+    }
+
+    return events;
+  }
+}
+
+const searchAction = new SearchAction();
+
 export function executeSearchAction(
   participants: PlannedActionParticipant[],
   match: MatchRecord
 ): ReplayPlayerEvent[] {
-  const events: ReplayPlayerEvent[] = [];
-  const itemLookup = buildItemLookup(match);
-  match.playerCharacters = match.playerCharacters ?? {};
-
-  for (const participant of participants) {
-    const actionId = participant.plan.actionId as ActionId;
-    if (!actionId) {
-      clearPlanByKey(participant.character, participant.planKey);
-      continue;
-    }
-    const position = participant.character.position;
-    const tileId = position?.tileId;
-    if (!tileId) {
-      clearPlanByKey(participant.character, participant.planKey);
-      continue;
-    }
-    const tile = findTileById(match, tileId);
-    const tileItems = Array.isArray(tile?.itemIds) ? tile!.itemIds : [];
-    const { list, lookup } = ensureFoundTracking(participant.character);
-    const undiscovered = tile
-      ? tileItems.filter(
-          (itemId) => !Object.prototype.hasOwnProperty.call(lookup, itemId)
-        )
-      : [];
-    const definition = ActionLibrary[actionId];
-    const extraReps = getUsableExtraExecutions(
-      participant.character,
-      participant.plan,
-      definition
-    );
-    const discoveryCount = tile
-      ? computeDiscoveryCount(extraReps, definition, undiscovered.length)
-      : 0;
-    const discovered =
-      discoveryCount > 0 ? sampleItems(undiscovered, discoveryCount) : [];
-
-    if (discovered.length > 0) {
-      for (const itemId of discovered) {
-        if (Object.prototype.hasOwnProperty.call(lookup, itemId)) {
-          continue;
-        }
-        lookup[itemId] = true;
-        list.push(itemId);
-      }
-      participant.character.foundItems = list;
-    }
-    const remainingHidden = Math.max(
-      0,
-      undiscovered.length - discovered.length
-    );
-    const action: ReplayActionDone = {
-      actionId,
-      originLocation: position?.coord,
-      targetLocation: position?.coord,
-      metadata: {
-        tileId,
-        tileMissing: !tile,
-        foundAny: discovered.length > 0,
-        discoveredItemIds: discovered,
-        discoveredItems: discovered.map((itemId) => ({
-          id: itemId,
-          itemType: itemLookup[itemId]?.item_type ?? null
-        })),
-        revealedCount: discovered.length,
-        remainingHidden,
-        totalItems: tileItems.length,
-        extraExecutions: extraReps
-      }
-    };
-
-    clearPlanByKey(participant.character, participant.planKey);
-    match.playerCharacters[participant.playerId] = participant.character;
-
-    events.push({
-      kind: "player",
-      actorId: participant.playerId,
-      action
-    });
-  }
-
-  return events;
+  return searchAction.execute(participants, match);
 }
