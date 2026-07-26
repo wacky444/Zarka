@@ -2055,7 +2055,17 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private refreshPlayerOptionsForSelectors(): void {
-    const baseOptions = this.playerOptions;
+    const match = this.currentMatch;
+    const baseOptions = this.playerOptions.filter((option) => {
+      if (!match) return true;
+      const char = match.playerCharacters?.[option.id];
+      const isDead =
+        match.deadCharacters?.[option.id] === true ||
+        char?.statuses?.conditions?.includes("dead") ||
+        (typeof char?.stats?.health?.current === "number" &&
+          char.stats.health.current <= 0);
+      return !isDead;
+    });
     const currentUserId = this.currentUserId;
 
     const mainAllowsSelf = this.selectedActionCanTargetSelf();
