@@ -250,9 +250,37 @@ function clearBotPlans(character: PlayerCharacter): void {
   }
 }
 
+function checkDangerousCell(
+  context: BotActionContext
+): BotActionCandidate | null {
+  const currentTile = getCurrentTile(context);
+  if (!isTileMarked(currentTile, context.currentTurn)) {
+    return null;
+  }
+  const moveDefinition = ActionLibrary.move;
+  if (
+    !moveDefinition ||
+    moveDefinition.developed !== true ||
+    isActionOnCooldown(
+      context.character,
+      moveDefinition.id,
+      context.currentTurn
+    ) ||
+    !hasEnoughEnergy(context.character, moveDefinition.energyCost)
+  ) {
+    return null;
+  }
+  return createMoveCandidate(moveDefinition, context);
+}
+
 function buildExecutableActionCandidates(
   context: BotActionContext
 ): BotActionCandidate[] {
+  const dangerousCellCandidate = checkDangerousCell(context);
+  if (dangerousCellCandidate) {
+    return [dangerousCellCandidate];
+  }
+
   const developed = getSupportedDevelopedActions();
   const results: BotActionCandidate[] = [];
   for (let i = 0; i < developed.length; i += 1) {
@@ -324,6 +352,33 @@ function createCandidateForAction(
   }
 }
 
+function isTileMarked(
+  tile: HexTileSnapshot | undefined,
+  currentTurn: number
+): boolean {
+  if (!tile) {
+    return false;
+  }
+  if (tile.meta?.destroyed === true || tile.walkable === false) {
+    return true;
+  }
+  const destructionTurn =
+    typeof tile.meta?.destructionTurn === "number"
+      ? tile.meta.destructionTurn
+      : undefined;
+  const warningTurn =
+    typeof tile.meta?.warningTurn === "number"
+      ? tile.meta.warningTurn
+      : undefined;
+  if (destructionTurn !== undefined && currentTurn >= destructionTurn) {
+    return true;
+  }
+  if (warningTurn !== undefined && currentTurn >= warningTurn) {
+    return true;
+  }
+  return false;
+}
+
 function createMoveCandidate(
   definition: ActionDefinition,
   context: BotActionContext
@@ -334,11 +389,19 @@ function createMoveCandidate(
   }
   const destinations = neighbors(origin)
     .map((coord) => context.map.byCoord[coordKey(coord)])
-    .filter((tile): tile is HexTileSnapshot => !!tile && tile.walkable);
+    .filter(
+      (tile): tile is HexTileSnapshot =>
+        !!tile && tile.walkable && tile.meta?.destroyed !== true
+    );
   if (destinations.length === 0) {
     return null;
   }
-  const destination = pickRandom(destinations, context.rng);
+  const safeDestinations = destinations.filter(
+    (tile) => !isTileMarked(tile, context.currentTurn)
+  );
+  const candidatesList =
+    safeDestinations.length > 0 ? safeDestinations : destinations;
+  const destination = pickRandom(candidatesList, context.rng);
   if (!destination) {
     return null;
   }
@@ -619,10 +682,14 @@ function getCurrentTile(
   context: BotActionContext
 ): HexTileSnapshot | undefined {
   const tileId = context.character.position?.tileId;
-  if (!tileId) {
-    return undefined;
+  if (tileId && context.map.byId[tileId]) {
+    return context.map.byId[tileId];
   }
-  return context.map.byId[tileId];
+  const coord = context.character.position?.coord;
+  if (coord) {
+    return context.map.byCoord[coordKey(coord)];
+  }
+  return undefined;
 }
 
 function getVisibleItems(
