@@ -38,7 +38,12 @@ const PLAYER_LIST_LABEL_PADDING = 10;
 const CARD_SPRITE_SIZE = 64;
 const CARD_SPRITE_PADDING = 16;
 
+import { Subtabs } from "./Subtabs";
+
+export type PlayerSubTabKey = "players" | "teams";
+
 export class CharacterPanelPlayerListView {
+  private readonly subtabs: Subtabs<PlayerSubTabKey>;
   private playersTabEntries: PlayerTabListEntry[] = [];
   private playersTabSelection: string | null = null;
   private currentMatch: MatchRecord | null = null;
@@ -79,8 +84,29 @@ export class CharacterPanelPlayerListView {
     this.playersTabListBackground.setStrokeStyle?.(1, 0x253055, 0.8);
     parent.add(this.playersTabListBackground);
 
+    const subtabY = playersBoxY + 8;
+    const subtabHeight = 28;
+
+    this.subtabs = new Subtabs<PlayerSubTabKey>({
+      scene,
+      parent,
+      x: layout.margin + 12,
+      y: subtabY,
+      width: playersBoxWidth - 24,
+      height: subtabHeight,
+      tabs: [
+        { key: "players", label: "Players" },
+        { key: "teams", label: "Teams" }
+      ],
+      defaultKey: "players",
+      onChange: () => {
+        this.updateSubtabVisibility();
+      }
+    });
+
+    const subtabBottom = subtabY + subtabHeight + 6;
     this.playersTabListTitle = scene.add
-      .text(layout.margin + 12, playersBoxY + 12, "Players", {
+      .text(layout.margin + 12, subtabBottom, "Players", {
         fontSize: "16px",
         color: "#ffffff"
       })
@@ -119,7 +145,7 @@ export class CharacterPanelPlayerListView {
       .setVisible(false);
     parent.add(this.playersTabCardTeam);
 
-    const listTop = playersBoxY + 44;
+    const listTop = subtabBottom + 26;
     const cardTop = this.playersTabCardBackground.y;
     const listHeight = Math.max(0, cardTop - listTop - 12);
     const listWidth = Math.max(120, playersBoxWidth - 24);
@@ -164,7 +190,7 @@ export class CharacterPanelPlayerListView {
     parent.add(this.playersTabCardSprite);
 
     this.playersTabEmpty = scene.add
-      .text(layout.margin + 24, playersBoxY + 70, "No players found.", {
+      .text(layout.margin + 24, subtabBottom + 30, "No players found.", {
         fontSize: "14px",
         color: "#94a3d4"
       })
@@ -174,6 +200,7 @@ export class CharacterPanelPlayerListView {
 
     this.elements = [
       this.playersTabListBackground,
+      ...this.subtabs.getElements(),
       this.playersTabListTitle,
       this.playersTabListScrollPanel,
       this.playersTabCardBackground,
@@ -188,6 +215,41 @@ export class CharacterPanelPlayerListView {
     return this.elements;
   }
 
+  setActiveSubtab(subtab: PlayerSubTabKey): void {
+    this.subtabs.setActiveKey(subtab);
+    this.updateSubtabVisibility();
+  }
+
+  getActiveSubtab(): PlayerSubTabKey {
+    return this.subtabs.getActiveKey();
+  }
+
+  private updateSubtabVisibility(): void {
+    const isVisible = this.playersTabListBackground.visible;
+    const isPlayersActive =
+      isVisible && this.subtabs.getActiveKey() === "players";
+
+    this.subtabs.setVisible(isVisible);
+
+    this.playersTabListTitle.setVisible(isPlayersActive);
+    this.playersTabListScrollPanel.setVisible?.(isPlayersActive);
+    this.playersTabCardBackground.setVisible(isPlayersActive);
+    this.playersTabCardName.setVisible(isPlayersActive);
+    this.playersTabCardTeam.setVisible(isPlayersActive);
+    this.playersTabCardSprite.setVisible(
+      isPlayersActive &&
+        Boolean(
+          this.playersTabSelection &&
+            this.currentMatch?.playerCharacters?.[this.playersTabSelection]
+        )
+    );
+    const match = this.currentMatch;
+    const list = this.playerOptions;
+    this.playersTabEmpty.setVisible(
+      isPlayersActive && (!match || list.length === 0)
+    );
+  }
+
   layout(options: CharacterPanelPlayerListViewLayout): void {
     const playersBoxY = options.contentTop;
     const playersBoxHeight = Math.max(
@@ -200,8 +262,19 @@ export class CharacterPanelPlayerListView {
       options.boxWidth,
       playersBoxHeight
     );
-    this.playersTabListTitle.setPosition(options.margin + 12, playersBoxY + 12);
-    const listTop = playersBoxY + 44;
+
+    const subtabY = playersBoxY + 8;
+    const subtabHeight = 28;
+    this.subtabs.layout(
+      options.margin + 12,
+      subtabY,
+      options.boxWidth - 24,
+      subtabHeight
+    );
+
+    const subtabBottom = subtabY + subtabHeight + 6;
+    this.playersTabListTitle.setPosition(options.margin + 12, subtabBottom);
+    const listTop = subtabBottom + 26;
     this.playersTabCardBackground.setPosition(
       options.margin + 12,
       playersBoxY + playersBoxHeight - 150
@@ -232,7 +305,7 @@ export class CharacterPanelPlayerListView {
     this.playersTabListScrollPanel.setSize?.(listWidth, listHeight);
     this.playersTabListScrollPanel.setMinSize?.(listWidth, listHeight);
     this.playersTabListScrollPanel.layout?.();
-    this.playersTabEmpty.setPosition(options.margin + 24, playersBoxY + 70);
+    this.playersTabEmpty.setPosition(options.margin + 24, subtabBottom + 30);
     this.refresh();
   }
 
@@ -264,10 +337,10 @@ export class CharacterPanelPlayerListView {
     this.playersTabListContent.removeAll(false);
     if (!match || list.length === 0) {
       this.playersTabListTitle.setText("Players");
-      this.playersTabEmpty.setVisible(true);
       this.playersTabCardName.setText("");
       this.playersTabCardTeam.setText("");
       this.playersTabCardSprite.setVisible(false);
+      this.updateSubtabVisibility();
       return;
     }
     const totalPlayers = list.length;
@@ -284,7 +357,6 @@ export class CharacterPanelPlayerListView {
       }
     }
     this.playersTabListTitle.setText(`Players (${aliveCount}/${totalPlayers})`);
-    this.playersTabEmpty.setVisible(false);
     const entriesByTeam = new Map<string, PlayerOption[]>();
     const order: string[] = [];
     for (const option of list) {
@@ -377,6 +449,7 @@ export class CharacterPanelPlayerListView {
     }
     this.applySelectionStyles();
     this.refreshPlayerCard();
+    this.updateSubtabVisibility();
     this.playersTabListScrollPanel.layout?.();
   }
 
@@ -389,9 +462,11 @@ export class CharacterPanelPlayerListView {
     if (!availableIds.has(normalized)) {
       return false;
     }
+    this.subtabs.setActiveKey("players", false);
     this.playersTabSelection = normalized;
     this.applySelectionStyles();
     this.refreshPlayerCard();
+    this.updateSubtabVisibility();
     return true;
   }
 

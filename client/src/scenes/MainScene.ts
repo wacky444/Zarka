@@ -397,21 +397,49 @@ export class MainScene extends Phaser.Scene {
           "Create Match",
           async () => {
             if (!this.turnService) throw new Error("No service");
-            const createRes = await this.turnService.createMatch(2);
-            const parsed = this.parseRpcPayload<CreateMatchPayload>(createRes);
-            if (!parsed || !parsed.match_id)
-              throw new Error("No match_id returned");
-            this.setCurrentMatchId(parsed.match_id);
-            const createdName = parsed.name ?? "Untitled Match";
-            this.currentMatchName = createdName;
-            this.statusText.setText(`Match created: ${createdName}`);
-            if (this.lobbyView) {
-              this.lobbyView.setMatchName(createdName);
-              this.lobbyView.setMatchStarted(parsed.started ?? false);
-            }
+            try {
+              const createRes = await this.turnService.createMatch(2);
+              const parsed = this.parseRpcPayload<CreateMatchPayload>(createRes);
+              if (!parsed || !parsed.match_id)
+                throw new Error("No match_id returned");
+              this.setCurrentMatchId(parsed.match_id);
+              const createdName = parsed.name ?? "Untitled Match";
+              this.currentMatchName = createdName;
+              this.statusText.setText(`Match created: ${createdName}`);
+              if (this.lobbyView) {
+                this.lobbyView.setMatchName(createdName);
+                this.lobbyView.setMatchStarted(parsed.started ?? false);
+              }
 
-            // Auto-join the match we just created
-            await this.joinMatch(parsed.match_id);
+              // Auto-join the match we just created
+              await this.joinMatch(parsed.match_id);
+            } catch (e: unknown) {
+              console.error("create_match error", e);
+              let code: number | undefined;
+              let msg: string | undefined;
+
+              if (e && typeof (e as { json?: unknown }).json === "function") {
+                try {
+                  const json = await (e as Response).json();
+                  if (typeof json?.code === "number") code = json.code;
+                  if (typeof json?.message === "string") msg = json.message;
+                } catch {
+                  // Ignore JSON parse failure
+                }
+              } else if (e && typeof e === "object") {
+                const errObj = e as { code?: number; message?: string };
+                if (typeof errObj.code === "number") code = errObj.code;
+                if (typeof errObj.message === "string") msg = errObj.message;
+              } else if (e instanceof Error) {
+                msg = e.message;
+              }
+
+              if (code === 8) {
+                this.statusText.setText(msg || "Maximum of 3 matches per user reached");
+              } else {
+                this.statusText.setText(msg ? `Error: ${msg}` : "Failed to create match (see console).");
+              }
+            }
           },
           ["main"]
         )

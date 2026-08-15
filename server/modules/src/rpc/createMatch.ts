@@ -87,7 +87,7 @@ export function createMatchRpc(
   if (creatorMatchCount >= 3) {
     throw {
       message: "Maximum of 3 matches per user reached",
-      code: nkruntime.Codes.RESOURCE_EXHAUSTED
+      code: 8
     } as nkruntime.Error;
   }
 
