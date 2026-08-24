@@ -1111,7 +1111,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.currentMatch = match ?? null;
     this.currentUserId = currentUserId ?? null;
     this.updatePlayerOptions(match ?? null, userMap, currentUserId);
-    this.playersTabView.update(match ?? null, this.playerOptions);
+    this.playersTabView.update(
+      match ?? null,
+      this.playerOptions,
+      currentUserId
+    );
     this.updateItemOptions(match ?? null, currentUserId);
     if (!match || !currentUserId) {
       this.currentTurn = 0;

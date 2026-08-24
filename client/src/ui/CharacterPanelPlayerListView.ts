@@ -32,7 +32,6 @@ type CharacterPanelPlayerListViewLayout = {
 };
 
 const BOX_HEIGHT = 180;
-const NO_TEAM_LABEL = "No Team";
 const UNKNOWN_TEAM_LABEL = "Unknown Team";
 const PLAYER_LIST_LABEL_PADDING = 10;
 const CARD_SPRITE_SIZE = 64;
@@ -48,6 +47,7 @@ export class CharacterPanelPlayerListView {
   private playersTabSelection: string | null = null;
   private currentMatch: MatchRecord | null = null;
   private playerOptions: PlayerOption[] = [];
+  private currentUserId: string | null = null;
   private playersTabListContent: Phaser.GameObjects.Container;
   private playersTabListScrollPanel: ScrollablePanelInstance;
   private playersTabListBackground: Phaser.GameObjects.Rectangle;
@@ -382,9 +382,14 @@ export class CharacterPanelPlayerListView {
     this.refresh();
   }
 
-  update(match: MatchRecord | null, players: PlayerOption[]): void {
+  update(
+    match: MatchRecord | null,
+    players: PlayerOption[],
+    currentUserId?: string | null
+  ): void {
     this.currentMatch = match;
     this.playerOptions = players;
+    this.currentUserId = currentUserId ?? null;
     this.refresh();
   }
 
@@ -396,7 +401,10 @@ export class CharacterPanelPlayerListView {
       !this.playersTabSelection ||
       !availableIds.has(this.playersTabSelection)
     ) {
-      this.playersTabSelection = list[0]?.id ?? null;
+      this.playersTabSelection =
+        this.currentUserId && availableIds.has(this.currentUserId)
+          ? this.currentUserId
+          : list[0]?.id ?? null;
     }
     for (const entry of this.playersTabEntries) {
       entry.button.destroy();
@@ -430,95 +438,77 @@ export class CharacterPanelPlayerListView {
       }
     }
     this.playersTabListTitle.setText(`Players (${aliveCount}/${totalPlayers})`);
-    const entriesByTeam = new Map<string, PlayerOption[]>();
-    const order: string[] = [];
-    for (const option of list) {
-      const character = match?.playerCharacters?.[option.id];
-      const teamId = character?.teamId?.trim() || UNKNOWN_TEAM_LABEL;
-      if (!entriesByTeam.has(teamId)) {
-        entriesByTeam.set(teamId, []);
-        order.push(teamId);
+    const isSelfPlayer = (option: PlayerOption): boolean => {
+      if (this.currentUserId && option.id === this.currentUserId) {
+        return true;
       }
-      entriesByTeam.get(teamId)?.push(option);
-    }
-    order.sort((a, b) => {
-      const rank = (value: string) => (value === NO_TEAM_LABEL ? 1 : 0);
-      const rankDiff = rank(a) - rank(b);
-      if (rankDiff !== 0) {
-        return rankDiff;
-      }
-      return a.localeCompare(b);
+      return option.label.endsWith(" (You)");
+    };
+
+    const sortedPlayers = [...list].sort((a, b) => {
+      const aIsSelf = isSelfPlayer(a);
+      const bIsSelf = isSelfPlayer(b);
+      if (aIsSelf && !bIsSelf) return -1;
+      if (!aIsSelf && bIsSelf) return 1;
+      return a.label.localeCompare(b.label);
     });
+
     const rowHeight = 30;
     const rowSpacing = 6;
-    const sectionSpacing = 12;
     const containerWidth = Math.max(
       120,
       this.playersTabListBackground.width - 24
     );
     const itemWidth = Math.max(80, containerWidth - 2);
     let y = 0;
-    for (const teamId of order) {
-      const teamLabel = this.scene.add
-        .text(0, y, `Team ${teamId}`, {
-          fontSize: "13px",
-          color: "#a0b7ff"
+    for (const option of sortedPlayers) {
+      const button = this.scene.add
+        .rectangle(0, y, itemWidth, rowHeight, 0x202b4a, 0.95)
+        .setOrigin(0, 0)
+        .setStrokeStyle(1, 0x2f3a5d, 1)
+        .setInteractive({ useHandCursor: true });
+      const character = match?.playerCharacters?.[option.id];
+      const isDead =
+        match?.deadCharacters?.[option.id] === true ||
+        character?.statuses?.conditions?.includes("dead") ||
+        (typeof character?.stats?.health?.current === "number" &&
+          character.stats.health.current <= 0);
+      const isBot = /^bot\d+$/i.test(option.id);
+      const isReady =
+        !isDead && (isBot || match?.readyStates?.[option.id] === true);
+      const readyIcon = this.scene.add
+        .text(itemWidth - PLAYER_LIST_LABEL_PADDING, y + rowHeight / 2, "✓", {
+          fontSize: "14px",
+          color: "#22c55e"
         })
-        .setOrigin(0, 0);
-      this.playersTabListContent.add(teamLabel);
-      y += 18;
-      const members = entriesByTeam.get(teamId) ?? [];
-      members.sort((a, b) => a.label.localeCompare(b.label));
-      for (const option of members) {
-        const button = this.scene.add
-          .rectangle(0, y, itemWidth, rowHeight, 0x202b4a, 0.95)
-          .setOrigin(0, 0)
-          .setStrokeStyle(1, 0x2f3a5d, 1)
-          .setInteractive({ useHandCursor: true });
-        const character = match?.playerCharacters?.[option.id];
-        const isDead =
-          match?.deadCharacters?.[option.id] === true ||
-          character?.statuses?.conditions?.includes("dead") ||
-          (typeof character?.stats?.health?.current === "number" &&
-            character.stats.health.current <= 0);
-        const isBot = /^bot\d+$/i.test(option.id);
-        const isReady =
-          !isDead && (isBot || match?.readyStates?.[option.id] === true);
-        const readyIcon = this.scene.add
-          .text(itemWidth - PLAYER_LIST_LABEL_PADDING, y + rowHeight / 2, "✓", {
-            fontSize: "14px",
-            color: "#22c55e"
-          })
-          .setOrigin(1, 0.5)
-          .setVisible(isReady);
-        const label = this.scene.add
-          .text(PLAYER_LIST_LABEL_PADDING, y + rowHeight / 2, option.label, {
-            fontSize: "14px",
-            color: "#ffffff"
-          })
-          .setOrigin(0, 0.5);
-        this.fitPlayerListLabelWidth(
-          label,
-          option.label,
-          itemWidth - PLAYER_LIST_LABEL_PADDING * 2 - (isReady ? 20 : 0)
-        );
-        button.on(Phaser.Input.Events.POINTER_UP, () => {
-          this.playersTabSelection = option.id;
-          this.applySelectionStyles();
-          this.refreshPlayerCard();
-        });
-        this.playersTabListContent.add(button);
-        this.playersTabListContent.add(label);
-        this.playersTabListContent.add(readyIcon);
-        this.playersTabEntries.push({
-          playerId: option.id,
-          button,
-          label,
-          readyIcon
-        });
-        y += rowHeight + rowSpacing;
-      }
-      y += sectionSpacing;
+        .setOrigin(1, 0.5)
+        .setVisible(isReady);
+      const label = this.scene.add
+        .text(PLAYER_LIST_LABEL_PADDING, y + rowHeight / 2, option.label, {
+          fontSize: "14px",
+          color: "#ffffff"
+        })
+        .setOrigin(0, 0.5);
+      this.fitPlayerListLabelWidth(
+        label,
+        option.label,
+        itemWidth - PLAYER_LIST_LABEL_PADDING * 2 - (isReady ? 20 : 0)
+      );
+      button.on(Phaser.Input.Events.POINTER_UP, () => {
+        this.playersTabSelection = option.id;
+        this.applySelectionStyles();
+        this.refreshPlayerCard();
+      });
+      this.playersTabListContent.add(button);
+      this.playersTabListContent.add(label);
+      this.playersTabListContent.add(readyIcon);
+      this.playersTabEntries.push({
+        playerId: option.id,
+        button,
+        label,
+        readyIcon
+      });
+      y += rowHeight + rowSpacing;
     }
     this.applySelectionStyles();
     this.refreshPlayerCard();
