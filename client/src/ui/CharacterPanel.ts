@@ -488,7 +488,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         pointerOutRelease: true
       },
       mouseWheelScroller: {
-        focus: true,
+        focus: 2,
         speed: 0.35
       },
       space: { left: 0, right: 0, top: 0, bottom: 0 }
@@ -840,6 +840,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       playersElements: this.playersElements,
       chatElements: this.chatElements,
       onCharacterTabShow: () => {
+        this.scrollPanel?.setMouseWheelScrollerEnable?.(true);
         this.mainActionDropdown.setVisible(true);
         this.mainActionDropdown.setActive(true);
         this.refreshExtraExecutionSelectorState();
@@ -871,6 +872,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.secondaryPlayerSelector.setVisible(false);
         this.secondaryPlayerSelector.setActive(false);
         this.readyToggle.disableInteractive();
+        this.scrollPanel?.setMouseWheelScrollerEnable?.(false);
       },
       onItemsTabShow: () => {
         this.inventoryGrid.setActive(true);
@@ -976,6 +978,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     );
     this.logView?.destroy();
     this.chatView?.destroy();
+    this.playersTabView?.destroy();
     this.scrollPanel?.clearMask?.();
     this.scrollMask?.destroy();
     this.scrollMaskShape?.destroy();
@@ -1010,9 +1013,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const scrollHeight = Math.max(160, height - scrollTop - MARGIN);
     this.scrollContentWidth = scrollWidth;
     if (this.scrollMaskShape) {
-      this.scrollMaskShape.setPosition(360, scrollTop);
+      const matrix = this.getWorldTransformMatrix();
+      this.scrollMaskShape.setPosition(matrix.tx + MARGIN, matrix.ty + scrollTop);
       this.scrollMaskShape.setSize(scrollWidth + 100, scrollHeight);
-      // this.scrollMaskShape.setDisplaySize(scrollWidth, scrollHeight);
     }
     if (this.scrollPanel) {
       this.scrollPanel.setPosition?.(MARGIN, scrollTop);

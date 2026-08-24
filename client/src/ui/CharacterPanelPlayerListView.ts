@@ -22,6 +22,9 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
     mask: Phaser.Display.Masks.BitmapMask | Phaser.Display.Masks.GeometryMask
   ) => Phaser.GameObjects.GameObject;
   clearMask?: (destroyMask?: boolean) => Phaser.GameObjects.GameObject;
+  addChildOY?: (inc: number, clamp?: boolean) => void;
+  childOY?: number;
+  t?: number;
 };
 
 type CharacterPanelPlayerListViewLayout = {
@@ -36,6 +39,13 @@ const UNKNOWN_TEAM_LABEL = "Unknown Team";
 const PLAYER_LIST_LABEL_PADDING = 10;
 const CARD_SPRITE_SIZE = 64;
 const CARD_SPRITE_PADDING = 16;
+const CARD_HEIGHT = 138;
+const PLAYER_ROW_HEIGHT = 30;
+const PLAYER_ROW_SPACING = 6;
+const VISIBLE_PLAYER_ROWS = 8;
+const PLAYER_LIST_SCROLL_HEIGHT =
+  VISIBLE_PLAYER_ROWS * PLAYER_ROW_HEIGHT +
+  (VISIBLE_PLAYER_ROWS - 1) * PLAYER_ROW_SPACING;
 
 import { Subtabs } from "./Subtabs";
 
@@ -50,6 +60,8 @@ export class CharacterPanelPlayerListView {
   private currentUserId: string | null = null;
   private playersTabListContent: Phaser.GameObjects.Container;
   private playersTabListScrollPanel: ScrollablePanelInstance;
+  private playersTabScrollMask: Phaser.Display.Masks.GeometryMask | null = null;
+  private playersTabScrollMaskShape: Phaser.GameObjects.Rectangle | null = null;
   private playersTabListBackground: Phaser.GameObjects.Rectangle;
   private playersTabListTitle: Phaser.GameObjects.Text;
   private playersTabCardBackground: Phaser.GameObjects.Rectangle;
@@ -60,6 +72,8 @@ export class CharacterPanelPlayerListView {
   private teamsTabListTitle: Phaser.GameObjects.Text;
   private teamsTabListContent: Phaser.GameObjects.Container;
   private teamsTabListScrollPanel: ScrollablePanelInstance;
+  private teamsTabScrollMask: Phaser.Display.Masks.GeometryMask | null = null;
+  private teamsTabScrollMaskShape: Phaser.GameObjects.Rectangle | null = null;
   private teamsTabEmpty: Phaser.GameObjects.Text;
   private teamsTabEntries: Phaser.GameObjects.GameObject[] = [];
   private readonly elements: Phaser.GameObjects.GameObject[];
@@ -110,6 +124,10 @@ export class CharacterPanelPlayerListView {
     });
 
     const subtabBottom = subtabY + subtabHeight + 6;
+    const listTop = subtabBottom + 26;
+    const listHeight = PLAYER_LIST_SCROLL_HEIGHT;
+    const cardTop = listTop + listHeight + 12;
+
     this.playersTabListTitle = scene.add
       .text(layout.margin + 12, subtabBottom, "Players", {
         fontSize: "16px",
@@ -122,9 +140,9 @@ export class CharacterPanelPlayerListView {
     this.playersTabCardBackground = scene.add
       .rectangle(
         layout.margin + 12,
-        playersBoxY + playersBoxHeight - 150,
+        cardTop,
         playersBoxWidth - 24,
-        138,
+        CARD_HEIGHT,
         0x141c33
       )
       .setOrigin(0, 0)
@@ -133,7 +151,7 @@ export class CharacterPanelPlayerListView {
     parent.add(this.playersTabCardBackground);
 
     this.playersTabCardName = scene.add
-      .text(layout.margin + 24, playersBoxY + playersBoxHeight - 138, "", {
+      .text(layout.margin + 24, cardTop + 12, "", {
         fontSize: "18px",
         color: "#ffffff"
       })
@@ -142,7 +160,7 @@ export class CharacterPanelPlayerListView {
     parent.add(this.playersTabCardName);
 
     this.playersTabCardTeam = scene.add
-      .text(layout.margin + 24, playersBoxY + playersBoxHeight - 112, "", {
+      .text(layout.margin + 24, cardTop + 38, "", {
         fontSize: "13px",
         color: "#a0b7ff"
       })
@@ -150,10 +168,19 @@ export class CharacterPanelPlayerListView {
       .setVisible(false);
     parent.add(this.playersTabCardTeam);
 
-    const listTop = subtabBottom + 26;
-    const cardTop = this.playersTabCardBackground.y;
-    const listHeight = Math.max(0, cardTop - listTop - 12);
     const listWidth = Math.max(120, playersBoxWidth - 24);
+    const matrix = parent.getWorldTransformMatrix();
+    const worldX = matrix.tx + layout.margin + 12;
+    const worldY = matrix.ty + listTop;
+
+    this.playersTabScrollMaskShape = scene.add
+      .rectangle(worldX, worldY, listWidth, listHeight, 0xffffff, 0)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setVisible(true);
+    this.playersTabScrollMask =
+      this.playersTabScrollMaskShape.createGeometryMask();
+
     this.playersTabListContent = scene.add.container(0, 0);
     this.playersTabListScrollPanel = scene.rexUI.add.scrollablePanel({
       x: layout.margin + 12,
@@ -163,9 +190,12 @@ export class CharacterPanelPlayerListView {
       scrollMode: 0,
       panel: {
         child: this.playersTabListContent,
-        mask: { padding: 1 }
+        mask: false
       },
-      slider: false,
+      slider: {
+        track: scene.rexUI.add.roundRectangle(0, 0, 4, 120, 2, 0x1f2a4a),
+        thumb: scene.rexUI.add.roundRectangle(0, 0, 6, 36, 3, 0x3b82f6)
+      },
       scroller: {
         threshold: 10,
         slidingDeceleration: 5000,
@@ -173,12 +203,15 @@ export class CharacterPanelPlayerListView {
         pointerOutRelease: true
       },
       mouseWheelScroller: {
-        focus: true,
+        focus: 2,
         speed: 0.35
       },
-      space: { left: 0, right: 0, top: 0, bottom: 0 }
+      space: { left: 0, right: 2, top: 0, bottom: 0, panel: 6 }
     }) as ScrollablePanelInstance;
     this.playersTabListScrollPanel.setOrigin?.(0, 0);
+    if (this.playersTabScrollMask) {
+      this.playersTabListScrollPanel.setMask?.(this.playersTabScrollMask);
+    }
     this.playersTabListScrollPanel.setVisible?.(false);
     parent.add(this.playersTabListScrollPanel);
 
@@ -214,6 +247,15 @@ export class CharacterPanelPlayerListView {
 
     this.teamsTabListContent = scene.add.container(0, 0);
     const teamsListHeight = Math.max(0, playersBoxHeight - (subtabBottom - playersBoxY) - 40);
+
+    this.teamsTabScrollMaskShape = scene.add
+      .rectangle(worldX, worldY, listWidth, teamsListHeight, 0xffffff, 0)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setVisible(true);
+    this.teamsTabScrollMask =
+      this.teamsTabScrollMaskShape.createGeometryMask();
+
     this.teamsTabListScrollPanel = scene.rexUI.add.scrollablePanel({
       x: layout.margin + 12,
       y: listTop,
@@ -222,7 +264,7 @@ export class CharacterPanelPlayerListView {
       scrollMode: 0,
       panel: {
         child: this.teamsTabListContent,
-        mask: { padding: 1 }
+        mask: false
       },
       slider: false,
       scroller: {
@@ -232,12 +274,15 @@ export class CharacterPanelPlayerListView {
         pointerOutRelease: true
       },
       mouseWheelScroller: {
-        focus: true,
+        focus: 2,
         speed: 0.35
       },
       space: { left: 0, right: 0, top: 0, bottom: 0 }
     }) as ScrollablePanelInstance;
     this.teamsTabListScrollPanel.setOrigin?.(0, 0);
+    if (this.teamsTabScrollMask) {
+      this.teamsTabListScrollPanel.setMask?.(this.teamsTabScrollMask);
+    }
     this.teamsTabListScrollPanel.setVisible?.(false);
     parent.add(this.teamsTabListScrollPanel);
 
@@ -315,10 +360,18 @@ export class CharacterPanelPlayerListView {
 
   layout(options: CharacterPanelPlayerListViewLayout): void {
     const playersBoxY = options.contentTop;
+    const subtabY = playersBoxY + 8;
+    const subtabHeight = 28;
+    const subtabBottom = subtabY + subtabHeight + 6;
+    const listTop = subtabBottom + 26;
+    const listHeight = PLAYER_LIST_SCROLL_HEIGHT;
+    const cardTop = listTop + listHeight + 12;
+    const cardHeight = CARD_HEIGHT;
     const playersBoxHeight = Math.max(
-      BOX_HEIGHT * 2,
+      cardTop + cardHeight + 12 - playersBoxY,
       options.panelHeight - playersBoxY - options.margin
     );
+
     this.playersTabListBackground.setPosition(options.margin, playersBoxY);
     this.playersTabListBackground.setSize(options.boxWidth, playersBoxHeight);
     this.playersTabListBackground.setDisplaySize(
@@ -326,8 +379,6 @@ export class CharacterPanelPlayerListView {
       playersBoxHeight
     );
 
-    const subtabY = playersBoxY + 8;
-    const subtabHeight = 28;
     this.subtabs.layout(
       options.margin + 12,
       subtabY,
@@ -335,13 +386,9 @@ export class CharacterPanelPlayerListView {
       subtabHeight
     );
 
-    const subtabBottom = subtabY + subtabHeight + 6;
     this.playersTabListTitle.setPosition(options.margin + 12, subtabBottom);
     this.teamsTabListTitle.setPosition(options.margin + 12, subtabBottom);
 
-    const listTop = subtabBottom + 26;
-    const cardTop = this.playersTabCardBackground.y;
-    const listHeight = Math.max(0, cardTop - listTop - 12);
     const listWidth = Math.max(120, options.boxWidth - 24);
     this.playersTabListScrollPanel.setPosition?.(options.margin + 12, listTop);
     this.playersTabListScrollPanel.setSize?.(listWidth, listHeight);
@@ -354,19 +401,27 @@ export class CharacterPanelPlayerListView {
     this.teamsTabListScrollPanel.setMinSize?.(listWidth, teamsListHeight);
     this.teamsTabListScrollPanel.layout?.();
 
+    this.updateMaskBounds(
+      options.margin,
+      listTop,
+      listWidth,
+      listHeight,
+      teamsListHeight
+    );
+
     this.playersTabCardBackground.setPosition(
       options.margin + 12,
-      playersBoxY + playersBoxHeight - 150
+      cardTop
     );
-    this.playersTabCardBackground.setSize(options.boxWidth - 24, 138);
-    this.playersTabCardBackground.setDisplaySize(options.boxWidth - 24, 138);
+    this.playersTabCardBackground.setSize(options.boxWidth - 24, cardHeight);
+    this.playersTabCardBackground.setDisplaySize(options.boxWidth - 24, cardHeight);
     this.playersTabCardName.setPosition(
       options.margin + 24,
-      playersBoxY + playersBoxHeight - 138
+      cardTop + 12
     );
     this.playersTabCardTeam.setPosition(
       options.margin + 24,
-      playersBoxY + playersBoxHeight - 112
+      cardTop + 38
     );
     const cardRight =
       this.playersTabCardBackground.x + this.playersTabCardBackground.width;
@@ -453,13 +508,13 @@ export class CharacterPanelPlayerListView {
       return a.label.localeCompare(b.label);
     });
 
-    const rowHeight = 30;
-    const rowSpacing = 6;
+    const rowHeight = PLAYER_ROW_HEIGHT;
+    const rowSpacing = PLAYER_ROW_SPACING;
     const containerWidth = Math.max(
       120,
       this.playersTabListBackground.width - 24
     );
-    const itemWidth = Math.max(80, containerWidth - 2);
+    const itemWidth = Math.max(80, containerWidth - 14);
     let y = 0;
     for (const option of sortedPlayers) {
       const button = this.scene.add
@@ -499,6 +554,12 @@ export class CharacterPanelPlayerListView {
         this.applySelectionStyles();
         this.refreshPlayerCard();
       });
+      button.on(
+        Phaser.Input.Events.POINTER_WHEEL,
+        (_pointer: Phaser.Input.Pointer, _dx: number, dy: number) => {
+          this.playersTabListScrollPanel.addChildOY?.(-dy * 0.35, true);
+        }
+      );
       this.playersTabListContent.add(button);
       this.playersTabListContent.add(label);
       this.playersTabListContent.add(readyIcon);
@@ -510,6 +571,8 @@ export class CharacterPanelPlayerListView {
       });
       y += rowHeight + rowSpacing;
     }
+    this.playersTabListContent.setPosition(0, 0);
+    this.playersTabListContent.setSize(itemWidth, y);
     this.applySelectionStyles();
     this.refreshPlayerCard();
 
@@ -624,9 +687,49 @@ export class CharacterPanelPlayerListView {
       teamY += teamRowHeight + teamRowSpacing;
     }
 
+    this.teamsTabListContent.setPosition(0, 0);
+    this.teamsTabListContent.setSize(itemWidth, teamY);
+
     this.updateSubtabVisibility();
     this.playersTabListScrollPanel.layout?.();
     this.teamsTabListScrollPanel.layout?.();
+  }
+
+  private updateMaskBounds(
+    margin: number,
+    listTop: number,
+    listWidth: number,
+    listHeight: number,
+    teamsListHeight: number
+  ): void {
+    const matrix = this.parent.getWorldTransformMatrix();
+    const worldX = matrix.tx + margin + 12;
+    const worldY = matrix.ty + listTop;
+
+    if (this.playersTabScrollMaskShape) {
+      this.playersTabScrollMaskShape.setPosition(worldX, worldY);
+      this.playersTabScrollMaskShape.setSize(listWidth, listHeight);
+    }
+    if (this.teamsTabScrollMaskShape) {
+      this.teamsTabScrollMaskShape.setPosition(worldX, worldY);
+      this.teamsTabScrollMaskShape.setSize(listWidth, teamsListHeight);
+    }
+  }
+
+  destroy(): void {
+    this.playersTabListScrollPanel?.clearMask?.();
+    this.playersTabScrollMask?.destroy();
+    this.playersTabScrollMaskShape?.destroy();
+    this.playersTabScrollMask = null;
+    this.playersTabScrollMaskShape = null;
+    this.playersTabListScrollPanel?.destroy();
+
+    this.teamsTabListScrollPanel?.clearMask?.();
+    this.teamsTabScrollMask?.destroy();
+    this.teamsTabScrollMaskShape?.destroy();
+    this.teamsTabScrollMask = null;
+    this.teamsTabScrollMaskShape = null;
+    this.teamsTabListScrollPanel?.destroy();
   }
 
   openPlayerCard(playerId: string): boolean {
