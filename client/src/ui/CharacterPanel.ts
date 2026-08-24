@@ -99,12 +99,14 @@ export type SecondaryActionSelection = {
 type LogEliminationPayload = {
   playerId: string;
   playerName: string;
+  teamName?: string;
   turn: number;
 };
 
 type PlayerEliminatedPayload = {
   playerId: string;
   playerName: string;
+  teamName?: string;
   texture: string;
   frame: string;
   turn: number;
@@ -307,9 +309,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         null,
       1
     );
+    const teamName =
+      payload.teamName || character?.teamId || undefined;
     const eventPayload: PlayerEliminatedPayload = {
       playerId: payload.playerId,
       playerName: payload.playerName,
+      teamName,
       texture: sprite.texture,
       frame: sprite.frame ?? DEFAULT_SKIN.body,
       turn: payload.turn

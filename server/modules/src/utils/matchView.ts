@@ -117,7 +117,20 @@ export function tailorPlayerCharactersForViewer(
       continue;
     }
     if (axialDistance(viewerCoord, candidateCoord) <= viewRange) {
-      filtered[id] = candidate;
+      const isDead =
+        isCharacterDead(candidate) ||
+        (typeof candidate.stats?.health?.current === "number" &&
+          candidate.stats.health.current <= 0);
+      const isConfirmedTeammate =
+        Array.isArray(viewer.relationships?.confirmedTeammates) &&
+        viewer.relationships.confirmedTeammates.indexOf(id) !== -1;
+      if (!isDead && !isConfirmedTeammate && candidate.teamId !== undefined) {
+        const sanitized = { ...candidate };
+        delete sanitized.teamId;
+        filtered[id] = sanitized;
+      } else {
+        filtered[id] = candidate;
+      }
     }
   }
   return filtered;
@@ -171,11 +184,37 @@ export function tailorMatchForPlayer(
         char.stats.health.current <= 0);
     deadCharacters[id] = !!isDead;
   }
+  const teamCounts: Record<string, number> = {};
+  if (Array.isArray(match.teams)) {
+    for (const teamName of match.teams) {
+      teamCounts[teamName] = 0;
+    }
+  }
+  for (const id in match.playerCharacters) {
+    if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, id)) {
+      continue;
+    }
+    const char = match.playerCharacters[id];
+    const isDead =
+      isCharacterDead(char) ||
+      (typeof char.stats?.health?.current === "number" &&
+        char.stats.health.current <= 0);
+    if (!isDead) {
+      if (char.teamId) {
+        teamCounts[char.teamId] = (teamCounts[char.teamId] ?? 0) + 1;
+      }
+      if (char.secretTeamId) {
+        teamCounts[char.secretTeamId] = (teamCounts[char.secretTeamId] ?? 0) + 1;
+      }
+    }
+  }
   return {
     ...match,
     playerCharacters: playerCharacters ?? {},
     playerList: playerList ?? {},
     deadCharacters,
+    teams: match.teams ? [...match.teams] : Object.keys(teamCounts),
+    teamCounts,
     map,
     items
   };

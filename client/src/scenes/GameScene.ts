@@ -55,6 +55,7 @@ import { VictoryOverlay } from "../ui/VictoryOverlay";
 type PlayerEliminationBannerEvent = {
   playerId: string;
   playerName: string;
+  teamName?: string;
   texture: string;
   frame: string;
   turn: number;
@@ -1048,8 +1049,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePlayerEliminated(payload: PlayerEliminationBannerEvent) {
+    const teamSuffix = payload.teamName ? ` (Team ${payload.teamName})` : "";
     const bannerPayload: TopBannerPayload = {
-      text: `Player ${payload.playerName} eliminated`,
+      text: `Player ${payload.playerName}${teamSuffix} eliminated`,
       texture: payload.texture,
       frame: payload.frame
     };
@@ -2464,13 +2466,8 @@ export class GameScene extends Phaser.Scene {
     if (!this.characterPanel) {
       return;
     }
-    if (maxTurn === 0) {
-      this.characterPanel.setLogTurnInfo(0);
-      this.characterPanel.setLogError("No replays yet.");
-      return;
-    }
     let targetTurn = turn;
-    if (targetTurn <= 0) {
+    if (targetTurn < 0) {
       targetTurn = maxTurn;
     }
     const cached = this.logReplayCache.get(targetTurn);

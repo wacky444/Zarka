@@ -37,6 +37,7 @@ interface CharacterPanelLogViewOptions {
   onElimination: (payload: {
     playerId: string;
     playerName: string;
+    teamName?: string;
     turn: number;
   }) => void;
 }
@@ -52,6 +53,7 @@ export class CharacterPanelLogView {
   private playbackActive = false;
   private lastRequestedTurn: number | null = null;
   private usernames: Record<string, string> = {};
+  private teams: Record<string, string> = {};
   private visible = false;
   private eliminationKeys = new Set<string>();
 
@@ -80,18 +82,15 @@ export class CharacterPanelLogView {
     this.usernames = { ...map };
   }
 
+  setTeams(map: Record<string, string>): void {
+    this.teams = { ...map };
+  }
+
   setTurnInfo(maxTurn: number): void {
     const normalized = Math.max(0, Math.floor(maxTurn));
     const previous = this.maxTurn;
     this.maxTurn = normalized;
-    if (normalized === 0) {
-      this.selectedTurn = null;
-      this.displayedTurn = null;
-      this.eventStrings = [];
-      this.lastRequestedTurn = null;
-      this.eliminationKeys.clear();
-      this.showStatus("No replays yet.");
-    } else if (
+    if (
       this.selectedTurn === null ||
       this.selectedTurn > normalized ||
       (normalized > previous && this.selectedTurn === previous)
@@ -109,11 +108,11 @@ export class CharacterPanelLogView {
     const resolvedTurn = Math.max(0, Math.floor(turn));
     this.maxTurn = Math.max(this.maxTurn, Math.floor(maxTurn), resolvedTurn);
     if (this.selectedTurn === null) {
-      this.selectedTurn = resolvedTurn > 0 ? resolvedTurn : this.maxTurn;
+      this.selectedTurn = resolvedTurn >= 0 ? resolvedTurn : this.maxTurn;
     }
     if (this.selectedTurn !== null) {
       this.selectedTurn = Math.min(
-        Math.max(1, this.selectedTurn),
+        Math.max(0, this.selectedTurn),
         this.maxTurn
       );
     }
@@ -184,14 +183,6 @@ export class CharacterPanelLogView {
   }
 
   ensureSelection(force = false): void {
-    if (this.maxTurn === 0) {
-      this.selectedTurn = null;
-      this.displayedTurn = null;
-      this.eventStrings = [];
-      this.updateButtons();
-      this.refreshDisplay();
-      return;
-    }
     if (this.selectedTurn === null || this.selectedTurn > this.maxTurn) {
       this.selectedTurn = this.maxTurn;
     }
@@ -275,7 +266,7 @@ export class CharacterPanelLogView {
   };
 
   private navigate(delta: number): void {
-    if (!this.visible || this.loading || this.maxTurn === 0) {
+    if (!this.visible || this.loading) {
       return;
     }
     if (this.selectedTurn === null) {
@@ -284,7 +275,7 @@ export class CharacterPanelLogView {
     if (this.selectedTurn === null) {
       return;
     }
-    const next = Phaser.Math.Clamp(this.selectedTurn + delta, 1, this.maxTurn);
+    const next = Phaser.Math.Clamp(this.selectedTurn + delta, 0, this.maxTurn);
     if (next === this.selectedTurn) {
       return;
     }
@@ -316,9 +307,9 @@ export class CharacterPanelLogView {
     }
     const selected = this.selectedTurn;
     const max = this.maxTurn;
-    const hasSelection = selected !== null && max > 0;
+    const hasSelection = selected !== null && max >= 0;
     const canPrev =
-      hasSelection && selected !== null && selected > 1 && !this.loading;
+      hasSelection && selected !== null && selected > 0 && !this.loading;
     const canNext =
       hasSelection && selected !== null && selected < max && !this.loading;
     const canPlay =
@@ -391,8 +382,25 @@ export class CharacterPanelLogView {
       if (event.kind === "player") {
         const actor = this.resolvePlayerName(event.actorId);
         const actionId = event.action.actionId;
+        if (actionId === "team_assigned") {
+          const meta = event.action.metadata as
+            | { teamId?: string; coverTeamId?: string }
+            | undefined;
+          const team = meta?.teamId;
+          const cover = meta?.coverTeamId;
+          if (team && cover) {
+            lines.push(`You belong to Team ${team} (infiltrated in Team ${cover})`);
+          } else if (team) {
+            lines.push(`You belong to Team ${team}`);
+          }
+          continue;
+        }
         if (actionId === "status_dead") {
-          lines.push(`${actor} died`);
+          const team =
+            (event.action.metadata as { teamId?: string })?.teamId ||
+            this.resolvePlayerTeam(event.actorId);
+          const teamSuffix = team ? ` (Team ${team})` : "";
+          lines.push(`${actor}${teamSuffix} died`);
           continue;
         }
         if (actionId === "status_unconscious") {
@@ -508,7 +516,11 @@ export class CharacterPanelLogView {
             ) {
               lines.push(`${targetName} took ${target.damageTaken} damage`);
             } else if (target.eliminated) {
-              lines.push(`${targetName} was eliminated`);
+              const team =
+                (target.metadata as { teamId?: string })?.teamId ||
+                this.resolvePlayerTeam(target.targetId);
+              const teamSuffix = team ? ` (Team ${team})` : "";
+              lines.push(`${targetName}${teamSuffix} was eliminated`);
             } else if (movedTo) {
               lines.push(`${targetName} fled to (${movedTo.q}, ${movedTo.r})`);
               if (energyLost && energyLost > 0) {
@@ -556,12 +568,24 @@ export class CharacterPanelLogView {
       }
       this.eliminationKeys.add(key);
       const playerName = this.resolvePlayerName(actorId);
+      const teamName =
+        (event.action.metadata as { teamId?: string })?.teamId ||
+        this.resolvePlayerTeam(actorId) ||
+        undefined;
       this.options.onElimination({
         playerId: actorId,
         playerName,
+        teamName,
         turn,
       });
     }
+  }
+
+  private resolvePlayerTeam(playerId: string | undefined): string | null {
+    if (!playerId) {
+      return null;
+    }
+    return this.teams[playerId] ?? null;
   }
 
   private buildFailedActionLine(actor: string, metadata: unknown): string {

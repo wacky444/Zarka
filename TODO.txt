@@ -2,7 +2,7 @@ X when the host removes the game, it doesn't notify the clients, so they are lef
 X randomize the location of the buildings on the map
 - spawn the players in a circle around the center of the map
 - implement the players list tab, clicking opens a player card, also including teams
-- clicking on a player opens player card
+X clicking on a player opens player card
 
 - autoadvance time should increase when the turn advances to the next day if time left is less than 1 day, and decrease when the turn advances to the next night if time left is more than 1 day
 
@@ -11,3 +11,5 @@ X randomize the location of the buildings on the map
 - sleep that coest 0 energy reduced health in 1, only reduce health when energy is used
 
 - breakfast left me with 18 energy instead of 20, also damaged me
+
+- scroll in player list

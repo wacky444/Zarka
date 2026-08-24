@@ -132,16 +132,27 @@ export function checkEndGameOutcome(match: MatchRecord): EndGameOutcome {
     }
   }
 
-  if (alive.length > 1) {
-    return { ended: false, reason: "not_ended" };
-  }
-
   if (alive.length === 0) {
     return {
       ended: true,
       reason: "all_dead",
       aliveCharacterIds: [],
     };
+  }
+
+  const uniqueAliveTeams: Record<string, boolean> = {};
+  let uniqueTeamCount = 0;
+  for (const id of alive) {
+    const character = characters[id];
+    const team = character?.teamId?.trim() || `solo_${id}`;
+    if (!uniqueAliveTeams[team]) {
+      uniqueAliveTeams[team] = true;
+      uniqueTeamCount += 1;
+    }
+  }
+
+  if (uniqueTeamCount > 1) {
+    return { ended: false, reason: "not_ended" };
   }
 
   return {

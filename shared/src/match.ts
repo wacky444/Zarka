@@ -32,6 +32,8 @@ export interface MatchRecord {
   removed: number;
   map?: GameMap;
   items?: MatchItemRecord[];
+  teams?: string[];
+  teamCounts?: Record<string, number>;
   lastAutoAdvanceAt?: number;
 }
 

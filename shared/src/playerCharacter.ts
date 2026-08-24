@@ -5,6 +5,7 @@ export interface PlayerCharacter {
   id: string;
   name: string;
   teamId?: string;
+  secretTeamId?: string;
   stats: PlayerCharacterStats;
   progression: PlayerProgression;
   economy: PlayerEconomy;

@@ -179,12 +179,40 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
               ? msg.viewDistance
               : DEFAULT_REPLAY_VIEW_DISTANCE;
           const events = Array.isArray(msg.events) ? msg.events : [];
+          const teamCounts: Record<string, number> = {};
+          if (Array.isArray(msg.teams)) {
+            for (const teamName of msg.teams) {
+              teamCounts[teamName] = 0;
+            }
+          }
+          const chars = msg.playerCharacters ?? {};
+          for (const id in chars) {
+            if (!Object.prototype.hasOwnProperty.call(chars, id)) {
+              continue;
+            }
+            const char = chars[id];
+            const isDead =
+              msg.deadCharacters?.[id] === true ||
+              (typeof char?.stats?.health?.current === "number" &&
+                char.stats.health.current <= 0);
+            if (!isDead) {
+              if (char?.teamId) {
+                teamCounts[char.teamId] = (teamCounts[char.teamId] ?? 0) + 1;
+              }
+              if (char?.secretTeamId) {
+                teamCounts[char.secretTeamId] =
+                  (teamCounts[char.secretTeamId] ?? 0) + 1;
+              }
+            }
+          }
           const payloadBase = {
             match_id: ctx.matchId,
             turn: msg.turn,
             readyStates: msg.readyStates,
             deadCharacters: msg.deadCharacters,
             playerCharacters: msg.playerCharacters,
+            teams: msg.teams ? [...msg.teams] : Object.keys(teamCounts),
+            teamCounts,
             advanced: true,
             viewDistance,
           };

@@ -71,7 +71,8 @@ export type ActionId =
   | "sleep"
   | "status_dead"
   | "status_unconscious"
-  | "failedAction";
+  | "failedAction"
+  | "team_assigned";
 
 export type ActionTag =
   | "Attack"

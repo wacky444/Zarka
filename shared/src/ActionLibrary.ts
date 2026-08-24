@@ -1300,6 +1300,23 @@ export const ActionLibrary: ActionLibraryDefinition = {
       "Evento automático cuando una acción no cumple los requisitos mínimos."
     ],
     tags: ["Status"]
+  },
+  team_assigned: {
+    id: "team_assigned",
+    name: "Equipo asignado",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "flag.png",
+    actionOrder: 0,
+    actionSubOrder: 0,
+    notes: [
+      "Informe personal de asignación de equipo en el turno 0."
+    ],
+    tags: ["Status"]
   }
 };
 

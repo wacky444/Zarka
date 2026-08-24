@@ -5,11 +5,13 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { MatchRecord } from "../models/types";
 import { assignSpawnPositions } from "../utils/playerCharacter";
+import { distributeTeams } from "../match/teams";
 import {
   CellLibrary,
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
-  generateGameMap
+  generateGameMap,
+  ReplayEvent
 } from "@shared";
 import { tailorMapForCharacter } from "../utils/matchView";
 
@@ -110,8 +112,46 @@ export function startMatchRpc(
   }
 
   assignSpawnPositions(match, logger);
+  distributeTeams(match, logger);
 
   match.started = true;
+
+  const turn0Events: ReplayEvent[] = [];
+  for (const playerId in match.playerCharacters) {
+    if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, playerId)) {
+      continue;
+    }
+    const character = match.playerCharacters[playerId];
+    const effectiveTeam = character?.secretTeamId || character?.teamId;
+    if (character && effectiveTeam) {
+      turn0Events.push({
+        kind: "player",
+        actorId: character.id,
+        action: {
+          actionId: "team_assigned",
+          metadata: {
+            teamId: effectiveTeam,
+            coverTeamId: character.secretTeamId ? character.teamId : undefined
+          }
+        },
+        visibility: {
+          scope: "limited",
+          playerIds: [character.id]
+        }
+      });
+    }
+  }
+
+  try {
+    storage.appendReplayTurn({
+      match_id: matchId,
+      turn: 0,
+      events: turn0Events,
+      created_at: Math.floor(Date.now() / 1000)
+    });
+  } catch (e) {
+    logger.warn("start_match: replay write failed: %s", (e as Error).message);
+  }
 
   try {
     storage.writeMatch(match, read.version);

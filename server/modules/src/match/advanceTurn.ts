@@ -131,6 +131,34 @@ export function advanceTurn(
   updateCooldownsForTurn(match, resolvedTurn);
   const actions = sortedActions();
   const replayEvents: ReplayEvent[] = [];
+
+  if (resolvedTurn === 0) {
+    for (const playerId in characters) {
+      if (!Object.prototype.hasOwnProperty.call(characters, playerId)) {
+        continue;
+      }
+      const character = characters[playerId];
+      const effectiveTeam = character?.secretTeamId || character?.teamId;
+      if (character && effectiveTeam) {
+        replayEvents.push({
+          kind: "player",
+          actorId: character.id,
+          action: {
+            actionId: "team_assigned",
+            metadata: {
+              teamId: effectiveTeam,
+              coverTeamId: character.secretTeamId ? character.teamId : undefined
+            }
+          },
+          visibility: {
+            scope: "limited",
+            playerIds: [character.id]
+          }
+        });
+      }
+    }
+  }
+
   for (const action of actions) {
     const events = executeAction(
       match,
@@ -188,16 +216,23 @@ export function advanceTurn(
     ) {
       const outcome = applyHealthDelta(character, -999, true, logger);
       match.playerCharacters[playerId] = outcome.character;
+      const deadTeamId = character.secretTeamId || character.teamId;
       replayEvents.push({
         kind: "player",
         actorId: character.id,
         action: {
           actionId: "status_dead",
+          metadata: {
+            teamId: deadTeamId,
+          },
         },
         targets: [
           {
             targetId: character.id,
             eliminated: true,
+            metadata: {
+              teamId: deadTeamId,
+            },
           },
         ],
       });

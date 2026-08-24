@@ -69,7 +69,7 @@ export function getReplayRpc(
   }
 
   let events: ReplayEvent[] = [];
-  if (turn > 0) {
+  if (turn >= 0) {
     const replay = storage.readReplay(matchId, turn);
     if (replay && Array.isArray(replay.events)) {
       events = tailorReplayEvents(

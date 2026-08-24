@@ -155,6 +155,7 @@ export function updateReadyStateRpc(
           readyStates: match.readyStates,
           deadCharacters: match.deadCharacters,
           playerCharacters: match.playerCharacters,
+          teams: match.teams,
           events,
           viewDistance,
           map: match.map,

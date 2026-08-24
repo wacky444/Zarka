@@ -57,6 +57,11 @@ export class CharacterPanelPlayerListView {
   private playersTabCardTeam: Phaser.GameObjects.Text;
   private playersTabCardSprite: Phaser.GameObjects.Image;
   private playersTabEmpty: Phaser.GameObjects.Text;
+  private teamsTabListTitle: Phaser.GameObjects.Text;
+  private teamsTabListContent: Phaser.GameObjects.Container;
+  private teamsTabListScrollPanel: ScrollablePanelInstance;
+  private teamsTabEmpty: Phaser.GameObjects.Text;
+  private teamsTabEntries: Phaser.GameObjects.GameObject[] = [];
   private readonly elements: Phaser.GameObjects.GameObject[];
 
   constructor(
@@ -198,6 +203,53 @@ export class CharacterPanelPlayerListView {
       .setVisible(false);
     parent.add(this.playersTabEmpty);
 
+    this.teamsTabListTitle = scene.add
+      .text(layout.margin + 12, subtabBottom, "Teams", {
+        fontSize: "16px",
+        color: "#ffffff"
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    parent.add(this.teamsTabListTitle);
+
+    this.teamsTabListContent = scene.add.container(0, 0);
+    const teamsListHeight = Math.max(0, playersBoxHeight - (subtabBottom - playersBoxY) - 40);
+    this.teamsTabListScrollPanel = scene.rexUI.add.scrollablePanel({
+      x: layout.margin + 12,
+      y: listTop,
+      width: listWidth,
+      height: teamsListHeight,
+      scrollMode: 0,
+      panel: {
+        child: this.teamsTabListContent,
+        mask: { padding: 1 }
+      },
+      slider: false,
+      scroller: {
+        threshold: 10,
+        slidingDeceleration: 5000,
+        backDeceleration: 2000,
+        pointerOutRelease: true
+      },
+      mouseWheelScroller: {
+        focus: true,
+        speed: 0.35
+      },
+      space: { left: 0, right: 0, top: 0, bottom: 0 }
+    }) as ScrollablePanelInstance;
+    this.teamsTabListScrollPanel.setOrigin?.(0, 0);
+    this.teamsTabListScrollPanel.setVisible?.(false);
+    parent.add(this.teamsTabListScrollPanel);
+
+    this.teamsTabEmpty = scene.add
+      .text(layout.margin + 24, subtabBottom + 30, "No teams found.", {
+        fontSize: "14px",
+        color: "#94a3d4"
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    parent.add(this.teamsTabEmpty);
+
     this.elements = [
       this.playersTabListBackground,
       ...this.subtabs.getElements(),
@@ -207,7 +259,10 @@ export class CharacterPanelPlayerListView {
       this.playersTabCardName,
       this.playersTabCardTeam,
       this.playersTabCardSprite,
-      this.playersTabEmpty
+      this.playersTabEmpty,
+      this.teamsTabListTitle,
+      this.teamsTabListScrollPanel,
+      this.teamsTabEmpty
     ];
   }
 
@@ -228,6 +283,7 @@ export class CharacterPanelPlayerListView {
     const isVisible = this.playersTabListBackground.visible;
     const isPlayersActive =
       isVisible && this.subtabs.getActiveKey() === "players";
+    const isTeamsActive = isVisible && this.subtabs.getActiveKey() === "teams";
 
     this.subtabs.setVisible(isVisible);
 
@@ -248,6 +304,13 @@ export class CharacterPanelPlayerListView {
     this.playersTabEmpty.setVisible(
       isPlayersActive && (!match || list.length === 0)
     );
+
+    this.teamsTabListTitle.setVisible(isTeamsActive);
+    this.teamsTabListScrollPanel.setVisible?.(isTeamsActive);
+    const teamCount = match?.teamCounts
+      ? Object.keys(match.teamCounts).length
+      : match?.teams?.length ?? 0;
+    this.teamsTabEmpty.setVisible(isTeamsActive && (!match || teamCount === 0));
   }
 
   layout(options: CharacterPanelPlayerListViewLayout): void {
@@ -274,7 +337,23 @@ export class CharacterPanelPlayerListView {
 
     const subtabBottom = subtabY + subtabHeight + 6;
     this.playersTabListTitle.setPosition(options.margin + 12, subtabBottom);
+    this.teamsTabListTitle.setPosition(options.margin + 12, subtabBottom);
+
     const listTop = subtabBottom + 26;
+    const cardTop = this.playersTabCardBackground.y;
+    const listHeight = Math.max(0, cardTop - listTop - 12);
+    const listWidth = Math.max(120, options.boxWidth - 24);
+    this.playersTabListScrollPanel.setPosition?.(options.margin + 12, listTop);
+    this.playersTabListScrollPanel.setSize?.(listWidth, listHeight);
+    this.playersTabListScrollPanel.setMinSize?.(listWidth, listHeight);
+    this.playersTabListScrollPanel.layout?.();
+
+    const teamsListHeight = Math.max(0, playersBoxY + playersBoxHeight - listTop - 16);
+    this.teamsTabListScrollPanel.setPosition?.(options.margin + 12, listTop);
+    this.teamsTabListScrollPanel.setSize?.(listWidth, teamsListHeight);
+    this.teamsTabListScrollPanel.setMinSize?.(listWidth, teamsListHeight);
+    this.teamsTabListScrollPanel.layout?.();
+
     this.playersTabCardBackground.setPosition(
       options.margin + 12,
       playersBoxY + playersBoxHeight - 150
@@ -298,14 +377,8 @@ export class CharacterPanelPlayerListView {
       cardRight - CARD_SPRITE_PADDING,
       cardCenterY
     );
-    const cardTop = this.playersTabCardBackground.y;
-    const listHeight = Math.max(0, cardTop - listTop - 12);
-    const listWidth = Math.max(120, options.boxWidth - 24);
-    this.playersTabListScrollPanel.setPosition?.(options.margin + 12, listTop);
-    this.playersTabListScrollPanel.setSize?.(listWidth, listHeight);
-    this.playersTabListScrollPanel.setMinSize?.(listWidth, listHeight);
-    this.playersTabListScrollPanel.layout?.();
     this.playersTabEmpty.setPosition(options.margin + 24, subtabBottom + 30);
+    this.teamsTabEmpty.setPosition(options.margin + 24, subtabBottom + 30);
     this.refresh();
   }
 
@@ -449,8 +522,121 @@ export class CharacterPanelPlayerListView {
     }
     this.applySelectionStyles();
     this.refreshPlayerCard();
+
+    for (const entry of this.teamsTabEntries) {
+      entry.destroy();
+    }
+    this.teamsTabEntries = [];
+    for (const child of [...this.teamsTabListContent.list]) {
+      child.destroy();
+    }
+    this.teamsTabListContent.removeAll(false);
+
+    const teamCounts: Record<string, number> = {};
+    if (match.teamCounts) {
+      for (const team in match.teamCounts) {
+        teamCounts[team] = match.teamCounts[team];
+      }
+    } else {
+      if (Array.isArray(match.teams)) {
+        for (const team of match.teams) {
+          teamCounts[team] = 0;
+        }
+      }
+      if (match.playerCharacters) {
+        for (const id in match.playerCharacters) {
+          const char = match.playerCharacters[id];
+          const isDead =
+            match.deadCharacters?.[id] === true ||
+            char?.statuses?.conditions?.includes("dead") ||
+            (typeof char?.stats?.health?.current === "number" &&
+              char.stats.health.current <= 0);
+          if (!isDead) {
+            if (char?.teamId) {
+              teamCounts[char.teamId] = (teamCounts[char.teamId] ?? 0) + 1;
+            }
+            if (char?.secretTeamId) {
+              teamCounts[char.secretTeamId] =
+                (teamCounts[char.secretTeamId] ?? 0) + 1;
+            }
+          }
+        }
+      }
+    }
+
+    const teamNames = Object.keys(teamCounts);
+    const getTeamRank = (name: string) => {
+      const lower = name.toLowerCase();
+      if (lower === "gemelos") return 1;
+      if (lower === "héroe" || lower === "heroe" || lower === "hero") return 2;
+      return 0;
+    };
+
+    teamNames.sort((a, b) => {
+      const rankDiff = getTeamRank(a) - getTeamRank(b);
+      if (rankDiff !== 0) return rankDiff;
+      return a.localeCompare(b);
+    });
+
+    this.teamsTabListTitle.setText(`Teams (${teamNames.length})`);
+
+    let teamY = 0;
+    const teamRowHeight = 34;
+    const teamRowSpacing = 6;
+
+    for (const teamName of teamNames) {
+      const aliveInTeam = teamCounts[teamName] ?? 0;
+      const isEliminated = aliveInTeam === 0;
+
+      const bg = this.scene.add
+        .rectangle(
+          0,
+          teamY,
+          itemWidth,
+          teamRowHeight,
+          isEliminated ? 0x24171f : 0x202b4a,
+          0.95
+        )
+        .setOrigin(0, 0)
+        .setStrokeStyle(1, isEliminated ? 0x4a2332 : 0x2f3a5d, 1);
+
+      const nameLabel = this.scene.add
+        .text(
+          PLAYER_LIST_LABEL_PADDING,
+          teamY + teamRowHeight / 2,
+          `${teamName}:`,
+          {
+            fontSize: "14px",
+            color: isEliminated ? "#94a3d4" : "#ffffff",
+            fontStyle: "bold"
+          }
+        )
+        .setOrigin(0, 0.5);
+
+      const countLabel = this.scene.add
+        .text(
+          itemWidth - PLAYER_LIST_LABEL_PADDING,
+          teamY + teamRowHeight / 2,
+          `${aliveInTeam}`,
+          {
+            fontSize: "15px",
+            color: isEliminated ? "#ef4444" : "#4ade80",
+            fontStyle: "bold"
+          }
+        )
+        .setOrigin(1, 0.5);
+
+      this.teamsTabListContent.add(bg);
+      this.teamsTabListContent.add(nameLabel);
+      this.teamsTabListContent.add(countLabel);
+
+      this.teamsTabEntries.push(bg, nameLabel, countLabel);
+      teamY += teamRowHeight + teamRowSpacing;
+    }
+
     this.updateSubtabVisibility();
     this.playersTabListScrollPanel.layout?.();
+    this.teamsTabListScrollPanel.layout?.();
   }
 
   openPlayerCard(playerId: string): boolean {

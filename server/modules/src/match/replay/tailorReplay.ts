@@ -33,6 +33,12 @@ function filterPlayerEvent(
   viewer: Axial | null,
   viewDistance: number
 ): boolean {
+  if (event.visibility && event.visibility.scope === "limited") {
+    return event.visibility.playerIds.indexOf(playerId) !== -1;
+  }
+  if (event.action.actionId === "team_assigned") {
+    return event.actorId === playerId;
+  }
   if (event.actorId === playerId) {
     return true;
   }
