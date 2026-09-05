@@ -35,7 +35,9 @@ import {
   type MatchChatMessage,
   getHexTileOffsets,
   ItemLibrary,
-  DEFAULT_SKIN
+  DEFAULT_SKIN,
+  type SkillId,
+  type UpgradeSkillPayload
 } from "@shared";
 import { buildBoardIconUrl, deriveBoardIconKey } from "../ui/actionIcons";
 import {
@@ -50,7 +52,6 @@ import { assetPath } from "../utils/assetPath";
 import { createSkinContainer, SkinContainer } from "../ui/PlayerSkinRenderer";
 import { AccountService } from "../services/AccountService";
 import { VictoryOverlay } from "../ui/VictoryOverlay";
-
 
 type PlayerEliminationBannerEvent = {
   playerId: string;
@@ -121,7 +122,9 @@ export class GameScene extends Phaser.Scene {
   private playerViewRange: number = 0;
   private playerCoordForTinting: Axial | null = null;
   private victoryOverlay: VictoryOverlay | null = null;
-  private pendingMatchEndPayload: import("@shared").MatchEndedMessagePayload | null = null;
+  private pendingMatchEndPayload:
+    | import("@shared").MatchEndedMessagePayload
+    | null = null;
 
   private readonly turnAdvancedHandler = (
     payload: TurnAdvancedMessagePayload
@@ -258,6 +261,7 @@ export class GameScene extends Phaser.Scene {
     );
     this.characterPanel.on("chat-send", this.handleChatSend, this);
     this.characterPanel.on("chat-tab-opened", this.handleChatTabOpened, this);
+    this.characterPanel.on("apply-skills", this.handleApplySkills, this);
 
     if (this.turnService) {
       const skin = await this.turnService.getUserSkin();
@@ -291,7 +295,6 @@ export class GameScene extends Phaser.Scene {
     if (this.uiCam) {
       this.victoryOverlay.ignoreCamera(this.cam);
     }
-
 
     this.autoAdvanceText = this.add
       .text(10, 10, "", {
@@ -338,7 +341,6 @@ export class GameScene extends Phaser.Scene {
         });
       }
     }
-
 
     this.enableDragPan();
     this.enableWheelZoom();
@@ -643,16 +645,19 @@ export class GameScene extends Phaser.Scene {
       this.updateTileTintState(img, tile);
 
       img.setInteractive({ useHandCursor: false });
-      img.on(Phaser.Input.Events.POINTER_OVER, (pointer: Phaser.Input.Pointer) => {
-        this.setLocationSelectionHoveredTile(tile.id);
-        if (isWarning && typeof destructionTurn === "number") {
-          const turnsLeft = destructionTurn - currentTurn;
-          this.hoverTooltip?.show(pointer.x, pointer.y, {
-            title: "Incoming Destruction",
-            body: `Destroyed in ${turnsLeft} ${turnsLeft === 1 ? "turn" : "turns"}`,
-          });
+      img.on(
+        Phaser.Input.Events.POINTER_OVER,
+        (pointer: Phaser.Input.Pointer) => {
+          this.setLocationSelectionHoveredTile(tile.id);
+          if (isWarning && typeof destructionTurn === "number") {
+            const turnsLeft = destructionTurn - currentTurn;
+            this.hoverTooltip?.show(pointer.x, pointer.y, {
+              title: "Incoming Destruction",
+              body: `Destroyed in ${turnsLeft} ${turnsLeft === 1 ? "turn" : "turns"}`
+            });
+          }
         }
-      });
+      );
       img.on(Phaser.Input.Events.POINTER_OUT, () => {
         this.hoverTooltip?.hide();
         if (this.locationSelectionHoveredTileId === tile.id) {
@@ -1094,8 +1099,8 @@ export class GameScene extends Phaser.Scene {
     const result: import("../ui/VictoryOverlay").MatchEndResultType = isWinner
       ? "win"
       : isDraw
-      ? "draw"
-      : "loss";
+        ? "draw"
+        : "loss";
 
     let winnerName: string | undefined = undefined;
     if (payload.winnerId) {
@@ -1114,7 +1119,6 @@ export class GameScene extends Phaser.Scene {
   isVictoryOverlayActive(): boolean {
     return this.victoryOverlay?.isShowing() ?? false;
   }
-
 
   private configureAutoAdvanceTimer(match: MatchRecord | null) {
     const roundTime =
@@ -1241,7 +1245,6 @@ export class GameScene extends Phaser.Scene {
     this.topBanner?.layout(width);
     this.victoryOverlay?.layout(width, height);
   }
-
 
   private handleResize(gameSize: Phaser.Structs.Size) {
     const width = gameSize.width ?? this.scale.width;
@@ -1815,6 +1818,42 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private isUpgradingSkill = false;
+
+  private async handleApplySkills(skillIds: SkillId[]) {
+    const matchId =
+      (this.registry.get("currentMatchId") as string | null) ??
+      this.currentMatch?.match_id;
+    if (
+      this.isUpgradingSkill ||
+      !this.turnService ||
+      !this.currentUserId ||
+      !matchId ||
+      skillIds.length === 0
+    ) {
+      return;
+    }
+    this.isUpgradingSkill = true;
+    try {
+      const res = await this.turnService.upgradeSkills(matchId, skillIds);
+      const payload = this.parseRpcPayload<UpgradeSkillPayload>(res);
+      if (payload.error) {
+        throw new Error(payload.error);
+      }
+      if (payload.character && this.currentMatch) {
+        this.currentMatch.playerCharacters =
+          this.currentMatch.playerCharacters ?? {};
+        this.currentMatch.playerCharacters[this.currentUserId] =
+          payload.character;
+        this.updateCharacterPanel(this.currentMatch);
+      }
+    } catch (error) {
+      console.warn("upgrade_skills failed", error);
+    } finally {
+      this.isUpgradingSkill = false;
+    }
+  }
+
   private handleReadyStateUpdate(payload: ReadyStateUpdateMessagePayload) {
     if (!payload || typeof payload.match_id !== "string") {
       return;
@@ -1930,7 +1969,6 @@ export class GameScene extends Phaser.Scene {
       this.triggerVictoryOverlay(payload);
     }
   }
-
 
   private createMoveReplayContext(): MoveReplayContext {
     return {
@@ -2273,7 +2311,7 @@ export class GameScene extends Phaser.Scene {
   showTileDestroyedBanner(cell: Axial): void {
     const bannerPayload: TopBannerPayload = {
       text: `Tile destroyed at (${cell.q}, ${cell.r})`,
-      texture: "board_icon_skull",
+      texture: "board_icon_skull"
     };
     this.topBanner?.show(bannerPayload);
     if (this.currentMatch?.map) {

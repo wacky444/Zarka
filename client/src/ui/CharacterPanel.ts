@@ -41,6 +41,11 @@ import {
   type ChatMessageViewModel
 } from "./CharacterPanelChatView";
 import { CharacterPanelPlayerListView } from "./CharacterPanelPlayerListView";
+import { Subtabs } from "./Subtabs";
+import { CharacterPanelSkillsView } from "./CharacterPanelSkillsView";
+
+export type CharacterSubTabKey = "status" | "skills";
+
 export type {
   ChatMessageViewModel,
   ChatConnectionState
@@ -123,6 +128,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private background: Phaser.GameObjects.Rectangle;
   private tabs: CharacterPanelTabEntry[] = [];
   private characterElements: Phaser.GameObjects.GameObject[] = [];
+  private characterSubtabs!: Subtabs<CharacterSubTabKey>;
+  private skillsView!: CharacterPanelSkillsView;
+  private statusElements: Phaser.GameObjects.GameObject[] = [];
   private itemsElements: Phaser.GameObjects.GameObject[] = [];
   private playersElements: Phaser.GameObjects.GameObject[] = [];
   private chatElements: Phaser.GameObjects.GameObject[] = [];
@@ -309,8 +317,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         null,
       1
     );
-    const teamName =
-      payload.teamName || character?.teamId || undefined;
+    const teamName = payload.teamName || character?.teamId || undefined;
     const eventPayload: PlayerEliminatedPayload = {
       playerId: payload.playerId,
       playerName: payload.playerName,
@@ -378,17 +385,39 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.tabs.push({ key: tab.key as TabKey, rect, text, badge });
     });
     const contentTop = TAB_HEIGHT + MARGIN;
+    const subtabY = TAB_HEIGHT + 8;
+    const subtabHeight = 28;
+    const subtabBottom = subtabY + subtabHeight + 8;
+
+    this.characterSubtabs = new Subtabs<CharacterSubTabKey>({
+      scene,
+      parent: this,
+      x: MARGIN + 12,
+      y: subtabY,
+      width: width - MARGIN * 2 - 24,
+      height: subtabHeight,
+      tabs: [
+        { key: "status", label: "Status" },
+        { key: "skills", label: "Skills" }
+      ],
+      defaultKey: "status",
+      onChange: () => {
+        this.updateCharacterSubtabVisibility();
+      }
+    });
+
+    const statusContentTop = subtabBottom + 14;
     const portraitScale = PORTRAIT_SIZE / 16;
     this.portrait = createSkinContainer(
       scene,
       MARGIN + PORTRAIT_SIZE / 2,
-      contentTop + PORTRAIT_SIZE / 2,
+      statusContentTop + PORTRAIT_SIZE / 2,
       DEFAULT_SKIN,
       portraitScale
     );
     this.add(this.portrait);
     this.nameText = scene.add
-      .text(MARGIN, contentTop - 14, "", {
+      .text(MARGIN, statusContentTop - 14, "", {
         fontSize: "18px",
         color: "#ffffff"
       })
@@ -396,13 +425,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.add(this.nameText);
     const barX = MARGIN * 2 + PORTRAIT_SIZE;
     this.healthLabel = scene.add
-      .text(barX, contentTop - 14, "Health", {
+      .text(barX, statusContentTop - 14, "Health", {
         fontSize: "14px",
         color: "#a0b7ff"
       })
       .setOrigin(0, 0);
     this.add(this.healthLabel);
-    this.healthBar = new ProgressBar(scene, barX, contentTop, {
+    this.healthBar = new ProgressBar(scene, barX, statusContentTop, {
       width: this.barWidth,
       height: BAR_HEIGHT,
       trackColor: 0x25304c,
@@ -410,20 +439,20 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     });
     this.add(this.healthBar);
     this.energyLabel = scene.add
-      .text(barX, contentTop + 32, "Energy", {
+      .text(barX, statusContentTop + 32, "Energy", {
         fontSize: "14px",
         color: "#a0b7ff"
       })
       .setOrigin(0, 0);
     this.add(this.energyLabel);
-    this.energyBar = new ProgressBar(scene, barX, contentTop + 46, {
+    this.energyBar = new ProgressBar(scene, barX, statusContentTop + 46, {
       width: this.barWidth,
       height: BAR_HEIGHT,
       trackColor: 0x25304c,
       barColor: ENERGY_ACCENT_COLOR
     });
     this.add(this.energyBar);
-    const readyY = contentTop + 80;
+    const readyY = statusContentTop + 80;
     this.readyToggle = scene.add
       .text(barX, readyY, "[ ] Ready", {
         fontSize: "15px",
@@ -820,7 +849,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       boxWidth,
       panelHeight: this.panelHeight
     });
-    this.characterElements = [
+    this.skillsView = new CharacterPanelSkillsView(scene, this, {
+      margin: MARGIN,
+      contentTop: subtabBottom,
+      boxWidth: width - MARGIN * 2,
+      panelHeight: this.panelHeight
+    });
+    this.skillsView.setOnConfirmSkills((skillIds) => {
+      this.emit("apply-skills", skillIds);
+    });
+    this.statusElements = [
       this.portrait,
       this.nameText,
       this.healthLabel,
@@ -830,8 +868,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.readyToggle
     ];
     if (this.scrollPanel) {
-      this.characterElements.push(this.scrollPanel);
+      this.statusElements.push(this.scrollPanel);
     }
+    this.characterElements = [...this.characterSubtabs.getElements()];
     this.tabsController = new CharacterPanelTabs({
       tabs: this.tabs,
       defaultKey: "character",
@@ -840,39 +879,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       playersElements: this.playersElements,
       chatElements: this.chatElements,
       onCharacterTabShow: () => {
-        this.scrollPanel?.setMouseWheelScrollerEnable?.(true);
-        this.mainActionDropdown.setVisible(true);
-        this.mainActionDropdown.setActive(true);
-        this.refreshExtraExecutionSelectorState();
-        this.refreshLocationSelectorState();
-        this.secondaryActionDropdown.setVisible(true);
-        this.secondaryActionDropdown.setActive(true);
-        this.refreshSecondaryExtraExecutionSelectorState();
-        this.refreshSecondaryLocationSelectorState();
-        this.refreshSecondaryPlayerSelectorState();
-        this.setReadyEnabled(this.readyEnabled);
+        this.updateCharacterSubtabVisibility();
       },
       onCharacterTabHide: () => {
-        this.mainActionDropdown.setVisible(false);
-        this.mainActionDropdown.setActive(false);
-        this.extraExecutionSelector.setVisible(false);
-        this.extraExecutionSelector.setActive(false);
-        this.locationSelector.setVisible(false);
-        this.locationSelector.setActive(false);
-        this.playerSelector.hideDropdown();
-        this.playerSelector.setVisible(false);
-        this.playerSelector.setActive(false);
-        this.secondaryActionDropdown.setVisible(false);
-        this.secondaryActionDropdown.setActive(false);
-        this.secondaryExtraExecutionSelector.setVisible(false);
-        this.secondaryExtraExecutionSelector.setActive(false);
-        this.secondaryLocationSelector.setVisible(false);
-        this.secondaryLocationSelector.setActive(false);
-        this.secondaryPlayerSelector.hideDropdown();
-        this.secondaryPlayerSelector.setVisible(false);
-        this.secondaryPlayerSelector.setActive(false);
-        this.readyToggle.disableInteractive();
-        this.scrollPanel?.setMouseWheelScrollerEnable?.(false);
+        this.hideCharacterTabContents();
       },
       onItemsTabShow: () => {
         this.inventoryGrid.setActive(true);
@@ -962,7 +972,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     try {
       this.secondaryPlayerSelector.hideDropdown();
     } catch (e) {
-      console.warn("hideDropdown secondaryPlayerSelector skipped during teardown", e);
+      console.warn(
+        "hideDropdown secondaryPlayerSelector skipped during teardown",
+        e
+      );
     }
     this.readyToggle?.off(
       Phaser.Input.Events.POINTER_DOWN,
@@ -976,6 +989,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       Phaser.Input.Events.POINTER_UP,
       this.handleReadyPointerUp
     );
+    this.characterSubtabs?.destroy();
+    this.skillsView?.destroy();
     this.logView?.destroy();
     this.chatView?.destroy();
     this.playersTabView?.destroy();
@@ -989,32 +1004,132 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     super.destroy(fromScene);
   }
 
+  private updateCharacterSubtabVisibility(): void {
+    const isCharacterTabActive =
+      this.tabsController.getActiveTab() === "character";
+    if (!isCharacterTabActive) {
+      this.hideCharacterTabContents();
+      return;
+    }
+
+    this.characterSubtabs.setVisible(true);
+    const activeSubtab = this.characterSubtabs.getActiveKey();
+
+    if (activeSubtab === "status") {
+      this.skillsView.setVisible(false);
+      this.showStatusElements();
+    } else {
+      this.hideStatusElements();
+      this.skillsView.setVisible(true);
+    }
+  }
+
+  private showStatusElements(): void {
+    for (const obj of this.statusElements) {
+      const target = obj as Phaser.GameObjects.GameObject & {
+        setVisible?: (value: boolean) => void;
+        setActive?: (value: boolean) => void;
+      };
+      target.setVisible?.(true);
+      target.setActive?.(true);
+    }
+    this.scrollPanel?.setMouseWheelScrollerEnable?.(true);
+    this.mainActionDropdown.setVisible(true);
+    this.mainActionDropdown.setActive(true);
+    this.refreshExtraExecutionSelectorState();
+    this.refreshLocationSelectorState();
+    this.secondaryActionDropdown.setVisible(true);
+    this.secondaryActionDropdown.setActive(true);
+    this.refreshSecondaryExtraExecutionSelectorState();
+    this.refreshSecondaryLocationSelectorState();
+    this.refreshSecondaryPlayerSelectorState();
+    this.setReadyEnabled(this.readyEnabled);
+  }
+
+  private hideStatusElements(): void {
+    for (const obj of this.statusElements) {
+      const target = obj as Phaser.GameObjects.GameObject & {
+        setVisible?: (value: boolean) => void;
+        setActive?: (value: boolean) => void;
+      };
+      target.setVisible?.(false);
+      target.setActive?.(false);
+    }
+    this.mainActionDropdown.setVisible(false);
+    this.mainActionDropdown.setActive(false);
+    this.extraExecutionSelector.setVisible(false);
+    this.extraExecutionSelector.setActive(false);
+    this.locationSelector.setVisible(false);
+    this.locationSelector.setActive(false);
+    this.playerSelector.hideDropdown();
+    this.playerSelector.setVisible(false);
+    this.playerSelector.setActive(false);
+    this.secondaryActionDropdown.setVisible(false);
+    this.secondaryActionDropdown.setActive(false);
+    this.secondaryExtraExecutionSelector.setVisible(false);
+    this.secondaryExtraExecutionSelector.setActive(false);
+    this.secondaryLocationSelector.setVisible(false);
+    this.secondaryLocationSelector.setActive(false);
+    this.secondaryPlayerSelector.hideDropdown();
+    this.secondaryPlayerSelector.setVisible(false);
+    this.secondaryPlayerSelector.setActive(false);
+    this.readyToggle.disableInteractive();
+    this.scrollPanel?.setMouseWheelScrollerEnable?.(false);
+  }
+
+  private hideCharacterTabContents(): void {
+    this.characterSubtabs.setVisible(false);
+    this.hideStatusElements();
+    this.skillsView.setVisible(false);
+  }
+
   setPanelSize(width: number, height: number) {
     this.panelWidth = width;
     this.panelHeight = height;
     this.barWidth = width - (PORTRAIT_SIZE + MARGIN * 3);
     this.setSize(width, height);
     this.background.setSize(width, height);
-    const barX = MARGIN * 2 + PORTRAIT_SIZE;
     const contentTop = TAB_HEIGHT + MARGIN;
-    this.healthBar.setPosition(barX, contentTop);
-    this.energyBar.setPosition(barX, contentTop + 46);
+    const subtabY = TAB_HEIGHT + 8;
+    const subtabHeight = 28;
+    const subtabBottom = subtabY + subtabHeight + 8;
+
+    this.characterSubtabs.layout(
+      MARGIN + 12,
+      subtabY,
+      width - MARGIN * 2 - 24,
+      subtabHeight
+    );
+
+    const statusContentTop = subtabBottom + 14;
+    const barX = MARGIN * 2 + PORTRAIT_SIZE;
+    this.portrait.setPosition(
+      MARGIN + PORTRAIT_SIZE / 2,
+      statusContentTop + PORTRAIT_SIZE / 2
+    );
+    this.nameText.setPosition(MARGIN, statusContentTop - 14);
+    this.healthLabel.setPosition(barX, statusContentTop - 14);
+    this.healthBar.setPosition(barX, statusContentTop);
+    this.energyBar.setPosition(barX, statusContentTop + 46);
     this.healthBar.resize(this.barWidth, BAR_HEIGHT);
     this.energyBar.resize(this.barWidth, BAR_HEIGHT);
     if (this.readyToggle) {
-      this.readyToggle.setPosition(barX, contentTop + 80);
+      this.readyToggle.setPosition(barX, statusContentTop + 80);
     }
     const scrollWidth = Math.max(120, width - MARGIN * 2);
     this.mainActionDropdownWidth = Math.max(0, scrollWidth - 24);
     this.secondaryActionDropdownWidth = Math.max(0, scrollWidth - 24);
     const readyHeight = this.readyToggle ? this.readyToggle.height : 0;
-    const readyBottom = contentTop + 80 + readyHeight + 24;
+    const readyBottom = statusContentTop + 80 + readyHeight + 24;
     const scrollTop = readyBottom;
     const scrollHeight = Math.max(160, height - scrollTop - MARGIN);
     this.scrollContentWidth = scrollWidth;
     if (this.scrollMaskShape) {
       const matrix = this.getWorldTransformMatrix();
-      this.scrollMaskShape.setPosition(matrix.tx + MARGIN, matrix.ty + scrollTop);
+      this.scrollMaskShape.setPosition(
+        matrix.tx + MARGIN,
+        matrix.ty + scrollTop
+      );
       this.scrollMaskShape.setSize(scrollWidth + 100, scrollHeight);
     }
     if (this.scrollPanel) {
@@ -1023,6 +1138,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.scrollPanel.setMinSize?.(scrollWidth, scrollHeight);
     }
     this.updateScrollLayout();
+
+    this.skillsView.layout({
+      margin: MARGIN,
+      contentTop: subtabBottom,
+      boxWidth: width - MARGIN * 2,
+      panelHeight: height
+    });
     const boxWidth = width - MARGIN * 2;
     const itemsBoxY = contentTop;
     const itemsBoxWidth = boxWidth;
@@ -1140,6 +1262,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     playerName: string | null,
     ready: boolean
   ) {
+    this.skillsView?.update(character);
     if (!character) {
       this.nameText.setText("No character");
       this.useBarValue(this.healthBar, 0);
@@ -1424,8 +1547,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (!this.readyToggle) {
       return;
     }
-    const showReady =
-      enabled && (this.tabsController?.isActive("character") ?? false);
+    const isCharacterActive =
+      this.tabsController?.isActive("character") ?? false;
+    const isStatusActive =
+      !this.characterSubtabs ||
+      this.characterSubtabs.getActiveKey() === "status";
+    const showReady = enabled && isCharacterActive && isStatusActive;
     if (showReady) {
       this.readyToggle.setAlpha(1);
       this.readyToggle.setInteractive({ useHandCursor: true });
@@ -1640,7 +1767,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       return 0;
     }
     const characters = this.currentMatch.playerCharacters ?? {};
-    const character = characters[this.currentUserId] as PlayerCharacter | undefined;
+    const character = characters[this.currentUserId] as
+      | PlayerCharacter
+      | undefined;
     return character?.stats?.energy?.current ?? 0;
   }
 

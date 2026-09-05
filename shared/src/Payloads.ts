@@ -7,6 +7,7 @@ import type {
 import type { ReplayEvent } from "./Replay";
 import type { MatchChatMessage } from "./chat";
 import type { Skin, UserAccount } from "./UserAccount";
+import type { SkillId } from "./Skill";
 
 export const OPCODE_SETTINGS_UPDATE = 100;
 export const OPCODE_MATCH_REMOVED = 101;
@@ -205,4 +206,20 @@ export type UpdateSkinPayload = {
   ok?: boolean;
   skin?: Skin;
   error?: string;
+};
+
+export type UpgradeSkillPayload = {
+  ok?: boolean;
+  match_id?: string;
+  user_id?: string;
+  skill_id?: SkillId;
+  skill_ids?: SkillId[];
+  character?: PlayerCharacter;
+  error?: string;
+};
+
+export type UpgradeSkillRequest = {
+  match_id: string;
+  skill_id?: SkillId;
+  skill_ids?: SkillId[];
 };

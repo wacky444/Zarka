@@ -1,5 +1,6 @@
 import type { Axial } from "./hexTile";
 import type { ActionCondition } from "./Action";
+import type { SkillId } from "./Skill";
 
 export interface PlayerCharacter {
   id: string;
@@ -139,41 +140,4 @@ export type PlayerConditionFlag =
   | "dead"
   | "protected";
 
-export type PlayerAbilityId =
-  | "vitality"
-  | "strength1"
-  | "strength2"
-  | "strength3"
-  | "strength4"
-  | "strength5"
-  | "dexterity1"
-  | "dexterity2"
-  | "dexterity3"
-  | "dexterity4"
-  | "resilience1"
-  | "resilience2"
-  | "resilience3"
-  | "resilience4"
-  | "agility1"
-  | "agility2"
-  | "agility3"
-  | "agility4"
-  | "charisma1"
-  | "charisma2"
-  | "charisma3"
-  | "charisma4"
-  | "perception1"
-  | "perception2"
-  | "perception3"
-  | "perception4"
-  | "perception5"
-  | "perception6"
-  | "greedy"
-  | "cannibal"
-  | "salesman"
-  | "pensioner"
-  | "undetectable"
-  | "brave"
-  | "vengeful"
-  | "charming"
-  | "coward";
+export type PlayerAbilityId = SkillId;

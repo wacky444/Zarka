@@ -14,6 +14,8 @@ import {
   type SaveChatMessageRequest,
   type GetUserAccountPayload,
   type Skin,
+  type SkillId,
+  type UpgradeSkillRequest
 } from "@shared";
 
 export type Move = { n: number; ts: number };
@@ -41,12 +43,14 @@ export class TurnService {
   private onMatchRemoved?: () => void;
   private onMatchEnded?: (payload: MatchEndedMessagePayload) => void;
   private onTurnAdvanced?: (payload: TurnAdvancedMessagePayload) => void;
-  private onReadyStateUpdate?: (payload: ReadyStateUpdateMessagePayload) => void;
+  private onReadyStateUpdate?: (
+    payload: ReadyStateUpdateMessagePayload
+  ) => void;
   private usernameCache = new Map<string, string>();
 
   constructor(
     private client: Client,
-    private session: Session,
+    private session: Session
   ) {}
 
   // Resolve Nakama usernames (or display names) for the given userIds with caching.
@@ -58,9 +62,9 @@ export class TurnService {
     const ids = Array.from(
       new Set(
         userIds.filter(
-          (id): id is string => typeof id === "string" && id.trim().length > 0,
-        ),
-      ),
+          (id): id is string => typeof id === "string" && id.trim().length > 0
+        )
+      )
     );
 
     if (ids.length === 0) {
@@ -122,10 +126,11 @@ export class TurnService {
   }
 
   async createMatch(size = 2, name?: string, turnsToBeAt1Tile = 30) {
-    const payload: { size: number; name?: string; turnsToBeAt1Tile?: number } = {
-      size,
-      turnsToBeAt1Tile,
-    };
+    const payload: { size: number; name?: string; turnsToBeAt1Tile?: number } =
+      {
+        size,
+        turnsToBeAt1Tile
+      };
     if (typeof name === "string" && name.trim()) {
       payload.name = name;
     }
@@ -136,7 +141,7 @@ export class TurnService {
   async submitTurn(match_id: string, move: Move) {
     const res = await this.client.rpc(this.session, "submit_turn", {
       match_id,
-      move,
+      move
     });
     return res;
   }
@@ -162,36 +167,36 @@ export class TurnService {
 
   async leaveMatch(match_id: string) {
     const res = await this.client.rpc(this.session, "leave_match", {
-      match_id,
+      match_id
     });
     return res;
   }
 
   async startMatch(match_id: string) {
     const res = await this.client.rpc(this.session, "start_match", {
-      match_id,
+      match_id
     });
     return res;
   }
 
   async updateMainAction(
     match_id: string,
-    submission: ActionSubmission | null,
+    submission: ActionSubmission | null
   ) {
     const res = await this.client.rpc(this.session, "update_main_action", {
       match_id,
-      submission,
+      submission
     });
     return res;
   }
 
   async updateSecondaryAction(
     match_id: string,
-    submission: ActionSubmission | null,
+    submission: ActionSubmission | null
   ) {
     const res = await this.client.rpc(this.session, "update_secondary_action", {
       match_id,
-      submission,
+      submission
     });
     return res;
   }
@@ -199,15 +204,31 @@ export class TurnService {
   async updateReadyState(match_id: string, ready: boolean) {
     const res = await this.client.rpc(this.session, "update_ready_state", {
       match_id,
-      ready,
+      ready
     });
+    return res;
+  }
+
+  async upgradeSkill(match_id: string, skill_id: SkillId) {
+    const res = await this.client.rpc(this.session, "upgrade_skill", {
+      match_id,
+      skill_id
+    } satisfies UpgradeSkillRequest);
+    return res;
+  }
+
+  async upgradeSkills(match_id: string, skill_ids: SkillId[]) {
+    const res = await this.client.rpc(this.session, "upgrade_skill", {
+      match_id,
+      skill_ids
+    } satisfies UpgradeSkillRequest);
     return res;
   }
 
   async updateSettings(match_id: string, settings: InMatchSettings) {
     const res = await this.client.rpc(this.session, "update_settings", {
       match_id,
-      settings,
+      settings
     });
     return res;
   }
@@ -219,7 +240,7 @@ export class TurnService {
 
   async removeMatch(match_id: string) {
     const res = await this.client.rpc(this.session, "remove_match", {
-      match_id,
+      match_id
     });
     return res;
   }
@@ -228,7 +249,7 @@ export class TurnService {
     const res = await this.client.rpc(
       this.session,
       "save_chat_message",
-      request,
+      request
     );
     return res;
   }
@@ -241,7 +262,7 @@ export class TurnService {
     const res = await this.client.rpc(
       this.session,
       "get_chat_history",
-      payload,
+      payload
     );
     return res;
   }
@@ -286,7 +307,7 @@ export class TurnService {
         } else if (m.op_code === OPCODE_MATCH_ENDED) {
           try {
             const payload = JSON.parse(
-              new TextDecoder().decode(m.data),
+              new TextDecoder().decode(m.data)
             ) as MatchEndedMessagePayload;
             if (this.onMatchEnded) {
               this.onMatchEnded(payload);
@@ -297,7 +318,7 @@ export class TurnService {
         } else if (m.op_code === OPCODE_TURN_ADVANCED) {
           try {
             const payload = JSON.parse(
-              new TextDecoder().decode(m.data),
+              new TextDecoder().decode(m.data)
             ) as TurnAdvancedMessagePayload;
             if (this.onTurnAdvanced) {
               this.onTurnAdvanced(payload);
@@ -308,7 +329,7 @@ export class TurnService {
         } else if (m.op_code === OPCODE_READY_STATE_UPDATE) {
           try {
             const payload = JSON.parse(
-              new TextDecoder().decode(m.data),
+              new TextDecoder().decode(m.data)
             ) as ReadyStateUpdateMessagePayload;
             if (this.onReadyStateUpdate) {
               this.onReadyStateUpdate(payload);
@@ -370,7 +391,7 @@ export class TurnService {
       started?: boolean;
       name?: string;
       players?: string[];
-    }) => void,
+    }) => void
   ) {
     this.onSettingsUpdate = cb;
   }
@@ -387,7 +408,9 @@ export class TurnService {
     this.onTurnAdvanced = cb;
   }
 
-  setOnReadyStateUpdate(cb?: (payload: ReadyStateUpdateMessagePayload) => void) {
+  setOnReadyStateUpdate(
+    cb?: (payload: ReadyStateUpdateMessagePayload) => void
+  ) {
     this.onReadyStateUpdate = cb;
   }
 
@@ -419,7 +442,7 @@ export class TurnService {
       const rpcRes = await this.client.rpc(
         this.session,
         "get_user_account",
-        {},
+        {}
       );
       const raw = (rpcRes as unknown as { payload?: unknown }).payload;
       const payload = (typeof raw === "string" ? JSON.parse(raw) : raw) as
