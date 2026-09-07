@@ -13,7 +13,8 @@ import {
   type ItemDefinition,
   DEFAULT_SKIN,
   Skin,
-  PlayerCharacterUnknown
+  PlayerCharacterUnknown,
+  getActionEnergyDiscount
 } from "@shared";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
 import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
@@ -244,17 +245,29 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.setReadyState(!this.readyState, true);
   };
   private readyPointerIsDown = false;
-  private readonly handleReadyPointerDown = () => {
+  private readonly handleReadyPointerDown = (
+    pointer: Phaser.Input.Pointer,
+    localX: number,
+    localY: number,
+    event: Phaser.Types.Input.EventData
+  ) => {
     this.readyPointerIsDown = true;
+    event.stopPropagation();
   };
   private readonly handleReadyPointerOut = () => {
     this.readyPointerIsDown = false;
   };
-  private readonly handleReadyPointerUp = () => {
+  private readonly handleReadyPointerUp = (
+    pointer: Phaser.Input.Pointer,
+    localX: number,
+    localY: number,
+    event: Phaser.Types.Input.EventData
+  ) => {
     if (this.readyPointerIsDown) {
       this.readyPointerIsDown = false;
       this.handleReadyToggle();
     }
+    event.stopPropagation();
   };
   private readonly handleSecondaryActionSelection = (
     actionId: string | null
@@ -926,6 +939,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.bringToTop(this.secondaryActionDropdown);
     this.bringToTop(this.secondaryLocationSelector);
     this.bringToTop(this.secondaryPlayerSelector);
+    this.bringToTop(this.readyToggle);
   }
 
   override destroy(fromScene?: boolean) {
@@ -1738,6 +1752,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       const description = developed
         ? descriptionBase
         : `${descriptionBase}\n\n(Not available in this build.)`;
+      const currentCharacter = this.getCurrentCharacter();
+      const discount = currentCharacter
+        ? getActionEnergyDiscount(currentCharacter, definition.id)
+        : 0;
+      const effectiveEnergyCost = Math.max(0, definition.energyCost - discount);
       return {
         id: definition.id,
         name: definition.name,
@@ -1745,7 +1764,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         texture,
         frame,
         tags: definition.tags,
-        energyCost: definition.energyCost,
+        energyCost: effectiveEnergyCost,
         cooldownRemaining: normalizedRemaining,
         disabled: isDisabled
       };
@@ -1762,14 +1781,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     };
   }
 
-  private getCurrentEnergy(): number {
+  private getCurrentCharacter(): PlayerCharacter | null {
     if (!this.currentMatch || !this.currentUserId) {
-      return 0;
+      return null;
     }
     const characters = this.currentMatch.playerCharacters ?? {};
-    const character = characters[this.currentUserId] as
-      | PlayerCharacter
-      | undefined;
+    return (characters[this.currentUserId] as PlayerCharacter | undefined) ?? null;
+  }
+
+  private getCurrentEnergy(): number {
+    const character = this.getCurrentCharacter();
     return character?.stats?.energy?.current ?? 0;
   }
 
@@ -1791,12 +1812,17 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       return;
     }
     const energy = this.getCurrentEnergy();
+    const character = this.getCurrentCharacter();
+    const discount = character && definition
+      ? getActionEnergyDiscount(character, definition.id)
+      : 0;
     this.extraExecutionSelector.configure({
       baseCost: definition!.energyCost,
       extraCostPerRep: extraExecution.cost,
       maxReps: extraExecution.maxRepetitions ?? 1,
       description: extraExecution.description,
-      energy
+      energy,
+      discount
     });
     if (initialReps > 0) {
       this.mainExtraExecutions = initialReps;
@@ -1825,12 +1851,17 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       return;
     }
     const energy = this.getCurrentEnergy();
+    const character = this.getCurrentCharacter();
+    const discount = character && definition
+      ? getActionEnergyDiscount(character, definition.id)
+      : 0;
     this.secondaryExtraExecutionSelector.configure({
       baseCost: definition!.energyCost,
       extraCostPerRep: extraExecution.cost,
       maxReps: extraExecution.maxRepetitions ?? 1,
       description: extraExecution.description,
-      energy
+      energy,
+      discount
     });
     if (initialReps > 0) {
       this.secondaryExtraExecutions = initialReps;

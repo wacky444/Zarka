@@ -1,5 +1,5 @@
 import type { ActionDefinition, ActionId, PlayerCharacter } from "@shared";
-import { ActionLibrary } from "@shared";
+import { ActionLibrary, getActionEnergyDiscount } from "@shared";
 
 export function getAvailableEnergy(character: PlayerCharacter): number {
   const energy = character.stats?.energy;
@@ -96,11 +96,22 @@ export function getUsableExtraExecutions(
   if (costPerRep <= 0) {
     return requested;
   }
+  const actionId =
+    resolvedDefinition?.id ?? (plan?.actionId as ActionId | undefined);
+  const totalDiscount = actionId
+    ? getActionEnergyDiscount(character, actionId)
+    : 0;
+  const baseCost = resolvedDefinition?.energyCost ?? 0;
+  const remainingDiscount = Math.max(0, totalDiscount - baseCost);
+
   const available = getAvailableEnergy(character);
-  const maxAffordable = Math.floor(available / costPerRep);
+  const maxAffordable = Math.floor((available + remainingDiscount) / costPerRep);
   const usable = Math.min(requested, maxAffordable);
   if (usable > 0 && deductEnergy) {
-    deductEnergyFromCharacter(character, usable * costPerRep);
+    const energyToDeduct = Math.max(0, usable * costPerRep - remainingDiscount);
+    if (energyToDeduct > 0) {
+      deductEnergyFromCharacter(character, energyToDeduct);
+    }
   }
   return Math.max(0, usable);
 }

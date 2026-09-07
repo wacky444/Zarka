@@ -25,9 +25,9 @@ buildSync({
       "if (!__global.module.exports) { __global.module.exports = {}; }",
       "var module = __global.module;",
       "var exports = module.exports;"
-    ].join("\n"),
+    ].join("\n")
   },
   tsconfig: tsconfigPath,
   outfile: path.resolve(outDir, "main.js"),
-  logLevel: "info",
+  logLevel: "info"
 });

@@ -87,6 +87,14 @@ docker compose up -d --build nakama
 - In the client there is a file that plays the action animation, ActionAnimator in `client/src/animation/moveReplay.ts`. Each action has its own function in a file to play the animation.
 - In the client there is a file that prints the action log, formatReplayEvents in `client/src/ui/CharacterPanelLogView.ts`.
 
+### Developing or editing skills
+
+- Skills are defined in `shared/src/SkillLibrary.ts` and typed in `shared/src/Skill.ts`. Implemented skills must have `implemented: true`.
+- Character acquired skills are stored in `character.abilities` as an array of `SkillId` (supporting duplicate entries up to `max` ranks) and purchased using `character.progression.availableSkillPoints`.
+- In the server, `server/modules/src/rpc/upgradeSkill.ts` handles the `upgrade_skill` RPC: validates player state, implementation status, point costs, and max rank limits, deducts skill points, adds the ability to `character.abilities`, and applies immediate permanent stat updates (e.g. `vitality` increments `character.stats.health.max`).
+- Skills that modify action costs, combat, or turn execution should inspect `character.abilities` during resolution in `server/modules/src/match/` or specific action handlers in `server/modules/src/match/actions/`.
+- In the client, `client/src/ui/CharacterPanelSkillsView.ts` renders skills grouped by category, counts committed ranks from `character.abilities`, and invokes `turnService.upgradeSkills()` (via `GameScene`) to commit upgrades.
+
 ## Build & validation workflow
 
 ### Server environment (Docker + Nakama)

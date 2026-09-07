@@ -1,3 +1,5 @@
+import type { ActionId } from "./Action";
+import type { PlayerCharacter } from "./playerCharacter";
 import type { SkillLibraryDefinition } from "./Skill";
 
 export const SkillLibrary: SkillLibraryDefinition = {
@@ -8,7 +10,11 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 2,
     max: 10,
     implemented: true,
-    category: "Vitalidad"
+    category: "Vitalidad",
+    effect: {
+      type: "max_health_increase",
+      value: 1
+    }
   },
   strength1: {
     id: "strength1",
@@ -16,8 +22,13 @@ export const SkillLibrary: SkillLibraryDefinition = {
     description: "Reduce el esfuerzo de los puñetazos en 3 puntos",
     cost: 1,
     max: 4,
-    implemented: false,
-    category: "Fuerza"
+    implemented: true,
+    category: "Fuerza",
+    effect: {
+      type: "action_energy_discount",
+      affectedAction: "punch",
+      value: 3
+    }
   },
   strength2: {
     id: "strength2",
@@ -26,8 +37,13 @@ export const SkillLibrary: SkillLibraryDefinition = {
       "Reduce el esfuerzo de los ataques con cuchillo, bate y hacha en 3 puntos",
     cost: 3,
     max: 4,
-    implemented: false,
-    category: "Fuerza"
+    implemented: true,
+    category: "Fuerza",
+    effect: {
+      type: "action_energy_discount",
+      affectedAction: ["knife_attack", "bat_attack", "axe_attack"],
+      value: 3
+    }
   },
   strength3: {
     id: "strength3",
@@ -36,8 +52,13 @@ export const SkillLibrary: SkillLibraryDefinition = {
       "Reduce el esfuerzo de los disparos con arpón y pistola en 2 puntos",
     cost: 2,
     max: 2,
-    implemented: false,
-    category: "Fuerza"
+    implemented: true,
+    category: "Fuerza",
+    effect: {
+      type: "action_energy_discount",
+      affectedAction: ["shoot_pistol", "shoot_harpoon"],
+      value: 2
+    }
   },
   strength4: {
     id: "strength4",
@@ -354,3 +375,26 @@ export const SkillLibrary: SkillLibraryDefinition = {
     category: "Habilidades especiales"
   }
 };
+
+export function getActionEnergyDiscount(
+  character: PlayerCharacter | undefined | null,
+  actionId: ActionId | string
+): number {
+  if (!character || !Array.isArray(character.abilities) || character.abilities.length === 0) {
+    return 0;
+  }
+  let discount = 0;
+  for (const ability of character.abilities) {
+    const definition = SkillLibrary[ability];
+    const effect = definition?.effect;
+    if (effect && effect.type === "action_energy_discount" && effect.affectedAction) {
+      const affects = Array.isArray(effect.affectedAction)
+        ? effect.affectedAction.indexOf(actionId as ActionId) !== -1
+        : effect.affectedAction === actionId;
+      if (affects) {
+        discount += effect.value;
+      }
+    }
+  }
+  return discount;
+}

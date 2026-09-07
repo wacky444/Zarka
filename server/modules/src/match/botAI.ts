@@ -2,6 +2,7 @@ import {
   ActionLibrary,
   CellLibrary,
   neighbors,
+  getActionEnergyDiscount,
   type ActionDefinition,
   type ActionId,
   type ActionTag,
@@ -290,7 +291,12 @@ function buildExecutableActionCandidates(
     ) {
       continue;
     }
-    if (!hasEnoughEnergy(context.character, definition.energyCost)) {
+    const discount = getActionEnergyDiscount(
+      context.character,
+      definition.id
+    );
+    const effectiveCost = Math.max(0, definition.energyCost - discount);
+    if (!hasEnoughEnergy(context.character, effectiveCost)) {
       continue;
     }
     const candidate = createCandidateForAction(definition, context);

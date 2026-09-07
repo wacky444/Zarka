@@ -20,6 +20,7 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
   private currentReps = 0;
   private maxTotalCost = 0;
   private currentEnergy = 0;
+  private discount = 0;
   private enabled = false;
   private preferredWidth: number;
   private disposed = false;
@@ -96,6 +97,7 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
     maxReps: number;
     description: string;
     energy: number;
+    discount?: number;
   }): void {
     if (this.disposed) {
       return;
@@ -104,7 +106,11 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
     this.baseCost = opts.baseCost;
     this.extraCostPerRep = opts.extraCostPerRep;
     this.maxReps = Math.max(0, opts.maxReps);
-    this.maxTotalCost = this.baseCost + this.maxReps * this.extraCostPerRep;
+    this.discount = Math.max(0, opts.discount ?? 0);
+    this.maxTotalCost = Math.max(
+      0,
+      this.baseCost + this.maxReps * this.extraCostPerRep - this.discount
+    );
     this.currentReps = 0;
     this.descriptionText.setText(opts.description);
     this.descriptionText.setWordWrapWidth(this.preferredWidth - 32, true);
@@ -165,7 +171,8 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
   }
 
   private updateCostDisplay(): void {
-    const total = this.baseCost + this.currentReps * this.extraCostPerRep;
+    const rawTotal = this.baseCost + this.currentReps * this.extraCostPerRep;
+    const total = Math.max(0, rawTotal - this.discount);
     this.countText.setText(`${this.currentReps}`);
     this.totalCostText.setText(`Energy: ${total} / ${this.maxTotalCost}`);
 

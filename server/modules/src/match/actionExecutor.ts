@@ -1,6 +1,6 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import { ActionLibrary, CellLibrary } from "@shared";
+import { ActionLibrary, CellLibrary, getActionEnergyDiscount } from "@shared";
 import type {
   ActionDefinition,
   ActionId,
@@ -102,6 +102,7 @@ function applyEnergyForParticipants(
   energyCost: number,
   match: MatchRecord,
   logger: nkruntime.Logger,
+  actionId?: ActionId | string,
 ): ReplayEvent[] {
   const events: ReplayEvent[] = [];
   const characters = match.playerCharacters;
@@ -109,9 +110,14 @@ function applyEnergyForParticipants(
     return events;
   }
   for (const participant of participants) {
+    const resolvedActionId = actionId ?? participant.plan?.actionId;
+    const discount = resolvedActionId
+      ? getActionEnergyDiscount(participant.character, resolvedActionId)
+      : 0;
+    const effectiveCost = Math.max(0, energyCost - discount);
     const outcome = applyActionEnergyCost(
       participant.character,
-      energyCost,
+      effectiveCost,
       logger,
     );
     if (outcome.event) {

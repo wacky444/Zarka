@@ -1,3 +1,5 @@
+import type { ActionId } from "./Action";
+
 export type SkillId =
   | "vitality"
   | "strength1"
@@ -37,6 +39,17 @@ export type SkillId =
   | "charming"
   | "coward";
 
+export type SkillEffectType =
+  | "action_energy_discount"
+  | "max_health_increase"
+  | string;
+
+export interface SkillEffect {
+  type: SkillEffectType;
+  affectedAction?: ActionId | ActionId[];
+  value: number;
+}
+
 export interface SkillDefinition {
   id: SkillId;
   name: string;
@@ -46,6 +59,7 @@ export interface SkillDefinition {
   implemented: boolean;
   category?: string;
   notes?: string[];
+  effect?: SkillEffect;
 }
 
 export type SkillLibraryDefinition = Record<SkillId, SkillDefinition>;
