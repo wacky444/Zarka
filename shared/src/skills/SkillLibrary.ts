@@ -66,7 +66,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 2,
     max: 2,
     implemented: false,
-    category: "Fuerza"
+    category: "Fuerza",
+    effect: {
+      type: "action_energy_discount",
+      affectedAction: ["place_c4", "place_trap", "detonate_c4"],
+      value: 2
+    }
   },
   strength5: {
     id: "strength5",
@@ -195,8 +200,13 @@ export const SkillLibrary: SkillLibraryDefinition = {
     description: "Reduce en 1 punto el esfuerzo por desplazamiento",
     cost: 1,
     max: 3,
-    implemented: false,
-    category: "Agilidad"
+    implemented: true,
+    category: "Agilidad",
+    effect: {
+      type: "action_energy_discount",
+      affectedAction: "move",
+      value: 1
+    }
   },
   agility4: {
     id: "agility4",
@@ -253,8 +263,13 @@ export const SkillLibrary: SkillLibraryDefinition = {
     description: "Reduce en 3 puntos el esfuerzo por detectar",
     cost: 3,
     max: 3,
-    implemented: false,
-    category: "Percepción"
+    implemented: true,
+    category: "Percepción",
+    effect: {
+      type: "action_energy_discount",
+      affectedAction: "detect",
+      value: 3
+    }
   },
   perception2: {
     id: "perception2",
