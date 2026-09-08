@@ -214,7 +214,7 @@ export function advanceTurn(
         (typeof standingTile.meta?.destructionTurn === "number" &&
           standingTile.meta.destructionTurn <= resolvedTurn))
     ) {
-      const outcome = applyHealthDelta(character, -999, true, logger);
+      const outcome = applyHealthDelta(character, -999, true, logger, true);
       match.playerCharacters[playerId] = outcome.character;
       const deadTeamId = character.secretTeamId || character.teamId;
       replayEvents.push({

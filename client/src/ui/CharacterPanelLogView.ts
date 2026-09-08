@@ -512,9 +512,16 @@ export class CharacterPanelLogView {
             }
             if (
               typeof target.damageTaken === "number" &&
-              target.damageTaken > 0
+              target.damageTaken >= 0
             ) {
               lines.push(`${targetName} took ${target.damageTaken} damage`);
+              if (target.eliminated) {
+                const team =
+                  (target.metadata as { teamId?: string })?.teamId ||
+                  this.resolvePlayerTeam(target.targetId);
+                const teamSuffix = team ? ` (Team ${team})` : "";
+                lines.push(`${targetName}${teamSuffix} was eliminated`);
+              }
             } else if (target.eliminated) {
               const team =
                 (target.metadata as { teamId?: string })?.teamId ||

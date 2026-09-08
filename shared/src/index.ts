@@ -13,5 +13,7 @@ export * from "./Replay";
 export * from "./chat";
 export * from "./UserAccount";
 export * from "./SkinOptions";
-export * from "./Skill";
-export * from "./SkillLibrary";
+export * from "./skills/Skill";
+export * from "./skills/SkillLibrary";
+export * from "./skills/SkillLogic";
+

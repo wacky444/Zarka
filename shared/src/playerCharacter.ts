@@ -1,6 +1,6 @@
 import type { Axial } from "./hexTile";
 import type { ActionCondition } from "./Action";
-import type { SkillId } from "./Skill";
+import type { SkillId } from "./skills/Skill";
 
 export interface PlayerCharacter {
   id: string;

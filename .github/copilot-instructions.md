@@ -89,7 +89,7 @@ docker compose up -d --build nakama
 
 ### Developing or editing skills
 
-- Skills are defined in `shared/src/SkillLibrary.ts` and typed in `shared/src/Skill.ts`. Implemented skills must have `implemented: true`.
+- Skills are defined in `shared/src/skills/SkillLibrary.ts`, typed in `shared/src/skills/Skill.ts`, and helper calculation logic lives in `shared/src/skills/SkillLogic.ts`. Implemented skills must have `implemented: true`.
 - Character acquired skills are stored in `character.abilities` as an array of `SkillId` (supporting duplicate entries up to `max` ranks) and purchased using `character.progression.availableSkillPoints`.
 - In the server, `server/modules/src/rpc/upgradeSkill.ts` handles the `upgrade_skill` RPC: validates player state, implementation status, point costs, and max rank limits, deducts skill points, adds the ability to `character.abilities`, and applies immediate permanent stat updates (e.g. `vitality` increments `character.stats.health.max`).
 - Skills that modify action costs, combat, or turn execution should inspect `character.abilities` during resolution in `server/modules/src/match/` or specific action handlers in `server/modules/src/match/actions/`.

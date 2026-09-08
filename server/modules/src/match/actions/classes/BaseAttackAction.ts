@@ -16,7 +16,7 @@ import {
   resolveGuardedDamage,
   type PlannedActionParticipant,
 } from "../utils";
-import { ActionLibrary } from "@shared";
+import { ActionLibrary, getDamageReduction } from "@shared";
 import { getUsableExtraExecutions } from "../../../utils/energy";
 import { collectTargets } from "../targeting";
 import { BaseAction } from "./BaseAction";
@@ -62,7 +62,9 @@ export abstract class BaseAttackAction extends BaseAction {
         }
         const guarded = isTargetProtected(target);
         const baseDamage = this.getBaseDamage(participant, targetId, match);
-        const dealtAmount = resolveGuardedDamage(baseDamage, guarded);
+        const guardedDamage = resolveGuardedDamage(baseDamage, guarded);
+        const damageReduction = getDamageReduction(target);
+        const dealtAmount = Math.max(0, guardedDamage - damageReduction);
         const {
           result: healthChange,
           character: updatedTarget,
@@ -74,9 +76,6 @@ export abstract class BaseAttackAction extends BaseAction {
           postEvents.push(event);
         }
         const applied = Math.max(0, -healthChange.delta);
-        if (applied <= 0) {
-          continue;
-        }
         totalDamage += applied;
         const eliminated =
           healthChange.current === 0 && healthChange.previous > 0;

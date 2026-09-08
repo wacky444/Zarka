@@ -1,4 +1,4 @@
-import type { ActionId } from "./Action";
+import type { ActionId } from "../Action";
 
 export type SkillId =
   | "vitality"
@@ -42,6 +42,10 @@ export type SkillId =
 export type SkillEffectType =
   | "action_energy_discount"
   | "max_health_increase"
+  | "max_load_increase"
+  | "damage_taken_reduction"
+  | "set_knockout_threshold"
+  | "lethal_damage_protection"
   | string;
 
 export interface SkillEffect {

@@ -9,7 +9,7 @@ import type {
   ReplayPlayerEvent,
   Axial,
 } from "@shared";
-import { ReplayActionEffect } from "@shared";
+import { ReplayActionEffect, getKnockoutThreshold } from "@shared";
 import type { MatchRecord } from "../../models/types";
 import { isCharacterDead } from "../../utils/playerCharacter";
 
@@ -197,7 +197,8 @@ export function applyHealthDelta(
   character: PlayerCharacter,
   delta: number,
   canDamageUnconscious: boolean = false,
-  logger: any = undefined
+  logger: any = undefined,
+  bypassResilience: boolean = false
 ): HealthDeltaOutcome {
   const stats = character.stats;
   const health = stats?.health;
@@ -233,18 +234,20 @@ export function applyHealthDelta(
   const actionPlan = character.actionPlan
     ? { ...character.actionPlan }
     : undefined;
-  const knockoutThreshold =
-    typeof health.knockoutThreshold === "number" &&
-    isFinite(health.knockoutThreshold)
-      ? health.knockoutThreshold
-      : INJURED_MAX_HP;
+  const knockoutThreshold = getKnockoutThreshold(character);
   const injuredMax =
-    typeof health.injuredMax === "number" && isFinite(health.injuredMax)
-      ? health.injuredMax
-      : INJURED_MAX_HP;
+    knockoutThreshold < INJURED_MAX_HP
+      ? knockoutThreshold
+      : typeof health.injuredMax === "number" && isFinite(health.injuredMax)
+        ? health.injuredMax
+        : INJURED_MAX_HP;
   const wasUnconscious = conditions.indexOf("unconscious") !== -1;
   const wasDead = isCharacterDead(character);
   const injuredCap = injuredMax > 0 ? injuredMax : INJURED_MAX_HP;
+  const hasResilience4 =
+    !bypassResilience &&
+    Array.isArray(character.abilities) &&
+    character.abilities.indexOf("resilience4") !== -1;
   let nextMaxHP = health.max;
   let nextCurrent: number;
   let nextActionPlan = actionPlan;
@@ -254,6 +257,9 @@ export function applyHealthDelta(
     nextCurrent = Math.min(previousHP, nextMaxHP);
   } else {
     nextCurrent = Math.max(0, previousHP + delta);
+    if (delta < 0 && hasResilience4 && previousHP > 1 && nextCurrent <= 0) {
+      nextCurrent = 1;
+    }
     nextCurrent = Math.min(nextCurrent, nextMaxHP);
   }
 

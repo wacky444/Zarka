@@ -1,5 +1,3 @@
-import type { ActionId } from "./Action";
-import type { PlayerCharacter } from "./playerCharacter";
 import type { SkillLibraryDefinition } from "./Skill";
 
 export const SkillLibrary: SkillLibraryDefinition = {
@@ -123,8 +121,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
     description: "Aumenta en 5 unidades la capacidad máxima de peso",
     cost: 2,
     max: 3,
-    implemented: false,
-    category: "Resistencia"
+    implemented: true,
+    category: "Resistencia",
+    effect: {
+      type: "max_load_increase",
+      value: 5
+    }
   },
   resilience2: {
     id: "resilience2",
@@ -133,8 +135,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
       "Reduce en 1 el daño recibido (veneno y virus restan igualmente)",
     cost: 4,
     max: 2,
-    implemented: false,
-    category: "Resistencia"
+    implemented: true,
+    category: "Resistencia",
+    effect: {
+      type: "damage_taken_reduction",
+      value: 1
+    }
   },
   resilience3: {
     id: "resilience3",
@@ -143,8 +149,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
       "Disminuye a 3 el mínimo de vida para desmayarse y quedar herido",
     cost: 4,
     max: 1,
-    implemented: false,
-    category: "Resistencia"
+    implemented: true,
+    category: "Resistencia",
+    effect: {
+      type: "set_knockout_threshold",
+      value: 3
+    }
   },
   resilience4: {
     id: "resilience4",
@@ -153,8 +163,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
       "Solo puede morir si recibe daño estando a 1 de vida, si no cualquier daño que le fuera a matar le deja en 1 punto de vida, incluso la motosierra",
     cost: 10,
     max: 1,
-    implemented: false,
-    category: "Resistencia"
+    implemented: true,
+    category: "Resistencia",
+    effect: {
+      type: "lethal_damage_protection",
+      value: 1
+    }
   },
   agility1: {
     id: "agility1",
@@ -376,25 +390,3 @@ export const SkillLibrary: SkillLibraryDefinition = {
   }
 };
 
-export function getActionEnergyDiscount(
-  character: PlayerCharacter | undefined | null,
-  actionId: ActionId | string
-): number {
-  if (!character || !Array.isArray(character.abilities) || character.abilities.length === 0) {
-    return 0;
-  }
-  let discount = 0;
-  for (const ability of character.abilities) {
-    const definition = SkillLibrary[ability];
-    const effect = definition?.effect;
-    if (effect && effect.type === "action_energy_discount" && effect.affectedAction) {
-      const affects = Array.isArray(effect.affectedAction)
-        ? effect.affectedAction.indexOf(actionId as ActionId) !== -1
-        : effect.affectedAction === actionId;
-      if (affects) {
-        discount += effect.value;
-      }
-    }
-  }
-  return discount;
-}

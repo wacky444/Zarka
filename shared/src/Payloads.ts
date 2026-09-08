@@ -7,7 +7,7 @@ import type {
 import type { ReplayEvent } from "./Replay";
 import type { MatchChatMessage } from "./chat";
 import type { Skin, UserAccount } from "./UserAccount";
-import type { SkillId } from "./Skill";
+import type { SkillId } from "./skills/Skill";
 
 export const OPCODE_SETTINGS_UPDATE = 100;
 export const OPCODE_MATCH_REMOVED = 101;
