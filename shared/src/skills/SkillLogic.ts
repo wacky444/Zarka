@@ -71,5 +71,12 @@ export function hasLethalDamageProtection(
   if (!character || !Array.isArray(character.abilities) || character.abilities.length === 0) {
     return false;
   }
-  return character.abilities.indexOf("resilience4") !== -1;
+  for (const ability of character.abilities) {
+    const definition = SkillLibrary[ability];
+    const effect = definition?.effect;
+    if (effect && effect.type === "lethal_damage_protection") {
+      return true;
+    }
+  }
+  return false;
 }

@@ -9,7 +9,11 @@ import type {
   ReplayPlayerEvent,
   Axial,
 } from "@shared";
-import { ReplayActionEffect, getKnockoutThreshold } from "@shared";
+import {
+  ReplayActionEffect,
+  getKnockoutThreshold,
+  hasLethalDamageProtection,
+} from "@shared";
 import type { MatchRecord } from "../../models/types";
 import { isCharacterDead } from "../../utils/playerCharacter";
 
@@ -244,10 +248,8 @@ export function applyHealthDelta(
   const wasUnconscious = conditions.indexOf("unconscious") !== -1;
   const wasDead = isCharacterDead(character);
   const injuredCap = injuredMax > 0 ? injuredMax : INJURED_MAX_HP;
-  const hasResilience4 =
-    !bypassResilience &&
-    Array.isArray(character.abilities) &&
-    character.abilities.indexOf("resilience4") !== -1;
+  const hasLethalProtection =
+    !bypassResilience && hasLethalDamageProtection(character);
   let nextMaxHP = health.max;
   let nextCurrent: number;
   let nextActionPlan = actionPlan;
@@ -257,7 +259,7 @@ export function applyHealthDelta(
     nextCurrent = Math.min(previousHP, nextMaxHP);
   } else {
     nextCurrent = Math.max(0, previousHP + delta);
-    if (delta < 0 && hasResilience4 && previousHP > 1 && nextCurrent <= 0) {
+    if (delta < 0 && hasLethalProtection && previousHP > 1 && nextCurrent <= 0) {
       nextCurrent = 1;
     }
     nextCurrent = Math.min(nextCurrent, nextMaxHP);

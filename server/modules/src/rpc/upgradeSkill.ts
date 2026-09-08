@@ -135,17 +135,24 @@ export function upgradeSkillRpc(
 
   for (const id of skillIds) {
     currentAbilities.push(id);
-    if (id === "vitality") {
-      if (!character.stats) {
-        character.stats = {
-          health: { current: 10, max: 12, knockoutThreshold: 5, injuredMax: 5 },
-          energy: { current: 10, max: 20 },
-          load: { current: 14, max: 25 },
-          speed: 0,
-          sympathy: 0,
-          baseViewRange: 0
-        };
-      }
+    const definition = SkillLibrary[id];
+    const effect = definition?.effect;
+    if (!effect) {
+      continue;
+    }
+
+    if (!character.stats) {
+      character.stats = {
+        health: { current: 10, max: 12, knockoutThreshold: 5, injuredMax: 5 },
+        energy: { current: 10, max: 20 },
+        load: { current: 14, max: 25 },
+        speed: 0,
+        sympathy: 0,
+        baseViewRange: 0
+      };
+    }
+
+    if (effect.type === "max_health_increase") {
       if (!character.stats.health) {
         character.stats.health = {
           current: 10,
@@ -154,39 +161,16 @@ export function upgradeSkillRpc(
           injuredMax: 5
         };
       }
-      character.stats.health.max += 1;
-    }
-    if (id === "resilience1") {
-      if (!character.stats) {
-        character.stats = {
-          health: { current: 10, max: 12, knockoutThreshold: 5, injuredMax: 5 },
-          energy: { current: 10, max: 20 },
-          load: { current: 14, max: 25 },
-          speed: 0,
-          sympathy: 0,
-          baseViewRange: 0
-        };
-      }
+      character.stats.health.max += effect.value;
+    } else if (effect.type === "max_load_increase") {
       if (!character.stats.load) {
         character.stats.load = {
           current: 14,
           max: 25
         };
       }
-      character.stats.load.max += 5;
-    }
-    const definition = SkillLibrary[id];
-    if (definition?.effect?.type === "set_knockout_threshold") {
-      if (!character.stats) {
-        character.stats = {
-          health: { current: 10, max: 12, knockoutThreshold: 5, injuredMax: 5 },
-          energy: { current: 10, max: 20 },
-          load: { current: 14, max: 25 },
-          speed: 0,
-          sympathy: 0,
-          baseViewRange: 0
-        };
-      }
+      character.stats.load.max += effect.value;
+    } else if (effect.type === "set_knockout_threshold") {
       if (!character.stats.health) {
         character.stats.health = {
           current: 10,
@@ -195,8 +179,8 @@ export function upgradeSkillRpc(
           injuredMax: 5
         };
       }
-      character.stats.health.knockoutThreshold = definition.effect.value;
-      character.stats.health.injuredMax = definition.effect.value;
+      character.stats.health.knockoutThreshold = effect.value;
+      character.stats.health.injuredMax = effect.value;
     }
   }
   character.abilities = currentAbilities;
