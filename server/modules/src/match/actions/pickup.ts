@@ -2,6 +2,7 @@ import type { MatchRecord } from "../../models/types";
 import {
   ActionLibrary,
   ExtraExecutionEffect,
+  getSkillEffectTotal,
   ItemLibrary,
   type ActionId,
   type HexTileSnapshot,
@@ -41,6 +42,7 @@ function normalizePriorityIds(
 }
 
 function computePickupLimit(
+  character: PlayerCharacter,
   extraReps: number,
   definition: import("@shared").ActionDefinition | undefined
 ): number {
@@ -48,7 +50,8 @@ function computePickupLimit(
   const hasIncreaseScope =
     definition?.extraExecution?.effectType ===
     ExtraExecutionEffect.IncreaseScope;
-  const limit = base + (hasIncreaseScope ? extraReps : 0);
+  const skillBonus = getSkillEffectTotal(character, "pickup_scope_increase");
+  const limit = base + skillBonus + (hasIncreaseScope ? extraReps : 0);
   return limit > 0 ? limit : 0;
 }
 
@@ -269,7 +272,11 @@ export class PickUpAction extends BaseAction {
         participant.plan,
         definition
       );
-      const limit = computePickupLimit(extraReps, definition);
+      const limit = computePickupLimit(
+        participant.character,
+        extraReps,
+        definition
+      );
       const picked: PickupItem[] = [];
       const skippedByLoad: PickupItem[] = [];
       const missingPriorityLookup: Record<string, true> = {};

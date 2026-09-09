@@ -348,8 +348,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
     description: "Coge 1 objeto extra sin esfuerzo al realizar la acción coger",
     cost: 2,
     max: 1,
-    implemented: false,
-    category: "Habilidades especiales"
+    implemented: true,
+    category: "Habilidades especiales",
+    effect: {
+      type: "pickup_scope_increase",
+      value: 1
+    }
   },
   cannibal: {
     id: "cannibal",
