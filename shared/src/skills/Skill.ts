@@ -49,6 +49,7 @@ export type SkillEffectType =
   | "dodge_success_chance_increase"
   | "speed_increase"
   | "extra_secondary_action"
+  | "search_discovery_increase"
   | string;
 
 export interface SkillEffect {

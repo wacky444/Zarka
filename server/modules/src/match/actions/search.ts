@@ -10,7 +10,11 @@ import type {
   ReplayActionDone,
   ReplayPlayerEvent,
 } from "@shared";
-import { ActionLibrary, ExtraExecutionEffect } from "@shared";
+import {
+  ActionLibrary,
+  ExtraExecutionEffect,
+  getSkillEffectTotal
+} from "@shared";
 import { type PlannedActionParticipant } from "./utils";
 import { getUsableExtraExecutions } from "../../utils/energy";
 import { BaseAction } from "./classes/BaseAction";
@@ -74,6 +78,7 @@ function sampleItems(pool: string[], count: number): string[] {
 }
 
 function computeDiscoveryCount(
+  character: PlayerCharacter,
   extraReps: number,
   definition: ActionDefinition | undefined,
   available: number
@@ -82,7 +87,11 @@ function computeDiscoveryCount(
     definition?.extraExecution?.effectType ===
     ExtraExecutionEffect.IncreaseScope;
   const extra = hasIncreaseScope ? extraReps : 0;
-  const baseTarget = BASE_DISCOVERY_COUNT + extra;
+  const skillBonus = getSkillEffectTotal(
+    character,
+    "search_discovery_increase"
+  );
+  const baseTarget = BASE_DISCOVERY_COUNT + skillBonus + extra;
   return Math.min(available, baseTarget > 0 ? baseTarget : 0);
 }
 
@@ -124,7 +133,12 @@ export class SearchAction extends BaseAction {
         definition
       );
       const discoveryCount = tile
-        ? computeDiscoveryCount(extraReps, definition, undiscovered.length)
+        ? computeDiscoveryCount(
+            participant.character,
+            extraReps,
+            definition,
+            undiscovered.length
+          )
         : 0;
       const discovered =
         discoveryCount > 0 ? sampleItems(undiscovered, discoveryCount) : [];

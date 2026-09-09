@@ -298,8 +298,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
     description: "Encuentra 1 objeto extra al realizar la acción buscar",
     cost: 2,
     max: 2,
-    implemented: false,
-    category: "Percepción"
+    implemented: true,
+    category: "Percepción",
+    effect: {
+      type: "search_discovery_increase",
+      value: 1
+    }
   },
   perception4: {
     id: "perception4",
