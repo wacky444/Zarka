@@ -170,6 +170,13 @@ export function upgradeSkillRpc(
         };
       }
       character.stats.load.max += effect.value;
+    } else if (effect.type === "speed_increase") {
+      const currentSpeed =
+        typeof character.stats.speed === "number" &&
+        isFinite(character.stats.speed)
+          ? character.stats.speed
+          : 0;
+      character.stats.speed = currentSpeed + effect.value;
     } else if (effect.type === "set_knockout_threshold") {
       if (!character.stats.health) {
         character.stats.health = {

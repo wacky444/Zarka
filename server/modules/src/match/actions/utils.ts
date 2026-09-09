@@ -11,6 +11,7 @@ import type {
 } from "@shared";
 import {
   ReplayActionEffect,
+  getCharacterSpeed,
   getKnockoutThreshold,
   hasLethalDamageProtection,
 } from "@shared";
@@ -114,6 +115,36 @@ export function shuffleParticipants<T extends PlannedActionParticipant>(
     roster[j] = tmp;
   }
   return roster;
+}
+
+export function sortParticipantsBySpeed<T extends PlannedActionParticipant>(
+  participants: T[],
+  randomizeEqualSpeed: boolean = true
+): T[] {
+  const sorted = participants.slice();
+  sorted.sort(
+    (left, right) =>
+      getCharacterSpeed(right.character) - getCharacterSpeed(left.character)
+  );
+  if (!randomizeEqualSpeed || sorted.length < 2) {
+    return sorted;
+  }
+
+  const ordered: T[] = [];
+  let groupStart = 0;
+  while (groupStart < sorted.length) {
+    const groupSpeed = getCharacterSpeed(sorted[groupStart].character);
+    let groupEnd = groupStart + 1;
+    while (
+      groupEnd < sorted.length &&
+      getCharacterSpeed(sorted[groupEnd].character) === groupSpeed
+    ) {
+      groupEnd += 1;
+    }
+    ordered.push(...shuffleParticipants(sorted.slice(groupStart, groupEnd)));
+    groupStart = groupEnd;
+  }
+  return ordered;
 }
 
 export interface PlanTargetOptions {

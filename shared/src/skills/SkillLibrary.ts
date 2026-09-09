@@ -195,8 +195,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
     description: "Aumenta 1 punto de rapidez",
     cost: 1,
     max: 3,
-    implemented: false,
-    category: "Agilidad"
+    implemented: true,
+    category: "Agilidad",
+    effect: {
+      type: "speed_increase",
+      value: 1
+    }
   },
   agility3: {
     id: "agility3",

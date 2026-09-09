@@ -4,6 +4,13 @@ import { SkillLibrary } from "./SkillLibrary";
 
 const BASE_DODGE_SUCCESS_CHANCE = 0.25;
 
+export function getCharacterSpeed(
+  character: PlayerCharacter | undefined | null
+): number {
+  const speed = character?.stats?.speed;
+  return typeof speed === "number" && isFinite(speed) ? Math.max(0, speed) : 0;
+}
+
 export function getDodgeSuccessChance(
   character: PlayerCharacter | undefined | null
 ): number {
