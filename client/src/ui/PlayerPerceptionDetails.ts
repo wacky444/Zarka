@@ -26,9 +26,7 @@ export function formatPlayerPerceptionDetails(
   }
 
   const energy = target.stats?.energy;
-  const lines = [
-    energy ? `Energy: ${energy.current} / ${energy.max}` : "Energy: Unknown"
-  ];
+  const lines = [energy ? `Energy: ${energy.current}` : "Energy: Unknown"];
   const activeTemporary =
     (energy as { activeTemporary?: number } | undefined)?.activeTemporary ?? 0;
   if (activeTemporary > 0) {
@@ -39,9 +37,12 @@ export function formatPlayerPerceptionDetails(
   }
 
   const conditions = target.statuses?.conditions ?? [];
-  const state = conditions.length > 0
-    ? conditions.map((condition) => CONDITION_LABELS[condition] ?? condition).join(", ")
-    : "Normal";
+  const state =
+    conditions.length > 0
+      ? conditions
+          .map((condition) => CONDITION_LABELS[condition] ?? condition)
+          .join(", ")
+      : "Normal";
   lines.push(`State: ${state}`);
   const carried = target.inventory?.carriedItems ?? [];
   const quantities = new Map<string, number>();
