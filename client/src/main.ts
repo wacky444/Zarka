@@ -6,6 +6,11 @@ import { AccountScene } from "./scenes/AccountScene";
 import RexUIPlugin from "phaser3-rex-plugins/templates/ui/ui-plugin";
 import { SessionManager } from "./services/sessionManager";
 
+const isMobile =
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: "game",
@@ -18,11 +23,14 @@ const config: Phaser.Types.Core.GameConfig = {
       {
         key: "rexUI",
         plugin: RexUIPlugin,
-        mapping: "rexUI",
-      },
-    ],
+        mapping: "rexUI"
+      }
+    ]
   },
   scene: [LoginScene, MainScene, GameScene, AccountScene],
+  scale: {
+    mode: isMobile ? Phaser.Scale.RESIZE : Phaser.Scale.RESIZE
+  }
 };
 
 // Initialize the game and check for existing session
@@ -36,7 +44,7 @@ async function initGame() {
       if (sessionData) {
         game.scene.start("MainScene", {
           client: sessionData.client,
-          session: sessionData.session,
+          session: sessionData.session
         });
       } else {
         game.scene.start("LoginScene");
