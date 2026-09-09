@@ -89,6 +89,7 @@ export interface PlayerPosition {
 
 export interface PlayerStatusState {
   conditions: PlayerConditionFlag[];
+  dodgeAttempts?: number;
   intoxication?: PlayerIntoxicationStatus;
   virus?: PlayerVirusStatus;
   fire?: PlayerFireStatus;

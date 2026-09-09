@@ -182,8 +182,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
       "Aumenta un 25% la probabilidad de éxito de la acción esquivar",
     cost: 1,
     max: 3,
-    implemented: false,
-    category: "Agilidad"
+    implemented: true,
+    category: "Agilidad",
+    effect: {
+      type: "dodge_success_chance_increase",
+      value: 0.25
+    }
   },
   agility2: {
     id: "agility2",

@@ -303,6 +303,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     name: "Esquivar",
     category: ActionCategory.Primary,
     energyCost: 2,
+    developed: true,
     cooldown: 3,
     experience: {
       base: 0,

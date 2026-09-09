@@ -10,6 +10,7 @@ import type {
 } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { executeMoveAction } from "./actions/move";
+import { executeDodgeAction } from "./actions/dodge";
 import { executeScareAction } from "./actions/scare";
 import { executeProtectAction } from "./actions/protect";
 import { executePunchAction } from "./actions/punch";
@@ -138,7 +139,31 @@ export function executeAction(
   let eventsForAction: ReplayEvent[] = [];
   let handled = false;
 
-  if (action.id === ActionLibrary.move.id) {
+  if (action.id === ActionLibrary.dodge.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = executeDodgeAction(participants, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.move.id) {
     const participants = collectParticipants(match, action.id);
     if (participants.length > 0) {
       const energyEvents = applyEnergyForParticipants(

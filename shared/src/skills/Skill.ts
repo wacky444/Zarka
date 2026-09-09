@@ -46,6 +46,7 @@ export type SkillEffectType =
   | "damage_taken_reduction"
   | "set_knockout_threshold"
   | "lethal_damage_protection"
+  | "dodge_success_chance_increase"
   | string;
 
 export interface SkillEffect {

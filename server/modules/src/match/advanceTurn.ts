@@ -108,6 +108,23 @@ function removeStateFromAllCharacters(
   }
 }
 
+function clearDodgeAttempts(match: MatchRecord): void {
+  if (!match.playerCharacters) {
+    return;
+  }
+  for (const playerId in match.playerCharacters) {
+    if (
+      !Object.prototype.hasOwnProperty.call(match.playerCharacters, playerId)
+    ) {
+      continue;
+    }
+    const character = match.playerCharacters[playerId];
+    if (character?.statuses) {
+      delete character.statuses.dodgeAttempts;
+    }
+  }
+}
+
 import { applyHealthDelta } from "./actions/utils";
 import { isCharacterDead } from "../utils/playerCharacter";
 
@@ -126,6 +143,7 @@ export function advanceTurn(
   }
   const tileLookup = buildTileLookup(match);
   activateTemporaryEnergy(match);
+  clearDodgeAttempts(match);
   removeStateFromAllCharacters(match, "protected");
   removeStateFromAllCharacters(match, "unconscious");
   updateCooldownsForTurn(match, resolvedTurn);

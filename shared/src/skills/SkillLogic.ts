@@ -2,6 +2,24 @@ import type { ActionId } from "../Action";
 import type { PlayerCharacter } from "../playerCharacter";
 import { SkillLibrary } from "./SkillLibrary";
 
+const BASE_DODGE_SUCCESS_CHANCE = 0.25;
+
+export function getDodgeSuccessChance(
+  character: PlayerCharacter | undefined | null
+): number {
+  if (!character || !Array.isArray(character.abilities)) {
+    return BASE_DODGE_SUCCESS_CHANCE;
+  }
+  let chance = BASE_DODGE_SUCCESS_CHANCE;
+  for (const ability of character.abilities) {
+    const effect = SkillLibrary[ability]?.effect;
+    if (effect?.type === "dodge_success_chance_increase") {
+      chance += effect.value;
+    }
+  }
+  return Math.min(1, Math.max(0, chance));
+}
+
 export function getActionEnergyDiscount(
   character: PlayerCharacter | undefined | null,
   actionId: ActionId | string

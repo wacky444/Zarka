@@ -3,6 +3,7 @@
 import type { MatchRecord } from "../../../models/types";
 import type {
   ActionId,
+  PlayerCharacter,
   ReplayActionDone,
   ReplayActionTarget,
   ReplayPlayerEvent,
@@ -16,10 +17,19 @@ import {
   resolveGuardedDamage,
   type PlannedActionParticipant,
 } from "../utils";
-import { ActionLibrary, getDamageReduction } from "@shared";
+import { ActionLibrary, getDamageReduction, getDodgeSuccessChance } from "@shared";
 import { getUsableExtraExecutions } from "../../../utils/energy";
 import { collectTargets } from "../targeting";
 import { BaseAction } from "./BaseAction";
+
+function resolveDodge(target: PlayerCharacter): boolean {
+  const attempts = target.statuses?.dodgeAttempts ?? 0;
+  if (attempts <= 0) {
+    return false;
+  }
+  target.statuses.dodgeAttempts = attempts - 1;
+  return Math.random() < getDodgeSuccessChance(target);
+}
 
 export abstract class BaseAttackAction extends BaseAction {
   abstract readonly baseDamage: number;
@@ -58,6 +68,15 @@ export abstract class BaseAttackAction extends BaseAction {
         const targetId = targetCandidate.id;
         const target = match.playerCharacters?.[targetId];
         if (!target) {
+          continue;
+        }
+        if (resolveDodge(target)) {
+          match.playerCharacters[targetId] = target;
+          targetEntries.push({
+            targetId,
+            damageTaken: 0,
+            effects: ReplayActionEffect.Dodged
+          });
           continue;
         }
         const guarded = isTargetProtected(target);
