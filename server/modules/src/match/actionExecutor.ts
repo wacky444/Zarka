@@ -19,7 +19,7 @@ import { executeAxeAttackAction } from "./actions/axeAttack";
 import { executeSleepAction } from "./actions/sleep";
 import { executeRecoverAction } from "./actions/recover";
 import { executeBreakfastAction } from "./actions/breakfast";
-import { executeFeedAction, hasFeedConsumable } from "./actions/feed";
+import { canFeedParticipant, executeFeedAction } from "./actions/feed";
 import { executeFocusAction } from "./actions/focus";
 import { executeUseBandageAction } from "./actions/useBandage";
 import { executeSearchAction } from "./actions/search";
@@ -373,7 +373,7 @@ export function executeAction(
     if (participants.length > 0) {
       const eligible: PlannedActionParticipant[] = [];
       for (const participant of participants) {
-        if (hasFeedConsumable(participant.character)) {
+        if (canFeedParticipant(participant.character, match)) {
           eligible.push(participant);
         } else {
           clearPlanByKey(participant.character, participant.planKey);

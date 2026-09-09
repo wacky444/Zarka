@@ -357,6 +357,9 @@ export function applyHealthDelta(
     stats: nextStats,
     statuses,
   };
+  if (becameDead) {
+    nextCharacter.corpseRations = 4;
+  }
 
   if (nextActionPlan) {
     nextCharacter.actionPlan = nextActionPlan;

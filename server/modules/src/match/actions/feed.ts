@@ -2,6 +2,7 @@
 
 import type { MatchRecord } from "../../models/types";
 import {
+  getSkillEffectTotal,
   ItemLibrary,
   ReplayActionEffect,
   type ActionId,
@@ -11,7 +12,12 @@ import {
   type ReplayActionTarget,
   type ReplayPlayerEvent,
 } from "@shared";
-import { type PlannedActionParticipant } from "./utils";
+import {
+  applyHealthDelta,
+  mergeCharacterState,
+  type PlannedActionParticipant
+} from "./utils";
+import { getAvailableEnergy } from "../../utils/energy";
 import { BaseAction } from "./classes/BaseAction";
 
 const FEED_ITEM_PRIORITY: ItemId[] = ["food", "drink"];
@@ -35,6 +41,56 @@ export function hasFeedConsumable(character: PlayerCharacter): boolean {
     }
   }
   return false;
+}
+
+function getCorpseRations(corpse: PlayerCharacter): number {
+  if (typeof corpse.corpseRations === "number" && isFinite(corpse.corpseRations)) {
+    return Math.max(0, Math.floor(corpse.corpseRations));
+  }
+  return 4;
+}
+
+function findCorpse(
+  character: PlayerCharacter,
+  match: MatchRecord
+): PlayerCharacter | null {
+  const tileId = character.position?.tileId;
+  if (!tileId || !match.playerCharacters) {
+    return null;
+  }
+  for (const playerId in match.playerCharacters) {
+    if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, playerId)) {
+      continue;
+    }
+    const corpse = match.playerCharacters[playerId];
+    if (
+      corpse.id !== character.id &&
+      corpse.position?.tileId === tileId &&
+      Array.isArray(corpse.statuses?.conditions) &&
+      corpse.statuses.conditions.indexOf("dead") !== -1 &&
+      getCorpseRations(corpse) > 0
+    ) {
+      return corpse;
+    }
+  }
+  return null;
+}
+
+function canEatCorpse(character: PlayerCharacter, match: MatchRecord): boolean {
+  const corpse = findCorpse(character, match);
+  if (!corpse) {
+    return false;
+  }
+  const hasCannibalSkill =
+    getSkillEffectTotal(character, "corpse_consumption") > 0;
+  return hasCannibalSkill || getAvailableEnergy(character) <= 0;
+}
+
+export function canFeedParticipant(
+  character: PlayerCharacter,
+  match: MatchRecord
+): boolean {
+  return hasFeedConsumable(character) || canEatCorpse(character, match);
 }
 
 function getEnergyGain(itemId: ItemId): number {
@@ -127,6 +183,23 @@ function consumeFeedItem(character: PlayerCharacter): ItemId | null {
   return null;
 }
 
+function consumeCorpse(
+  character: PlayerCharacter,
+  match: MatchRecord
+): PlayerCharacter | null {
+  const corpse = findCorpse(character, match);
+  if (!corpse) {
+    return null;
+  }
+  const remaining = getCorpseRations(corpse) - 1;
+  corpse.corpseRations = remaining;
+  if (remaining <= 0 && corpse.inventory) {
+    corpse.inventory.carriedItems = [];
+    corpse.inventory.stash = [];
+  }
+  return corpse;
+}
+
 export class FeedAction extends BaseAction {
   protected override readonly shouldShuffleParticipants = false;
 
@@ -145,22 +218,40 @@ export class FeedAction extends BaseAction {
         continue;
       }
       const consumedItemId = consumeFeedItem(participant.character);
-      if (!consumedItemId) {
+      const corpse = consumedItemId
+        ? null
+        : canEatCorpse(participant.character, match)
+          ? consumeCorpse(participant.character, match)
+          : null;
+      if (!consumedItemId && !corpse) {
         this.clearPlan(participant);
         if (match.playerCharacters) {
           match.playerCharacters[participant.playerId] = participant.character;
         }
         continue;
       }
-      const energyGain = getEnergyGain(consumedItemId);
+      const energyGain = corpse ? 20 : getEnergyGain(consumedItemId!);
       const restored = applyEnergy(participant.character, energyGain);
+      let healthEvent: ReplayPlayerEvent | undefined;
+      const corpseHealthLoss = corpse
+        ? getSkillEffectTotal(participant.character, "corpse_consumption") > 0
+          ? 0
+          : 1
+        : 0;
+      if (corpse && corpseHealthLoss > 0) {
+        const healthOutcome = applyHealthDelta(participant.character, -1);
+        mergeCharacterState(participant.character, healthOutcome.character);
+        healthEvent = healthOutcome.event;
+      }
       const action: ReplayActionDone = {
         actionId,
         effects: ReplayActionEffect.Heal,
         metadata: {
-          consumedItemId,
+          consumedItemId: corpse ? "corpse" : consumedItemId,
           energyRestored: restored,
-        },
+          corpseRationsRemaining: corpse?.corpseRations,
+          healthLost: corpseHealthLoss
+        }
       };
       if (participant.character.position?.coord) {
         action.originLocation = participant.character.position.coord;
@@ -169,9 +260,11 @@ export class FeedAction extends BaseAction {
         targetId: participant.playerId,
         effects: ReplayActionEffect.Heal,
         metadata: {
-          consumedItemId,
+          consumedItemId: corpse ? "corpse" : consumedItemId,
           energyRestored: restored,
-        },
+          corpseRationsRemaining: corpse?.corpseRations,
+          healthLost: corpseHealthLoss
+        }
       };
       this.clearPlan(participant);
       if (match.playerCharacters) {
@@ -183,6 +276,9 @@ export class FeedAction extends BaseAction {
         action,
         targets: [target],
       });
+      if (healthEvent) {
+        events.push(healthEvent);
+      }
     }
     return events;
   }

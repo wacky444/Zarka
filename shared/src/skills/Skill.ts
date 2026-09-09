@@ -53,6 +53,7 @@ export type SkillEffectType =
   | "search_food_drink_priority"
   | "perceive_character_details"
   | "pickup_scope_increase"
+  | "corpse_consumption"
   | string;
 
 export interface SkillEffect {

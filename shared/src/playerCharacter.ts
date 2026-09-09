@@ -17,6 +17,7 @@ export interface PlayerCharacter {
   position?: PlayerPosition;
   actionPlan?: PlayerActionPlan;
   foundItems?: string[];
+  corpseRations?: number;
 }
 
 export interface PlayerCharacterUnknown {

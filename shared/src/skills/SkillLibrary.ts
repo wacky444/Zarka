@@ -362,8 +362,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
       "Permite alimentarse de los cadáveres sin necesidad de estar hambriento y no pierde vida por comer cadáver",
     cost: 4,
     max: 1,
-    implemented: false,
-    category: "Habilidades especiales"
+    implemented: true,
+    category: "Habilidades especiales",
+    effect: {
+      type: "corpse_consumption",
+      value: 1
+    }
   },
   salesman: {
     id: "salesman",
