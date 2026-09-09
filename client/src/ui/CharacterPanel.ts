@@ -101,6 +101,7 @@ export type SecondaryActionSelection = {
   targetPlayerIds?: string[];
   targetItemIds?: string[];
   extraExecutions?: number;
+  prioritizeFoodDrink?: boolean;
 };
 
 type LogEliminationPayload = {
@@ -170,7 +171,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private secondaryLocationSelector: LocationSelector;
   private secondaryPlayerSelector: PlayerSelector;
   private secondaryItemSelector: ItemPrioritySelector;
+  private secondarySearchPriorityToggle: Phaser.GameObjects.Text;
   private extraSecondaryLocationSelector: LocationSelector;
+  private extraSecondarySearchPriorityToggle: Phaser.GameObjects.Text;
   private extraSecondaryPlayerSelector: PlayerSelector;
   private extraSecondaryItemSelector: ItemPrioritySelector;
   private itemsBackground!: Phaser.GameObjects.Rectangle;
@@ -197,7 +200,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private extraSecondaryActionTargetPlayerId: string | null = null;
   private mainActionPriorityItems: string[] = [];
   private secondaryActionPriorityItems: string[] = [];
+  private secondaryPrioritizeFoodDrink = false;
   private extraSecondaryActionPriorityItems: string[] = [];
+  private extraSecondaryPrioritizeFoodDrink = false;
   private lastMainActionItem: GridSelectItem | null = null;
   private lastSecondaryActionItem: GridSelectItem | null = null;
   private lastExtraSecondaryActionItem: GridSelectItem | null = null;
@@ -304,6 +309,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.refreshSecondaryExtraExecutionSelectorState();
     this.refreshSecondaryLocationSelectorState();
     this.refreshSecondaryPlayerSelectorState();
+    this.refreshSecondarySearchPriorityState();
     this.emitSecondaryActionChange();
   };
   private readonly handleSecondaryLocationPickRequest = () => {
@@ -330,6 +336,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.refreshExtraSecondaryExecutionSelectorState();
     this.refreshExtraSecondaryLocationSelectorState();
     this.refreshExtraSecondaryPlayerSelectorState();
+    this.refreshExtraSecondarySearchPriorityState();
     this.emitExtraSecondaryActionChange();
   };
   private readonly handleExtraSecondaryLocationPickRequest = () => {
@@ -353,6 +360,41 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     itemIds: string[]
   ) => {
     this.setExtraSecondaryActionPriorityItems(itemIds ?? [], true);
+  };
+  private readonly handleSecondarySearchPriorityToggle = (
+    _pointer: Phaser.Input.Pointer,
+    _localX: number,
+    _localY: number,
+    event: Phaser.Types.Input.EventData
+  ) => {
+    if (!this.secondarySearchPriorityToggle.visible) {
+      return;
+    }
+    this.secondaryPrioritizeFoodDrink = !this.secondaryPrioritizeFoodDrink;
+    this.updateSearchPriorityToggleText(
+      this.secondarySearchPriorityToggle,
+      this.secondaryPrioritizeFoodDrink
+    );
+    this.emitSecondaryActionChange();
+    event.stopPropagation();
+  };
+  private readonly handleExtraSecondarySearchPriorityToggle = (
+    _pointer: Phaser.Input.Pointer,
+    _localX: number,
+    _localY: number,
+    event: Phaser.Types.Input.EventData
+  ) => {
+    if (!this.extraSecondarySearchPriorityToggle.visible) {
+      return;
+    }
+    this.extraSecondaryPrioritizeFoodDrink =
+      !this.extraSecondaryPrioritizeFoodDrink;
+    this.updateSearchPriorityToggleText(
+      this.extraSecondarySearchPriorityToggle,
+      this.extraSecondaryPrioritizeFoodDrink
+    );
+    this.emitExtraSecondaryActionChange();
+    event.stopPropagation();
   };
   private readonly handleSecondaryLocationClear = () => {
     this.setSecondaryActionTarget(null, true);
@@ -763,6 +805,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.handleSecondaryItemPriorityChange
     );
     this.scrollContent.add(this.secondaryItemSelector);
+    this.secondarySearchPriorityToggle = scene.add
+      .text(0, 0, "[ ] Prioritize food/drink", {
+        fontSize: "13px",
+        color: "#facc15"
+      })
+      .setOrigin(0, 0)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.secondarySearchPriorityToggle.on(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleSecondarySearchPriorityToggle
+    );
+    this.scrollContent.add(this.secondarySearchPriorityToggle);
 
     this.extraSecondaryActionBox = scene.add
       .rectangle(0, 0, boxWidth, BOX_HEIGHT, 0x1b2440)
@@ -863,6 +918,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.handleExtraSecondaryItemPriorityChange
     );
     this.scrollContent.add(this.extraSecondaryItemSelector);
+    this.extraSecondarySearchPriorityToggle = scene.add
+      .text(0, 0, "[ ] Prioritize food/drink", {
+        fontSize: "13px",
+        color: "#facc15"
+      })
+      .setOrigin(0, 0)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.extraSecondarySearchPriorityToggle.on(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleExtraSecondarySearchPriorityToggle
+    );
+    this.scrollContent.add(this.extraSecondarySearchPriorityToggle);
     this.updateScrollLayout();
     const itemsBoxY = contentTop;
     const itemsBoxHeight = Math.max(
@@ -1175,6 +1243,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       "change",
       this.handleExtraSecondaryPlayerSelection
     );
+    this.secondarySearchPriorityToggle.off(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleSecondarySearchPriorityToggle
+    );
+    this.extraSecondarySearchPriorityToggle.off(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleExtraSecondarySearchPriorityToggle
+    );
     try {
       this.extraSecondaryPlayerSelector.hideDropdown();
     } catch (e) {
@@ -1258,6 +1334,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.refreshExtraSecondaryLocationSelectorState();
     this.refreshExtraSecondaryPlayerSelectorState();
     this.refreshExtraSecondaryItemSelectorState();
+    this.refreshSecondarySearchPriorityState();
+    this.refreshExtraSecondarySearchPriorityState();
     this.setReadyEnabled(this.readyEnabled);
   }
 
@@ -1301,6 +1379,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.extraSecondaryPlayerSelector.setActive(false);
     this.extraSecondaryItemSelector.setVisible(false);
     this.extraSecondaryItemSelector.setActive(false);
+    this.secondarySearchPriorityToggle.setVisible(false);
+    this.secondarySearchPriorityToggle.setActive(false);
+    this.extraSecondarySearchPriorityToggle.setVisible(false);
+    this.extraSecondarySearchPriorityToggle.setActive(false);
     this.readyToggle.disableInteractive();
     this.scrollPanel?.setMouseWheelScrollerEnable?.(false);
   }
@@ -1600,6 +1682,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.setLocationSelectionPending(false);
     this.playerSelector.setPending(false);
     const secondaryActions = this.collectSecondaryActions(character);
+    this.secondaryPrioritizeFoodDrink =
+      character.actionPlan?.secondary?.prioritizeFoodDrink === true;
     const secondaryId = character.actionPlan?.secondary?.actionId ?? null;
     const secondaryExtraExecutions =
       character.actionPlan?.secondary?.extraExecutions ?? 0;
@@ -1635,6 +1719,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const extraSecondaryActions = character.actionPlan?.extraSecondary?.actionId
       ? [character.actionPlan.extraSecondary.actionId as ActionId]
       : [];
+    this.extraSecondaryPrioritizeFoodDrink =
+      character.actionPlan?.extraSecondary?.prioritizeFoodDrink === true;
     const extraSecondaryId =
       character.actionPlan?.extraSecondary?.actionId ?? null;
     const extraSecondaryExtraExecutions =
@@ -1684,13 +1770,15 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       secondaryId,
       normalizedSecondaryTargetLocation,
       secondaryServerTargetPlayerId,
-      secondaryTargetItems
+      secondaryTargetItems,
+      character.actionPlan?.secondary?.prioritizeFoodDrink === true
     );
     this.syncExtraSecondaryActionWithServer(
       extraSecondaryId,
       normalizedExtraSecondaryTargetLocation,
       extraSecondaryServerTargetPlayerId,
-      extraSecondaryTargetItems
+      extraSecondaryTargetItems,
+      character.actionPlan?.extraSecondary?.prioritizeFoodDrink === true
     );
     this.updateInventoryPanel(character);
     this.updateScrollLayout();
@@ -1915,6 +2003,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.refreshSecondaryLocationSelectorState();
     this.refreshSecondaryPlayerSelectorState();
     this.refreshSecondaryItemSelectorState();
+    this.refreshSecondarySearchPriorityState();
   }
 
   private applyExtraSecondaryActions(
@@ -1957,6 +2046,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.refreshExtraSecondaryLocationSelectorState();
     this.refreshExtraSecondaryPlayerSelectorState();
     this.refreshExtraSecondaryItemSelectorState();
+    this.refreshExtraSecondarySearchPriorityState();
   }
 
   private collectMainActions(character: PlayerCharacter) {
@@ -2284,6 +2374,55 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.updateScrollLayout();
   }
 
+  private hasSearchPrioritySkill(): boolean {
+    return (
+      getSkillEffectTotal(
+        this.getCurrentCharacter(),
+        "search_food_drink_priority"
+      ) > 0
+    );
+  }
+
+  private updateSearchPriorityToggleText(
+    toggle: Phaser.GameObjects.Text,
+    enabled: boolean
+  ): void {
+    toggle.setText(
+      enabled ? "[x] Prioritize food/drink" : "[ ] Prioritize food/drink"
+    );
+  }
+
+  private refreshSecondarySearchPriorityState(): void {
+    const visible =
+      this.hasSearchPrioritySkill() && this.secondaryActionSelection === "search";
+    this.secondarySearchPriorityToggle.setVisible(visible);
+    this.secondarySearchPriorityToggle.setActive(visible);
+    if (!visible) {
+      this.secondaryPrioritizeFoodDrink = false;
+    }
+    this.updateSearchPriorityToggleText(
+      this.secondarySearchPriorityToggle,
+      this.secondaryPrioritizeFoodDrink
+    );
+    this.updateScrollLayout();
+  }
+
+  private refreshExtraSecondarySearchPriorityState(): void {
+    const visible =
+      this.hasSearchPrioritySkill() &&
+      this.extraSecondaryActionSelection === "search";
+    this.extraSecondarySearchPriorityToggle.setVisible(visible);
+    this.extraSecondarySearchPriorityToggle.setActive(visible);
+    if (!visible) {
+      this.extraSecondaryPrioritizeFoodDrink = false;
+    }
+    this.updateSearchPriorityToggleText(
+      this.extraSecondarySearchPriorityToggle,
+      this.extraSecondaryPrioritizeFoodDrink
+    );
+    this.updateScrollLayout();
+  }
+
   private refreshLocationSelectorState() {
     this.lastMainActionItem = this.mainActionDropdown.getSelectedItem() ?? null;
     const supports = this.selectedActionSupportsLocation();
@@ -2452,7 +2591,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       extraExecutionSelector: ExtraExecutionSelector | null,
       locationSelector: LocationSelector,
       playerSelector: PlayerSelector,
-      itemSelector: ItemPrioritySelector
+      itemSelector: ItemPrioritySelector,
+      searchPriorityToggle: Phaser.GameObjects.Text | null
     ) => {
       box.setPosition(0, cursorY);
       box.setSize(width, BOX_HEIGHT);
@@ -2483,6 +2623,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       if (itemSelector.visible) {
         innerCursor += itemSelector.height + 8;
       }
+      if (searchPriorityToggle) {
+        searchPriorityToggle.setPosition(horizontalPadding, innerCursor);
+        if (searchPriorityToggle.visible) {
+          innerCursor += searchPriorityToggle.height + 8;
+        }
+      }
       const blockHeight = Math.max(BOX_HEIGHT, innerCursor - cursorY + 16);
       box.setSize(width, blockHeight);
       box.setDisplaySize(width, blockHeight);
@@ -2496,7 +2642,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.extraExecutionSelector,
       this.locationSelector,
       this.playerSelector,
-      this.itemSelector
+      this.itemSelector,
+      null
     );
     cursorY += 16;
     layoutActionBlock(
@@ -2506,7 +2653,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.secondaryExtraExecutionSelector,
       this.secondaryLocationSelector,
       this.secondaryPlayerSelector,
-      this.secondaryItemSelector
+      this.secondaryItemSelector,
+      this.secondarySearchPriorityToggle
     );
     cursorY += 16;
     if (this.hasExtraSecondaryAction()) {
@@ -2519,7 +2667,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.extraSecondaryExtraExecutionSelector,
         this.extraSecondaryLocationSelector,
         this.extraSecondaryPlayerSelector,
-        this.extraSecondaryItemSelector
+        this.extraSecondaryItemSelector,
+        this.extraSecondarySearchPriorityToggle
       );
       cursorY += 16;
     } else {
@@ -3118,6 +3267,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const supportsExtra = this.selectedSecondaryActionSupportsExtraExecution();
     const payload: SecondaryActionSelection = {
       actionId: this.secondaryActionSelection,
+      prioritizeFoodDrink:
+        this.secondaryActionSelection === "search" &&
+        this.secondaryPrioritizeFoodDrink,
       targetLocation:
         supportsLocation && this.secondaryActionTarget
           ? {
@@ -3145,6 +3297,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const supportsExtra = this.selectedExtraSecondaryActionSupportsExtraExecution();
     const payload: SecondaryActionSelection = {
       actionId: this.extraSecondaryActionSelection,
+      prioritizeFoodDrink:
+        this.extraSecondaryActionSelection === "search" &&
+        this.extraSecondaryPrioritizeFoodDrink,
       targetLocation:
         supportsLocation && this.extraSecondaryActionTarget
           ? {
@@ -3200,7 +3355,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     serverActionId: string | null,
     serverTargetLocation: Axial | null,
     serverTargetPlayerId: string | null,
-    serverTargetItems: string[] | null
+    serverTargetItems: string[] | null,
+    serverPrioritizeFoodDrink: boolean
   ): void {
     const matchesSelection =
       (this.secondaryActionSelection ?? null) === (serverActionId ?? null);
@@ -3215,11 +3371,15 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.secondaryActionPriorityItems,
       serverTargetItems
     );
+    const matchesFoodDrinkPriority =
+      this.secondaryActionSelection !== "search" ||
+      this.secondaryPrioritizeFoodDrink === serverPrioritizeFoodDrink;
     if (
       !matchesSelection ||
       !matchesLocation ||
       !matchesPlayer ||
-      !matchesItems
+      !matchesItems ||
+      !matchesFoodDrinkPriority
     ) {
       this.emitSecondaryActionChange();
     }
@@ -3229,7 +3389,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     serverActionId: string | null,
     serverTargetLocation: Axial | null,
     serverTargetPlayerId: string | null,
-    serverTargetItems: string[] | null
+    serverTargetItems: string[] | null,
+    serverPrioritizeFoodDrink: boolean
   ): void {
     const matchesSelection =
       (this.extraSecondaryActionSelection ?? null) ===
@@ -3245,7 +3406,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.extraSecondaryActionPriorityItems,
       serverTargetItems
     );
-    if (!matchesSelection || !matchesLocation || !matchesPlayer || !matchesItems) {
+    const matchesFoodDrinkPriority =
+      this.extraSecondaryActionSelection !== "search" ||
+      this.extraSecondaryPrioritizeFoodDrink === serverPrioritizeFoodDrink;
+    if (
+      !matchesSelection ||
+      !matchesLocation ||
+      !matchesPlayer ||
+      !matchesItems ||
+      !matchesFoodDrinkPriority
+    ) {
       this.emitExtraSecondaryActionChange();
     }
   }
@@ -3422,6 +3592,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const supportsPlayer = this.selectedSecondaryActionSupportsSingleTarget();
     return {
       actionId: this.secondaryActionSelection,
+      prioritizeFoodDrink:
+        this.secondaryActionSelection === "search" &&
+        this.secondaryPrioritizeFoodDrink,
       targetLocation:
         supportsLocation && this.secondaryActionTarget
           ? {

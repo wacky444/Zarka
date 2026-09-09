@@ -321,8 +321,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
     description: "Puede priorizar buscar una comida o bebida en cada búsqueda",
     cost: 3,
     max: 1,
-    implemented: false,
-    category: "Percepción"
+    implemented: true,
+    category: "Percepción",
+    effect: {
+      type: "search_food_drink_priority",
+      value: 1
+    }
   },
   perception6: {
     id: "perception6",

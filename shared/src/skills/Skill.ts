@@ -50,6 +50,7 @@ export type SkillEffectType =
   | "speed_increase"
   | "extra_secondary_action"
   | "search_discovery_increase"
+  | "search_food_drink_priority"
   | string;
 
 export interface SkillEffect {

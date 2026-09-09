@@ -73,8 +73,55 @@ function ensureFoundTracking(character: PlayerCharacter): FoundTracking {
   return { list, lookup };
 }
 
-function sampleItems(pool: string[], count: number): string[] {
-  return pool.slice(0, Math.min(count, pool.length));
+function shuffleItems(items: string[]): string[] {
+  const shuffled = items.slice();
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    const current = shuffled[index];
+    shuffled[index] = shuffled[swapIndex];
+    shuffled[swapIndex] = current;
+  }
+  return shuffled;
+}
+
+function sampleItems(
+  pool: string[],
+  count: number,
+  itemLookup: ItemLookup,
+  prioritizeFoodDrink: boolean
+): string[] {
+  const limit = Math.min(count, pool.length);
+  if (limit <= 0) {
+    return [];
+  }
+
+  const shuffledPool = shuffleItems(pool);
+  if (!prioritizeFoodDrink) {
+    return shuffledPool.slice(0, limit);
+  }
+
+  const priority = shuffledPool.filter((itemId) => {
+    const itemType = itemLookup[itemId]?.item_type;
+    return itemType === "food" || itemType === "drink";
+  });
+  const selected = priority.slice(0, limit);
+  if (selected.length >= limit) {
+    return selected;
+  }
+  const selectedIds: Record<string, true> = {};
+  for (const itemId of selected) {
+    selectedIds[itemId] = true;
+  }
+  for (const itemId of shuffledPool) {
+    if (selected.length >= limit) {
+      break;
+    }
+    if (!Object.prototype.hasOwnProperty.call(selectedIds, itemId)) {
+      selected.push(itemId);
+      selectedIds[itemId] = true;
+    }
+  }
+  return selected;
 }
 
 function computeDiscoveryCount(
@@ -141,7 +188,14 @@ export class SearchAction extends BaseAction {
           )
         : 0;
       const discovered =
-        discoveryCount > 0 ? sampleItems(undiscovered, discoveryCount) : [];
+        discoveryCount > 0
+          ? sampleItems(
+              undiscovered,
+              discoveryCount,
+              itemLookup,
+              participant.plan.prioritizeFoodDrink === true
+            )
+          : [];
 
       if (discovered.length > 0) {
         for (const itemId of discovered) {

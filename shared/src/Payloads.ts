@@ -62,6 +62,7 @@ export type UpdateSecondaryActionPayload = {
   targetPlayerIds?: string[];
   targetItemIds?: string[];
   extraExecutions?: number;
+  prioritizeFoodDrink?: boolean;
   error?: string;
 };
 

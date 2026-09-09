@@ -1640,7 +1640,8 @@ export class GameScene extends Phaser.Scene {
       extraExecutions:
         typeof selection?.extraExecutions === "number"
           ? selection.extraExecutions
-          : undefined
+          : undefined,
+      prioritizeFoodDrink: selection?.prioritizeFoodDrink === true
     };
     const character =
       this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
@@ -1667,7 +1668,9 @@ export class GameScene extends Phaser.Scene {
         previousItems
       ) &&
       (normalizedSelection.extraExecutions ?? 0) ===
-        (previousPlan?.extraExecutions ?? 0)
+        (previousPlan?.extraExecutions ?? 0) &&
+      normalizedSelection.prioritizeFoodDrink ===
+        (previousPlan?.prioritizeFoodDrink ?? false)
     ) {
       return;
     }
@@ -1684,7 +1687,8 @@ export class GameScene extends Phaser.Scene {
             normalizedSelection.targetLocation,
             normalizedSelection.targetPlayerIds,
             normalizedSelection.targetItemIds,
-            normalizedSelection.extraExecutions
+            normalizedSelection.extraExecutions,
+            normalizedSelection.prioritizeFoodDrink
           )
         : null;
       const res = await this.turnService.updateSecondaryAction(
@@ -1744,6 +1748,11 @@ export class GameScene extends Phaser.Scene {
         } else if (nextPlan.extraExecutions) {
           delete nextPlan.extraExecutions;
         }
+        if (payload.prioritizeFoodDrink === true) {
+          nextPlan.prioritizeFoodDrink = true;
+        } else {
+          delete nextPlan.prioritizeFoodDrink;
+        }
         target.actionPlan.secondary = nextPlan;
       }
       this.updateCharacterPanel(this.currentMatch);
@@ -1779,7 +1788,8 @@ export class GameScene extends Phaser.Scene {
       extraExecutions:
         typeof selection?.extraExecutions === "number"
           ? selection.extraExecutions
-          : undefined
+          : undefined,
+      prioritizeFoodDrink: selection?.prioritizeFoodDrink === true
     };
     const character =
       this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
@@ -1799,7 +1809,9 @@ export class GameScene extends Phaser.Scene {
         this.normalizeTargetItems(previousPlan?.targetItemIds)
       ) &&
       (normalizedSelection.extraExecutions ?? 0) ===
-        (previousPlan?.extraExecutions ?? 0)
+        (previousPlan?.extraExecutions ?? 0) &&
+      normalizedSelection.prioritizeFoodDrink ===
+        (previousPlan?.prioritizeFoodDrink ?? false)
     ) {
       return;
     }
@@ -1816,7 +1828,8 @@ export class GameScene extends Phaser.Scene {
             normalizedSelection.targetLocation,
             normalizedSelection.targetPlayerIds,
             normalizedSelection.targetItemIds,
-            normalizedSelection.extraExecutions
+            normalizedSelection.extraExecutions,
+            normalizedSelection.prioritizeFoodDrink
           )
         : null;
       const res = await this.turnService.updateSecondaryAction(
@@ -1871,6 +1884,11 @@ export class GameScene extends Phaser.Scene {
           nextPlan.extraExecutions = payload.extraExecutions;
         } else {
           delete nextPlan.extraExecutions;
+        }
+        if (payload.prioritizeFoodDrink === true) {
+          nextPlan.prioritizeFoodDrink = true;
+        } else {
+          delete nextPlan.prioritizeFoodDrink;
         }
         target.actionPlan.extraSecondary = nextPlan;
       }
@@ -2223,7 +2241,8 @@ export class GameScene extends Phaser.Scene {
     target: Axial | null,
     targetPlayerIds: string[] | undefined,
     targetItemIds: string[] | undefined,
-    extraExecutions?: number
+    extraExecutions?: number,
+    prioritizeFoodDrink = false
   ): ActionSubmission {
     const typedId = actionId as ActionId;
     const definition = ActionLibrary[typedId] ?? null;
@@ -2246,6 +2265,9 @@ export class GameScene extends Phaser.Scene {
     }
     if (typeof extraExecutions === "number" && extraExecutions > 0) {
       submission.extraExecutions = extraExecutions;
+    }
+    if (prioritizeFoodDrink) {
+      submission.prioritizeFoodDrink = true;
     }
     return submission;
   }

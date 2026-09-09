@@ -59,6 +59,7 @@ export function updateSecondaryActionRpc(
   let targetPlayerIds: string[] | undefined;
   let targetItemIds: string[] | undefined;
   let extraExecutions: number | undefined;
+  let prioritizeFoodDrink = false;
   if (submission) {
     actionId = normalizeActionId(submission.actionId);
     if (actionId.length === 0) {
@@ -76,6 +77,7 @@ export function updateSecondaryActionRpc(
       throw makeNakamaError("invalid_action_category", 3);
     }
     normalizedActionId = candidate;
+    prioritizeFoodDrink = submission.prioritizeFoodDrink === true;
     const locationCandidate = submission.targetLocationId as Axial | undefined;
     if (locationCandidate) {
       const rawCandidate = locationCandidate as unknown as {
@@ -174,6 +176,14 @@ export function updateSecondaryActionRpc(
   ) {
     throw makeNakamaError("skill_required:agility4", 9);
   }
+  if (prioritizeFoodDrink) {
+    if (normalizedActionId !== "search") {
+      throw makeNakamaError("search_priority_requires_search", 3);
+    }
+    if (getSkillEffectTotal(character, "search_food_drink_priority") < 1) {
+      throw makeNakamaError("skill_required:perception5", 9);
+    }
+  }
   const isDead = isCharacterIncapacitated(character);
   if (!clearAction && isDead) {
     throw makeNakamaError("character_incapacitated", 9);
@@ -232,6 +242,11 @@ export function updateSecondaryActionRpc(
     } else if (nextPlan.extraExecutions) {
       delete nextPlan.extraExecutions;
     }
+    if (prioritizeFoodDrink) {
+      nextPlan.prioritizeFoodDrink = true;
+    } else {
+      delete nextPlan.prioritizeFoodDrink;
+    }
     character.actionPlan[planKey] = nextPlan;
   }
   storage.writeMatch(match, read.version);
@@ -249,7 +264,8 @@ export function updateSecondaryActionRpc(
       clearAction || !targetItemIds || targetItemIds.length === 0
         ? undefined
         : targetItemIds,
-    extraExecutions: clearAction ? undefined : extraExecutions
+    extraExecutions: clearAction ? undefined : extraExecutions,
+    prioritizeFoodDrink: clearAction ? undefined : prioritizeFoodDrink
   };
   return JSON.stringify(response);
 }
