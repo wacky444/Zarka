@@ -48,6 +48,7 @@ export type SkillEffectType =
   | "lethal_damage_protection"
   | "dodge_success_chance_increase"
   | "speed_increase"
+  | "extra_secondary_action"
   | string;
 
 export interface SkillEffect {

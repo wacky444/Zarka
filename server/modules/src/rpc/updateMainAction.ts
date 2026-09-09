@@ -157,6 +157,7 @@ export function updateMainActionRpc(
     }
     if (
       character.actionPlan.secondary === undefined &&
+      character.actionPlan.extraSecondary === undefined &&
       character.actionPlan.nextMain === undefined &&
       character.actionPlan.main === undefined
     ) {

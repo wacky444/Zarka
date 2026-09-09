@@ -1,8 +1,36 @@
 import type { ActionId } from "../Action";
 import type { PlayerCharacter } from "../playerCharacter";
+import type { SkillId } from "./Skill";
 import { SkillLibrary } from "./SkillLibrary";
 
 const BASE_DODGE_SUCCESS_CHANCE = 0.25;
+
+export function getSkillRank(
+  character: PlayerCharacter | undefined | null,
+  skillId: SkillId
+): number {
+  if (!character || !Array.isArray(character.abilities)) {
+    return 0;
+  }
+  return character.abilities.filter((ability) => ability === skillId).length;
+}
+
+export function getSkillEffectTotal(
+  character: PlayerCharacter | undefined | null,
+  effectType: string
+): number {
+  if (!character || !Array.isArray(character.abilities)) {
+    return 0;
+  }
+  let total = 0;
+  for (const ability of character.abilities) {
+    const effect = SkillLibrary[ability]?.effect;
+    if (effect?.type === effectType) {
+      total += effect.value;
+    }
+  }
+  return total;
+}
 
 export function getCharacterSpeed(
   character: PlayerCharacter | undefined | null

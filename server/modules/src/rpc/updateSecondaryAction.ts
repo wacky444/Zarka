@@ -1,6 +1,11 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import { ActionCategory, ActionLibrary, type ActionId } from "@shared";
+import {
+  ActionCategory,
+  ActionLibrary,
+  getSkillEffectTotal,
+  type ActionId
+} from "@shared";
 import { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
@@ -11,7 +16,10 @@ import {
   isActionOnCooldown,
   updateCharacterCooldowns
 } from "../match/actions/cooldowns";
-import { clearSecondaryPlan } from "../match/actions/utils";
+import {
+  clearExtraSecondaryPlan,
+  clearSecondaryPlan
+} from "../match/actions/utils";
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
 
 export function updateSecondaryActionRpc(
@@ -33,6 +41,8 @@ export function updateSecondaryActionRpc(
     throw makeNakamaError("bad_json", 3);
   }
   const matchId: string | undefined = json.match_id;
+  const planKey: "secondary" | "extraSecondary" =
+    json.slot === "extra_secondary" ? "extraSecondary" : "secondary";
   const submissionRaw: unknown = json.submission;
   const submission: ActionSubmission | null =
     submissionRaw === null || submissionRaw === undefined
@@ -158,6 +168,12 @@ export function updateSecondaryActionRpc(
   if (!character) {
     throw makeNakamaError("no_character", 9);
   }
+  if (
+    planKey === "extraSecondary" &&
+    getSkillEffectTotal(character, "extra_secondary_action") < 1
+  ) {
+    throw makeNakamaError("skill_required:agility4", 9);
+  }
   const isDead = isCharacterIncapacitated(character);
   if (!clearAction && isDead) {
     throw makeNakamaError("character_incapacitated", 9);
@@ -166,10 +182,14 @@ export function updateSecondaryActionRpc(
   updateCharacterCooldowns(character, currentTurn);
   character.actionPlan = character.actionPlan ?? {};
   if (clearAction) {
-    clearSecondaryPlan(character);
+    if (planKey === "extraSecondary") {
+      clearExtraSecondaryPlan(character);
+    } else {
+      clearSecondaryPlan(character);
+    }
   } else {
     const previous: PlayerPlannedAction =
-      character.actionPlan.secondary ?? ({ actionId } as PlayerPlannedAction);
+      character.actionPlan[planKey] ?? ({ actionId } as PlayerPlannedAction);
     const nextPlan: PlayerPlannedAction = { ...previous, actionId };
     if (
       normalizedActionId &&
@@ -212,7 +232,7 @@ export function updateSecondaryActionRpc(
     } else if (nextPlan.extraExecutions) {
       delete nextPlan.extraExecutions;
     }
-    character.actionPlan.secondary = nextPlan;
+    character.actionPlan[planKey] = nextPlan;
   }
   storage.writeMatch(match, read.version);
   const response: import("@shared").UpdateSecondaryActionPayload = {

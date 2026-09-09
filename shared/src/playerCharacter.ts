@@ -118,6 +118,7 @@ export interface PlayerActionCooldown {
 export interface PlayerActionPlan {
   main?: PlayerPlannedAction;
   secondary?: PlayerPlannedAction;
+  extraSecondary?: PlayerPlannedAction;
   nextMain?: PlayerPlannedAction;
 }
 

@@ -18,7 +18,7 @@ import {
 import type { MatchRecord } from "../../models/types";
 import { isCharacterDead } from "../../utils/playerCharacter";
 
-export type PlannedActionKey = "main" | "secondary";
+export type PlannedActionKey = "main" | "secondary" | "extraSecondary";
 
 const INJURED_MAX_HP = 5;
 
@@ -469,6 +469,7 @@ export function clearMainPlan(character: PlayerCharacter): void {
   delete character.actionPlan.main;
   if (
     character.actionPlan.secondary === undefined &&
+    character.actionPlan.extraSecondary === undefined &&
     character.actionPlan.nextMain === undefined &&
     character.actionPlan.main === undefined
   ) {
@@ -483,6 +484,22 @@ export function clearSecondaryPlan(character: PlayerCharacter): void {
   delete character.actionPlan.secondary;
   if (
     character.actionPlan.secondary === undefined &&
+    character.actionPlan.extraSecondary === undefined &&
+    character.actionPlan.nextMain === undefined &&
+    character.actionPlan.main === undefined
+  ) {
+    delete character.actionPlan;
+  }
+}
+
+export function clearExtraSecondaryPlan(character: PlayerCharacter): void {
+  if (!character.actionPlan) {
+    return;
+  }
+  delete character.actionPlan.extraSecondary;
+  if (
+    character.actionPlan.secondary === undefined &&
+    character.actionPlan.extraSecondary === undefined &&
     character.actionPlan.nextMain === undefined &&
     character.actionPlan.main === undefined
   ) {
@@ -496,6 +513,8 @@ export function clearPlanByKey(
 ): void {
   if (key === "secondary") {
     clearSecondaryPlan(character);
+  } else if (key === "extraSecondary") {
+    clearExtraSecondaryPlan(character);
   } else {
     clearMainPlan(character);
   }

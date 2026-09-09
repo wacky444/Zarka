@@ -222,8 +222,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
     description: "Permite hacer una acción secundaria adicional",
     cost: 5,
     max: 1,
-    implemented: false,
-    category: "Agilidad"
+    implemented: true,
+    category: "Agilidad",
+    effect: {
+      type: "extra_secondary_action",
+      value: 1
+    }
   },
   charisma1: {
     id: "charisma1",

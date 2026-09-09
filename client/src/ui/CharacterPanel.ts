@@ -14,7 +14,8 @@ import {
   DEFAULT_SKIN,
   Skin,
   PlayerCharacterUnknown,
-  getActionEnergyDiscount
+  getActionEnergyDiscount,
+  getSkillEffectTotal
 } from "@shared";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
 import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
@@ -147,22 +148,31 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private readyToggle!: Phaser.GameObjects.Text;
   private mainActionBox: Phaser.GameObjects.Rectangle;
   private secondaryActionBox: Phaser.GameObjects.Rectangle;
+  private extraSecondaryActionBox: Phaser.GameObjects.Rectangle;
   private mainActionLabel: Phaser.GameObjects.Text;
   private secondaryActionLabel: Phaser.GameObjects.Text;
+  private extraSecondaryActionLabel: Phaser.GameObjects.Text;
   private mainActionDropdown: GridSelect;
   private mainActionDropdownWidth: number;
   private secondaryActionDropdown: GridSelect;
   private secondaryActionDropdownWidth: number;
+  private extraSecondaryActionDropdown: GridSelect;
+  private extraSecondaryActionDropdownWidth: number;
   private extraExecutionSelector: ExtraExecutionSelector;
   private mainExtraExecutions = 0;
   private secondaryExtraExecutionSelector: ExtraExecutionSelector;
   private secondaryExtraExecutions = 0;
+  private extraSecondaryExtraExecutionSelector: ExtraExecutionSelector;
+  private extraSecondaryExtraExecutions = 0;
   private locationSelector: LocationSelector;
   private playerSelector: PlayerSelector;
   private itemSelector: ItemPrioritySelector;
   private secondaryLocationSelector: LocationSelector;
   private secondaryPlayerSelector: PlayerSelector;
   private secondaryItemSelector: ItemPrioritySelector;
+  private extraSecondaryLocationSelector: LocationSelector;
+  private extraSecondaryPlayerSelector: PlayerSelector;
+  private extraSecondaryItemSelector: ItemPrioritySelector;
   private itemsBackground!: Phaser.GameObjects.Rectangle;
   private itemsTitle!: Phaser.GameObjects.Text;
   private inventoryGrid!: InventoryGrid;
@@ -177,21 +187,27 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private barWidth: number;
   private mainActionSelection: string | null = null;
   private secondaryActionSelection: string | null = null;
+  private extraSecondaryActionSelection: string | null = null;
   private currentTurn = 0;
   private mainActionTarget: Axial | null = null;
   private secondaryActionTarget: Axial | null = null;
+  private extraSecondaryActionTarget: Axial | null = null;
   private mainActionTargetPlayerId: string | null = null;
   private secondaryActionTargetPlayerId: string | null = null;
+  private extraSecondaryActionTargetPlayerId: string | null = null;
   private mainActionPriorityItems: string[] = [];
   private secondaryActionPriorityItems: string[] = [];
+  private extraSecondaryActionPriorityItems: string[] = [];
   private lastMainActionItem: GridSelectItem | null = null;
   private lastSecondaryActionItem: GridSelectItem | null = null;
+  private lastExtraSecondaryActionItem: GridSelectItem | null = null;
   private readyState = false;
   private readyEnabled = false;
   private playerOptions: PlayerOption[] = [];
   private playersTabView!: CharacterPanelPlayerListView;
   private mainPlayerOptions: PlayerOption[] = [];
   private secondaryPlayerOptions: PlayerOption[] = [];
+  private extraSecondaryPlayerOptions: PlayerOption[] = [];
   private itemOptions: ItemPriorityOption[] = [];
   private currentMatch: MatchRecord | null = null;
   private currentUserId: string | null = null;
@@ -208,6 +224,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private readonly handleSecondaryExtraExecutionChange = (reps: number) => {
     this.secondaryExtraExecutions = reps;
     this.emitSecondaryActionChange();
+  };
+  private readonly handleExtraSecondaryExtraExecutionChange = (reps: number) => {
+    this.extraSecondaryExtraExecutions = reps;
+    this.emitExtraSecondaryActionChange();
   };
   private readonly handleMainActionSelection = (actionId: string | null) => {
     this.mainActionSelection = actionId ?? null;
@@ -294,6 +314,45 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       return;
     }
     this.emit("secondary-action-location-request");
+  };
+  private readonly handleExtraSecondaryActionSelection = (
+    actionId: string | null
+  ) => {
+    this.extraSecondaryActionSelection = actionId ?? null;
+    this.lastExtraSecondaryActionItem =
+      this.extraSecondaryActionDropdown.getSelectedItem() ?? null;
+    if (!this.extraSecondaryActionSelection) {
+      this.setExtraSecondaryActionTarget(null, false);
+      this.setExtraSecondaryActionTargetPlayer(null, false);
+      this.setExtraSecondaryActionPriorityItems([], false);
+    }
+    this.refreshPlayerOptionsForSelectors();
+    this.refreshExtraSecondaryExecutionSelectorState();
+    this.refreshExtraSecondaryLocationSelectorState();
+    this.refreshExtraSecondaryPlayerSelectorState();
+    this.emitExtraSecondaryActionChange();
+  };
+  private readonly handleExtraSecondaryLocationPickRequest = () => {
+    if (
+      !this.extraSecondaryActionSelection ||
+      !this.selectedExtraSecondaryActionSupportsLocation()
+    ) {
+      return;
+    }
+    this.emit("extra-secondary-action-location-request");
+  };
+  private readonly handleExtraSecondaryLocationClear = () => {
+    this.setExtraSecondaryActionTarget(null, true);
+  };
+  private readonly handleExtraSecondaryPlayerSelection = (
+    playerId: string | null
+  ) => {
+    this.setExtraSecondaryActionTargetPlayer(playerId ?? null, true);
+  };
+  private readonly handleExtraSecondaryItemPriorityChange = (
+    itemIds: string[]
+  ) => {
+    this.setExtraSecondaryActionPriorityItems(itemIds ?? [], true);
   };
   private readonly handleSecondaryLocationClear = () => {
     this.setSecondaryActionTarget(null, true);
@@ -704,6 +763,106 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.handleSecondaryItemPriorityChange
     );
     this.scrollContent.add(this.secondaryItemSelector);
+
+    this.extraSecondaryActionBox = scene.add
+      .rectangle(0, 0, boxWidth, BOX_HEIGHT, 0x1b2440)
+      .setOrigin(0, 0)
+      .setVisible(false);
+    this.scrollContent.add(this.extraSecondaryActionBox);
+    this.extraSecondaryActionLabel = scene.add
+      .text(0, 0, "Extra Secondary Action", {
+        fontSize: "16px",
+        color: "#ffffff"
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    this.scrollContent.add(this.extraSecondaryActionLabel);
+    this.extraSecondaryActionDropdownWidth = boxWidth - 24;
+    this.extraSecondaryActionDropdown = new GridSelect(scene, 0, 0, {
+      width: this.extraSecondaryActionDropdownWidth,
+      title: "Select Extra Secondary Action",
+      placeholder: "Choose action",
+      emptyLabel: "Unknown",
+      columns: 3,
+      cellHeight: 260,
+      includeEmptyOption: true,
+      emptyOptionLabel: "No extra secondary action",
+      emptyOptionDescription: "Removes the extra secondary action."
+    });
+    this.extraSecondaryActionDropdown.setVisible(false);
+    this.scrollContent.add(this.extraSecondaryActionDropdown);
+    this.extraSecondaryActionDropdown.on(
+      "change",
+      this.handleExtraSecondaryActionSelection
+    );
+    this.extraSecondaryActionDropdown.on(
+      "modal-open",
+      this.handleActionModalOpen
+    );
+    this.extraSecondaryActionDropdown.on(
+      "modal-close",
+      this.handleActionModalClose
+    );
+    this.extraSecondaryExtraExecutionSelector = new ExtraExecutionSelector(
+      scene,
+      0,
+      0,
+      this.extraSecondaryActionDropdownWidth
+    );
+    this.extraSecondaryExtraExecutionSelector.setEnabled(false);
+    this.extraSecondaryExtraExecutionSelector.setVisible(false);
+    this.extraSecondaryExtraExecutionSelector.setActive(false);
+    this.extraSecondaryExtraExecutionSelector.on(
+      "change",
+      this.handleExtraSecondaryExtraExecutionChange
+    );
+    this.scrollContent.add(this.extraSecondaryExtraExecutionSelector);
+    this.extraSecondaryLocationSelector = new LocationSelector(
+      scene,
+      0,
+      0,
+      this.extraSecondaryActionDropdownWidth
+    );
+    this.extraSecondaryLocationSelector.setEnabled(false);
+    this.extraSecondaryLocationSelector.setVisible(false);
+    this.extraSecondaryLocationSelector.setActive(false);
+    this.extraSecondaryLocationSelector.on(
+      "pick-request",
+      this.handleExtraSecondaryLocationPickRequest
+    );
+    this.extraSecondaryLocationSelector.on(
+      "clear-request",
+      this.handleExtraSecondaryLocationClear
+    );
+    this.scrollContent.add(this.extraSecondaryLocationSelector);
+    this.extraSecondaryPlayerSelector = new PlayerSelector(
+      scene,
+      0,
+      0,
+      this.extraSecondaryActionDropdownWidth
+    );
+    this.extraSecondaryPlayerSelector.setEnabled(false);
+    this.extraSecondaryPlayerSelector.setVisible(false);
+    this.extraSecondaryPlayerSelector.setActive(false);
+    this.extraSecondaryPlayerSelector.on(
+      "change",
+      this.handleExtraSecondaryPlayerSelection
+    );
+    this.scrollContent.add(this.extraSecondaryPlayerSelector);
+    this.extraSecondaryItemSelector = new ItemPrioritySelector(
+      scene,
+      0,
+      0,
+      this.extraSecondaryActionDropdownWidth
+    );
+    this.extraSecondaryItemSelector.setEnabled(false);
+    this.extraSecondaryItemSelector.setVisible(false);
+    this.extraSecondaryItemSelector.setActive(false);
+    this.extraSecondaryItemSelector.on(
+      "change",
+      this.handleExtraSecondaryItemPriorityChange
+    );
+    this.scrollContent.add(this.extraSecondaryItemSelector);
     this.updateScrollLayout();
     const itemsBoxY = contentTop;
     const itemsBoxHeight = Math.max(
@@ -939,6 +1098,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.bringToTop(this.secondaryActionDropdown);
     this.bringToTop(this.secondaryLocationSelector);
     this.bringToTop(this.secondaryPlayerSelector);
+    this.bringToTop(this.extraSecondaryActionDropdown);
+    this.bringToTop(this.extraSecondaryLocationSelector);
+    this.bringToTop(this.extraSecondaryPlayerSelector);
     this.bringToTop(this.readyToggle);
   }
 
@@ -988,6 +1150,36 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     } catch (e) {
       console.warn(
         "hideDropdown secondaryPlayerSelector skipped during teardown",
+        e
+      );
+    }
+    this.extraSecondaryActionDropdown.off(
+      "change",
+      this.handleExtraSecondaryActionSelection
+    );
+    this.extraSecondaryActionDropdown.off("modal-open", this.handleActionModalOpen);
+    this.extraSecondaryActionDropdown.off("modal-close", this.handleActionModalClose);
+    this.extraSecondaryExtraExecutionSelector.off(
+      "change",
+      this.handleExtraSecondaryExtraExecutionChange
+    );
+    this.extraSecondaryLocationSelector.off(
+      "pick-request",
+      this.handleExtraSecondaryLocationPickRequest
+    );
+    this.extraSecondaryLocationSelector.off(
+      "clear-request",
+      this.handleExtraSecondaryLocationClear
+    );
+    this.extraSecondaryPlayerSelector.off(
+      "change",
+      this.handleExtraSecondaryPlayerSelection
+    );
+    try {
+      this.extraSecondaryPlayerSelector.hideDropdown();
+    } catch (e) {
+      console.warn(
+        "hideDropdown extraSecondaryPlayerSelector skipped during teardown",
         e
       );
     }
@@ -1054,9 +1246,18 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.refreshLocationSelectorState();
     this.secondaryActionDropdown.setVisible(true);
     this.secondaryActionDropdown.setActive(true);
+    const hasExtraSecondaryAction = this.hasExtraSecondaryAction();
+    this.extraSecondaryActionBox.setVisible(hasExtraSecondaryAction);
+    this.extraSecondaryActionLabel.setVisible(hasExtraSecondaryAction);
+    this.extraSecondaryActionDropdown.setVisible(hasExtraSecondaryAction);
+    this.extraSecondaryActionDropdown.setActive(hasExtraSecondaryAction);
     this.refreshSecondaryExtraExecutionSelectorState();
     this.refreshSecondaryLocationSelectorState();
     this.refreshSecondaryPlayerSelectorState();
+    this.refreshExtraSecondaryExecutionSelectorState();
+    this.refreshExtraSecondaryLocationSelectorState();
+    this.refreshExtraSecondaryPlayerSelectorState();
+    this.refreshExtraSecondaryItemSelectorState();
     this.setReadyEnabled(this.readyEnabled);
   }
 
@@ -1087,6 +1288,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.secondaryPlayerSelector.hideDropdown();
     this.secondaryPlayerSelector.setVisible(false);
     this.secondaryPlayerSelector.setActive(false);
+    this.extraSecondaryActionBox.setVisible(false);
+    this.extraSecondaryActionLabel.setVisible(false);
+    this.extraSecondaryActionDropdown.setVisible(false);
+    this.extraSecondaryActionDropdown.setActive(false);
+    this.extraSecondaryExtraExecutionSelector.setVisible(false);
+    this.extraSecondaryExtraExecutionSelector.setActive(false);
+    this.extraSecondaryLocationSelector.setVisible(false);
+    this.extraSecondaryLocationSelector.setActive(false);
+    this.extraSecondaryPlayerSelector.hideDropdown();
+    this.extraSecondaryPlayerSelector.setVisible(false);
+    this.extraSecondaryPlayerSelector.setActive(false);
+    this.extraSecondaryItemSelector.setVisible(false);
+    this.extraSecondaryItemSelector.setActive(false);
     this.readyToggle.disableInteractive();
     this.scrollPanel?.setMouseWheelScrollerEnable?.(false);
   }
@@ -1133,6 +1347,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const scrollWidth = Math.max(120, width - MARGIN * 2);
     this.mainActionDropdownWidth = Math.max(0, scrollWidth - 24);
     this.secondaryActionDropdownWidth = Math.max(0, scrollWidth - 24);
+    this.extraSecondaryActionDropdownWidth = Math.max(0, scrollWidth - 24);
     const readyHeight = this.readyToggle ? this.readyToggle.height : 0;
     const readyBottom = statusContentTop + 80 + readyHeight + 24;
     const scrollTop = readyBottom;
@@ -1314,6 +1529,17 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.refreshSecondaryPlayerSelectorState();
       this.refreshItemSelectorState();
       this.refreshSecondaryItemSelectorState();
+      this.applyExtraSecondaryActions([], null, null);
+      this.extraSecondaryActionPriorityItems = [];
+      this.extraSecondaryItemSelector.setValue([], false);
+      this.extraSecondaryItemSelector.setEnabled(false);
+      this.extraSecondaryItemSelector.setVisible(false);
+      this.extraSecondaryItemSelector.setActive(false);
+      this.extraSecondaryPlayerSelector.setPending(false);
+      this.extraSecondaryPlayerSelector.setEnabled(false);
+      this.extraSecondaryPlayerSelector.hideDropdown();
+      this.refreshExtraSecondaryPlayerSelectorState();
+      this.refreshExtraSecondaryItemSelectorState();
       this.setReadyEnabled(false);
       this.setReadyState(false, false);
       this.updateInventoryPanel(null);
@@ -1405,6 +1631,47 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.setSecondaryActionPriorityItems(secondaryTargetItems, false);
     this.setSecondaryLocationSelectionPending(false);
     this.secondaryPlayerSelector.setPending(false);
+
+    const extraSecondaryActions = character.actionPlan?.extraSecondary?.actionId
+      ? [character.actionPlan.extraSecondary.actionId as ActionId]
+      : [];
+    const extraSecondaryId =
+      character.actionPlan?.extraSecondary?.actionId ?? null;
+    const extraSecondaryExtraExecutions =
+      character.actionPlan?.extraSecondary?.extraExecutions ?? 0;
+    this.applyExtraSecondaryActions(
+      extraSecondaryActions,
+      extraSecondaryId,
+      character,
+      extraSecondaryExtraExecutions
+    );
+    const extraSecondaryTargetLocation =
+      character.actionPlan?.extraSecondary?.targetLocationId ?? null;
+    const normalizedExtraSecondaryTargetLocation = this.normalizeAxial(
+      extraSecondaryTargetLocation
+    );
+    this.setExtraSecondaryActionTarget(
+      normalizedExtraSecondaryTargetLocation,
+      false
+    );
+    const extraSecondaryTargetPlayers =
+      character.actionPlan?.extraSecondary?.targetPlayerIds ?? null;
+    const extraSecondaryServerTargetPlayerId = this.normalizePlayerId(
+      Array.isArray(extraSecondaryTargetPlayers) &&
+        extraSecondaryTargetPlayers.length > 0
+        ? extraSecondaryTargetPlayers[0]
+        : null
+    );
+    this.setExtraSecondaryActionTargetPlayer(
+      extraSecondaryServerTargetPlayerId,
+      false
+    );
+    const extraSecondaryTargetItems = Array.isArray(
+      character.actionPlan?.extraSecondary?.targetItemIds
+    )
+      ? (character.actionPlan?.extraSecondary?.targetItemIds as string[])
+      : [];
+    this.setExtraSecondaryActionPriorityItems(extraSecondaryTargetItems, false);
     this.setReadyEnabled(true);
     this.setReadyState(ready, false);
     this.syncMainActionWithServer(
@@ -1418,6 +1685,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       normalizedSecondaryTargetLocation,
       secondaryServerTargetPlayerId,
       secondaryTargetItems
+    );
+    this.syncExtraSecondaryActionWithServer(
+      extraSecondaryId,
+      normalizedExtraSecondaryTargetLocation,
+      extraSecondaryServerTargetPlayerId,
+      extraSecondaryTargetItems
     );
     this.updateInventoryPanel(character);
     this.updateScrollLayout();
@@ -1642,6 +1915,48 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.refreshSecondaryLocationSelectorState();
     this.refreshSecondaryPlayerSelectorState();
     this.refreshSecondaryItemSelectorState();
+  }
+
+  private applyExtraSecondaryActions(
+    actions: ActionId[],
+    preferredId: string | null,
+    character: PlayerCharacter | null,
+    storedExtraExecutions = 0
+  ) {
+    const available = this.hasExtraSecondaryAction();
+    this.extraSecondaryActionBox.setVisible(available);
+    this.extraSecondaryActionLabel.setVisible(available);
+    this.extraSecondaryActionDropdown.setVisible(available);
+    this.extraSecondaryActionDropdown.setActive(available);
+    const items = this.buildSecondaryActionItems(
+      actions,
+      character,
+      this.currentTurn
+    );
+    this.extraSecondaryActionDropdown.setItems(items);
+    if (preferredId) {
+      this.extraSecondaryActionDropdown.setValue(preferredId, false);
+      if (!this.extraSecondaryActionDropdown.getValue() && items[0]) {
+        this.extraSecondaryActionDropdown.setValue(items[0].id, false);
+      }
+    } else {
+      this.extraSecondaryActionDropdown.setValue(null, false);
+      if (!this.extraSecondaryActionDropdown.getSelectedItem() && items[0]) {
+        this.extraSecondaryActionDropdown.setValue(items[0].id, false);
+      }
+    }
+    this.lastExtraSecondaryActionItem =
+      this.extraSecondaryActionDropdown.getSelectedItem() ?? null;
+    this.extraSecondaryActionSelection =
+      this.extraSecondaryActionDropdown.getValue();
+    if (!this.extraSecondaryActionSelection) {
+      this.setExtraSecondaryActionTarget(null, false);
+      this.setExtraSecondaryActionTargetPlayer(null, false);
+    }
+    this.refreshExtraSecondaryExecutionSelectorState(storedExtraExecutions);
+    this.refreshExtraSecondaryLocationSelectorState();
+    this.refreshExtraSecondaryPlayerSelectorState();
+    this.refreshExtraSecondaryItemSelectorState();
   }
 
   private collectMainActions(character: PlayerCharacter) {
@@ -1872,6 +2187,103 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.updateScrollLayout();
   }
 
+  private refreshExtraSecondaryExecutionSelectorState(initialReps = 0) {
+    const definition = this.extraSecondaryActionSelection
+      ? (ActionLibrary[this.extraSecondaryActionSelection as ActionId] ?? null)
+      : null;
+    const extraExecution = definition?.extraExecution ?? null;
+    const supports = extraExecution !== null && this.hasExtraSecondaryAction();
+    this.extraSecondaryExtraExecutionSelector.setVisible(supports);
+    this.extraSecondaryExtraExecutionSelector.setActive(supports);
+    if (!supports) {
+      this.extraSecondaryExtraExecutions = 0;
+      this.extraSecondaryExtraExecutionSelector.setValue(0);
+      this.extraSecondaryExtraExecutionSelector.setEnabled(false);
+      this.updateScrollLayout();
+      return;
+    }
+    const character = this.getCurrentCharacter();
+    const discount = character && definition
+      ? getActionEnergyDiscount(character, definition.id)
+      : 0;
+    this.extraSecondaryExtraExecutionSelector.configure({
+      baseCost: definition!.energyCost,
+      extraCostPerRep: extraExecution.cost,
+      maxReps: extraExecution.maxRepetitions ?? 1,
+      description: extraExecution.description,
+      energy: this.getCurrentEnergy(),
+      discount
+    });
+    if (initialReps > 0) {
+      this.extraSecondaryExtraExecutions = initialReps;
+      this.extraSecondaryExtraExecutionSelector.setValue(initialReps);
+    }
+    this.extraSecondaryExtraExecutionSelector.setEnabled(
+      this.extraSecondaryActionSelection !== null
+    );
+    this.updateScrollLayout();
+  }
+
+  private refreshExtraSecondaryLocationSelectorState() {
+    this.lastExtraSecondaryActionItem =
+      this.extraSecondaryActionDropdown.getSelectedItem() ?? null;
+    const supports = this.selectedExtraSecondaryActionSupportsLocation();
+    this.extraSecondaryLocationSelector.setVisible(supports);
+    this.extraSecondaryLocationSelector.setActive(supports);
+    if (!supports) {
+      this.extraSecondaryActionTarget = null;
+      this.extraSecondaryLocationSelector.setValue(null);
+      this.extraSecondaryLocationSelector.setEnabled(false);
+      this.extraSecondaryLocationSelector.setPending(false);
+      this.updateScrollLayout();
+      return;
+    }
+    this.extraSecondaryLocationSelector.setEnabled(
+      this.extraSecondaryActionSelection !== null
+    );
+    this.updateScrollLayout();
+  }
+
+  private refreshExtraSecondaryPlayerSelectorState() {
+    const supports = this.selectedExtraSecondaryActionSupportsSingleTarget();
+    const shouldShow = supports && this.extraSecondaryPlayerOptions.length > 0;
+    this.extraSecondaryPlayerSelector.setVisible(shouldShow);
+    this.extraSecondaryPlayerSelector.setActive(shouldShow);
+    if (!shouldShow) {
+      this.extraSecondaryActionTargetPlayerId = null;
+      this.extraSecondaryPlayerSelector.setValue(null);
+      this.extraSecondaryPlayerSelector.setEnabled(false);
+      this.extraSecondaryPlayerSelector.setPending(false);
+      this.extraSecondaryPlayerSelector.hideDropdown();
+      this.updateScrollLayout();
+      return;
+    }
+    this.extraSecondaryPlayerSelector.setEnabled(
+      this.extraSecondaryActionSelection !== null
+    );
+    this.updateScrollLayout();
+  }
+
+  private refreshExtraSecondaryItemSelectorState() {
+    const supports = this.selectedExtraSecondaryActionSupportsItemPriority();
+    const shouldShow = supports && this.itemOptions.length > 0;
+    this.extraSecondaryItemSelector.setVisible(shouldShow);
+    this.extraSecondaryItemSelector.setActive(shouldShow);
+    if (!shouldShow) {
+      this.extraSecondaryActionPriorityItems = [];
+      this.extraSecondaryItemSelector.setValue([], false);
+      this.extraSecondaryItemSelector.setEnabled(false);
+      this.extraSecondaryItemSelector.setPending(false);
+      this.extraSecondaryItemSelector.hideDropdown();
+      this.updateScrollLayout();
+      return;
+    }
+    this.extraSecondaryItemSelector.setEnabled(
+      this.extraSecondaryActionSelection !== null
+    );
+    this.updateScrollLayout();
+  }
+
   private refreshLocationSelectorState() {
     this.lastMainActionItem = this.mainActionDropdown.getSelectedItem() ?? null;
     const supports = this.selectedActionSupportsLocation();
@@ -2097,6 +2509,24 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.secondaryItemSelector
     );
     cursorY += 16;
+    if (this.hasExtraSecondaryAction()) {
+      this.extraSecondaryActionBox.setVisible(true);
+      this.extraSecondaryActionLabel.setVisible(true);
+      layoutActionBlock(
+        this.extraSecondaryActionBox,
+        this.extraSecondaryActionLabel,
+        this.extraSecondaryActionDropdown,
+        this.extraSecondaryExtraExecutionSelector,
+        this.extraSecondaryLocationSelector,
+        this.extraSecondaryPlayerSelector,
+        this.extraSecondaryItemSelector
+      );
+      cursorY += 16;
+    } else {
+      this.extraSecondaryActionBox.setVisible(false);
+      this.extraSecondaryActionLabel.setVisible(false);
+      this.extraSecondaryActionDropdown.setVisible(false);
+    }
     this.scrollContent.setPosition(0, 0);
     this.scrollContent.setSize(width, cursorY);
     this.scrollPanel.layout?.();
@@ -2250,6 +2680,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
     const mainAllowsSelf = this.selectedActionCanTargetSelf();
     const secondaryAllowsSelf = this.selectedSecondaryActionCanTargetSelf();
+    const extraSecondaryAllowsSelf =
+      this.selectedExtraSecondaryActionCanTargetSelf();
 
     const mainOptions =
       currentUserId && !mainAllowsSelf
@@ -2259,9 +2691,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       currentUserId && !secondaryAllowsSelf
         ? baseOptions.filter((option) => option.id !== currentUserId)
         : baseOptions;
+    const extraSecondaryOptions =
+      currentUserId && !extraSecondaryAllowsSelf
+        ? baseOptions.filter((option) => option.id !== currentUserId)
+        : baseOptions;
 
     this.mainPlayerOptions = mainOptions;
     this.secondaryPlayerOptions = secondaryOptions;
+    this.extraSecondaryPlayerOptions = extraSecondaryOptions;
 
     if (
       this.mainActionTargetPlayerId &&
@@ -2277,13 +2714,25 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     ) {
       this.secondaryActionTargetPlayerId = null;
     }
+    if (
+      this.extraSecondaryActionTargetPlayerId &&
+      !extraSecondaryOptions.some(
+        (option) => option.id === this.extraSecondaryActionTargetPlayerId
+      )
+    ) {
+      this.extraSecondaryActionTargetPlayerId = null;
+    }
 
     this.playerSelector.setOptions(mainOptions);
     this.secondaryPlayerSelector.setOptions(secondaryOptions);
+    this.extraSecondaryPlayerSelector.setOptions(extraSecondaryOptions);
 
     this.playerSelector.setValue(this.mainActionTargetPlayerId ?? null);
     this.secondaryPlayerSelector.setValue(
       this.secondaryActionTargetPlayerId ?? null
+    );
+    this.extraSecondaryPlayerSelector.setValue(
+      this.extraSecondaryActionTargetPlayerId ?? null
     );
   }
 
@@ -2300,6 +2749,15 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       return false;
     }
     const definition = ActionLibrary[this.secondaryActionSelection as ActionId];
+    return definition?.tags?.includes("CanTargetSelf") === true;
+  }
+
+  private selectedExtraSecondaryActionCanTargetSelf(): boolean {
+    if (!this.extraSecondaryActionSelection) {
+      return false;
+    }
+    const definition =
+      ActionLibrary[this.extraSecondaryActionSelection as ActionId];
     return definition?.tags?.includes("CanTargetSelf") === true;
   }
 
@@ -2439,12 +2897,17 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.itemOptions = options;
     this.itemSelector.setOptions(options);
     this.secondaryItemSelector.setOptions(options);
+    this.extraSecondaryItemSelector.setOptions(options);
     const normalizedMain = this.filterPriorityIds(this.mainActionPriorityItems);
     this.mainActionPriorityItems = normalizedMain;
     const normalizedSecondary = this.filterPriorityIds(
       this.secondaryActionPriorityItems
     );
     this.secondaryActionPriorityItems = normalizedSecondary;
+    const normalizedExtraSecondary = this.filterPriorityIds(
+      this.extraSecondaryActionPriorityItems
+    );
+    this.extraSecondaryActionPriorityItems = normalizedExtraSecondary;
     if (this.selectedActionSupportsItemPriority()) {
       this.itemSelector.setValue(normalizedMain, false);
     } else {
@@ -2455,8 +2918,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     } else {
       this.secondaryItemSelector.setValue([], false);
     }
+    if (this.selectedExtraSecondaryActionSupportsItemPriority()) {
+      this.extraSecondaryItemSelector.setValue(normalizedExtraSecondary, false);
+    } else {
+      this.extraSecondaryItemSelector.setValue([], false);
+    }
     this.refreshItemSelectorState();
     this.refreshSecondaryItemSelectorState();
+    this.refreshExtraSecondaryItemSelectorState();
   }
 
   private resolvePlayerSpriteInfo(
@@ -2566,6 +3035,40 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     return this.lastSecondaryActionItem?.tags?.includes("TargetItems") ?? false;
   }
 
+  private hasExtraSecondaryAction(): boolean {
+    return (
+      getSkillEffectTotal(
+        this.getCurrentCharacter(),
+        "extra_secondary_action"
+      ) > 0
+    );
+  }
+
+  private selectedExtraSecondaryActionSupportsLocation() {
+    return this.lastExtraSecondaryActionItem?.tags?.includes("Ranged") ?? false;
+  }
+
+  private selectedExtraSecondaryActionSupportsSingleTarget() {
+    return (
+      this.lastExtraSecondaryActionItem?.tags?.includes("SingleTarget") ?? false
+    );
+  }
+
+  private selectedExtraSecondaryActionSupportsItemPriority() {
+    return (
+      this.lastExtraSecondaryActionItem?.tags?.includes("TargetItems") ?? false
+    );
+  }
+
+  private selectedExtraSecondaryActionSupportsExtraExecution(): boolean {
+    if (!this.extraSecondaryActionSelection) {
+      return false;
+    }
+    const definition =
+      ActionLibrary[this.extraSecondaryActionSelection as ActionId] ?? null;
+    return definition?.extraExecution !== undefined;
+  }
+
   private selectedActionSupportsExtraExecution(): boolean {
     if (!this.mainActionSelection) {
       return false;
@@ -2635,6 +3138,35 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.emit("secondary-action-change", payload);
   }
 
+  private emitExtraSecondaryActionChange() {
+    const supportsLocation = this.selectedExtraSecondaryActionSupportsLocation();
+    const supportsPlayer = this.selectedExtraSecondaryActionSupportsSingleTarget();
+    const supportsItems = this.selectedExtraSecondaryActionSupportsItemPriority();
+    const supportsExtra = this.selectedExtraSecondaryActionSupportsExtraExecution();
+    const payload: SecondaryActionSelection = {
+      actionId: this.extraSecondaryActionSelection,
+      targetLocation:
+        supportsLocation && this.extraSecondaryActionTarget
+          ? {
+              q: this.extraSecondaryActionTarget.q,
+              r: this.extraSecondaryActionTarget.r
+            }
+          : null,
+      targetPlayerIds: supportsPlayer
+        ? this.extraSecondaryActionTargetPlayerId
+          ? [this.extraSecondaryActionTargetPlayerId]
+          : []
+        : undefined,
+      targetItemIds: supportsItems
+        ? [...this.extraSecondaryActionPriorityItems]
+        : undefined,
+      extraExecutions: supportsExtra
+        ? this.extraSecondaryExtraExecutions
+        : undefined
+    };
+    this.emit("extra-secondary-action-change", payload);
+  }
+
   private syncMainActionWithServer(
     serverActionId: string | null,
     serverTargetLocation: Axial | null,
@@ -2690,6 +3222,31 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       !matchesItems
     ) {
       this.emitSecondaryActionChange();
+    }
+  }
+
+  private syncExtraSecondaryActionWithServer(
+    serverActionId: string | null,
+    serverTargetLocation: Axial | null,
+    serverTargetPlayerId: string | null,
+    serverTargetItems: string[] | null
+  ): void {
+    const matchesSelection =
+      (this.extraSecondaryActionSelection ?? null) ===
+      (serverActionId ?? null);
+    const matchesLocation = this.isSameAxial(
+      this.extraSecondaryActionTarget,
+      serverTargetLocation
+    );
+    const matchesPlayer =
+      (this.extraSecondaryActionTargetPlayerId ?? null) ===
+      (serverTargetPlayerId ?? null);
+    const matchesItems = this.isSameTargetItems(
+      this.extraSecondaryActionPriorityItems,
+      serverTargetItems
+    );
+    if (!matchesSelection || !matchesLocation || !matchesPlayer || !matchesItems) {
+      this.emitExtraSecondaryActionChange();
     }
   }
 
@@ -2751,6 +3308,88 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     if (emit) {
       this.emitSecondaryActionChange();
+    }
+    return true;
+  }
+
+  private setExtraSecondaryActionTargetPlayer(
+    targetId: string | null,
+    emit = false
+  ): boolean {
+    const supports = this.selectedExtraSecondaryActionSupportsSingleTarget();
+    if (!supports) {
+      const changed = this.extraSecondaryActionTargetPlayerId !== null;
+      this.extraSecondaryActionTargetPlayerId = null;
+      this.extraSecondaryPlayerSelector.setValue(null);
+      if (emit && changed) {
+        this.emitExtraSecondaryActionChange();
+      }
+      return changed;
+    }
+    const normalized = targetId &&
+      this.extraSecondaryPlayerOptions.some((option) => option.id === targetId)
+      ? targetId
+      : null;
+    const changed = this.extraSecondaryActionTargetPlayerId !== normalized;
+    this.extraSecondaryActionTargetPlayerId = normalized;
+    this.extraSecondaryPlayerSelector.setValue(normalized);
+    if (emit && changed) {
+      this.emitExtraSecondaryActionChange();
+    }
+    return changed;
+  }
+
+  private setExtraSecondaryActionPriorityItems(
+    ids: string[],
+    emit = false
+  ): boolean {
+    const supports = this.selectedExtraSecondaryActionSupportsItemPriority();
+    if (!supports) {
+      const changed = this.extraSecondaryActionPriorityItems.length > 0;
+      this.extraSecondaryActionPriorityItems = [];
+      this.extraSecondaryItemSelector.setValue([], false);
+      if (emit && changed) {
+        this.emitExtraSecondaryActionChange();
+      }
+      return changed;
+    }
+    const filtered = this.filterPriorityIds(ids);
+    if (this.isSameTargetItems(this.extraSecondaryActionPriorityItems, filtered)) {
+      this.extraSecondaryItemSelector.setValue(filtered, false);
+      return false;
+    }
+    this.extraSecondaryActionPriorityItems = filtered;
+    this.extraSecondaryItemSelector.setValue(filtered, false);
+    if (emit) {
+      this.emitExtraSecondaryActionChange();
+    }
+    return true;
+  }
+
+  private setExtraSecondaryActionTarget(
+    target: Axial | null,
+    emit = false
+  ): boolean {
+    const supports = this.selectedExtraSecondaryActionSupportsLocation();
+    if (!supports) {
+      const changed = this.extraSecondaryActionTarget !== null;
+      this.extraSecondaryActionTarget = null;
+      this.extraSecondaryLocationSelector.setValue(null);
+      if (emit && changed) {
+        this.emitExtraSecondaryActionChange();
+      }
+      return changed;
+    }
+    const normalized = this.normalizeAxial(target);
+    if (this.isSameAxial(normalized, this.extraSecondaryActionTarget)) {
+      return false;
+    }
+    this.extraSecondaryActionTarget = normalized;
+    this.extraSecondaryLocationSelector.setValue(
+      normalized ? { q: normalized.q, r: normalized.r } : null
+    );
+    if (emit) {
+      this.emitExtraSecondaryActionChange();
     }
     return true;
   }

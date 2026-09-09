@@ -77,7 +77,7 @@ function collectParticipants(
     if (!character || !character.actionPlan) {
       continue;
     }
-    const { main, secondary } = character.actionPlan;
+    const { main, secondary, extraSecondary } = character.actionPlan;
     if (main && main.actionId === actionId) {
       list.push({
         playerId,
@@ -92,6 +92,14 @@ function collectParticipants(
         character,
         plan: secondary,
         planKey: "secondary",
+      });
+    }
+    if (extraSecondary && extraSecondary.actionId === actionId) {
+      list.push({
+        playerId,
+        character,
+        plan: extraSecondary,
+        planKey: "extraSecondary",
       });
     }
   }

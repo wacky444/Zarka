@@ -192,11 +192,13 @@ export class TurnService {
 
   async updateSecondaryAction(
     match_id: string,
-    submission: ActionSubmission | null
+    submission: ActionSubmission | null,
+    slot: "secondary" | "extra_secondary" = "secondary"
   ) {
     const res = await this.client.rpc(this.session, "update_secondary_action", {
       match_id,
-      submission
+      submission,
+      slot
     });
     return res;
   }

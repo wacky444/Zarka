@@ -241,10 +241,12 @@ function clearBotPlans(character: PlayerCharacter): void {
   }
   delete character.actionPlan.main;
   delete character.actionPlan.secondary;
+  delete character.actionPlan.extraSecondary;
   delete character.actionPlan.nextMain;
   if (
     character.actionPlan.main === undefined &&
     character.actionPlan.secondary === undefined &&
+    character.actionPlan.extraSecondary === undefined &&
     character.actionPlan.nextMain === undefined
   ) {
     delete character.actionPlan;

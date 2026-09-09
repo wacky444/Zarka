@@ -88,6 +88,10 @@ export class GameScene extends Phaser.Scene {
   private pendingMainActionSelection: MainActionSelection | undefined;
   private secondaryActionUpdateRunning = false;
   private pendingSecondaryActionSelection: SecondaryActionSelection | undefined;
+  private extraSecondaryActionUpdateRunning = false;
+  private pendingExtraSecondaryActionSelection:
+    | SecondaryActionSelection
+    | undefined;
   private readyUpdateRunning = false;
   private pendingReadyState: boolean | undefined;
   private locationSelectionActive = false;
@@ -238,6 +242,11 @@ export class GameScene extends Phaser.Scene {
       this
     );
     this.characterPanel.on(
+      "extra-secondary-action-change",
+      this.handleExtraSecondaryActionSelection,
+      this
+    );
+    this.characterPanel.on(
       "main-action-location-request",
       this.beginMainActionLocationPick,
       this
@@ -362,6 +371,11 @@ export class GameScene extends Phaser.Scene {
       this.characterPanel?.off(
         "secondary-action-change",
         this.handleSecondaryActionSelection,
+        this
+      );
+      this.characterPanel?.off(
+        "extra-secondary-action-change",
+        this.handleExtraSecondaryActionSelection,
         this
       );
       this.characterPanel?.off(
@@ -1555,6 +1569,7 @@ export class GameScene extends Phaser.Scene {
         }
         if (
           target.actionPlan.secondary === undefined &&
+          target.actionPlan.extraSecondary === undefined &&
           target.actionPlan.nextMain === undefined &&
           target.actionPlan.main === undefined
         ) {
@@ -1695,6 +1710,7 @@ export class GameScene extends Phaser.Scene {
         }
         if (
           target.actionPlan.secondary === undefined &&
+          target.actionPlan.extraSecondary === undefined &&
           target.actionPlan.nextMain === undefined &&
           target.actionPlan.main === undefined
         ) {
@@ -1740,6 +1756,133 @@ export class GameScene extends Phaser.Scene {
         const nextSelection = this.pendingSecondaryActionSelection;
         this.pendingSecondaryActionSelection = undefined;
         void this.handleSecondaryActionSelection(nextSelection);
+      }
+    }
+  }
+
+  private async handleExtraSecondaryActionSelection(
+    selection: SecondaryActionSelection | null | undefined
+  ) {
+    const matchId = this.registry.get("currentMatchId") as string | null;
+    if (!this.turnService || !this.currentUserId || !matchId) {
+      return;
+    }
+    const normalizedSelection: SecondaryActionSelection = {
+      actionId: selection?.actionId ?? null,
+      targetLocation: this.normalizeAxial(selection?.targetLocation),
+      targetPlayerIds: this.normalizeTargetPlayers(
+        selection?.targetPlayerIds ?? undefined
+      ),
+      targetItemIds: this.normalizeTargetItems(
+        selection?.targetItemIds ?? undefined
+      ),
+      extraExecutions:
+        typeof selection?.extraExecutions === "number"
+          ? selection.extraExecutions
+          : undefined
+    };
+    const character =
+      this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
+    const previousPlan = character?.actionPlan?.extraSecondary ?? null;
+    if (
+      normalizedSelection.actionId === (previousPlan?.actionId ?? null) &&
+      this.isSameAxial(
+        normalizedSelection.targetLocation,
+        this.normalizeAxial(previousPlan?.targetLocationId ?? null)
+      ) &&
+      this.isSameTargetPlayers(
+        normalizedSelection.targetPlayerIds,
+        this.normalizeTargetPlayers(previousPlan?.targetPlayerIds)
+      ) &&
+      this.isSameTargetItems(
+        normalizedSelection.targetItemIds,
+        this.normalizeTargetItems(previousPlan?.targetItemIds)
+      ) &&
+      (normalizedSelection.extraExecutions ?? 0) ===
+        (previousPlan?.extraExecutions ?? 0)
+    ) {
+      return;
+    }
+    if (this.extraSecondaryActionUpdateRunning) {
+      this.pendingExtraSecondaryActionSelection = normalizedSelection;
+      return;
+    }
+    this.extraSecondaryActionUpdateRunning = true;
+    this.pendingExtraSecondaryActionSelection = undefined;
+    try {
+      const submission = normalizedSelection.actionId
+        ? this.buildSecondaryActionSubmission(
+            normalizedSelection.actionId,
+            normalizedSelection.targetLocation,
+            normalizedSelection.targetPlayerIds,
+            normalizedSelection.targetItemIds,
+            normalizedSelection.extraExecutions
+          )
+        : null;
+      const res = await this.turnService.updateSecondaryAction(
+        matchId,
+        submission,
+        "extra_secondary"
+      );
+      const payload = this.parseRpcPayload<UpdateSecondaryActionPayload>(res);
+      if (payload.error) {
+        throw new Error(payload.error);
+      }
+      const target =
+        this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
+      if (!target) {
+        return;
+      }
+      target.actionPlan = target.actionPlan ?? {};
+      if (!submission) {
+        delete target.actionPlan.extraSecondary;
+        if (
+          target.actionPlan.main === undefined &&
+          target.actionPlan.secondary === undefined &&
+          target.actionPlan.extraSecondary === undefined &&
+          target.actionPlan.nextMain === undefined
+        ) {
+          delete target.actionPlan;
+        }
+      } else {
+        const nextPlan: PlayerPlannedAction = {
+          ...(target.actionPlan.extraSecondary ?? {}),
+          actionId: submission.actionId
+        };
+        if (payload.targetLocationId) {
+          nextPlan.targetLocationId = payload.targetLocationId;
+        } else {
+          delete nextPlan.targetLocationId;
+        }
+        if (payload.targetPlayerIds && payload.targetPlayerIds.length > 0) {
+          nextPlan.targetPlayerIds = [...payload.targetPlayerIds];
+        } else {
+          delete nextPlan.targetPlayerIds;
+        }
+        if (payload.targetItemIds && payload.targetItemIds.length > 0) {
+          nextPlan.targetItemIds = [...payload.targetItemIds];
+        } else {
+          delete nextPlan.targetItemIds;
+        }
+        if (
+          typeof payload.extraExecutions === "number" &&
+          payload.extraExecutions > 0
+        ) {
+          nextPlan.extraExecutions = payload.extraExecutions;
+        } else {
+          delete nextPlan.extraExecutions;
+        }
+        target.actionPlan.extraSecondary = nextPlan;
+      }
+      this.updateCharacterPanel(this.currentMatch);
+    } catch (error) {
+      console.warn("update_extra_secondary_action failed", error);
+    } finally {
+      this.extraSecondaryActionUpdateRunning = false;
+      if (this.pendingExtraSecondaryActionSelection) {
+        const nextSelection = this.pendingExtraSecondaryActionSelection;
+        this.pendingExtraSecondaryActionSelection = undefined;
+        void this.handleExtraSecondaryActionSelection(nextSelection);
       }
     }
   }
