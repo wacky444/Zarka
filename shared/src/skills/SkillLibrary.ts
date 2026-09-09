@@ -384,8 +384,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
     description: "Recibe 1 zarkan cada día",
     cost: 3,
     max: 1,
-    implemented: false,
-    category: "Habilidades especiales"
+    implemented: true,
+    category: "Habilidades especiales",
+    effect: {
+      type: "daily_zarkan_income",
+      value: 1
+    }
   },
   undetectable: {
     id: "undetectable",

@@ -1,6 +1,6 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import { ActionLibrary } from "@shared";
+import { ActionLibrary, getSkillEffectTotal } from "@shared";
 import type {
   ActionDefinition,
   ReplayEvent,
@@ -108,7 +108,39 @@ function removeStateFromAllCharacters(
   }
 }
 
-function clearDodgeAttempts(match: MatchRecord): void {
+function applyDailyPension(match: MatchRecord): void {
+  if (!match.playerCharacters) {
+    return;
+  }
+  for (const playerId in match.playerCharacters) {
+    if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, playerId)) {
+      continue;
+    }
+    const character = match.playerCharacters[playerId];
+    if (!character || isCharacterDead(character)) {
+      continue;
+    }
+    const income = getSkillEffectTotal(character, "daily_zarkan_income");
+    if (income <= 0) {
+      continue;
+    }
+    if (!character.economy) {
+      character.economy = {
+        zarkans: 0,
+        pendingZarkans: 0,
+        incomeInterval: 5
+      };
+    }
+    const current =
+      typeof character.economy.zarkans === "number" &&
+      isFinite(character.economy.zarkans)
+        ? character.economy.zarkans
+        : 0;
+    character.economy.zarkans = current + income;
+  }
+}
+
+function clearDodgeAttempts(match: MatchRecord) {
   if (!match.playerCharacters) {
     return;
   }
@@ -143,6 +175,7 @@ export function advanceTurn(
   }
   const tileLookup = buildTileLookup(match);
   activateTemporaryEnergy(match);
+  applyDailyPension(match);
   clearDodgeAttempts(match);
   removeStateFromAllCharacters(match, "protected");
   removeStateFromAllCharacters(match, "unconscious");

@@ -54,6 +54,7 @@ export type SkillEffectType =
   | "perceive_character_details"
   | "pickup_scope_increase"
   | "corpse_consumption"
+  | "daily_zarkan_income"
   | string;
 
 export interface SkillEffect {
