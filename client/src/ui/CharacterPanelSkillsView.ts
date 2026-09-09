@@ -189,12 +189,32 @@ export class CharacterPanelSkillsView {
         this.revertBtnBg.setFillStyle(0x475569);
       }
     });
-    this.revertBtnBg.on(Phaser.Input.Events.POINTER_UP, () => {
-      if (this.revertBtnBg.input?.enabled) {
-        this.pendingUpgrades = [];
-        this.refreshView();
+    this.revertBtnBg.on(
+      Phaser.Input.Events.POINTER_DOWN,
+      (
+        _pointer: Phaser.Input.Pointer,
+        _localX: number,
+        _localY: number,
+        event: Phaser.Types.Input.EventData
+      ) => {
+        event.stopPropagation();
       }
-    });
+    );
+    this.revertBtnBg.on(
+      Phaser.Input.Events.POINTER_UP,
+      (
+        _pointer: Phaser.Input.Pointer,
+        _localX: number,
+        _localY: number,
+        event: Phaser.Types.Input.EventData
+      ) => {
+        event.stopPropagation();
+        if (this.revertBtnBg.input?.enabled) {
+          this.pendingUpgrades = [];
+          this.refreshView();
+        }
+      }
+    );
 
     this.confirmBtnBg.on(Phaser.Input.Events.POINTER_OVER, () => {
       if (this.confirmBtnBg.input?.enabled) {
@@ -206,13 +226,36 @@ export class CharacterPanelSkillsView {
         this.confirmBtnBg.setFillStyle(0x16a34a);
       }
     });
-    this.confirmBtnBg.on(Phaser.Input.Events.POINTER_UP, () => {
-      if (this.confirmBtnBg.input?.enabled && this.pendingUpgrades.length > 0) {
-        const toApply = [...this.pendingUpgrades];
-        this.setButtonsEnabled(false);
-        this.onConfirmSkills?.(toApply);
+    this.confirmBtnBg.on(
+      Phaser.Input.Events.POINTER_DOWN,
+      (
+        _pointer: Phaser.Input.Pointer,
+        _localX: number,
+        _localY: number,
+        event: Phaser.Types.Input.EventData
+      ) => {
+        event.stopPropagation();
       }
-    });
+    );
+    this.confirmBtnBg.on(
+      Phaser.Input.Events.POINTER_UP,
+      (
+        _pointer: Phaser.Input.Pointer,
+        _localX: number,
+        _localY: number,
+        event: Phaser.Types.Input.EventData
+      ) => {
+        event.stopPropagation();
+        if (
+          this.confirmBtnBg.input?.enabled &&
+          this.pendingUpgrades.length > 0
+        ) {
+          const toApply = [...this.pendingUpgrades];
+          this.setButtonsEnabled(false);
+          this.onConfirmSkills?.(toApply);
+        }
+      }
+    );
 
     const listTop = headerY + HEADER_HEIGHT + 8;
     const listWidth = width - 24;
@@ -263,6 +306,10 @@ export class CharacterPanelSkillsView {
     }
     this.scrollPanel.setVisible?.(false);
     parent.add(this.scrollPanel);
+    parent.bringToTop(this.revertBtnBg);
+    parent.bringToTop(this.revertBtnText);
+    parent.bringToTop(this.confirmBtnBg);
+    parent.bringToTop(this.confirmBtnText);
 
     this.buildSkillList(listWidth - 8);
 
