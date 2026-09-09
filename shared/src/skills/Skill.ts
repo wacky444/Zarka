@@ -51,6 +51,7 @@ export type SkillEffectType =
   | "extra_secondary_action"
   | "search_discovery_increase"
   | "search_food_drink_priority"
+  | "perceive_character_details"
   | string;
 
 export interface SkillEffect {

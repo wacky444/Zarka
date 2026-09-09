@@ -335,8 +335,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
       "Detecta puntos de esfuerzo (incluso los extras si se hubiera concentrado en ese turno), estado y objetos de todos los personajes que ve en la localización (igualmente requiere que los objetos sean descubiertos mediante un registro que se podría condicionar para poder concretar qué objeto robar). Si está desmayado ese turno no detecta nada",
     cost: 10,
     max: 1,
-    implemented: false,
-    category: "Percepción"
+    implemented: true,
+    category: "Percepción",
+    effect: {
+      type: "perceive_character_details",
+      value: 1
+    }
   },
   greedy: {
     id: "greedy",

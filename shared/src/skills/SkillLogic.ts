@@ -32,6 +32,37 @@ export function getSkillEffectTotal(
   return total;
 }
 
+export function canPerceiveCharacterDetails(
+  viewer: PlayerCharacter | undefined | null,
+  target: PlayerCharacter | undefined | null
+): boolean {
+  if (!viewer || !target || viewer.id === target.id) {
+    return false;
+  }
+  const conditions = viewer.statuses?.conditions;
+  if (
+    !Array.isArray(conditions) ||
+    conditions.indexOf("unconscious") !== -1 ||
+    conditions.indexOf("dead") !== -1 ||
+    !(viewer.stats?.health?.current > 0) ||
+    getSkillEffectTotal(viewer, "perceive_character_details") <= 0
+  ) {
+    return false;
+  }
+  const viewerCoord = viewer.position?.coord;
+  const targetCoord = target.position?.coord;
+  return !!(
+    viewerCoord &&
+    targetCoord &&
+    typeof viewerCoord.q === "number" &&
+    isFinite(viewerCoord.q) &&
+    typeof viewerCoord.r === "number" &&
+    isFinite(viewerCoord.r) &&
+    viewerCoord.q === targetCoord.q &&
+    viewerCoord.r === targetCoord.r
+  );
+}
+
 export function getCharacterSpeed(
   character: PlayerCharacter | undefined | null
 ): number {

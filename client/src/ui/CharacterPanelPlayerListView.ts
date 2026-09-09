@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import type { MatchRecord } from "@shared";
 import type { PlayerOption } from "./PlayerSelector";
+import { formatPlayerPerceptionDetails } from "./PlayerPerceptionDetails";
 
 type PlayerTabListEntry = {
   playerId: string;
@@ -40,6 +41,8 @@ const PLAYER_LIST_LABEL_PADDING = 10;
 const CARD_SPRITE_SIZE = 64;
 const CARD_SPRITE_PADDING = 16;
 const CARD_HEIGHT = 138;
+const CARD_DETAILS_TOP = 84;
+const CARD_DETAILS_HEIGHT = 180;
 const PLAYER_ROW_HEIGHT = 30;
 const PLAYER_ROW_SPACING = 6;
 const VISIBLE_PLAYER_ROWS = 8;
@@ -53,6 +56,12 @@ export type PlayerSubTabKey = "players" | "teams";
 
 export class CharacterPanelPlayerListView {
   private readonly subtabs: Subtabs<PlayerSubTabKey>;
+  private layoutOptions: CharacterPanelPlayerListViewLayout;
+  private playersTabCardDetails: Phaser.GameObjects.Text;
+  private playersTabCardDetailsContent: Phaser.GameObjects.Container;
+  private playersTabCardDetailsPanel: ScrollablePanelInstance;
+  private playersTabCardDetailsMaskShape: Phaser.GameObjects.Rectangle;
+  private playersTabCardDetailsMask: Phaser.Display.Masks.GeometryMask;
   private playersTabEntries: PlayerTabListEntry[] = [];
   private playersTabSelection: string | null = null;
   private currentMatch: MatchRecord | null = null;
@@ -83,6 +92,7 @@ export class CharacterPanelPlayerListView {
     private readonly parent: Phaser.GameObjects.Container,
     layout: CharacterPanelPlayerListViewLayout
   ) {
+    this.layoutOptions = { ...layout };
     const playersBoxY = layout.contentTop;
     const playersBoxWidth = layout.boxWidth;
     const playersBoxHeight = Math.max(
@@ -227,6 +237,49 @@ export class CharacterPanelPlayerListView {
       .setVisible(false);
     parent.add(this.playersTabCardSprite);
 
+    this.playersTabCardDetails = scene.add
+      .text(0, 0, "", {
+        fontSize: "13px",
+        color: "#cbd5f5",
+        wordWrap: { width: playersBoxWidth - 62, useAdvancedWrap: true },
+        lineSpacing: 4
+      })
+      .setOrigin(0, 0);
+    this.playersTabCardDetailsContent = scene.add.container(0, 0, [
+      this.playersTabCardDetails
+    ]);
+    this.playersTabCardDetailsMaskShape = scene.add
+      .rectangle(0, 0, 1, 1, 0xffffff, 0)
+      .setOrigin(0, 0)
+      .setScrollFactor(0);
+    this.playersTabCardDetailsMask =
+      this.playersTabCardDetailsMaskShape.createGeometryMask();
+    this.playersTabCardDetailsPanel = scene.rexUI.add.scrollablePanel({
+      x: layout.margin + 24,
+      y: cardTop + CARD_DETAILS_TOP,
+      width: playersBoxWidth - 48,
+      height: CARD_DETAILS_HEIGHT,
+      scrollMode: 0,
+      panel: { child: this.playersTabCardDetailsContent, mask: false },
+      slider: {
+        track: scene.rexUI.add.roundRectangle(0, 0, 4, 120, 2, 0x1f2a4a),
+        thumb: scene.rexUI.add.roundRectangle(0, 0, 6, 36, 3, 0x3b82f6)
+      },
+      scroller: {
+        threshold: 10,
+        slidingDeceleration: 5000,
+        backDeceleration: 2000,
+        pointerOutRelease: true
+      },
+      mouseWheelScroller: { focus: 2, speed: 0.35 },
+      space: { left: 0, right: 2, top: 0, bottom: 0, panel: 6 }
+    }) as ScrollablePanelInstance;
+    this.playersTabCardDetailsPanel.setOrigin?.(0, 0);
+    this.playersTabCardDetailsPanel.setMask?.(this.playersTabCardDetailsMask);
+    this.playersTabCardDetailsPanel.setVisible?.(false);
+    this.playersTabCardDetailsPanel.setMouseWheelScrollerEnable?.(false);
+    parent.add(this.playersTabCardDetailsPanel);
+
     this.playersTabEmpty = scene.add
       .text(layout.margin + 24, subtabBottom + 30, "No players found.", {
         fontSize: "14px",
@@ -304,6 +357,7 @@ export class CharacterPanelPlayerListView {
       this.playersTabCardName,
       this.playersTabCardTeam,
       this.playersTabCardSprite,
+      this.playersTabCardDetailsPanel,
       this.playersTabEmpty,
       this.teamsTabListTitle,
       this.teamsTabListScrollPanel,
@@ -337,6 +391,10 @@ export class CharacterPanelPlayerListView {
     this.playersTabCardBackground.setVisible(isPlayersActive);
     this.playersTabCardName.setVisible(isPlayersActive);
     this.playersTabCardTeam.setVisible(isPlayersActive);
+    const showDetails =
+      isPlayersActive && this.playersTabCardDetails.text.length > 0;
+    this.playersTabCardDetailsPanel.setVisible?.(showDetails);
+    this.playersTabCardDetailsPanel.setMouseWheelScrollerEnable?.(showDetails);
     this.playersTabCardSprite.setVisible(
       isPlayersActive &&
         Boolean(
@@ -359,48 +417,68 @@ export class CharacterPanelPlayerListView {
   }
 
   layout(options: CharacterPanelPlayerListViewLayout): void {
-    const playersBoxY = options.contentTop;
-    const subtabY = playersBoxY + 8;
+    this.layoutOptions = { ...options };
+    const subtabY = options.contentTop + 8;
     const subtabHeight = 28;
     const subtabBottom = subtabY + subtabHeight + 6;
-    const listTop = subtabBottom + 26;
-    const listHeight = PLAYER_LIST_SCROLL_HEIGHT;
-    const cardTop = listTop + listHeight + 12;
-    const cardHeight = CARD_HEIGHT;
-    const playersBoxHeight = Math.max(
-      cardTop + cardHeight + 12 - playersBoxY,
-      options.panelHeight - playersBoxY - options.margin
-    );
-
-    this.playersTabListBackground.setPosition(options.margin, playersBoxY);
-    this.playersTabListBackground.setSize(options.boxWidth, playersBoxHeight);
-    this.playersTabListBackground.setDisplaySize(
-      options.boxWidth,
-      playersBoxHeight
-    );
-
     this.subtabs.layout(
       options.margin + 12,
       subtabY,
       options.boxWidth - 24,
       subtabHeight
     );
-
     this.playersTabListTitle.setPosition(options.margin + 12, subtabBottom);
     this.teamsTabListTitle.setPosition(options.margin + 12, subtabBottom);
+    this.playersTabEmpty.setPosition(options.margin + 24, subtabBottom + 30);
+    this.teamsTabEmpty.setPosition(options.margin + 24, subtabBottom + 30);
+    this.refresh();
+  }
+
+  private layoutPlayerCard(): void {
+    const options = this.layoutOptions;
+    const listTop = options.contentTop + 8 + 28 + 6 + 26;
+    const hasDetails = this.playersTabCardDetails.text.length > 0;
+    const cardHeight = hasDetails
+      ? Math.max(
+          CARD_HEIGHT,
+          Math.min(
+            CARD_DETAILS_TOP + CARD_DETAILS_HEIGHT + 12,
+            options.panelHeight - options.margin - listTop - PLAYER_ROW_HEIGHT - 12
+          )
+        )
+      : CARD_HEIGHT;
+    const listHeight = Math.max(
+      PLAYER_ROW_HEIGHT,
+      Math.min(
+        PLAYER_LIST_SCROLL_HEIGHT,
+        options.panelHeight - options.margin - listTop - cardHeight - 12
+      )
+    );
+    const cardTop = listTop + listHeight + 12;
+    const playersBoxHeight = Math.max(
+      cardTop + cardHeight + 12 - options.contentTop,
+      options.panelHeight - options.contentTop - options.margin
+    );
+    this.playersTabListBackground.setPosition(options.margin, options.contentTop);
+    this.playersTabListBackground.setSize(options.boxWidth, playersBoxHeight);
+    this.playersTabListBackground.setDisplaySize(
+      options.boxWidth,
+      playersBoxHeight
+    );
 
     const listWidth = Math.max(120, options.boxWidth - 24);
     this.playersTabListScrollPanel.setPosition?.(options.margin + 12, listTop);
     this.playersTabListScrollPanel.setSize?.(listWidth, listHeight);
     this.playersTabListScrollPanel.setMinSize?.(listWidth, listHeight);
     this.playersTabListScrollPanel.layout?.();
-
-    const teamsListHeight = Math.max(0, playersBoxY + playersBoxHeight - listTop - 16);
+    const teamsListHeight = Math.max(
+      0,
+      options.contentTop + playersBoxHeight - listTop - 16
+    );
     this.teamsTabListScrollPanel.setPosition?.(options.margin + 12, listTop);
     this.teamsTabListScrollPanel.setSize?.(listWidth, teamsListHeight);
     this.teamsTabListScrollPanel.setMinSize?.(listWidth, teamsListHeight);
     this.teamsTabListScrollPanel.layout?.();
-
     this.updateMaskBounds(
       options.margin,
       listTop,
@@ -409,32 +487,35 @@ export class CharacterPanelPlayerListView {
       teamsListHeight
     );
 
-    this.playersTabCardBackground.setPosition(
-      options.margin + 12,
-      cardTop
-    );
+    this.playersTabCardBackground.setPosition(options.margin + 12, cardTop);
     this.playersTabCardBackground.setSize(options.boxWidth - 24, cardHeight);
     this.playersTabCardBackground.setDisplaySize(options.boxWidth - 24, cardHeight);
-    this.playersTabCardName.setPosition(
-      options.margin + 24,
-      cardTop + 12
-    );
-    this.playersTabCardTeam.setPosition(
-      options.margin + 24,
-      cardTop + 38
-    );
-    const cardRight =
-      this.playersTabCardBackground.x + this.playersTabCardBackground.width;
-    const cardCenterY =
-      this.playersTabCardBackground.y +
-      this.playersTabCardBackground.height / 2;
+    this.playersTabCardName.setPosition(options.margin + 24, cardTop + 12);
+    this.playersTabCardTeam.setPosition(options.margin + 24, cardTop + 38);
     this.playersTabCardSprite.setPosition(
-      cardRight - CARD_SPRITE_PADDING,
-      cardCenterY
+      options.margin + options.boxWidth - 12 - CARD_SPRITE_PADDING,
+      cardTop + (hasDetails ? CARD_DETAILS_TOP / 2 : cardHeight / 2)
     );
-    this.playersTabEmpty.setPosition(options.margin + 24, subtabBottom + 30);
-    this.teamsTabEmpty.setPosition(options.margin + 24, subtabBottom + 30);
-    this.refresh();
+
+    const detailsX = options.margin + 24;
+    const detailsY = cardTop + CARD_DETAILS_TOP;
+    const detailsWidth = Math.max(80, options.boxWidth - 48);
+    const detailsHeight = Math.max(1, cardHeight - CARD_DETAILS_TOP - 12);
+    this.playersTabCardDetails.setWordWrapWidth(detailsWidth - 14, true);
+    this.playersTabCardDetailsContent.setSize(
+      detailsWidth - 14,
+      this.playersTabCardDetails.height
+    );
+    const matrix = this.parent.getWorldTransformMatrix();
+    this.playersTabCardDetailsMaskShape.setPosition(
+      matrix.tx + detailsX,
+      matrix.ty + detailsY
+    );
+    this.playersTabCardDetailsMaskShape.setSize(detailsWidth, detailsHeight);
+    this.playersTabCardDetailsPanel.setPosition?.(detailsX, detailsY);
+    this.playersTabCardDetailsPanel.setSize?.(detailsWidth, detailsHeight);
+    this.playersTabCardDetailsPanel.setMinSize?.(detailsWidth, detailsHeight);
+    this.playersTabCardDetailsPanel.layout?.();
   }
 
   update(
@@ -476,6 +557,8 @@ export class CharacterPanelPlayerListView {
       this.playersTabCardName.setText("");
       this.playersTabCardTeam.setText("");
       this.playersTabCardSprite.setVisible(false);
+      this.playersTabCardDetails.setText("");
+      this.layoutPlayerCard();
       this.updateSubtabVisibility();
       return;
     }
@@ -717,6 +800,11 @@ export class CharacterPanelPlayerListView {
   }
 
   destroy(): void {
+    this.playersTabCardDetailsPanel.clearMask?.();
+    this.playersTabCardDetailsMask.destroy();
+    this.playersTabCardDetailsMaskShape.destroy();
+    this.playersTabCardDetailsPanel.destroy();
+
     this.playersTabListScrollPanel?.clearMask?.();
     this.playersTabScrollMask?.destroy();
     this.playersTabScrollMaskShape?.destroy();
@@ -750,6 +838,8 @@ export class CharacterPanelPlayerListView {
   }
 
   clearSelectionStyles(): void {
+    this.playersTabCardDetailsPanel.setVisible?.(false);
+    this.playersTabCardDetailsPanel.setMouseWheelScrollerEnable?.(false);
     for (const entry of this.playersTabEntries) {
       entry.button.setFillStyle(0x202b4a, 0.95);
       entry.button.setStrokeStyle(1, 0x2f3a5d, 1);
@@ -812,6 +902,9 @@ export class CharacterPanelPlayerListView {
       this.playersTabCardName.setText("");
       this.playersTabCardTeam.setText("");
       this.playersTabCardSprite.setVisible(false);
+      this.playersTabCardDetails.setText("");
+      this.layoutPlayerCard();
+      this.updateSubtabVisibility();
       return;
     }
     const character = match.playerCharacters?.[selectedId] ?? null;
@@ -821,6 +914,16 @@ export class CharacterPanelPlayerListView {
     this.playersTabCardName.setText(displayName);
     const teamId = character?.teamId?.trim() || UNKNOWN_TEAM_LABEL;
     this.playersTabCardTeam.setText(`Team: ${teamId}`);
+    const viewer = this.currentUserId
+      ? match.playerCharacters?.[this.currentUserId]
+      : undefined;
+    const details = formatPlayerPerceptionDetails(viewer, character);
+    if (details !== this.playersTabCardDetails.text) {
+      this.playersTabCardDetailsPanel.t = 0;
+    }
+    this.playersTabCardDetails.setText(details);
+    this.layoutPlayerCard();
+    this.updateSubtabVisibility();
 
     const option = this.playerOptions.find((entry) => entry.id === selectedId);
     const texture = option?.texture ?? "char";
