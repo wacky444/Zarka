@@ -1171,6 +1171,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.bringToTop(this.extraSecondaryLocationSelector);
     this.bringToTop(this.extraSecondaryPlayerSelector);
     this.bringToTop(this.readyToggle);
+    for (const tab of this.tabs) {
+      this.bringToTop(tab.rect);
+      this.bringToTop(tab.text);
+      if (tab.badge) {
+        this.bringToTop(tab.badge);
+      }
+    }
+    for (const element of this.characterSubtabs.getElements()) {
+      this.bringToTop(element);
+    }
   }
 
   override destroy(fromScene?: boolean) {
