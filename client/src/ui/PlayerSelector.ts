@@ -4,6 +4,7 @@ import { GridSelect, type GridSelectItem } from "./GridSelect";
 export type PlayerOption = {
   id: string;
   label: string;
+  name?: string;
   description?: string;
   texture?: string;
   frame?: string;

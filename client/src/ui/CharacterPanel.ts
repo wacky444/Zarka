@@ -218,6 +218,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private currentUserId: string | null = null;
   private currentPlayerSkin: import("@shared").Skin | null = null;
   private playerAccounts = new Map<string, import("@shared").UserAccount>();
+  private lastUserMap: Record<string, string> = {};
   private playerOptionSkinIcons = new Map<
     string,
     { textureKey: string; signature: string }
@@ -1535,6 +1536,35 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   setPlayerAccount(userId: string, account: import("@shared").UserAccount) {
     this.playerAccounts.set(userId, account);
+    if (this.currentMatch) {
+      this.updatePlayerOptions(
+        this.currentMatch,
+        this.lastUserMap,
+        this.currentUserId
+      );
+      this.playersTabView.update(
+        this.currentMatch,
+        this.playerOptions,
+        this.currentUserId
+      );
+      if (this.currentUserId && userId === this.currentUserId) {
+        const characters = this.currentMatch.playerCharacters ?? {};
+        const character =
+          (characters[this.currentUserId] as PlayerCharacter) ?? null;
+        const accountDisplayName =
+          typeof account.displayName === "string" &&
+          account.displayName.trim().length > 0
+            ? account.displayName.trim()
+            : null;
+        const name =
+          accountDisplayName ??
+          this.lastUserMap[this.currentUserId] ??
+          null;
+        const ready =
+          this.currentMatch.readyStates?.[this.currentUserId] ?? false;
+        this.applyCharacter(character, name, ready);
+      }
+    }
   }
 
   updateFromMatch(
@@ -1543,6 +1573,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     usernames?: Record<string, string>
   ) {
     const userMap = usernames ? { ...usernames } : {};
+    this.lastUserMap = userMap;
     this.logView.setUsernames(userMap);
     this.currentMatch = match ?? null;
     this.currentUserId = currentUserId ?? null;
@@ -1563,7 +1594,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const characters = match.playerCharacters ?? {};
     // Current character is always received as PlayerCharacter type
     const character = (characters[currentUserId] as PlayerCharacter) ?? null;
-    const name = userMap[currentUserId] ?? null;
+    const currentAccount = this.playerAccounts.get(currentUserId);
+    const accountDisplayName =
+      typeof currentAccount?.displayName === "string" &&
+      currentAccount.displayName.trim().length > 0
+        ? currentAccount.displayName.trim()
+        : null;
+    const name = accountDisplayName ?? userMap[currentUserId] ?? null;
     const ready = match.readyStates?.[currentUserId] ?? false;
     this.applyCharacter(character, name, ready);
   }
@@ -2769,8 +2806,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         }
         seen.add(id);
         const character = match.playerCharacters?.[id] ?? null;
-        const baseName = usernames[id] ?? character?.name ?? id;
         const account = this.playerAccounts.get(id) ?? null;
+        const accountDisplayName =
+          typeof account?.displayName === "string" &&
+          account.displayName.trim().length > 0
+            ? account.displayName.trim()
+            : null;
+        const baseName =
+          accountDisplayName ?? usernames[id] ?? character?.name ?? id;
         const accountSkin = account?.cosmetics.selectedSkinId ?? null;
         const displayName = baseName && baseName.length > 0 ? baseName : id;
         const label =
@@ -2786,6 +2829,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         options.push({
           id,
           label,
+          name: displayName,
           texture: sprite.texture,
           frame: sprite.frame,
           iconScale: sprite.iconScale

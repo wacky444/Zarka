@@ -908,9 +908,8 @@ export class CharacterPanelPlayerListView {
       return;
     }
     const character = match.playerCharacters?.[selectedId] ?? null;
-    const displayName =
-      this.playerOptions.find((option) => option.id === selectedId)?.label ??
-      selectedId;
+    const option = this.playerOptions.find((entry) => entry.id === selectedId);
+    const displayName = option?.name ?? option?.label ?? selectedId;
     this.playersTabCardName.setText(displayName);
     const teamId = character?.teamId?.trim() || UNKNOWN_TEAM_LABEL;
     this.playersTabCardTeam.setText(`Team: ${teamId}`);
@@ -925,7 +924,6 @@ export class CharacterPanelPlayerListView {
     this.layoutPlayerCard();
     this.updateSubtabVisibility();
 
-    const option = this.playerOptions.find((entry) => entry.id === selectedId);
     const texture = option?.texture ?? "char";
     const frame = option?.frame;
     const shouldShowSprite = this.playersTabCardBackground.visible;

@@ -71,15 +71,6 @@ export class TurnService {
       return {};
     }
 
-    // Seed the cache with the current user if available.
-    if (this.session.user_id) {
-      const currentName =
-        (typeof this.session.username === "string" &&
-          this.session.username.trim()) ||
-        this.session.user_id;
-      this.usernameCache.set(this.session.user_id, currentName);
-    }
-
     const missing = ids.filter((id) => !this.usernameCache.has(id));
     if (missing.length > 0) {
       try {
@@ -96,12 +87,12 @@ export class TurnService {
                 ? user.id
                 : null;
           if (!id) continue;
-          const username =
-            (typeof user.username === "string" && user.username.trim()) ||
+          const name =
             (typeof user.display_name === "string" &&
               user.display_name.trim()) ||
+            (typeof user.username === "string" && user.username.trim()) ||
             id;
-          this.usernameCache.set(id, username);
+          this.usernameCache.set(id, name);
         }
       } catch (error) {
         // It's a bot, is not associated to a nakama user
@@ -110,7 +101,13 @@ export class TurnService {
 
       for (const id of missing) {
         if (!this.usernameCache.has(id)) {
-          this.usernameCache.set(id, id);
+          const fallback =
+            id === this.session.user_id &&
+            typeof this.session.username === "string" &&
+            this.session.username.trim()
+              ? this.session.username.trim()
+              : id;
+          this.usernameCache.set(id, fallback);
         }
       }
     }
@@ -123,6 +120,14 @@ export class TurnService {
       }
     }
     return result;
+  }
+
+  invalidateUsernames(userId?: string): void {
+    if (userId) {
+      this.usernameCache.delete(userId);
+    } else {
+      this.usernameCache.clear();
+    }
   }
 
   async createMatch(size = 2, name?: string, turnsToBeAt1Tile = 30) {

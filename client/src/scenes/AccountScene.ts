@@ -1,8 +1,10 @@
 import Phaser from "phaser";
 import { Client, Session } from "@heroiclabs/nakama-js";
-import { makeButton } from "../ui/button";
+import { makeButton, type UIButton } from "../ui/button";
 import { SessionManager } from "../services/sessionManager";
 import { FacebookService } from "../services/facebookService";
+import type { AccountService } from "../services/AccountService";
+import type { TurnService } from "../services/turnService";
 import { GridSelect, type GridSelectItem } from "../ui/GridSelect";
 import { assetPath } from "../utils/assetPath";
 import type {
@@ -42,6 +44,9 @@ export class AccountScene extends Phaser.Scene {
   private client!: Client;
   private session!: Session;
   private userInfoText!: Phaser.GameObjects.Text;
+  private displayNameText!: Phaser.GameObjects.Text;
+  private changeDisplayNameButton!: UIButton;
+  private currentDisplayName = "";
   private playerStatsText!: Phaser.GameObjects.Text;
   private facebookStatusText!: Phaser.GameObjects.Text;
   private skinSelectors: Partial<Record<SkinCategory, GridSelect>> = {};
@@ -88,11 +93,33 @@ export class AccountScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.userInfoText = this.add
-      .text(400, 115, "", {
+      .text(400, 102, "", {
         color: "#cccccc",
         fontSize: "13px"
       })
       .setOrigin(0.5);
+
+    this.displayNameText = this.add
+      .text(0, 0, "", {
+        color: "#cccccc",
+        fontSize: "13px"
+      })
+      .setOrigin(0, 0.5);
+
+    this.changeDisplayNameButton = makeButton(
+      this,
+      0,
+      0,
+      "Change",
+      async () => {
+        await this.promptChangeDisplayName();
+      },
+      ["account"]
+    );
+    this.changeDisplayNameButton.setOrigin(0, 0.5);
+    this.changeDisplayNameButton.setFontSize("13px");
+    this.changeDisplayNameButton.setPadding(4, 2);
+    this.changeDisplayNameButton.setVisible(false);
 
     this.add
       .text(400, 155, "Player Stats", {
@@ -269,17 +296,35 @@ export class AccountScene extends Phaser.Scene {
 
       let userInfo = `User ID: ${this.session.user_id}\n`;
       if (account.user?.username) {
-        userInfo += `Username: ${account.user.username}\n`;
+        userInfo += `Username: ${account.user.username}`;
       }
       if (account.email) {
-        userInfo += `Email: ${account.email}\n`;
+        userInfo += `\nEmail: ${account.email}`;
       }
 
-      if (userAccount?.displayName) {
-        userInfo += `Display Name: ${userAccount.displayName}\n`;
-      }
+      this.userInfoText.setText(userInfo.trimEnd());
 
-      this.userInfoText.setText(userInfo);
+      const displayName =
+        userAccount?.displayName || account.user?.display_name || "";
+      this.currentDisplayName = displayName;
+
+      this.displayNameText.setText(
+        `Display Name: ${displayName || "(not set)"}`
+      );
+
+      const leftX = Math.round(
+        this.userInfoText.x - this.userInfoText.width / 2
+      );
+      const displayNameY = Math.round(
+        this.userInfoText.y + this.userInfoText.height / 2 + 8
+      );
+
+      this.displayNameText.setPosition(leftX, displayNameY);
+      this.changeDisplayNameButton.setPosition(
+        leftX + this.displayNameText.width + 12,
+        displayNameY
+      );
+      this.changeDisplayNameButton.setVisible(true);
 
       if (userAccount) {
         const s = userAccount.stats;
@@ -359,6 +404,47 @@ export class AccountScene extends Phaser.Scene {
     } catch (error) {
       console.error("Error unlinking Facebook:", error);
       this.statusText.setText("Failed to unlink Facebook account");
+    }
+  }
+
+  private async promptChangeDisplayName() {
+    const current = this.currentDisplayName || "";
+    const input = window.prompt("Enter new display name:", current);
+    if (input === null) {
+      return;
+    }
+
+    const trimmed = input.trim();
+    if (trimmed === current) {
+      return;
+    }
+
+    if (trimmed.length > 128) {
+      this.statusText.setText("Display name must be 128 characters or less");
+      return;
+    }
+
+    this.statusText.setText("Updating display name...");
+    try {
+      await this.client.updateAccount(this.session, {
+        display_name: trimmed
+      });
+
+      const accountService = this.registry.get("accountService") as
+        | AccountService
+        | undefined;
+      accountService?.invalidate(this.session.user_id);
+
+      const turnService = this.registry.get("turnService") as
+        | TurnService
+        | undefined;
+      turnService?.invalidateUsernames(this.session.user_id);
+
+      this.statusText.setText("Display name updated!");
+      await this.loadUserInfo();
+    } catch (error) {
+      console.error("Failed to update display name:", error);
+      this.statusText.setText("Failed to update display name");
     }
   }
 }

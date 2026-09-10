@@ -1349,12 +1349,33 @@ export class GameScene extends Phaser.Scene {
     if (ids.size === 0) return;
     const accounts = await this.accountService.getAccounts(Array.from(ids));
     const panel = this.characterPanel;
+    let hasNameChange = false;
     for (const [userId, account] of accounts) {
       panel.setPlayerAccount(userId, account);
       const accountSkin = account?.cosmetics?.selectedSkinId;
       if (accountSkin) {
         this.playerSkinMap.set(userId, accountSkin);
       }
+      if (account?.displayName && account.displayName.trim().length > 0) {
+        const trimmed = account.displayName.trim();
+        if (this.playerNameMap[userId] !== trimmed) {
+          this.playerNameMap[userId] = trimmed;
+          hasNameChange = true;
+        }
+      }
+    }
+    if (this.currentUserId) {
+      this.currentPlayerName = this.playerNameMap[this.currentUserId] ?? null;
+    }
+    if (hasNameChange) {
+      this.renderPlayerCharacters(match);
+      this.characterPanel.updateFromMatch(
+        match,
+        this.currentUserId,
+        Object.keys(this.playerNameMap).length > 0
+          ? this.playerNameMap
+          : undefined
+      );
     }
   }
 
