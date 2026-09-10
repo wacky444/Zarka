@@ -184,7 +184,7 @@ export class AccountScene extends Phaser.Scene {
       const selector = new GridSelect(this, startX, y, {
         width: selectorWidth,
         height: rowHeight,
-        columns: 6,
+        columns: 5,
         title: `Select ${categoryLabel(cat)}`,
         subtitle: `Choose a ${cat} style`,
         placeholder: categoryLabel(cat),

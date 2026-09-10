@@ -43,6 +43,7 @@ interface GridSelectConfig {
   emptyOptionLabel?: string;
   emptyOptionDescription?: string;
   autoSelectFirst?: boolean;
+  iconTextGap?: number;
 }
 
 type RexSizer = Phaser.GameObjects.GameObject & {
@@ -116,6 +117,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private tooltip: HoverTooltip | null = null;
   private enabled = true;
   private readonly labelActiveColor: string;
+  private readonly iconTextGap: number;
   private currentWidth: number;
   private modalVisible = false;
 
@@ -134,6 +136,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.modalSubtitle = config.subtitle ?? "Tap an action to select it";
     this.placeholder = config.placeholder ?? "Select";
     this.emptyLabel = config.emptyLabel ?? "Unknown";
+    this.iconTextGap = config.iconTextGap ?? 16;
     this.modalWidth =
       config.modalWidth ?? Math.min(scene.scale.width - 80, 600);
     this.modalHeight =
@@ -188,7 +191,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
     this.label = scene.add
       .text(
-        this.icon.x + this.iconTargetSize + 12,
+        16,
         this.collapsedHeight / 2,
         this.placeholder,
         {
@@ -204,6 +207,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.add(this.hitAreaZone);
 
     this.icon.setVisible(false);
+    this.updateLabelPosition();
 
     this.hitAreaZone.on(Phaser.Input.Events.POINTER_UP, this.openModal, this);
     this.hitAreaZone.on(Phaser.Input.Events.POINTER_OVER, () => {
@@ -314,7 +318,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.hitAreaZone.input?.hitArea.setTo(0, 0, width, this.collapsedHeight);
     this.background.setSize?.(width, this.collapsedHeight);
     this.background.setDisplaySize?.(width, this.collapsedHeight);
-    this.label.setX(this.icon.x + this.iconTargetSize + 12);
+    this.updateLabelPosition();
     this.currentWidth = width;
     this.applyEnabledState();
     return this;
@@ -346,10 +350,19 @@ export class GridSelect extends Phaser.GameObjects.Container {
     return this;
   }
 
+  private updateLabelPosition() {
+    if (this.icon?.visible) {
+      this.label.setX(this.icon.x + this.icon.displayWidth + this.iconTextGap);
+    } else {
+      this.label.setX(16);
+    }
+  }
+
   private clearSelection() {
     this.selectedItem = null;
     this.icon.setVisible(false);
     this.label.setText(this.placeholder);
+    this.updateLabelPosition();
     this.applyEnabledState();
   }
 
@@ -386,6 +399,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     if (item.isEmptyOption) {
       this.icon.setVisible(false);
       this.label.setText(item.name.length > 0 ? item.name : this.emptyLabel);
+      this.updateLabelPosition();
       return;
     }
     const textureManager = this.scene.textures;
@@ -409,6 +423,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.icon.setVisible(false);
     }
     this.label.setText(item.name.length > 0 ? item.name : this.emptyLabel);
+    this.updateLabelPosition();
     this.applyEnabledState();
   }
 
