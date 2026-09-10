@@ -2,9 +2,19 @@
 declare global {
   interface Window {
     FB: {
-      init: (params: { appId: string; cookie: boolean; xfbml: boolean; version: string }) => void;
-      login: (callback: (response: FacebookLoginResponse) => void, options?: { scope: string }) => void;
-      getLoginStatus: (callback: (response: FacebookLoginResponse) => void) => void;
+      init: (params: {
+        appId: string;
+        cookie: boolean;
+        xfbml: boolean;
+        version: string;
+      }) => void;
+      login: (
+        callback: (response: FacebookLoginResponse) => void,
+        options?: { scope: string }
+      ) => void;
+      getLoginStatus: (
+        callback: (response: FacebookLoginResponse) => void
+      ) => void;
       logout: (callback: () => void) => void;
     };
     fbAsyncInit: () => void;
@@ -27,7 +37,7 @@ export interface FacebookAuthResponse {
 
 export class FacebookService {
   private static isInitialized = false;
-  
+
   public static async initialize(): Promise<boolean> {
     return new Promise((resolve) => {
       // Check if FB SDK is already loaded
@@ -36,17 +46,17 @@ export class FacebookService {
         resolve(true);
         return;
       }
-      
+
       // Wait for FB SDK to initialize
       const originalFbAsyncInit = window.fbAsyncInit;
-      window.fbAsyncInit = function() {
+      window.fbAsyncInit = function () {
         if (originalFbAsyncInit) {
           originalFbAsyncInit();
         }
         FacebookService.isInitialized = true;
         resolve(true);
       };
-      
+
       // Timeout after 10 seconds if FB SDK doesn't load
       setTimeout(() => {
         if (!FacebookService.isInitialized) {
@@ -56,7 +66,7 @@ export class FacebookService {
       }, 10000);
     });
   }
-  
+
   public static async login(): Promise<FacebookAuthResponse | null> {
     if (!this.isInitialized) {
       const initialized = await this.initialize();
@@ -64,7 +74,7 @@ export class FacebookService {
         throw new Error("Facebook SDK not available");
       }
     }
-    
+
     return new Promise((resolve) => {
       window.FB.login((response: FacebookLoginResponse) => {
         if (response.authResponse) {
@@ -77,10 +87,10 @@ export class FacebookService {
         } else {
           resolve(null);
         }
-      }, { scope: 'email' });
+      });
     });
   }
-  
+
   public static async getLoginStatus(): Promise<FacebookAuthResponse | null> {
     if (!this.isInitialized) {
       const initialized = await this.initialize();
@@ -88,10 +98,10 @@ export class FacebookService {
         return null;
       }
     }
-    
+
     return new Promise((resolve) => {
       window.FB.getLoginStatus((response: FacebookLoginResponse) => {
-        if (response.status === 'connected' && response.authResponse) {
+        if (response.status === "connected" && response.authResponse) {
           const authResponse: FacebookAuthResponse = {
             accessToken: response.authResponse.accessToken,
             userID: response.authResponse.userID,
@@ -104,12 +114,12 @@ export class FacebookService {
       });
     });
   }
-  
+
   public static async logout(): Promise<void> {
     if (!this.isInitialized) {
       return;
     }
-    
+
     return new Promise((resolve) => {
       window.FB.logout(() => {
         resolve();
