@@ -5,8 +5,8 @@ runtime:
   http_key: "replace-with-a-long-random-http-key"
   env:
     # Set this to the Facebook App Secret. Do not commit the real value.
-    FACEBOOK_APP_SECRET: "replace-with-facebook-app-secret"
-    FACEBOOK_DATA_DELETION_URL: "https://zdv.sytes.net/facebook/data-deletion"
+    - "FACEBOOK_APP_SECRET=replace-with-facebook-app-secret"
+    - "FACEBOOK_DATA_DELETION_URL=https://example.url/facebook/data-deletion"
 socket:
   port: 7350
 console:
