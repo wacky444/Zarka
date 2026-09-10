@@ -89,7 +89,9 @@ export function shuffleArray<T>(array: T[]): T[] {
   return result;
 }
 
-export function findPartitionsOf3And4(total: number): Array<{ threes: number; fours: number }> {
+export function findPartitionsOf3And4(
+  total: number
+): Array<{ threes: number; fours: number }> {
   const partitions: Array<{ threes: number; fours: number }> = [];
   if (total <= 0) {
     return partitions;
@@ -278,6 +280,9 @@ export function distributeTeams(
         char.stats.energy.max = 20;
         char.stats.energy.current = 10;
       }
+      if (char.stats?.load) {
+        char.stats.load.current = 3;
+      }
       char.inventory = {
         carriedItems: [{ itemId: "food", quantity: 1, weight: 3 }],
         stash: []
@@ -304,6 +309,13 @@ export function distributeTeams(
         charA.stats.energy.max = 30;
         charA.stats.energy.current = 15;
       }
+      if (charA.stats?.load) {
+        charA.stats.load.current = 3;
+      }
+      charA.inventory = {
+        carriedItems: [{ itemId: "food", quantity: 1, weight: 3 }],
+        stash: []
+      };
       charA.relationships = {
         confirmedTeammates: [twinBId],
         alliances: [],
@@ -319,6 +331,13 @@ export function distributeTeams(
         charB.stats.energy.max = 30;
         charB.stats.energy.current = 15;
       }
+      if (charB.stats?.load) {
+        charB.stats.load.current = 3;
+      }
+      charB.inventory = {
+        carriedItems: [{ itemId: "food", quantity: 1, weight: 3 }],
+        stash: []
+      };
       charB.relationships = {
         confirmedTeammates: [twinAId],
         alliances: [],
@@ -339,6 +358,9 @@ export function distributeTeams(
       if (heroChar.stats?.energy) {
         heroChar.stats.energy.max = 50;
         heroChar.stats.energy.current = 50;
+      }
+      if (heroChar.stats?.load) {
+        heroChar.stats.load.current = 9;
       }
       heroChar.inventory = {
         carriedItems: [{ itemId: "food", quantity: 3, weight: 9 }],

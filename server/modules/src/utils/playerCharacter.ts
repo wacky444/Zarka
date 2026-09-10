@@ -22,7 +22,7 @@ export function createDefaultCharacter(userId: string): PlayerCharacter {
         max: 20
       },
       load: {
-        current: 14,
+        current: 0,
         max: 25
       },
       speed: 0,

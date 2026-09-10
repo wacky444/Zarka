@@ -9,6 +9,4 @@
 
 - breakfast left me with 18 energy instead of 20, also damaged me
 
-- when starting the game the character has a food but 14 load 
-
 - Responsive game scene, map or side bar

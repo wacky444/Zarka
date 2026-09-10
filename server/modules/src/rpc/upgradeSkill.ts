@@ -145,7 +145,7 @@ export function upgradeSkillRpc(
       character.stats = {
         health: { current: 10, max: 12, knockoutThreshold: 5, injuredMax: 5 },
         energy: { current: 10, max: 20 },
-        load: { current: 14, max: 25 },
+        load: { current: 0, max: 25 },
         speed: 0,
         sympathy: 0,
         baseViewRange: 0
@@ -165,7 +165,7 @@ export function upgradeSkillRpc(
     } else if (effect.type === "max_load_increase") {
       if (!character.stats.load) {
         character.stats.load = {
-          current: 14,
+          current: 3,
           max: 25
         };
       }
