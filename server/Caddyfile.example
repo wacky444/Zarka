@@ -1,17 +1,50 @@
+{
+	# Global options
+	# ACME account email for Let's Encrypt
+	email {$CADDY_EMAIL}
+}
+
+# Public domain
 {$CADDY_DOMAIN} {
-  @facebookDataDeletion path /facebook/data-deletion
-  handle @facebookDataDeletion {
-    rewrite * /v2/rpc/facebook_data_deletion?http_key={$NAKAMA_HTTP_KEY}&unwrap=
-    header Content-Type application/json
-    reverse_proxy nakama:7350
-  }
+	encode gzip
 
-  @facebookDataDeletionStatus path_regexp facebookDataDeletionStatus ^/facebook/data-deletion/status/([A-Za-z0-9]+)$
-  handle @facebookDataDeletionStatus {
-    rewrite * /v2/rpc/facebook_data_deletion_status?http_key={$NAKAMA_HTTP_KEY}&unwrap=&code={re.facebookDataDeletionStatus.1}
-    header Content-Type application/json
-    reverse_proxy nakama:7350
-  }
+	@facebookDataDeletion path /facebook/data-deletion
+	handle @facebookDataDeletion {
+		rewrite * /v2/rpc/facebook_data_deletion?http_key={$NAKAMA_HTTP_KEY}&unwrap=
+		header Content-Type application/json
+		reverse_proxy nakama:7460
+	}
 
-  reverse_proxy nakama:7350
+	@facebookDataDeletionStatus path_regexp facebookDataDeletionStatus ^/facebook/data-deletion/status/([A-Za-z0-9]+)$
+	handle @facebookDataDeletionStatus {
+		rewrite * /v2/rpc/facebook_data_deletion_status?http_key={$NAKAMA_HTTP_KEY}&unwrap=&code={re.facebookDataDeletionStatus.1}
+		header Content-Type application/json
+		reverse_proxy nakama:7460
+	}
+
+	# Proxy all HTTP(S) and WebSockets to Nakama on its internal port
+	reverse_proxy nakama:7460
+}
+
+# Local fallback with an internal CA (self-signed) certificate
+# Useful when no public domain/DNS is available.
+https://localhost {
+	encode gzip
+	tls internal
+
+	@facebookDataDeletion path /facebook/data-deletion
+	handle @facebookDataDeletion {
+		rewrite * /v2/rpc/facebook_data_deletion?http_key={$NAKAMA_HTTP_KEY}&unwrap=
+		header Content-Type application/json
+		reverse_proxy nakama:7460
+	}
+
+	@facebookDataDeletionStatus path_regexp facebookDataDeletionStatus ^/facebook/data-deletion/status/([A-Za-z0-9]+)$
+	handle @facebookDataDeletionStatus {
+		rewrite * /v2/rpc/facebook_data_deletion_status?http_key={$NAKAMA_HTTP_KEY}&unwrap=&code={re.facebookDataDeletionStatus.1}
+		header Content-Type application/json
+		reverse_proxy nakama:7460
+	}
+
+	reverse_proxy nakama:7460
 }
