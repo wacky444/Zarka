@@ -1,0 +1,17 @@
+{$CADDY_DOMAIN} {
+  @facebookDataDeletion path /facebook/data-deletion
+  handle @facebookDataDeletion {
+    rewrite * /v2/rpc/facebook_data_deletion?http_key={$NAKAMA_HTTP_KEY}&unwrap=
+    header Content-Type application/json
+    reverse_proxy nakama:7350
+  }
+
+  @facebookDataDeletionStatus path_regexp facebookDataDeletionStatus ^/facebook/data-deletion/status/([A-Za-z0-9]+)$
+  handle @facebookDataDeletionStatus {
+    rewrite * /v2/rpc/facebook_data_deletion_status?http_key={$NAKAMA_HTTP_KEY}&unwrap=&code={re.facebookDataDeletionStatus.1}
+    header Content-Type application/json
+    reverse_proxy nakama:7350
+  }
+
+  reverse_proxy nakama:7350
+}

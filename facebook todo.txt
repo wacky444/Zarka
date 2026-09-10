@@ -1,0 +1,72 @@
+He hecho git pull --ff-only antes de modificar nada.
+
+ Implementado:
+
+ - Callback: https://zdv.sytes.net/facebook/data-deletion
+ - Estado: https://zdv.sytes.net/facebook/data-deletion/status/<codigo>
+ - Validación de signed_request con HMAC-SHA256 y Facebook App Secret.
+ - Búsqueda del usuario mediante su Facebook ID.
+ - Eliminación exclusiva de la cuenta Nakama con nk.accountDeleteId(userId, true).
+ - No se eliminan:
+     - Partidas
+     - Turnos
+     - Chats
+     - Repeticiones
+
+ Archivos principales:
+
+ - server/modules/src/rpc/facebookDataDeletion.ts
+ - server/modules/src/main.ts
+ - server/modules/src/rpc/index.ts
+ - server/Caddyfile.example
+ - server/local.yml.example
+ - server/modules/README.md
+
+ El Caddyfile de ejemplo hace que:
+
+ ```text
+   /facebook/data-deletion
+ ```
+
+ se redirija internamente al RPC de Nakama, inyectando el http_key sin exponerlo a Facebook.
+
+ Configuración necesaria:
+
+ ```bash
+   cp server/Caddyfile.example server/Caddyfile
+ ```
+
+ En server/local.yml:
+
+ ```yaml
+   runtime:
+     http_key: "la-misma-clave-que-NAKAMA_HTTP_KEY"
+     env:
+       FACEBOOK_APP_SECRET: "tu-facebook-app-secret"
+       FACEBOOK_DATA_DELETION_URL: "https://zdv.sytes.net/facebook/data-deletion"
+ ```
+
+ En el entorno de Docker/Caddy:
+
+ ```env
+   CADDY_DOMAIN=zdv.sytes.net
+   NAKAMA_HTTP_KEY=la-misma-clave-configurada-en-nakama
+ ```
+
+ Después:
+
+ ```bash
+   cd server/modules
+   npm run build
+
+   cd ..
+   docker compose up -d --force-recreate nakama caddy
+ ```
+
+ Validación realizada:
+
+ ```text
+   server/modules: npm run build
+ ```
+
+ Resultado: correcto. Los cambios aún no están committeados.

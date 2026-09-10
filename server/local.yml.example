@@ -1,6 +1,12 @@
 runtime:
   path: "/nakama/data/modules"
   js_entrypoint: "build/server/modules/src/main.js"
+  # Must match NAKAMA_HTTP_KEY used by server/Caddyfile.example.
+  http_key: "replace-with-a-long-random-http-key"
+  env:
+    # Set this to the Facebook App Secret. Do not commit the real value.
+    FACEBOOK_APP_SECRET: "replace-with-facebook-app-secret"
+    FACEBOOK_DATA_DELETION_URL: "https://zdv.sytes.net/facebook/data-deletion"
 socket:
   port: 7350
 console:

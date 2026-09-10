@@ -19,7 +19,9 @@ import {
   getChatHistoryRpc,
   getUserAccountRpc,
   updateSkinRpc,
-  upgradeSkillRpc
+  upgradeSkillRpc,
+  facebookDataDeletionRpc,
+  facebookDataDeletionStatusRpc
 } from "./rpc";
 import { asyncTurnMatchHandler } from "./match/async_turn";
 import { restoreMatchesFromStorage } from "./services/matchRestoration";
@@ -174,6 +176,25 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register upgrade_skill: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("facebook_data_deletion", facebookDataDeletionRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register facebook_data_deletion: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc(
+      "facebook_data_deletion_status",
+      facebookDataDeletionStatusRpc
+    );
+  } catch (error) {
+    logger.error(
+      "Failed to register facebook_data_deletion_status: %s",
       (error && (error as Error).message) || String(error)
     );
   }
