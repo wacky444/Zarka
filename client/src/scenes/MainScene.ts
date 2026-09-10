@@ -18,7 +18,19 @@ import type {
   RemoveMatchPayload
 } from "@shared";
 
+const MAIN_LAYOUT = {
+  contentWidth: 380,
+  horizontalPadding: 32,
+  titleY: 0,
+  statusY: 48,
+  controlsY: 112,
+  buttonGap: 58,
+  minTop: 24
+};
+
 export class MainScene extends Phaser.Scene {
+  private mainRoot!: Phaser.GameObjects.Container;
+  private titleText!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
   private turnService: TurnService | null = null;
   private accountService: AccountService | null = null;
@@ -30,6 +42,7 @@ export class MainScene extends Phaser.Scene {
   private lobbyView!: LobbyView;
   private activeView: "main" | "matchList" | "myMatchList" | "inMatch" = "main";
   private buttons: UIButton[] = [];
+  private mainButtons: UIButton[] = [];
   private currentUserId: string | null = null;
 
   constructor() {
@@ -158,8 +171,34 @@ export class MainScene extends Phaser.Scene {
   preload() {}
 
   async create(data?: { client?: Client; session?: Session }) {
-    this.statusText = this.add.text(10, 10, "Connecting...", {
-      color: "#ffffff"
+    this.mainRoot = this.add.container(0, 0);
+
+    this.titleText = this.add
+      .text(0, 0, "Zarka", {
+        color: "#ffffff",
+        fontSize: "32px",
+        fontStyle: "bold"
+      })
+      .setOrigin(0.5);
+    this.mainRoot.add(this.titleText);
+
+    this.statusText = this.add
+      .text(0, 0, "Connecting...", {
+        color: "#cccccc",
+        fontSize: "16px",
+        align: "center",
+        wordWrap: { width: 500 }
+      })
+      .setOrigin(0.5);
+    this.mainRoot.add(this.statusText);
+
+    this.createMainButtons();
+    this.layoutMain();
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutMain, this);
+    this.events.on(Phaser.Scenes.Events.WAKE, this.layoutMain, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutMain, this);
+      this.events.off(Phaser.Scenes.Events.WAKE, this.layoutMain, this);
     });
 
     try {
@@ -257,8 +296,12 @@ export class MainScene extends Phaser.Scene {
 
       // Instantiate Matches List view (hidden by default)
       this.matchesListView = new MatchesListView(this);
+      this.matchesListView.setTurnService(this.turnService);
       this.matchesListView.setOnJoin(async (matchId: string) => {
         await this.joinMatch(matchId);
+      });
+      this.matchesListView.setOnBack(() => {
+        this.showView("main");
       });
 
       // Instantiate My Matches List view (hidden by default)
@@ -290,6 +333,9 @@ export class MainScene extends Phaser.Scene {
       this.myMatchesListView.setOnView(async (matchId: string) => {
         // Switch to the match view
         await this.joinMatch(matchId);
+      });
+      this.myMatchesListView.setOnBack(() => {
+        this.showView("main");
       });
 
       // Instantiate lobby view (hidden by default)
@@ -388,170 +434,6 @@ export class MainScene extends Phaser.Scene {
         }
       });
 
-      // Buttons
-      this.buttons.push(
-        makeButton(
-          this,
-          10,
-          40,
-          "Create Match",
-          async () => {
-            if (!this.turnService) throw new Error("No service");
-            try {
-              const createRes = await this.turnService.createMatch(2);
-              const parsed = this.parseRpcPayload<CreateMatchPayload>(createRes);
-              if (!parsed || !parsed.match_id)
-                throw new Error("No match_id returned");
-              this.setCurrentMatchId(parsed.match_id);
-              const createdName = parsed.name ?? "Untitled Match";
-              this.currentMatchName = createdName;
-              this.statusText.setText(`Match created: ${createdName}`);
-              if (this.lobbyView) {
-                this.lobbyView.setMatchName(createdName);
-                this.lobbyView.setMatchStarted(parsed.started ?? false);
-              }
-
-              // Auto-join the match we just created
-              await this.joinMatch(parsed.match_id);
-            } catch (e: unknown) {
-              console.error("create_match error", e);
-              let code: number | undefined;
-              let msg: string | undefined;
-
-              if (e && typeof (e as { json?: unknown }).json === "function") {
-                try {
-                  const json = await (e as Response).json();
-                  if (typeof json?.code === "number") code = json.code;
-                  if (typeof json?.message === "string") msg = json.message;
-                } catch {
-                  // Ignore JSON parse failure
-                }
-              } else if (e && typeof e === "object") {
-                const errObj = e as { code?: number; message?: string };
-                if (typeof errObj.code === "number") code = errObj.code;
-                if (typeof errObj.message === "string") msg = errObj.message;
-              } else if (e instanceof Error) {
-                msg = e.message;
-              }
-
-              if (code === 8) {
-                this.statusText.setText(msg || "Maximum of 3 matches per user reached");
-              } else {
-                this.statusText.setText(msg ? `Error: ${msg}` : "Failed to create match (see console).");
-              }
-            }
-          },
-          ["main"]
-        )
-      );
-
-      // Matches list view toggle
-      this.buttons.push(
-        makeButton(
-          this,
-          10,
-          240,
-          "List Matches",
-          () => {
-            this.showView("matchList");
-          },
-          ["main"]
-        )
-      );
-
-      // My Matches list view toggle
-      this.buttons.push(
-        makeButton(
-          this,
-          10,
-          280,
-          "My Matches",
-          () => {
-            this.showView("myMatchList");
-          },
-          ["main"]
-        )
-      );
-
-      // Logout button
-      this.buttons.push(
-        makeButton(
-          this,
-          10,
-          320,
-          "Logout",
-          () => {
-            this.logout();
-          },
-          ["main"]
-        )
-      );
-
-      // Account Settings button
-      this.buttons.push(
-        makeButton(
-          this,
-          10,
-          360,
-          "Account Settings",
-          () => {
-            this.scene.start("AccountScene", {
-              client: this.turnService?.getClient(),
-              session: this.turnService?.getSession()
-            });
-          },
-          ["main"]
-        )
-      );
-
-      // View-specific buttons for MatchesList
-      this.buttons.push(
-        makeButton(
-          this,
-          10,
-          70,
-          "Refresh",
-          () => this.matchesListView.refresh(),
-          ["matchList"]
-        )
-      );
-      this.buttons.push(
-        makeButton(
-          this,
-          110,
-          70,
-          "Back",
-          () => {
-            this.showView("main");
-          },
-          ["matchList"]
-        )
-      );
-
-      // View-specific buttons for MyMatchesList
-      this.buttons.push(
-        makeButton(
-          this,
-          10,
-          70,
-          "Refresh",
-          () => this.myMatchesListView.refresh(),
-          ["myMatchList"]
-        )
-      );
-      this.buttons.push(
-        makeButton(
-          this,
-          110,
-          70,
-          "Back",
-          () => {
-            this.showView("main");
-          },
-          ["myMatchList"]
-        )
-      );
-
       // Placeholder: inMatch view buttons can be added and tagged with ["inMatch"]
       this.buttons.push(
         makeButton(
@@ -603,10 +485,18 @@ export class MainScene extends Phaser.Scene {
 
   private showView(view: "main" | "matchList" | "myMatchList" | "inMatch") {
     this.activeView = view;
+    if (view === "main") {
+      this.layoutMain();
+    }
     this.applyViewVisibility();
   }
 
   private applyViewVisibility() {
+    const isMain = this.activeView === "main";
+    if (this.mainRoot) {
+      this.mainRoot.setVisible(isMain).setActive(isMain);
+    }
+
     // Toggle buttons based on tags
     this.buttons.forEach((btn) => {
       const show = btn.tags.includes(this.activeView);
@@ -633,6 +523,143 @@ export class MainScene extends Phaser.Scene {
     } catch (e) {
       console.warn("applyViewVisibility: view toggle error", e);
     }
+  }
+
+  private createMainButtons() {
+    const createMatchButton = makeButton(
+      this,
+      0,
+      0,
+      "Create Match",
+      async () => {
+        if (!this.turnService) throw new Error("No service");
+        try {
+          const createRes = await this.turnService.createMatch(2);
+          const parsed = this.parseRpcPayload<CreateMatchPayload>(createRes);
+          if (!parsed || !parsed.match_id)
+            throw new Error("No match_id returned");
+          this.setCurrentMatchId(parsed.match_id);
+          const createdName = parsed.name ?? "Untitled Match";
+          this.currentMatchName = createdName;
+          this.statusText.setText(`Match created: ${createdName}`);
+          if (this.lobbyView) {
+            this.lobbyView.setMatchName(createdName);
+            this.lobbyView.setMatchStarted(parsed.started ?? false);
+          }
+
+          // Auto-join the match we just created
+          await this.joinMatch(parsed.match_id);
+        } catch (e: unknown) {
+          console.error("create_match error", e);
+          let code: number | undefined;
+          let msg: string | undefined;
+
+          if (e && typeof (e as { json?: unknown }).json === "function") {
+            try {
+              const json = await (e as Response).json();
+              if (typeof json?.code === "number") code = json.code;
+              if (typeof json?.message === "string") msg = json.message;
+            } catch {
+              // Ignore JSON parse failure
+            }
+          } else if (e && typeof e === "object") {
+            const errObj = e as { code?: number; message?: string };
+            if (typeof errObj.code === "number") code = errObj.code;
+            if (typeof errObj.message === "string") msg = errObj.message;
+          } else if (e instanceof Error) {
+            msg = e.message;
+          }
+
+          if (code === 8) {
+            this.statusText.setText(msg || "Maximum of 3 matches per user reached");
+          } else {
+            this.statusText.setText(msg ? `Error: ${msg}` : "Failed to create match (see console).");
+          }
+        }
+      },
+      ["main"]
+    ).setOrigin(0.5);
+
+    const listMatchesButton = makeButton(
+      this,
+      0,
+      0,
+      "List Matches",
+      () => {
+        this.showView("matchList");
+      },
+      ["main"]
+    ).setOrigin(0.5);
+
+    const myMatchesButton = makeButton(
+      this,
+      0,
+      0,
+      "My Matches",
+      () => {
+        this.showView("myMatchList");
+      },
+      ["main"]
+    ).setOrigin(0.5);
+
+    const accountSettingsButton = makeButton(
+      this,
+      0,
+      0,
+      "Account Settings",
+      () => {
+        this.scene.start("AccountScene", {
+          client: this.turnService?.getClient(),
+          session: this.turnService?.getSession()
+        });
+      },
+      ["main"]
+    ).setOrigin(0.5);
+
+    const logoutButton = makeButton(
+      this,
+      0,
+      0,
+      "Logout",
+      () => {
+        this.logout();
+      },
+      ["main"]
+    ).setOrigin(0.5);
+
+    this.mainButtons = [
+      createMatchButton,
+      listMatchesButton,
+      myMatchesButton,
+      accountSettingsButton,
+      logoutButton
+    ];
+    this.mainRoot.add(this.mainButtons);
+    this.buttons.push(...this.mainButtons);
+  }
+
+  private layoutMain(): void {
+    const viewportWidth = this.scale.width;
+    const viewportHeight = this.scale.height;
+    const contentHeight =
+      MAIN_LAYOUT.controlsY +
+      Math.max(0, this.mainButtons.length - 1) * MAIN_LAYOUT.buttonGap +
+      32;
+    const top = Math.max(
+      MAIN_LAYOUT.minTop,
+      (viewportHeight - contentHeight) / 2
+    );
+
+    this.mainRoot.setPosition(viewportWidth / 2, top);
+    this.titleText.setPosition(0, MAIN_LAYOUT.titleY);
+    this.statusText.setPosition(0, MAIN_LAYOUT.statusY);
+
+    this.mainButtons.forEach((button, index) => {
+      button.setPosition(
+        0,
+        MAIN_LAYOUT.controlsY + index * MAIN_LAYOUT.buttonGap
+      );
+    });
   }
 
   private logout() {
