@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "predev": "npm run test:smoke:login",
-    "dev": "vite",
+    "dev": "vite --no-open",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",

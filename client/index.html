@@ -1,37 +1,44 @@
 <!doctype html>
 <html lang="en">
-
-<head>
+  <head>
     <meta charset="UTF-8" />
     <title>Async Turn Game</title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <link rel="icon" type="image/png" href="/favicon.ico">
-</head>
+    <link rel="icon" type="image/png" href="/favicon.ico" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
 
-<body>
+  <body>
     <div id="game"></div>
-    
+
     <!-- Facebook SDK -->
     <script>
-        window.fbAsyncInit = function() {
-            FB.init({
-                appId: 'YOUR_FACEBOOK_APP_ID', // Replace with your actual Facebook App ID
-                cookie: true,
-                xfbml: true,
-                version: 'v18.0'
-            });
-        };
+      window.fbAsyncInit = function () {
+        FB.init({
+          appId: "YOUR_FACEBOOK_APP_ID", // Replace with your actual Facebook App ID
+          cookie: true,
+          xfbml: true,
+          version: "v18.0"
+        });
+      };
 
-        (function(d, s, id) {
-            var js, fjs = d.getElementsByTagName(s)[0];
-            if (d.getElementById(id)) return;
-            js = d.createElement(s); js.id = id;
-            js.src = "https://connect.facebook.net/en_US/sdk.js";
-            fjs.parentNode.insertBefore(js, fjs);
-        }(document, 'script', 'facebook-jssdk'));
+      (function (d, s, id) {
+        var js,
+          fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) return;
+        js = d.createElement(s);
+        js.id = id;
+        js.src = "https://connect.facebook.net/en_US/sdk.js";
+        fjs.parentNode.insertBefore(js, fjs);
+      })(document, "script", "facebook-jssdk");
     </script>
-    
-    <script type="module" src="/src/main.ts"></script>
-</body>
 
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>
