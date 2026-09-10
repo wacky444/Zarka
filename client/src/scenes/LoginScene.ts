@@ -15,7 +15,23 @@ type VisibleGameObject = Phaser.GameObjects.GameObject & {
   setVisible: (value: boolean) => VisibleGameObject;
 };
 
+const LOGIN_LAYOUT = {
+  contentWidth: 380,
+  horizontalPadding: 32,
+  titleY: 0,
+  statusY: 48,
+  controlsY: 112,
+  entryButtonGap: 58,
+  formFieldGap: 18,
+  formLabelHeight: 22,
+  formInputHeight: 32,
+  formActionsGap: 24,
+  minTop: 24
+};
+
 export class LoginScene extends Phaser.Scene {
+  private loginRoot!: Phaser.GameObjects.Container;
+  private titleText!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
   private client!: Client;
   private guiState: LoginGuiState = LoginGuiState.Entry;
@@ -38,6 +54,7 @@ export class LoginScene extends Phaser.Scene {
   private formBackButton!: UIButton;
 
   private entryObjects: VisibleGameObject[] = [];
+  private entryButtons: UIButton[] = [];
   private formObjects: VisibleGameObject[] = [];
 
   constructor() {
@@ -71,25 +88,33 @@ export class LoginScene extends Phaser.Scene {
     this.client = new Client(serverKey, host, port, useSSL);
     await healthProbe(host, parseInt(port, 10), useSSL);
 
-    // Title
-    this.add
-      .text(400, 100, "Zarka", {
+    this.loginRoot = this.add.container(0, 0);
+
+    this.titleText = this.add
+      .text(0, 0, "Zarka", {
         color: "#ffffff",
         fontSize: "32px",
-        fontStyle: "bold",
+        fontStyle: "bold"
       })
       .setOrigin(0.5);
+    this.loginRoot.add(this.titleText);
 
     this.statusText = this.add
-      .text(400, 150, "Choose your login method", {
+      .text(0, 0, "Choose your login method", {
         color: "#cccccc",
-        fontSize: "16px",
+        fontSize: "16px"
       })
       .setOrigin(0.5);
+    this.loginRoot.add(this.statusText);
 
     this.createEntryButtons();
     this.createAuthForm();
     this.setGuiState(LoginGuiState.Entry);
+    this.layoutLogin();
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutLogin, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutLogin, this);
+    });
 
     this.input.keyboard!.on("keydown", (event: KeyboardEvent) => {
       this.handleKeyboardInput(event);
@@ -99,47 +124,51 @@ export class LoginScene extends Phaser.Scene {
   private createEntryButtons() {
     const facebookButton = makeButton(
       this,
-      400,
-      230,
+      0,
+      0,
       "Login with Facebook",
       async () => {
         await this.loginWithFacebook();
       },
     ).setOrigin(0.5);
 
-    const loginButton = makeButton(this, 400, 300, "Login", async () => {
+    const loginButton = makeButton(this, 0, 0, "Login", async () => {
       this.setGuiState(LoginGuiState.Login);
     }).setOrigin(0.5);
 
     const guestButton = makeButton(
       this,
-      400,
-      370,
+      0,
+      0,
       "Continue as Guest",
       async () => {
         await this.loginAsGuest();
       },
     ).setOrigin(0.5);
 
-    const registerButton = makeButton(this, 400, 440, "Register", async () => {
+    const registerButton = makeButton(this, 0, 0, "Register", async () => {
       this.setGuiState(LoginGuiState.Register);
     }).setOrigin(0.5);
 
+    this.entryButtons = [
+      facebookButton,
+      loginButton,
+      guestButton,
+      registerButton
+    ];
+    this.loginRoot.add(this.entryButtons);
     this.entryObjects.push(
-      facebookButton as VisibleGameObject,
-      loginButton as VisibleGameObject,
-      guestButton as VisibleGameObject,
-      registerButton as VisibleGameObject,
+      ...this.entryButtons as VisibleGameObject[]
     );
   }
 
   private createAuthForm() {
-    this.emailLabel = this.add.text(200, 280, "Email:", {
+    this.emailLabel = this.add.text(0, 0, "Email:", {
       color: "#ffffff",
       fontSize: "16px",
     });
 
-    this.emailDisplay = this.add.text(200, 305, "", {
+    this.emailDisplay = this.add.text(0, 0, "", {
       color: "#666666",
       fontSize: "14px",
       backgroundColor: "#333333",
@@ -150,12 +179,12 @@ export class LoginScene extends Phaser.Scene {
       this.focusEmailInput();
     });
 
-    this.passwordLabel = this.add.text(200, 345, "Password:", {
+    this.passwordLabel = this.add.text(0, 0, "Password:", {
       color: "#ffffff",
       fontSize: "16px",
     });
 
-    this.passwordDisplay = this.add.text(200, 370, "", {
+    this.passwordDisplay = this.add.text(0, 0, "", {
       color: "#666666",
       fontSize: "14px",
       backgroundColor: "#333333",
@@ -166,12 +195,12 @@ export class LoginScene extends Phaser.Scene {
       this.focusPasswordInput();
     });
 
-    this.usernameLabel = this.add.text(200, 410, "Username:", {
+    this.usernameLabel = this.add.text(0, 0, "Username:", {
       color: "#ffffff",
       fontSize: "16px",
     });
 
-    this.usernameDisplay = this.add.text(200, 435, "", {
+    this.usernameDisplay = this.add.text(0, 0, "", {
       color: "#666666",
       fontSize: "14px",
       backgroundColor: "#333333",
@@ -182,7 +211,7 @@ export class LoginScene extends Phaser.Scene {
       this.focusUsernameInput();
     });
 
-    this.formActionButton = makeButton(this, 300, 510, "Login", async () => {
+    this.formActionButton = makeButton(this, 0, 0, "Login", async () => {
       if (this.guiState === LoginGuiState.Login) {
         await this.loginWithEmail();
         return;
@@ -191,19 +220,92 @@ export class LoginScene extends Phaser.Scene {
       await this.registerWithEmail();
     }).setOrigin(0.5);
 
-    this.formBackButton = makeButton(this, 500, 510, "Back", async () => {
+    this.formBackButton = makeButton(this, 0, 0, "Back", async () => {
       this.setGuiState(LoginGuiState.Entry);
     }).setOrigin(0.5);
 
-    this.formObjects.push(
-      this.emailLabel as VisibleGameObject,
-      this.emailDisplay as VisibleGameObject,
-      this.passwordLabel as VisibleGameObject,
-      this.passwordDisplay as VisibleGameObject,
-      this.usernameLabel as VisibleGameObject,
-      this.usernameDisplay as VisibleGameObject,
-      this.formActionButton as VisibleGameObject,
-      this.formBackButton as VisibleGameObject,
+    const formElements = [
+      this.emailLabel,
+      this.emailDisplay,
+      this.passwordLabel,
+      this.passwordDisplay,
+      this.usernameLabel,
+      this.usernameDisplay,
+      this.formActionButton,
+      this.formBackButton
+    ];
+    this.loginRoot.add(formElements);
+    this.formObjects.push(...(formElements as VisibleGameObject[]));
+  }
+
+  private layoutLogin(): void {
+    const viewportWidth = this.scale.width;
+    const viewportHeight = this.scale.height;
+    const contentWidth = Math.min(
+      LOGIN_LAYOUT.contentWidth,
+      Math.max(240, viewportWidth - LOGIN_LAYOUT.horizontalPadding)
+    );
+    const fieldCount = this.guiState === LoginGuiState.Register ? 3 : 2;
+    const fieldBlockHeight =
+      LOGIN_LAYOUT.formLabelHeight + LOGIN_LAYOUT.formInputHeight;
+    const entryHeight =
+      LOGIN_LAYOUT.controlsY +
+      Math.max(0, this.entryButtons.length - 1) * LOGIN_LAYOUT.entryButtonGap +
+      32;
+    const formHeight =
+      LOGIN_LAYOUT.controlsY +
+      fieldCount * fieldBlockHeight +
+      Math.max(0, fieldCount - 1) * LOGIN_LAYOUT.formFieldGap +
+      LOGIN_LAYOUT.formActionsGap +
+      32;
+    const contentHeight =
+      this.guiState === LoginGuiState.Entry ? entryHeight : formHeight;
+    const top = Math.max(
+      LOGIN_LAYOUT.minTop,
+      (viewportHeight - contentHeight) / 2
+    );
+    const left = -contentWidth / 2;
+
+    this.loginRoot.setPosition(viewportWidth / 2, top);
+    this.titleText.setPosition(0, LOGIN_LAYOUT.titleY);
+    this.statusText.setPosition(0, LOGIN_LAYOUT.statusY);
+
+    if (this.guiState === LoginGuiState.Entry) {
+      this.entryButtons.forEach((button, index) => {
+        button.setPosition(0, LOGIN_LAYOUT.controlsY + index * LOGIN_LAYOUT.entryButtonGap);
+      });
+      return;
+    }
+
+    const fields = [
+      { label: this.emailLabel, display: this.emailDisplay },
+      { label: this.passwordLabel, display: this.passwordDisplay },
+      { label: this.usernameLabel, display: this.usernameDisplay }
+    ];
+    let fieldY = LOGIN_LAYOUT.controlsY;
+    for (const [index, field] of fields.entries()) {
+      const isUsername = index === fields.length - 1;
+      if (isUsername && this.guiState !== LoginGuiState.Register) {
+        continue;
+      }
+      field.label.setPosition(left, fieldY);
+      field.display.setPosition(left, fieldY + LOGIN_LAYOUT.formLabelHeight);
+      field.display.setFixedSize(contentWidth, LOGIN_LAYOUT.formInputHeight);
+      fieldY += fieldBlockHeight + LOGIN_LAYOUT.formFieldGap;
+    }
+
+    const actionsY = fieldY + LOGIN_LAYOUT.formActionsGap;
+    const actionWidth = this.formActionButton.width;
+    const backWidth = this.formBackButton.width;
+    const actionGroupWidth =
+      actionWidth + LOGIN_LAYOUT.formActionsGap + backWidth;
+    this.formActionButton.setPosition(
+      -actionGroupWidth / 2 + actionWidth / 2,
+      actionsY
+    );
+    this.formBackButton.setPosition(
+      actionGroupWidth / 2 - backWidth / 2,
+      actionsY
     );
   }
 
@@ -222,6 +324,7 @@ export class LoginScene extends Phaser.Scene {
       this.clearFocus();
       this.statusText.setText("Choose your login method");
       this.updateDisplays();
+      this.layoutLogin();
       return;
     }
 
@@ -232,6 +335,7 @@ export class LoginScene extends Phaser.Scene {
 
     this.focusEmailInput();
     this.updateDisplays();
+    this.layoutLogin();
   }
 
   private setGroupVisible(objects: VisibleGameObject[], visible: boolean) {
