@@ -1,15 +1,4 @@
-- spawn the players in a circle around the center of the map
-- implement the players list tab, clicking opens a player card, also including teams
-
-- autoadvance time should increase when the turn advances to the next day if time left is less than 1 day, and decrease when the turn advances to the next night if time left is more than 1 day
-
 - auto advance turn when time has ran out, doesn't work, the timer just reset
-
-- sleep that coest 0 energy reduced health in 1, only reduce health when energy is used
-
-- breakfast left me with 18 energy instead of 20, also damaged me
-
-- Responsive game scene, map or side bar
 
 - buttons for tab arrows 
 
@@ -28,3 +17,9 @@
 - bug de ver toda la partida al tener dos juegos,uno en movil y otro en pc, al pasar turno se ve todo
 
 - selecting target cell in mobile is drag and drop and is hard
+
+- pinch zoom mobile
+
+- click instead of hover in items in ground in mobile
+
+- scare should allow to push 2 players with extra power

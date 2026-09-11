@@ -436,9 +436,7 @@ export function applyActionEnergyCost(
   outcome.energySpent = tempConsumed + (previousEnergy - nextEnergy);
   const totalAvailableBefore = tempAvailable + previousEnergy;
   const exhausted =
-    totalAvailableBefore <= 0 ||
-    totalAvailableBefore < effectiveCost ||
-    (effectiveCost === 0 && totalAvailableBefore <= 0);
+    effectiveCost > 0 && totalAvailableBefore < effectiveCost;
   outcome.exhausted = exhausted;
   if (!exhausted) {
     return outcome;
