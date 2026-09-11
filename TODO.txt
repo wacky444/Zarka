@@ -23,3 +23,15 @@
 - click instead of hover in items in ground in mobile
 
 - scare should allow to push 2 players with extra power
+
+- traps
+
+- crafting
+
+- shop
+
+- ground
+
+- train and experience
+
+- stealing
