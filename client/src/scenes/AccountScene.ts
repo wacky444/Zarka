@@ -44,6 +44,7 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   setMinSize?: (width: number, height: number) => void;
   setSize?: (width: number, height: number) => void;
   setPosition?: (x: number, y: number) => void;
+  setOrigin?: (x: number, y?: number) => void;
 };
 
 const ACCOUNT_LAYOUT = {
@@ -131,6 +132,7 @@ export class AccountScene extends Phaser.Scene {
       },
       space: { left: 0, right: 8, top: 0, bottom: 0, panel: 8 }
     }) as ScrollablePanelInstance;
+    this.accountScrollPanel.setOrigin?.(0, 0);
 
     this.titleText = this.add
       .text(0, 0, "Account Settings", {
@@ -138,7 +140,7 @@ export class AccountScene extends Phaser.Scene {
         fontSize: "28px",
         fontStyle: "bold"
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 0);
     this.accountRoot.add(this.titleText);
 
     this.statusText = this.add
@@ -147,7 +149,7 @@ export class AccountScene extends Phaser.Scene {
         fontSize: "16px",
         align: "center"
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 0);
     this.accountRoot.add(this.statusText);
 
     this.userInfoText = this.add
@@ -156,7 +158,7 @@ export class AccountScene extends Phaser.Scene {
         fontSize: "13px",
         align: "center"
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 0);
     this.accountRoot.add(this.userInfoText);
 
     this.displayNameText = this.add
@@ -165,7 +167,7 @@ export class AccountScene extends Phaser.Scene {
         fontSize: "13px",
         align: "center"
       })
-      .setOrigin(0.5, 0.5);
+      .setOrigin(0.5, 0);
     this.accountRoot.add(this.displayNameText);
 
     this.changeDisplayNameButton = makeButton(
@@ -178,7 +180,7 @@ export class AccountScene extends Phaser.Scene {
       },
       ["account"]
     );
-    this.changeDisplayNameButton.setOrigin(0.5, 0.5);
+    this.changeDisplayNameButton.setOrigin(0.5, 0);
     this.changeDisplayNameButton.setFontSize("13px");
     this.changeDisplayNameButton.setPadding(4, 2);
     this.changeDisplayNameButton.setVisible(false);
@@ -189,7 +191,7 @@ export class AccountScene extends Phaser.Scene {
         color: "#ffffff",
         fontSize: "18px"
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 0);
     this.accountRoot.add(this.skinStatsTitle);
 
     this.playerStatsText = this.add
@@ -198,7 +200,7 @@ export class AccountScene extends Phaser.Scene {
         fontSize: "13px",
         align: "center"
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 0);
     this.accountRoot.add(this.playerStatsText);
 
     this.skinTitle = this.add
@@ -206,7 +208,7 @@ export class AccountScene extends Phaser.Scene {
         color: "#ffffff",
         fontSize: "18px"
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 0);
     this.accountRoot.add(this.skinTitle);
 
     this.createSkinPreview(0, 0);
@@ -217,7 +219,7 @@ export class AccountScene extends Phaser.Scene {
         color: "#ffffff",
         fontSize: "18px"
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 0);
     this.accountRoot.add(this.facebookTitle);
 
     this.facebookStatusText = this.add
@@ -226,12 +228,12 @@ export class AccountScene extends Phaser.Scene {
         fontSize: "13px",
         align: "center"
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 0);
     this.accountRoot.add(this.facebookStatusText);
 
     this.linkFacebookButton = makeButton(this, 0, 0, "Link Facebook", async () => {
       await this.linkFacebook();
-    }).setOrigin(0.5);
+    }).setOrigin(0.5, 0);
     this.accountRoot.add(this.linkFacebookButton);
 
     this.unlinkFacebookButton = makeButton(
@@ -242,7 +244,7 @@ export class AccountScene extends Phaser.Scene {
       async () => {
         await this.unlinkFacebook();
       }
-    ).setOrigin(0.5);
+    ).setOrigin(0.5, 0);
     this.accountRoot.add(this.unlinkFacebookButton);
 
     this.backButton = makeButton(this, 0, 0, "Back to Game", () => {
@@ -250,7 +252,7 @@ export class AccountScene extends Phaser.Scene {
         client: this.client,
         session: this.session
       });
-    }).setOrigin(0.5);
+    }).setOrigin(0.5, 0);
     this.accountRoot.add(this.backButton);
 
     this.layoutAccount();
@@ -273,11 +275,8 @@ export class AccountScene extends Phaser.Scene {
       )
     );
     const contentLeft = (viewportWidth - contentWidth) / 2;
-    const centerX = contentWidth / 2;
-    const contentTop = ACCOUNT_LAYOUT.horizontalPadding;
-
-    this.accountRoot.setPosition(contentLeft, contentTop);
-    let cursorY = 0;
+    const centerX = viewportWidth / 2;
+    let cursorY = ACCOUNT_LAYOUT.horizontalPadding;
 
     this.titleText.setPosition(centerX, cursorY);
     cursorY += this.titleText.height + 8;
@@ -295,10 +294,12 @@ export class AccountScene extends Phaser.Scene {
     if (this.changeDisplayNameButton.visible) {
       this.changeDisplayNameButton.setPosition(centerX, cursorY);
       cursorY += this.changeDisplayNameButton.height + ACCOUNT_LAYOUT.sectionGap;
+    } else {
+      cursorY += ACCOUNT_LAYOUT.sectionGap;
     }
 
     this.skinStatsTitle.setPosition(centerX, cursorY);
-    cursorY += this.skinStatsTitle.height + 6;
+    cursorY += this.skinStatsTitle.height + 16;
     this.playerStatsText.setWordWrapWidth(contentWidth, true);
     this.playerStatsText.setPosition(centerX, cursorY);
     cursorY += this.playerStatsText.height + ACCOUNT_LAYOUT.sectionGap;
@@ -309,22 +310,24 @@ export class AccountScene extends Phaser.Scene {
     const narrowSkinLayout = contentWidth < ACCOUNT_LAYOUT.narrowSkinBreakpoint;
     const previewColumnWidth = ACCOUNT_LAYOUT.previewSize + 40;
     const previewTop = cursorY;
-    let selectorX = 0;
+    let selectorX = contentLeft;
     let selectorY = cursorY;
     let selectorWidth = contentWidth;
-    const previewBottom = previewTop + ACCOUNT_LAYOUT.previewSize + 30;
+    const previewCenterY =
+      previewTop + this.previewLabel.height + 12 + ACCOUNT_LAYOUT.previewSize / 2;
+    const previewBottom =
+      previewTop + this.previewLabel.height + 12 + ACCOUNT_LAYOUT.previewSize;
 
     if (!narrowSkinLayout) {
-      selectorX = previewColumnWidth + ACCOUNT_LAYOUT.sectionGap;
-      selectorWidth = contentWidth - selectorX;
-      this.previewLabel.setPosition(previewColumnWidth / 2, previewTop);
-      const previewCenterY = previewTop + 30 + ACCOUNT_LAYOUT.previewSize / 2;
+      selectorX = contentLeft + previewColumnWidth + ACCOUNT_LAYOUT.sectionGap;
+      selectorWidth = contentWidth - (previewColumnWidth + ACCOUNT_LAYOUT.sectionGap);
+      const previewCenterX = contentLeft + previewColumnWidth / 2;
+      this.previewLabel.setPosition(previewCenterX, previewTop);
       for (const layer of Object.values(this.previewLayers)) {
-        layer.setPosition(previewColumnWidth / 2, previewCenterY);
+        layer.setPosition(previewCenterX, previewCenterY);
       }
     } else {
       this.previewLabel.setPosition(centerX, previewTop);
-      const previewCenterY = previewTop + 30 + ACCOUNT_LAYOUT.previewSize / 2;
       for (const layer of Object.values(this.previewLayers)) {
         layer.setPosition(centerX, previewCenterY);
       }
@@ -357,7 +360,7 @@ export class AccountScene extends Phaser.Scene {
       facebookButtonGap +
       this.unlinkFacebookButton.width;
     if (facebookButtonsWidth <= contentWidth) {
-      const buttonsLeft = (contentWidth - facebookButtonsWidth) / 2;
+      const buttonsLeft = (viewportWidth - facebookButtonsWidth) / 2;
       this.linkFacebookButton.setPosition(
         buttonsLeft + this.linkFacebookButton.width / 2,
         cursorY
@@ -384,7 +387,9 @@ export class AccountScene extends Phaser.Scene {
     this.backButton.setPosition(centerX, cursorY);
     cursorY += this.backButton.height + ACCOUNT_LAYOUT.horizontalPadding;
 
-    this.accountRoot.setSize(contentWidth, cursorY);
+    this.accountRoot.setPosition(0, 0);
+    this.accountRoot.setSize(viewportWidth, cursorY);
+    this.accountScrollPanel.setOrigin?.(0, 0);
     this.accountScrollPanel.setPosition?.(0, 0);
     this.accountScrollPanel.setSize?.(viewportWidth, viewportHeight);
     this.accountScrollPanel.setMinSize?.(viewportWidth, viewportHeight);
@@ -397,7 +402,7 @@ export class AccountScene extends Phaser.Scene {
         color: "#aaaaaa",
         fontSize: "13px"
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 0);
     this.accountRoot.add(this.previewLabel);
 
     this.previewLayers = createSkinLayers(

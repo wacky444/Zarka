@@ -307,7 +307,7 @@ export function distributeTeams(
       };
       if (charA.stats?.energy) {
         charA.stats.energy.max = 30;
-        charA.stats.energy.current = 15;
+        charA.stats.energy.current = 10;
       }
       if (charA.stats?.load) {
         charA.stats.load.current = 3;
@@ -329,7 +329,7 @@ export function distributeTeams(
       };
       if (charB.stats?.energy) {
         charB.stats.energy.max = 30;
-        charB.stats.energy.current = 15;
+        charB.stats.energy.current = 10;
       }
       if (charB.stats?.load) {
         charB.stats.load.current = 3;
@@ -357,7 +357,7 @@ export function distributeTeams(
       };
       if (heroChar.stats?.energy) {
         heroChar.stats.energy.max = 50;
-        heroChar.stats.energy.current = 50;
+        heroChar.stats.energy.current = 10;
       }
       if (heroChar.stats?.load) {
         heroChar.stats.load.current = 9;
