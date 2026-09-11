@@ -62,6 +62,10 @@ type PlayerEliminationBannerEvent = {
   turn: number;
 };
 
+type MobileViewMode = "map" | "sidebar";
+
+const MOBILE_LAYOUT_BREAKPOINT = 760;
+
 export class GameScene extends Phaser.Scene {
   private static readonly TILE_WIDTH = 128;
   private static readonly TILE_HEIGHT = 118;
@@ -79,7 +83,11 @@ export class GameScene extends Phaser.Scene {
   private playerNameLabels = new Map<string, Phaser.GameObjects.Text>();
   private playerNameMap: Record<string, string> = {};
   private characterPanel: CharacterPanel | null = null;
+  private characterPanelDesktopWidth = 0;
   private menuButton: UIButton | null = null;
+  private viewModeButton: UIButton | null = null;
+  private mobileLayout = false;
+  private mobileViewMode: MobileViewMode = "sidebar";
   private currentUserId: string | null = null;
   private currentPlayerName: string | null = null;
   private turnService: TurnService | null = null;
@@ -230,6 +238,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.characterPanel = new CharacterPanel(this, 0, 0);
+    this.characterPanelDesktopWidth = this.characterPanel.getPanelWidth();
     this.cam.ignore(this.characterPanel);
     this.characterPanel.on(
       "main-action-change",
@@ -286,8 +295,16 @@ export class GameScene extends Phaser.Scene {
     this.menuButton = makeButton(this, 0, 0, "☰", () => {
       this.scene.stop("GameScene");
       this.scene.wake("MainScene");
-    }).setScrollFactor(0);
+    })
+      .setScrollFactor(0)
+      .setDepth(1100);
     this.cam.ignore(this.menuButton);
+    this.viewModeButton = makeButton(this, 0, 0, "Map", () => {
+      this.toggleMobileViewMode();
+    })
+      .setScrollFactor(0)
+      .setDepth(1101);
+    this.cam.ignore(this.viewModeButton);
     this.topBanner = new TopBanner(this, {
       camera: this.cam
     });
@@ -445,6 +462,8 @@ export class GameScene extends Phaser.Scene {
       }
       this.autoAdvanceText?.destroy();
       this.autoAdvanceText = null;
+      this.viewModeButton?.destroy();
+      this.viewModeButton = null;
       if (this.chatUnsubscribe) {
         this.chatUnsubscribe();
         this.chatUnsubscribe = null;
@@ -1245,19 +1264,91 @@ export class GameScene extends Phaser.Scene {
   private layoutUI() {
     const width = this.uiCam ? this.uiCam.width : this.scale.width;
     const height = this.uiCam ? this.uiCam.height : this.scale.height;
-    if (this.characterPanel) {
-      const panelWidth = this.characterPanel.getPanelWidth();
-      this.characterPanel.setPosition(width - panelWidth, 0);
-      this.characterPanel.setPanelSize(panelWidth, height);
+    const isMobile = this.isMobileViewport(width);
+
+    if (isMobile !== this.mobileLayout) {
+      this.mobileLayout = isMobile;
+      if (isMobile) {
+        this.mobileViewMode = "sidebar";
+      }
     }
+
+    if (this.characterPanel) {
+      if (isMobile) {
+        const showSidebar = this.mobileViewMode === "sidebar";
+        this.characterPanel.setPosition(0, 0);
+        this.characterPanel.setPanelSize(width, height);
+        this.characterPanel.setVisible(showSidebar);
+        this.characterPanel.setActive(showSidebar);
+      } else {
+        this.characterPanel.setVisible(true);
+        this.characterPanel.setActive(true);
+        this.characterPanel.setPanelSize(
+          this.characterPanelDesktopWidth,
+          height
+        );
+        this.characterPanel.setPosition(
+          width - this.characterPanelDesktopWidth,
+          0
+        );
+      }
+    }
+
     if (this.menuButton) {
-      this.menuButton.setPosition(0 + 10, height - this.menuButton.height - 10);
+      this.menuButton.setPosition(10, height - this.menuButton.height - 10);
+    }
+    if (this.viewModeButton) {
+      const showModeButton = isMobile;
+      this.viewModeButton.setVisible(showModeButton);
+      this.viewModeButton.setActive(showModeButton);
+      if (showModeButton) {
+        this.viewModeButton.setText(
+          this.mobileViewMode === "sidebar" ? "[ Map ]" : "[ Panel ]"
+        );
+        this.viewModeButton.setPosition(
+          width - this.viewModeButton.width - 12,
+          height - this.viewModeButton.height - 10
+        );
+      }
     }
     if (this.autoAdvanceText) {
       this.autoAdvanceText.setPosition(10, 10);
     }
     this.topBanner?.layout(width);
     this.victoryOverlay?.layout(width, height);
+  }
+
+  private isMobileViewport(width: number): boolean {
+    if (width <= MOBILE_LAYOUT_BREAKPOINT) {
+      return true;
+    }
+    if (typeof navigator === "undefined") {
+      return false;
+    }
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
+  }
+
+  private toggleMobileViewMode(): void {
+    if (!this.mobileLayout) {
+      return;
+    }
+    if (this.mobileViewMode === "map") {
+      this.cancelMainActionLocationPick();
+      this.mobileViewMode = "sidebar";
+    } else {
+      this.mobileViewMode = "map";
+    }
+    this.layoutUI();
+  }
+
+  private showMobileSidebar(): void {
+    if (!this.mobileLayout) {
+      return;
+    }
+    this.mobileViewMode = "sidebar";
+    this.layoutUI();
   }
 
   private handleResize(gameSize: Phaser.Structs.Size) {
@@ -2183,6 +2274,10 @@ export class GameScene extends Phaser.Scene {
     this.locationSelectionHoveredTileId = null;
     this.locationSelectionPointerId = null;
     this.characterPanel?.setLocationSelectionPending(true);
+    if (this.mobileLayout) {
+      this.mobileViewMode = "map";
+      this.layoutUI();
+    }
     this.refreshLocationSelectionVisuals();
     this.input.setDefaultCursor("crosshair");
   }
@@ -2203,12 +2298,14 @@ export class GameScene extends Phaser.Scene {
     const selection = this.characterPanel?.getMainActionSelection();
     if (!selection || !selection.actionId) {
       this.cancelMainActionLocationPick();
+      this.showMobileSidebar();
       return;
     }
     const coord = this.normalizeAxial(tile.coord);
     if (!coord) {
       this.locationSelectionPointerId = null;
       this.cancelMainActionLocationPick();
+      this.showMobileSidebar();
       return;
     }
     const actionId = selection.actionId as ActionId;
@@ -2219,6 +2316,7 @@ export class GameScene extends Phaser.Scene {
     );
     this.locationSelectionPointerId = null;
     this.cancelMainActionLocationPick();
+    this.showMobileSidebar();
     if (!inRange) {
       return;
     }
@@ -2427,7 +2525,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private isPointerOverUI(pointer: Phaser.Input.Pointer) {
-    if (!this.characterPanel || !this.uiCam) {
+    if (
+      !this.characterPanel ||
+      !this.uiCam ||
+      !this.characterPanel.visible
+    ) {
       return false;
     }
     const panelX = this.characterPanel.x;
