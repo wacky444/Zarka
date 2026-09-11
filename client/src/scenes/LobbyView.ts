@@ -17,6 +17,7 @@ type FixWidthSizerInstance = Phaser.GameObjects.GameObject & {
   setPosition: (x: number, y: number) => Phaser.GameObjects.GameObject;
   setSize: (width: number, height: number) => Phaser.GameObjects.GameObject;
   setMinSize: (width: number, height: number) => Phaser.GameObjects.GameObject;
+  setOrigin?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
   layout: () => Phaser.GameObjects.GameObject;
   add: (
     child: Phaser.GameObjects.GameObject,
@@ -24,11 +25,26 @@ type FixWidthSizerInstance = Phaser.GameObjects.GameObject & {
   ) => FixWidthSizerInstance;
 };
 
+type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
+  layout?: () => void;
+  setMinSize?: (width: number, height: number) => void;
+  setSize?: (width: number, height: number) => void;
+  setPosition?: (x: number, y: number) => void;
+  setOrigin?: (x: number, y?: number) => void;
+  setVisible?: (visible: boolean) => void;
+  setActive?: (active: boolean) => void;
+  setT?: (t: number) => void;
+  setMouseWheelScrollerEnable?: (enable: boolean) => void;
+  setScrollerEnable?: (enable: boolean) => void;
+};
+
 export class LobbyView {
   private static readonly MAX_NAME_LENGTH = 64;
   private static readonly DEFAULT_MATCH_NAME = "Zarka game";
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
+  private contentRoot: Phaser.GameObjects.Container;
+  private scrollPanel: ScrollablePanelInstance;
   private title!: Phaser.GameObjects.Text;
   private matchIdText!: Phaser.GameObjects.Text;
   private matchNameText!: Phaser.GameObjects.Text;
@@ -61,12 +77,14 @@ export class LobbyView {
   private startMatchButton?: UIButton;
   private removeMatchButton?: UIButton;
   private returnToGameButton?: UIButton;
+  private backToMenuButton?: UIButton;
 
   private onLeave?: () => void | Promise<void>;
   private onEndTurn?: () => void | Promise<void>;
   private onSettingsChange?: (s: InMatchSettings) => void | Promise<void>;
   private onStartMatch?: () => void | Promise<void>;
   private onRemoveMatch?: () => void | Promise<void>;
+  private onBackToMenu?: () => void | Promise<void>;
 
   private started = false;
   private startMatchBusy = false;
@@ -82,11 +100,46 @@ export class LobbyView {
       .setVisible(false)
       .setActive(false);
 
+    this.contentRoot = scene.add.container(0, 0);
+
+    this.scrollPanel = scene.rexUI.add.scrollablePanel({
+      x: 0,
+      y: 0,
+      width: scene.scale.width,
+      height: scene.scale.height,
+      scrollMode: 0,
+      panel: {
+        child: this.contentRoot,
+        mask: true
+      },
+      slider: {
+        track: scene.rexUI.add.roundRectangle(0, 0, 4, 120, 2, 0x1f2a4a),
+        thumb: scene.rexUI.add.roundRectangle(0, 0, 6, 36, 3, 0x3b82f6)
+      },
+      scroller: {
+        threshold: 10,
+        slidingDeceleration: 5000,
+        backDeceleration: 2000,
+        pointerOutRelease: true
+      },
+      mouseWheelScroller: {
+        focus: 2,
+        speed: 0.35
+      },
+      space: { left: 0, right: 8, top: 0, bottom: 0, panel: 8 }
+    }) as ScrollablePanelInstance;
+    this.scrollPanel.setOrigin?.(0, 0);
+    this.scrollPanel.setVisible?.(false);
+    this.scrollPanel.setActive?.(false);
+    this.scrollPanel.setMouseWheelScrollerEnable?.(false);
+    this.scrollPanel.setScrollerEnable?.(false);
+    this.container.add(this.scrollPanel);
+
     this.title = scene.add.text(0, 0, "Match Lobby", {
       color: "#ffffff",
       fontSize: "20px"
     });
-    this.container.add(this.title);
+    this.contentRoot.add(this.title);
 
     this.matchIdText = scene.add.text(0, 0, "Match: -", {
       color: "#cccccc"
@@ -105,7 +158,8 @@ export class LobbyView {
       height: 1,
       space: { item: 12, line: 8 }
     }) as FixWidthSizerInstance;
-    this.container.add(this.headerSizer);
+    this.headerSizer.setOrigin?.(0, 0);
+    this.contentRoot.add(this.headerSizer);
     this.headerSizer.add(this.matchIdText, { padding: 2 });
     this.headerSizer.add(this.matchNameText, { padding: 2 });
     this.headerSizer.add(this.creatorText, { padding: 2 });
@@ -128,7 +182,8 @@ export class LobbyView {
       height: 1,
       space: { item: 12, line: 10 }
     }) as FixWidthSizerInstance;
-    this.container.add(this.actionSizer);
+    this.actionSizer.setOrigin?.(0, 0);
+    this.contentRoot.add(this.actionSizer);
 
     const leaveBtn = makeButton(
       scene,
@@ -201,11 +256,12 @@ export class LobbyView {
       height: 1,
       space: { item: 12, line: 12 }
     }) as FixWidthSizerInstance;
-    this.container.add(this.settingsSizer);
+    this.settingsSizer.setOrigin?.(0, 0);
+    this.contentRoot.add(this.settingsSizer);
 
     this.playersStepper = addLabeledStepper(
       this.scene,
-      this.container,
+      this.contentRoot,
       0,
       0,
       "Players",
@@ -224,7 +280,7 @@ export class LobbyView {
 
     this.colsStepper = addLabeledStepper(
       this.scene,
-      this.container,
+      this.contentRoot,
       0,
       0,
       "Columns",
@@ -241,7 +297,7 @@ export class LobbyView {
 
     this.rowsStepper = addLabeledStepper(
       this.scene,
-      this.container,
+      this.contentRoot,
       0,
       0,
       "Rows",
@@ -258,7 +314,7 @@ export class LobbyView {
 
     this.roundTimeInput = addLabeledTimeInput(
       this.scene,
-      this.container,
+      this.contentRoot,
       0,
       0,
       "Skip Time",
@@ -273,7 +329,7 @@ export class LobbyView {
 
     this.autoSkipToggle = addLabeledToggle(
       this.scene,
-      this.container,
+      this.contentRoot,
       0,
       0,
       "Skip",
@@ -288,7 +344,7 @@ export class LobbyView {
 
     this.botPlayersStepper = addLabeledStepper(
       this.scene,
-      this.container,
+      this.contentRoot,
       0,
       0,
       "Bots",
@@ -305,7 +361,7 @@ export class LobbyView {
 
     this.turnsToBeAt1TileStepper = addLabeledStepper(
       this.scene,
-      this.container,
+      this.contentRoot,
       0,
       0,
       "Destroy",
@@ -330,7 +386,17 @@ export class LobbyView {
       this.turnsToBeAt1TileStepper.container
     ];
     for (const control of settingsControls) {
-      this.container.remove(control, false);
+      this.contentRoot.remove(control, false);
+      Object.defineProperty(control, "originX", {
+        value: 0,
+        writable: true,
+        configurable: true
+      });
+      Object.defineProperty(control, "originY", {
+        value: 0,
+        writable: true,
+        configurable: true
+      });
       this.settingsSizer.add(control, { padding: 2 });
     }
 
@@ -338,12 +404,12 @@ export class LobbyView {
       color: "#a0ffa0",
       fontSize: "18px"
     });
-    this.container.add(this.playerListTitle);
+    this.contentRoot.add(this.playerListTitle);
 
     this.playerListText = scene.add.text(0, 0, "Waiting for players...", {
       color: "#cccccc"
     });
-    this.container.add(this.playerListText);
+    this.contentRoot.add(this.playerListText);
 
     this.refreshPlayerList();
     this.updateStartButtonState();
@@ -359,14 +425,27 @@ export class LobbyView {
       },
       ["inMatch"]
     );
-    this.returnToGameButton.setScrollFactor(0);
-    this.container.add(this.returnToGameButton);
+    this.contentRoot.add(this.returnToGameButton);
     this.returnToGameButton.setVisible(false);
+
+    this.backToMenuButton = makeButton(
+      scene,
+      0,
+      0,
+      "Back to Menu",
+      () => {
+        if (this.onBackToMenu) this.onBackToMenu();
+      },
+      ["inMatch"]
+    );
+    this.contentRoot.add(this.backToMenuButton);
 
     this.layout();
     this.scene.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
+    this.scene.events.on(Phaser.Scenes.Events.WAKE, this.layout, this);
     this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scene.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
+      this.scene.events.off(Phaser.Scenes.Events.WAKE, this.layout, this);
     });
   }
 
@@ -383,8 +462,8 @@ export class LobbyView {
     const contentLeft = (viewportWidth - contentWidth) / 2;
     const contentTop = LobbyView.HORIZONTAL_PADDING;
 
-    this.container.setPosition(contentLeft, contentTop);
-    this.title.setPosition(0, 0);
+    this.container.setPosition(0, 0);
+    this.title.setPosition(contentLeft, contentTop);
 
     const metadataWidth = Math.min(240, contentWidth);
     this.matchIdText.setFixedSize(metadataWidth, 24);
@@ -394,9 +473,10 @@ export class LobbyView {
     this.matchNameText.setWordWrapWidth(metadataWidth, true);
     this.creatorText.setWordWrapWidth(metadataWidth, true);
 
-    let cursorY = this.title.height + 12;
+    let cursorY = contentTop + this.title.height + 12;
     const layoutSizer = (sizer: FixWidthSizerInstance) => {
-      sizer.setPosition(0, cursorY);
+      sizer.setOrigin?.(0, 0);
+      sizer.setPosition(contentLeft, cursorY);
       sizer.setMinSize(contentWidth, 0);
       sizer.setSize(contentWidth, 0);
       sizer.layout();
@@ -407,20 +487,60 @@ export class LobbyView {
     layoutSizer(this.actionSizer);
     layoutSizer(this.settingsSizer);
 
-    this.playerListTitle.setPosition(0, cursorY);
+    this.playerListTitle.setPosition(contentLeft, cursorY);
     cursorY += this.playerListTitle.height + 6;
     this.playerListText.setWordWrapWidth(contentWidth, true);
-    this.playerListText.setPosition(0, cursorY);
+    this.playerListText.setPosition(contentLeft, cursorY);
 
-    if (this.returnToGameButton) {
-      this.returnToGameButton.setPosition(
-        Math.max(0, contentWidth - this.returnToGameButton.width),
-        Math.max(
-          cursorY + this.playerListText.height + 20,
-          viewportHeight - contentTop - this.returnToGameButton.height - 16
-        )
-      );
+    const buttonHeight = Math.max(
+      this.backToMenuButton?.height ?? 0,
+      this.returnToGameButton?.height ?? 0,
+      28
+    );
+    const minBottomY = cursorY + this.playerListText.height + 24;
+    const pinnedBottomY =
+      viewportHeight - buttonHeight - LobbyView.HORIZONTAL_PADDING;
+    const bottomY = Math.max(minBottomY, pinnedBottomY);
+
+    const buttonGap = 12;
+    const backToMenuWidth = this.backToMenuButton?.width ?? 0;
+    const returnWidth = this.returnToGameButton?.width ?? 0;
+    const bothVisible =
+      Boolean(this.backToMenuButton?.visible) &&
+      Boolean(this.returnToGameButton?.visible);
+
+    let totalContentHeight =
+      bottomY + buttonHeight + LobbyView.HORIZONTAL_PADDING;
+
+    if (bothVisible && contentWidth < backToMenuWidth + returnWidth + buttonGap) {
+      this.returnToGameButton?.setPosition(contentLeft, bottomY);
+      const nextY = bottomY + (this.returnToGameButton?.height ?? 0) + 8;
+      this.backToMenuButton?.setPosition(contentLeft, nextY);
+      totalContentHeight =
+        nextY +
+        (this.backToMenuButton?.height ?? 0) +
+        LobbyView.HORIZONTAL_PADDING;
+    } else {
+      this.backToMenuButton?.setPosition(contentLeft, bottomY);
+      if (this.returnToGameButton) {
+        this.returnToGameButton.setPosition(
+          contentLeft + Math.max(0, contentWidth - returnWidth),
+          bottomY
+        );
+      }
     }
+
+    this.contentRoot.setPosition(0, 0);
+    this.contentRoot.setSize(viewportWidth, totalContentHeight);
+    this.scrollPanel.setOrigin?.(0, 0);
+    this.scrollPanel.setPosition?.(0, 0);
+    this.scrollPanel.setSize?.(viewportWidth, viewportHeight);
+    this.scrollPanel.setMinSize?.(viewportWidth, viewportHeight);
+    this.scrollPanel.layout?.();
+  }
+
+  setOnBackToMenu(handler: () => void | Promise<void>) {
+    this.onBackToMenu = handler;
   }
 
   setOnLeave(handler: () => void | Promise<void>) {
@@ -537,12 +657,21 @@ export class LobbyView {
   }
 
   show() {
-    this.layout();
     this.container.setVisible(true).setActive(true);
+    this.scrollPanel.setVisible?.(true);
+    this.scrollPanel.setActive?.(true);
+    this.scrollPanel.setMouseWheelScrollerEnable?.(true);
+    this.scrollPanel.setScrollerEnable?.(true);
+    this.scrollPanel.setT?.(0);
+    this.layout();
   }
 
   hide() {
     this.container.setVisible(false).setActive(false);
+    this.scrollPanel.setVisible?.(false);
+    this.scrollPanel.setActive?.(false);
+    this.scrollPanel.setMouseWheelScrollerEnable?.(false);
+    this.scrollPanel.setScrollerEnable?.(false);
   }
 
   getSettings(): InMatchSettings {

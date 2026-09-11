@@ -78,6 +78,16 @@ export function addLabeledStepper(
   isHost: boolean = true
 ): StepperHandle {
   const controlContainer = scene.add.container(x, y);
+  Object.defineProperty(controlContainer, "originX", {
+    value: 0,
+    writable: true,
+    configurable: true
+  });
+  Object.defineProperty(controlContainer, "originY", {
+    value: 0,
+    writable: true,
+    configurable: true
+  });
   container.add(controlContainer);
 
   const lab = scene.add.text(0, 0, `${label}:`, {
@@ -165,6 +175,16 @@ export function addLabeledToggle(
   isHost: boolean = true
 ): ToggleHandle {
   const controlContainer = scene.add.container(x, y);
+  Object.defineProperty(controlContainer, "originX", {
+    value: 0,
+    writable: true,
+    configurable: true
+  });
+  Object.defineProperty(controlContainer, "originY", {
+    value: 0,
+    writable: true,
+    configurable: true
+  });
   container.add(controlContainer);
 
   const lab = scene.add.text(0, 0, `${label}:`, {
@@ -235,6 +255,16 @@ export function addLabeledTimeInput(
   isHost: boolean = true
 ): TimeInputHandle {
   const controlContainer = scene.add.container(x, y);
+  Object.defineProperty(controlContainer, "originX", {
+    value: 0,
+    writable: true,
+    configurable: true
+  });
+  Object.defineProperty(controlContainer, "originY", {
+    value: 0,
+    writable: true,
+    configurable: true
+  });
   container.add(controlContainer);
 
   const lab = scene.add.text(0, 0, `${label}:`, {

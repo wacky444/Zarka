@@ -340,6 +340,10 @@ export class MainScene extends Phaser.Scene {
 
       // Instantiate lobby view (hidden by default)
       this.lobbyView = new LobbyView(this);
+      this.lobbyView.setOnBackToMenu(() => {
+        this.showView("main");
+        this.statusText.setText("Back to main menu (still in match).");
+      });
       this.lobbyView.setOnLeave(async () => {
         if (!this.turnService || !this.currentMatchId) return;
         const res = await this.turnService.leaveMatch(this.currentMatchId);
@@ -433,21 +437,6 @@ export class MainScene extends Phaser.Scene {
           this.statusText.setText("Failed to remove match (see console).");
         }
       });
-
-      // Placeholder: inMatch view buttons can be added and tagged with ["inMatch"]
-      this.buttons.push(
-        makeButton(
-          this,
-          630,
-          120,
-          "Back to Menu",
-          () => {
-            this.showView("main");
-            this.statusText.setText("Back to main menu (still in match).");
-          },
-          ["inMatch"]
-        )
-      );
 
       // Initialize in main view
       this.applyViewVisibility();
