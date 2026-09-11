@@ -35,7 +35,7 @@ import {
 import { CharacterPanelLogView } from "./CharacterPanelLogView";
 import { InventoryGrid, type InventoryGridItem } from "./InventoryGrid";
 import { resolveItemTexture } from "./itemIcons";
-import { ENERGY_ACCENT_COLOR, HEALTH_ACCENT_COLOR } from "./ColorPalette";
+import { THEME } from "./ColorPalette";
 import { createSkinContainer, SkinContainer } from "./PlayerSkinRenderer";
 import {
   CharacterPanelChatView,
@@ -550,7 +550,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       width: this.barWidth,
       height: BAR_HEIGHT,
       trackColor: 0x25304c,
-      barColor: HEALTH_ACCENT_COLOR
+      barColor: THEME.colors.healthAccent
     });
     this.add(this.healthBar);
     this.energyLabel = scene.add
@@ -564,7 +564,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       width: this.barWidth,
       height: BAR_HEIGHT,
       trackColor: 0x25304c,
-      barColor: ENERGY_ACCENT_COLOR
+      barColor: THEME.colors.energyAccent
     });
     this.add(this.energyBar);
     const readyY = statusContentTop + 80;

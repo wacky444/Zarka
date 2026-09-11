@@ -1,8 +1,6 @@
 import Phaser from "phaser";
 import { makeButton, type UIButton } from "./button";
-import { ENERGY_ACCENT_COLOR } from "./ColorPalette";
-
-const ENERGY_HEX = "#" + ENERGY_ACCENT_COLOR.toString(16).padStart(6, "0");
+import { THEME } from "./ColorPalette";
 
 export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
   private readonly label: Phaser.GameObjects.Text;
@@ -64,17 +62,23 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
 
     const barTrackHeight = 10;
     this.totalCostBar = scene.add
-      .rectangle(0, 0, width - 32, barTrackHeight, 0x25304c)
+      .rectangle(
+        0,
+        0,
+        width - 32,
+        barTrackHeight,
+        THEME.colors.collapsedBorder
+      )
       .setOrigin(0, 0);
 
     this.totalCostFill = scene.add
-      .rectangle(0, 0, 0, barTrackHeight, ENERGY_ACCENT_COLOR)
+      .rectangle(0, 0, 0, barTrackHeight, THEME.colors.energyAccent)
       .setOrigin(0, 0);
 
     this.totalCostText = scene.add
       .text(0, 0, "Cost: 0", {
         fontSize: "14px",
-        color: ENERGY_HEX
+        color: THEME.colors.energyCost
       })
       .setOrigin(0, 0);
 

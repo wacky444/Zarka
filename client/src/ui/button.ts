@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { THEME } from "./ColorPalette";
 
 export type UIButton = Phaser.GameObjects.Text & { tags: string[] };
 
@@ -30,17 +31,23 @@ export function makeButton(
 ): UIButton {
   const txt = scene.add
     .text(x, y, `[ ${label} ]`, {
-      color: "#00ff88",
-      backgroundColor: "#00332a",
+      color: THEME.buttons.default.text,
+      backgroundColor: THEME.buttons.default.background,
       fontSize: "16px"
     })
     .setPadding(6)
     .setInteractive({ useHandCursor: true })
     .on("pointerover", () =>
-      txt.setStyle({ color: "#ffffff", backgroundColor: "#005c49" })
+      txt.setStyle({
+        color: THEME.buttons.hover.text,
+        backgroundColor: THEME.buttons.hover.background
+      })
     )
     .on("pointerout", () =>
-      txt.setStyle({ color: "#00ff88", backgroundColor: "#00332a" })
+      txt.setStyle({
+        color: THEME.buttons.default.text,
+        backgroundColor: THEME.buttons.default.background
+      })
     )
     .on("pointerdown", async () => {
       try {
@@ -73,11 +80,13 @@ export function addLabeledStepper(
   const controlContainer = scene.add.container(x, y);
   container.add(controlContainer);
 
-  const lab = scene.add.text(0, 0, `${label}:`, { color: "#ffffff" });
+  const lab = scene.add.text(0, 0, `${label}:`, {
+    color: THEME.colors.textPrimary
+  });
   controlContainer.add(lab);
 
   const valText = scene.add.text(80, 0, `${getter()}`, {
-    color: "#ffff88"
+    color: THEME.colors.energyCost
   });
   controlContainer.add(valText);
 
@@ -158,11 +167,13 @@ export function addLabeledToggle(
   const controlContainer = scene.add.container(x, y);
   container.add(controlContainer);
 
-  const lab = scene.add.text(0, 0, `${label}:`, { color: "#ffffff" });
+  const lab = scene.add.text(0, 0, `${label}:`, {
+    color: THEME.colors.textPrimary
+  });
   controlContainer.add(lab);
 
   const valText = scene.add.text(80, 0, getter() ? "ON" : "OFF", {
-    color: "#ffff88"
+    color: THEME.colors.energyCost
   });
   controlContainer.add(valText);
 
@@ -226,11 +237,13 @@ export function addLabeledTimeInput(
   const controlContainer = scene.add.container(x, y);
   container.add(controlContainer);
 
-  const lab = scene.add.text(0, 0, `${label}:`, { color: "#ffffff" });
+  const lab = scene.add.text(0, 0, `${label}:`, {
+    color: THEME.colors.textPrimary
+  });
   controlContainer.add(lab);
 
   const valText = scene.add.text(110, 0, getter(), {
-    color: "#ffff88"
+    color: THEME.colors.energyCost
   });
   controlContainer.add(valText);
 

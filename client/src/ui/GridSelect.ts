@@ -1,18 +1,6 @@
 import Phaser from "phaser";
 import { HoverTooltip } from "./HoverTooltip";
-import {
-  MODAL_BACKGROUND_COLOR,
-  MODAL_HEADER_COLOR,
-  MODAL_TEXT_COLOR,
-  CARD_BACKGROUND_COLOR,
-  CARD_BACKGROUND_SELECTED,
-  CARD_BACKGROUND_DISABLED,
-  COLLAPSED_BACKGROUND_COLOR,
-  COLLAPSED_BORDER_COLOR,
-  COOLDOWN_TEXT_COLOR,
-  DISABLED_TEXT_COLOR,
-  ENERGY_COST_TEXT_COLOR,
-} from "./ColorPalette";
+import { THEME } from "./ColorPalette";
 
 export interface GridSelectItem {
   id: string;
@@ -175,10 +163,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
       config.width,
       this.collapsedHeight,
       10,
-      COLLAPSED_BACKGROUND_COLOR,
+      THEME.colors.collapsedBackground,
     ) as RexRoundRectangle;
     this.background.setOrigin?.(0, 0);
-    this.background.setStrokeStyle?.(2, COLLAPSED_BORDER_COLOR, 1);
+    this.background.setStrokeStyle?.(2, THEME.colors.collapsedBorder, 1);
 
     this.icon = scene.add.image(
       12,
@@ -213,7 +201,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.hitAreaZone.on(Phaser.Input.Events.POINTER_OVER, () => {
       if (!this.enabled) {
         this.scene.input.setDefaultCursor("default");
-        this.background.setStrokeStyle?.(2, COLLAPSED_BORDER_COLOR, 1);
+        this.background.setStrokeStyle?.(2, THEME.colors.collapsedBorder, 1);
         return;
       }
       this.scene.input.setDefaultCursor("pointer");
@@ -221,7 +209,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     });
     this.hitAreaZone.on(Phaser.Input.Events.POINTER_OUT, () => {
       this.scene.input.setDefaultCursor("default");
-      this.background.setStrokeStyle?.(2, COLLAPSED_BORDER_COLOR, 1);
+      this.background.setStrokeStyle?.(2, THEME.colors.collapsedBorder, 1);
     });
 
     this.applyEnabledState();
@@ -532,7 +520,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.modalWidth,
       this.modalHeight,
       14,
-      MODAL_BACKGROUND_COLOR,
+      THEME.colors.modalBackground,
     );
     modal.addBackground(background);
     const backgroundGO = background as unknown as Phaser.GameObjects.GameObject;
@@ -563,7 +551,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     const header = scene.add
       .text(0, 0, this.modalTitle, {
         fontSize: "22px",
-        color: MODAL_HEADER_COLOR,
+        color: THEME.colors.modalHeader,
         fontStyle: "bold",
       })
       .setOrigin(0.5, 0.5);
@@ -572,7 +560,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     const subtitle = scene.add
       .text(0, 0, this.modalSubtitle, {
         fontSize: "15px",
-        color: MODAL_TEXT_COLOR,
+        color: THEME.colors.modalText,
       })
       .setOrigin(0.5, 0.5);
     modal.add(subtitle, 0, "center", { bottom: 4 }, false);
@@ -844,7 +832,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         cellWidth,
         cellHeight,
         12,
-        CARD_BACKGROUND_COLOR,
+        THEME.colors.cardBackground,
       ) as RexRoundRectangle;
       bg.setSize?.(cellWidth, cellHeight);
       bg.setDisplaySize?.(cellWidth, cellHeight);
@@ -880,7 +868,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       const energyText = scene.add
         .text(0, 0, "", {
           fontSize: "14px",
-          color: ENERGY_COST_TEXT_COLOR,
+          color: THEME.colors.energyCost,
           align: "center",
         })
         .setOrigin(0.5, 0.5)
@@ -889,7 +877,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
       const descText = scene.rexUI.add.BBCodeText(0, 0, "", {
         fontSize: "13px",
-        color: MODAL_TEXT_COLOR,
+        color: THEME.colors.modalText,
         align: "center",
         wrap: {
           mode: "word",
@@ -902,7 +890,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       const cooldownText = scene.add
         .text(0, 0, "", {
           fontSize: "14px",
-          color: COOLDOWN_TEXT_COLOR,
+          color: THEME.colors.cooldown,
           fontStyle: "bold",
         })
         .setOrigin(1, 0)
@@ -1127,10 +1115,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
     const disabled = config.item.disabled === true;
     const selected = config.isSelected && !disabled;
     const baseColor = selected
-      ? CARD_BACKGROUND_SELECTED
+      ? THEME.colors.cardSelected
       : disabled
-        ? CARD_BACKGROUND_DISABLED
-        : CARD_BACKGROUND_COLOR;
+        ? THEME.colors.cardDisabled
+        : THEME.colors.cardBackground;
     config.bg?.setFillStyle?.(baseColor, 1);
     config.bg?.setSize?.(config.cellWidth, config.cellHeight);
     config.bg?.setDisplaySize?.(config.cellWidth, config.cellHeight);
@@ -1138,9 +1126,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
     if (config.icon) {
       config.icon.setAlpha(disabled ? 0.5 : 1);
     }
-    config.nameText?.setColor(disabled ? DISABLED_TEXT_COLOR : "#ffffff");
+    config.nameText?.setColor(
+      disabled ? THEME.colors.textDisabled : THEME.colors.textPrimary
+    );
     config.descText?.setColor(
-      disabled ? DISABLED_TEXT_COLOR : MODAL_TEXT_COLOR,
+      disabled ? THEME.colors.textDisabled : THEME.colors.modalText,
     );
     if (config.energyText) {
       const hasCost =
@@ -1151,7 +1141,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         const label = `Energy: ${config.item.energyCost}`;
         this.applySingleLineText(config.energyText, label, config.textWidth);
         config.energyText.setColor(
-          disabled ? DISABLED_TEXT_COLOR : ENERGY_COST_TEXT_COLOR,
+          disabled ? THEME.colors.textDisabled : THEME.colors.energyCost,
         );
         config.energyText.setVisible(true);
       } else {
@@ -1303,10 +1293,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
       setAlpha?: (value: number) => unknown;
     };
     bg.setAlpha?.(this.enabled ? 1 : 0.75);
-    this.background.setStrokeStyle?.(2, COLLAPSED_BORDER_COLOR, 1);
+    this.background.setStrokeStyle?.(2, THEME.colors.collapsedBorder, 1);
     this.icon.setAlpha(this.enabled ? 1 : 0.6);
     this.label.setColor(
-      this.enabled ? this.labelActiveColor : DISABLED_TEXT_COLOR,
+      this.enabled ? this.labelActiveColor : THEME.colors.textDisabled,
     );
     if (!this.enabled) {
       this.scene.input.setDefaultCursor("default");
