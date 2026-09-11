@@ -20,6 +20,9 @@ declare module "phaser3-rex-plugins/templates/ui/ui-plugin" {
       scrollablePanel(
         config: Record<string, unknown>
       ): Phaser.GameObjects.GameObject;
+      fixWidthSizer(
+        config: Record<string, unknown>
+      ): Phaser.GameObjects.GameObject;
       label(config: Record<string, unknown>): Phaser.GameObjects.GameObject;
       simpleLabel(
         config: Record<string, unknown>
@@ -56,6 +59,9 @@ declare global {
             color: number
           ): Phaser.GameObjects.GameObject;
           scrollablePanel(
+            config: Record<string, unknown>
+          ): Phaser.GameObjects.GameObject;
+          fixWidthSizer(
             config: Record<string, unknown>
           ): Phaser.GameObjects.GameObject;
           label(config: Record<string, unknown>): Phaser.GameObjects.GameObject;

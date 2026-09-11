@@ -11,6 +11,19 @@ import {
 } from "../ui/button";
 import { InMatchSettings } from "@shared";
 
+type FixWidthSizerInstance = Phaser.GameObjects.GameObject & {
+  width: number;
+  height: number;
+  setPosition: (x: number, y: number) => Phaser.GameObjects.GameObject;
+  setSize: (width: number, height: number) => Phaser.GameObjects.GameObject;
+  setMinSize: (width: number, height: number) => Phaser.GameObjects.GameObject;
+  layout: () => Phaser.GameObjects.GameObject;
+  add: (
+    child: Phaser.GameObjects.GameObject,
+    config?: Record<string, unknown>
+  ) => FixWidthSizerInstance;
+};
+
 export class LobbyView {
   private static readonly MAX_NAME_LENGTH = 64;
   private static readonly DEFAULT_MATCH_NAME = "Zarka game";
@@ -22,6 +35,9 @@ export class LobbyView {
   private creatorText!: Phaser.GameObjects.Text;
   private playerListTitle!: Phaser.GameObjects.Text;
   private playerListText!: Phaser.GameObjects.Text;
+  private headerSizer!: FixWidthSizerInstance;
+  private actionSizer!: FixWidthSizerInstance;
+  private settingsSizer!: FixWidthSizerInstance;
 
   private players = 2;
   private cols = 5;
@@ -55,6 +71,10 @@ export class LobbyView {
   private started = false;
   private startMatchBusy = false;
 
+  private static readonly CONTENT_MAX_WIDTH = 920;
+  private static readonly HORIZONTAL_PADDING = 24;
+  private static readonly SECTION_GAP = 16;
+
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     this.container = scene.add
@@ -62,70 +82,82 @@ export class LobbyView {
       .setVisible(false)
       .setActive(false);
 
-    this.title = scene.add.text(10, 30, "Match Lobby", {
+    this.title = scene.add.text(0, 0, "Match Lobby", {
       color: "#ffffff",
       fontSize: "20px"
     });
     this.container.add(this.title);
 
-    this.matchIdText = scene.add.text(10, 60, "Match: -", {
+    this.matchIdText = scene.add.text(0, 0, "Match: -", {
       color: "#cccccc"
     });
-    this.container.add(this.matchIdText);
 
-    this.matchNameText = scene.add.text(10, 80, `Name: ${this.matchName}`, {
+    this.matchNameText = scene.add.text(0, 0, `Name: ${this.matchName}`, {
       color: "#cccccc"
     });
-    this.container.add(this.matchNameText);
 
-    this.creatorText = scene.add.text(560, 60, "Creator: -", {
+    this.creatorText = scene.add.text(0, 0, "Creator: -", {
       color: "#cccccc"
     });
-    this.container.add(this.creatorText);
+
+    this.headerSizer = scene.rexUI.add.fixWidthSizer({
+      width: 1,
+      height: 1,
+      space: { item: 12, line: 8 }
+    }) as FixWidthSizerInstance;
+    this.container.add(this.headerSizer);
+    this.headerSizer.add(this.matchIdText, { padding: 2 });
+    this.headerSizer.add(this.matchNameText, { padding: 2 });
+    this.headerSizer.add(this.creatorText, { padding: 2 });
 
     this.renameButton = makeButton(
       scene,
-      300,
-      78,
+      0,
+      0,
       "Rename",
       async () => {
         this.promptRename();
       },
       ["inMatch"]
     );
-    this.container.add(this.renameButton);
+    this.headerSizer.add(this.renameButton, { padding: 2 });
     this.setRenameEnabled(this.isHost);
 
-    let y = 120;
+    this.actionSizer = scene.rexUI.add.fixWidthSizer({
+      width: 1,
+      height: 1,
+      space: { item: 12, line: 10 }
+    }) as FixWidthSizerInstance;
+    this.container.add(this.actionSizer);
 
     const leaveBtn = makeButton(
       scene,
-      10,
-      y,
+      0,
+      0,
       "Leave Match",
       async () => {
         if (this.onLeave) await this.onLeave();
       },
       ["inMatch"]
     );
-    this.container.add(leaveBtn);
+    this.actionSizer.add(leaveBtn, { padding: 2 });
 
     const endTurnBtn = makeButton(
       scene,
-      150,
-      y,
+      0,
+      0,
       "End Turn",
       async () => {
         if (this.onEndTurn) await this.onEndTurn();
       },
       ["inMatch"]
     );
-    this.container.add(endTurnBtn);
+    this.actionSizer.add(endTurnBtn, { padding: 2 });
 
     this.startMatchButton = makeButton(
       scene,
-      290,
-      y,
+      0,
+      0,
       "Start Match",
       async () => {
         if (this.started || this.startMatchBusy) return;
@@ -143,12 +175,12 @@ export class LobbyView {
       },
       ["inMatch"]
     );
-    this.container.add(this.startMatchButton);
+    this.actionSizer.add(this.startMatchButton, { padding: 2 });
 
     this.removeMatchButton = makeButton(
       scene,
-      450,
-      y,
+      0,
+      0,
       "Remove Match",
       async () => {
         if (!this.onRemoveMatch) return;
@@ -161,16 +193,21 @@ export class LobbyView {
       },
       ["inMatch"]
     );
-    this.container.add(this.removeMatchButton);
+    this.actionSizer.add(this.removeMatchButton, { padding: 2 });
     this.setRemoveMatchEnabled(this.isHost);
 
-    y += 40;
+    this.settingsSizer = scene.rexUI.add.fixWidthSizer({
+      width: 1,
+      height: 1,
+      space: { item: 12, line: 12 }
+    }) as FixWidthSizerInstance;
+    this.container.add(this.settingsSizer);
 
     this.playersStepper = addLabeledStepper(
       this.scene,
       this.container,
-      10,
-      y,
+      0,
+      0,
       "Players",
       1,
       100,
@@ -188,8 +225,8 @@ export class LobbyView {
     this.colsStepper = addLabeledStepper(
       this.scene,
       this.container,
-      280,
-      y,
+      0,
+      0,
       "Columns",
       1,
       100,
@@ -205,8 +242,8 @@ export class LobbyView {
     this.rowsStepper = addLabeledStepper(
       this.scene,
       this.container,
-      560,
-      y,
+      0,
+      0,
       "Rows",
       1,
       100,
@@ -219,13 +256,11 @@ export class LobbyView {
       this.isHost
     );
 
-    y += 40;
-
     this.roundTimeInput = addLabeledTimeInput(
       this.scene,
       this.container,
-      10,
-      y,
+      0,
+      0,
       "Skip Time",
       () => this.roundTime,
       (v) => {
@@ -239,8 +274,8 @@ export class LobbyView {
     this.autoSkipToggle = addLabeledToggle(
       this.scene,
       this.container,
-      280,
-      y,
+      0,
+      0,
       "Skip",
       () => this.autoSkip,
       (v) => {
@@ -254,8 +289,8 @@ export class LobbyView {
     this.botPlayersStepper = addLabeledStepper(
       this.scene,
       this.container,
-      560,
-      y,
+      0,
+      0,
       "Bots",
       0,
       10,
@@ -268,13 +303,11 @@ export class LobbyView {
       this.isHost
     );
 
-    y += 40;
-
     this.turnsToBeAt1TileStepper = addLabeledStepper(
       this.scene,
       this.container,
-      10,
-      y,
+      0,
+      0,
       "Destroy",
       5,
       200,
@@ -287,15 +320,27 @@ export class LobbyView {
       this.isHost
     );
 
-    y += 60;
+    const settingsControls = [
+      this.playersStepper.container,
+      this.colsStepper.container,
+      this.rowsStepper.container,
+      this.roundTimeInput.container,
+      this.autoSkipToggle.container,
+      this.botPlayersStepper.container,
+      this.turnsToBeAt1TileStepper.container
+    ];
+    for (const control of settingsControls) {
+      this.container.remove(control, false);
+      this.settingsSizer.add(control, { padding: 2 });
+    }
 
-    this.playerListTitle = scene.add.text(10, y, "Players", {
+    this.playerListTitle = scene.add.text(0, 0, "Players", {
       color: "#a0ffa0",
       fontSize: "18px"
     });
     this.container.add(this.playerListTitle);
 
-    this.playerListText = scene.add.text(10, y + 24, "Waiting for players...", {
+    this.playerListText = scene.add.text(0, 0, "Waiting for players...", {
       color: "#cccccc"
     });
     this.container.add(this.playerListText);
@@ -303,11 +348,10 @@ export class LobbyView {
     this.refreshPlayerList();
     this.updateStartButtonState();
 
-    const cam = scene.cameras.main;
     this.returnToGameButton = makeButton(
       scene,
-      10,
-      cam.height - 40,
+      0,
+      0,
       "← Return",
       () => {
         scene.scene.sleep("MainScene");
@@ -318,6 +362,65 @@ export class LobbyView {
     this.returnToGameButton.setScrollFactor(0);
     this.container.add(this.returnToGameButton);
     this.returnToGameButton.setVisible(false);
+
+    this.layout();
+    this.scene.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
+    this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scene.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
+    });
+  }
+
+  private layout(): void {
+    const viewportWidth = this.scene.scale.width;
+    const viewportHeight = this.scene.scale.height;
+    const contentWidth = Math.min(
+      LobbyView.CONTENT_MAX_WIDTH,
+      Math.max(
+        280,
+        viewportWidth - LobbyView.HORIZONTAL_PADDING * 2
+      )
+    );
+    const contentLeft = (viewportWidth - contentWidth) / 2;
+    const contentTop = LobbyView.HORIZONTAL_PADDING;
+
+    this.container.setPosition(contentLeft, contentTop);
+    this.title.setPosition(0, 0);
+
+    const metadataWidth = Math.min(240, contentWidth);
+    this.matchIdText.setFixedSize(metadataWidth, 24);
+    this.matchNameText.setFixedSize(metadataWidth, 24);
+    this.creatorText.setFixedSize(metadataWidth, 24);
+    this.matchIdText.setWordWrapWidth(metadataWidth, true);
+    this.matchNameText.setWordWrapWidth(metadataWidth, true);
+    this.creatorText.setWordWrapWidth(metadataWidth, true);
+
+    let cursorY = this.title.height + 12;
+    const layoutSizer = (sizer: FixWidthSizerInstance) => {
+      sizer.setPosition(0, cursorY);
+      sizer.setMinSize(contentWidth, 0);
+      sizer.setSize(contentWidth, 0);
+      sizer.layout();
+      cursorY += sizer.height + LobbyView.SECTION_GAP;
+    };
+
+    layoutSizer(this.headerSizer);
+    layoutSizer(this.actionSizer);
+    layoutSizer(this.settingsSizer);
+
+    this.playerListTitle.setPosition(0, cursorY);
+    cursorY += this.playerListTitle.height + 6;
+    this.playerListText.setWordWrapWidth(contentWidth, true);
+    this.playerListText.setPosition(0, cursorY);
+
+    if (this.returnToGameButton) {
+      this.returnToGameButton.setPosition(
+        Math.max(0, contentWidth - this.returnToGameButton.width),
+        Math.max(
+          cursorY + this.playerListText.height + 20,
+          viewportHeight - contentTop - this.returnToGameButton.height - 16
+        )
+      );
+    }
   }
 
   setOnLeave(handler: () => void | Promise<void>) {
@@ -434,6 +537,7 @@ export class LobbyView {
   }
 
   show() {
+    this.layout();
     this.container.setVisible(true).setActive(true);
   }
 
@@ -522,6 +626,7 @@ export class LobbyView {
     if (this.returnToGameButton) {
       this.returnToGameButton.setVisible(started);
     }
+    this.layout();
   }
 
   setPlayers(usernames: string[]) {
@@ -543,10 +648,12 @@ export class LobbyView {
     this.playerListTitle.setText(`Players (${playerCount}/${capacity})`);
     if (playerCount === 0) {
       this.playerListText.setText("Waiting for players...");
+      this.layout();
       return;
     }
     const lines = this.playerNames.map((name, idx) => `${idx + 1}. ${name}`);
     this.playerListText.setText(lines.join("\n"));
+    this.layout();
   }
 
   private updateStartButtonState() {

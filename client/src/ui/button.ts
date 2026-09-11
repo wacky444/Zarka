@@ -3,16 +3,19 @@ import Phaser from "phaser";
 export type UIButton = Phaser.GameObjects.Text & { tags: string[] };
 
 export type StepperHandle = {
+  container: Phaser.GameObjects.Container;
   setEnabled: (enabled: boolean) => void;
   setDisplayValue: (v: number) => void;
 };
 
 export type ToggleHandle = {
+  container: Phaser.GameObjects.Container;
   setEnabled: (enabled: boolean) => void;
   setDisplayValue: (v: boolean) => void;
 };
 
 export type TimeInputHandle = {
+  container: Phaser.GameObjects.Container;
   setEnabled: (enabled: boolean) => void;
   setDisplayValue: (v: string) => void;
 };
@@ -67,18 +70,21 @@ export function addLabeledStepper(
   onlyHost: boolean = false,
   isHost: boolean = true
 ): StepperHandle {
-  const lab = scene.add.text(x, y, `${label}:`, { color: "#ffffff" });
-  container.add(lab);
+  const controlContainer = scene.add.container(x, y);
+  container.add(controlContainer);
 
-  const valText = scene.add.text(x + 80, y, `${getter()}`, {
+  const lab = scene.add.text(0, 0, `${label}:`, { color: "#ffffff" });
+  controlContainer.add(lab);
+
+  const valText = scene.add.text(80, 0, `${getter()}`, {
     color: "#ffff88"
   });
-  container.add(valText);
+  controlContainer.add(valText);
 
   const decBtn = makeButton(
     scene,
-    x + 130,
-    y - 2,
+    130,
+    -2,
     "-",
     () => {
       const v = Math.max(min, getter() - 1);
@@ -89,8 +95,8 @@ export function addLabeledStepper(
   );
   const incBtn = makeButton(
     scene,
-    x + 170,
-    y - 2,
+    170,
+    -2,
     "+",
     () => {
       const v = Math.min(max, getter() + 1);
@@ -100,8 +106,12 @@ export function addLabeledStepper(
     ["inMatch"]
   );
 
-  container.add(decBtn);
-  container.add(incBtn);
+  controlContainer.add(decBtn);
+  controlContainer.add(incBtn);
+  controlContainer.setSize(
+    incBtn.x + incBtn.width,
+    Math.max(lab.height, incBtn.height)
+  );
 
   // Helper to toggle interactivity/appearance
   const applyEnabled = (btn: UIButton, enabled: boolean) => {
@@ -120,6 +130,7 @@ export function addLabeledStepper(
   applyEnabled(incBtn, initialEnabled);
 
   return {
+    container: controlContainer,
     setEnabled: (enabled: boolean) => {
       applyEnabled(decBtn, enabled);
       applyEnabled(incBtn, enabled);
@@ -144,18 +155,21 @@ export function addLabeledToggle(
   onlyHost: boolean = false,
   isHost: boolean = true
 ): ToggleHandle {
-  const lab = scene.add.text(x, y, `${label}:`, { color: "#ffffff" });
-  container.add(lab);
+  const controlContainer = scene.add.container(x, y);
+  container.add(controlContainer);
 
-  const valText = scene.add.text(x + 80, y, getter() ? "ON" : "OFF", {
+  const lab = scene.add.text(0, 0, `${label}:`, { color: "#ffffff" });
+  controlContainer.add(lab);
+
+  const valText = scene.add.text(80, 0, getter() ? "ON" : "OFF", {
     color: "#ffff88"
   });
-  container.add(valText);
+  controlContainer.add(valText);
 
   const toggleBtn = makeButton(
     scene,
-    x + 130,
-    y - 2,
+    130,
+    -2,
     "Toggle",
     () => {
       const newValue = !getter();
@@ -165,7 +179,11 @@ export function addLabeledToggle(
     ["inMatch"]
   );
 
-  container.add(toggleBtn);
+  controlContainer.add(toggleBtn);
+  controlContainer.setSize(
+    toggleBtn.x + toggleBtn.width,
+    Math.max(lab.height, toggleBtn.height)
+  );
 
   // Helper to toggle interactivity/appearance
   const applyEnabled = (btn: UIButton, enabled: boolean) => {
@@ -183,6 +201,7 @@ export function addLabeledToggle(
   applyEnabled(toggleBtn, initialEnabled);
 
   return {
+    container: controlContainer,
     setEnabled: (enabled: boolean) => {
       applyEnabled(toggleBtn, enabled);
     },
@@ -204,18 +223,21 @@ export function addLabeledTimeInput(
   onlyHost: boolean = false,
   isHost: boolean = true
 ): TimeInputHandle {
-  const lab = scene.add.text(x, y, `${label}:`, { color: "#ffffff" });
-  container.add(lab);
+  const controlContainer = scene.add.container(x, y);
+  container.add(controlContainer);
 
-  const valText = scene.add.text(x + 110, y, getter(), {
+  const lab = scene.add.text(0, 0, `${label}:`, { color: "#ffffff" });
+  controlContainer.add(lab);
+
+  const valText = scene.add.text(110, 0, getter(), {
     color: "#ffff88"
   });
-  container.add(valText);
+  controlContainer.add(valText);
 
   const editBtn = makeButton(
     scene,
-    x + 160,
-    y - 2,
+    160,
+    -2,
     "Edit",
     () => {
       // Simple increment hour for now - in a real game you'd have a proper time picker
@@ -231,7 +253,11 @@ export function addLabeledTimeInput(
     ["inMatch"]
   );
 
-  container.add(editBtn);
+  controlContainer.add(editBtn);
+  controlContainer.setSize(
+    editBtn.x + editBtn.width,
+    Math.max(lab.height, editBtn.height)
+  );
 
   // Helper to toggle interactivity/appearance
   const applyEnabled = (btn: UIButton, enabled: boolean) => {
@@ -249,6 +275,7 @@ export function addLabeledTimeInput(
   applyEnabled(editBtn, initialEnabled);
 
   return {
+    container: controlContainer,
     setEnabled: (enabled: boolean) => {
       applyEnabled(editBtn, enabled);
     },
