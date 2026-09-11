@@ -13,3 +13,6 @@ console:
   port: 9100
   username: "admin"
   password: "password"
+session:
+  token_expiry_sec: 7200
+  refresh_token_expiry_sec: 2592000

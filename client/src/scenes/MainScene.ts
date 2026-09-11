@@ -212,6 +212,14 @@ export class MainScene extends Phaser.Scene {
         client = result.client;
         session = result.session;
       }
+      SessionManager.attachSessionRefreshHandler(client);
+
+      const unregisterSessionExpired = SessionManager.onSessionExpired(() => {
+        this.logout("Your session has expired. Please log in again.");
+      });
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        unregisterSessionExpired();
+      });
 
       this.turnService = new TurnService(client, session);
       this.registry.set("turnService", this.turnService);
@@ -651,7 +659,11 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  private logout() {
+  private logout(message?: string) {
+    if (this.scene.isActive("GameScene") || this.scene.isSleeping("GameScene")) {
+      this.scene.stop("GameScene");
+    }
+
     // Clear the session
     SessionManager.clearSession();
 
@@ -671,6 +683,6 @@ export class MainScene extends Phaser.Scene {
     this.registry.set("currentUserId", null);
     this.registry.set("turnService", null);
     this.registry.set("accountService", null);
-    this.scene.start("LoginScene");
+    this.scene.start("LoginScene", message ? { message } : undefined);
   }
 }

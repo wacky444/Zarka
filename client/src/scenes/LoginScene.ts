@@ -56,9 +56,14 @@ export class LoginScene extends Phaser.Scene {
   private entryObjects: VisibleGameObject[] = [];
   private entryButtons: UIButton[] = [];
   private formObjects: VisibleGameObject[] = [];
+  private initialMessage = "";
 
   constructor() {
     super("LoginScene"); // Required to show the scene on logout
+  }
+
+  init(data?: { message?: string }) {
+    this.initialMessage = data?.message || "";
   }
 
   preload() {}
@@ -67,7 +72,7 @@ export class LoginScene extends Phaser.Scene {
     // Since the LoginScene is the first scene, it will be loaded even if we have a valid session.
     // Change the scene back to MainScene
     try {
-      if (SessionManager.hasValidSession()) {
+      if (!this.initialMessage && SessionManager.hasValidSession()) {
         const restored = await SessionManager.restoreSession();
         if (restored) {
           // Navigate directly and stop this scene to avoid UI overlap
@@ -85,7 +90,7 @@ export class LoginScene extends Phaser.Scene {
 
     // Initialize Nakama client
     const { host, port, useSSL, serverKey } = getEnv();
-    this.client = new Client(serverKey, host, port, useSSL);
+    this.client = SessionManager.attachSessionRefreshHandler(new Client(serverKey, host, port, useSSL));
     await healthProbe(host, parseInt(port, 10), useSSL);
 
     this.loginRoot = this.add.container(0, 0);
@@ -100,8 +105,8 @@ export class LoginScene extends Phaser.Scene {
     this.loginRoot.add(this.titleText);
 
     this.statusText = this.add
-      .text(0, 0, "Choose your login method", {
-        color: "#cccccc",
+      .text(0, 0, this.initialMessage || "Choose your login method", {
+        color: this.initialMessage ? "#ffcc00" : "#cccccc",
         fontSize: "16px"
       })
       .setOrigin(0.5);

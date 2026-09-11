@@ -10,3 +10,9 @@
 - breakfast left me with 18 energy instead of 20, also damaged me
 
 - Responsive game scene, map or side bar
+
+- buttons for tab arrows 
+
+- icons for, inventory, character, status, skills, players, teams, log/replay, map, arrow right, left
+
+- google login

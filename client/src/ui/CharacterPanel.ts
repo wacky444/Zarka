@@ -184,6 +184,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private scrollMaskShape: Phaser.GameObjects.Rectangle | null = null;
   private scrollContent: Phaser.GameObjects.Container;
   private scrollContentWidth = 0;
+  private scrollTop = 0;
   private gridModalOpenCount = 0;
   private panelWidth: number;
   private panelHeight: number;
@@ -594,15 +595,20 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const initialScrollWidth = Math.max(120, width - MARGIN * 2);
     this.scrollContentWidth = initialScrollWidth;
     const estimatedScrollTop = readyY + this.readyToggle.height + 24;
+    this.scrollTop = estimatedScrollTop;
     const estimatedScrollHeight = Math.max(
       200,
       height - estimatedScrollTop - MARGIN
     );
 
+    const matrix = this.getWorldTransformMatrix();
+    const worldX = matrix.tx + MARGIN;
+    const worldY = matrix.ty + estimatedScrollTop;
+
     this.scrollMaskShape = scene.add
       .rectangle(
-        460,
-        estimatedScrollTop,
+        worldX,
+        worldY,
         initialScrollWidth + 100,
         estimatedScrollHeight,
         0xffffff,
@@ -612,7 +618,6 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       .setScrollFactor(0)
       .setVisible(true);
     this.scrollMask = this.scrollMaskShape.createGeometryMask();
-    this.add(this.scrollMaskShape);
 
     this.scrollPanel = scene.rexUI.add.scrollablePanel({
       x: MARGIN,
@@ -622,7 +627,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       scrollMode: 0,
       panel: {
         child: this.scrollContent,
-        mask: { padding: 1 }
+        mask: false
       },
       slider: false,
       scroller: {
@@ -1404,6 +1409,23 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.skillsView.setVisible(false);
   }
 
+  override setPosition(x?: number, y?: number, z?: number, w?: number): this {
+    super.setPosition(x, y, z, w);
+    this.updateScrollMaskPosition();
+    return this;
+  }
+
+  private updateScrollMaskPosition(): void {
+    if (!this.scrollMaskShape) {
+      return;
+    }
+    const matrix = this.getWorldTransformMatrix();
+    this.scrollMaskShape.setPosition(
+      matrix.tx + MARGIN,
+      matrix.ty + this.scrollTop
+    );
+  }
+
   setPanelSize(width: number, height: number) {
     this.panelWidth = width;
     this.panelHeight = height;
@@ -1444,6 +1466,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const readyHeight = this.readyToggle ? this.readyToggle.height : 0;
     const readyBottom = statusContentTop + 80 + readyHeight + 24;
     const scrollTop = readyBottom;
+    this.scrollTop = scrollTop;
     const scrollHeight = Math.max(160, height - scrollTop - MARGIN);
     this.scrollContentWidth = scrollWidth;
     if (this.scrollMaskShape) {

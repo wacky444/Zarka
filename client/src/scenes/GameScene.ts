@@ -1283,13 +1283,13 @@ export class GameScene extends Phaser.Scene {
       } else {
         this.characterPanel.setVisible(true);
         this.characterPanel.setActive(true);
-        this.characterPanel.setPanelSize(
-          this.characterPanelDesktopWidth,
-          height
-        );
         this.characterPanel.setPosition(
           width - this.characterPanelDesktopWidth,
           0
+        );
+        this.characterPanel.setPanelSize(
+          this.characterPanelDesktopWidth,
+          height
         );
       }
     }
