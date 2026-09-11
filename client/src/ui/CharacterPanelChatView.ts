@@ -332,11 +332,16 @@ export class CharacterPanelChatView {
     }
     const lines = this.messages.map((entry) => {
       const time = formatTime(entry.timestamp);
+      const name = entry.senderLabel.trim();
       const label = entry.isSystem
         ? "System"
         : entry.isSelf
-        ? "You"
-        : entry.senderLabel;
+        ? name
+          ? name.endsWith("(You)")
+            ? name
+            : `${name} (You)`
+          : "You"
+        : name || "Unknown";
       return `${time} ${label}: ${entry.content}`;
     });
     this.messagesText.setText(lines.join("\n"));

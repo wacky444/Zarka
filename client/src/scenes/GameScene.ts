@@ -1422,6 +1422,7 @@ export class GameScene extends Phaser.Scene {
       this.currentPlayerName = this.playerNameMap[this.currentUserId] ?? null;
     }
     await this.resolvePlayerAccounts(match);
+    this.syncChatMessagesToPanel();
   }
 
   private async resolvePlayerAccounts(match: MatchRecord | null) {
@@ -1436,6 +1437,9 @@ export class GameScene extends Phaser.Scene {
       for (const id of Object.keys(match.playerCharacters)) {
         if (typeof id === "string" && id.trim().length > 0) ids.add(id);
       }
+    }
+    if (this.currentUserId) {
+      ids.add(this.currentUserId);
     }
     if (ids.size === 0) return;
     const accounts = await this.accountService.getAccounts(Array.from(ids));
@@ -1467,6 +1471,7 @@ export class GameScene extends Phaser.Scene {
           ? this.playerNameMap
           : undefined
       );
+      this.syncChatMessagesToPanel();
     }
   }
 
@@ -1518,6 +1523,33 @@ export class GameScene extends Phaser.Scene {
     }
     this.characterPanel.appendChatMessage(this.toChatViewModel(message));
     this.characterPanel.markChatUnread(true);
+    if (
+      message.senderId &&
+      !this.playerNameMap[message.senderId] &&
+      this.turnService
+    ) {
+      this.resolveSinglePlayerName(message.senderId);
+    }
+  }
+
+  private async resolveSinglePlayerName(userId: string) {
+    if (!userId || !this.turnService) return;
+    try {
+      const map = await this.turnService.resolveUsernames([userId]);
+      if (map[userId]) {
+        this.playerNameMap[userId] = map[userId];
+      }
+      if (this.accountService) {
+        const accounts = await this.accountService.getAccounts([userId]);
+        const account = accounts.get(userId);
+        if (account?.displayName && account.displayName.trim().length > 0) {
+          this.playerNameMap[userId] = account.displayName.trim();
+        }
+      }
+      this.syncChatMessagesToPanel();
+    } catch (e) {
+      console.warn("resolveSinglePlayerName failed", e);
+    }
   }
 
   private syncChatMessagesToPanel() {
@@ -1529,17 +1561,27 @@ export class GameScene extends Phaser.Scene {
   }
 
   private toChatViewModel(message: MatchChatMessage): ChatMessageViewModel {
-    const baseName =
-      this.playerNameMap[message.senderId] ??
-      message.username ??
-      message.senderId ??
+    if (
+      message.senderId &&
+      message.displayName &&
+      !this.playerNameMap[message.senderId]
+    ) {
+      this.playerNameMap[message.senderId] = message.displayName.trim();
+    }
+    const resolvedName =
+      (message.senderId && this.playerNameMap[message.senderId]) ||
+      (message.displayName && message.displayName.trim().length > 0
+        ? message.displayName.trim()
+        : undefined) ||
+      message.username ||
+      message.senderId ||
       "Unknown";
     return {
       id:
         message.messageId?.trim().length > 0
           ? message.messageId
           : `${message.createdAt}:${message.senderId}`,
-      senderLabel: message.system ? "System" : baseName,
+      senderLabel: message.system ? "System" : resolvedName,
       content: message.content,
       timestamp: message.createdAt,
       isSelf: !!this.currentUserId && message.senderId === this.currentUserId,
@@ -1553,7 +1595,10 @@ export class GameScene extends Phaser.Scene {
     }
     this.characterPanel?.setChatSendCooldown(750);
     try {
-      await this.chatService.send(message);
+      const displayName =
+        this.currentPlayerName ??
+        (this.currentUserId ? this.playerNameMap[this.currentUserId] : undefined);
+      await this.chatService.send(message, displayName ?? undefined);
     } catch (error) {
       console.warn("chat send failed", error);
       this.characterPanel?.setChatConnectionState("error", "Send failed");

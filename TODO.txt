@@ -16,3 +16,15 @@
 - icons for, inventory, character, status, skills, players, teams, log/replay, map, arrow right, left
 
 - google login
+
+- when a player joined without doing f5, in the  player list it shows a guid
+
+- in the player list, the tab to switch between teams and players, have to click in the text to swap when the scroll is under it
+
+- spanglish, translator system
+
+- player list cant be scrolled with finger
+
+- bug de ver toda la partida al tener dos juegos,uno en movil y otro en pc, al pasar turno se ve todo
+
+- selecting target cell in mobile is drag and drop and is hard

@@ -5,6 +5,7 @@ export interface MatchChatMessage {
   content: string;
   createdAt: number;
   username?: string;
+  displayName?: string;
   code?: number;
   persistent?: boolean;
   system?: boolean;
@@ -22,6 +23,7 @@ export interface SaveChatMessageRequest {
   content: string;
   createdAt?: number;
   username?: string;
+  displayName?: string;
   code?: number;
   persistent?: boolean;
   system?: boolean;

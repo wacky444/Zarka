@@ -58,6 +58,31 @@ function decodeMessageContent(raw: unknown): string {
   return stringified;
 }
 
+function decodeMessageDisplayName(raw: unknown): string | undefined {
+  const stringified = stringFromContent(raw);
+  if (!stringified) {
+    return undefined;
+  }
+  const trimmed = stringified.trim();
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed) as {
+        displayName?: unknown;
+        display_name?: unknown;
+      };
+      const candidate = [parsed.displayName, parsed.display_name].find(
+        (value) => typeof value === "string" && value.trim().length > 0
+      );
+      if (typeof candidate === "string") {
+        return candidate.trim();
+      }
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
 export class MatchChatService {
   private socket: Socket | null = null;
   private channel: Channel | null = null;
@@ -103,7 +128,7 @@ export class MatchChatService {
     };
   }
 
-  async send(text: string): Promise<void> {
+  async send(text: string, displayName?: string): Promise<void> {
     if (!this.socket || !this.channel) {
       throw new Error("Chat is not connected");
     }
@@ -115,10 +140,21 @@ export class MatchChatService {
       return;
     }
     const message = trimmed.slice(0, MAX_MESSAGE_LENGTH);
-    const ack = await this.socket.writeChatMessage(this.channel.id, {
+    const contentPayload: { message: string; displayName?: string } = {
       message,
-    });
-    this.persistSentMessage(ack, message).catch((error) => {
+    };
+    const cleanDisplayName =
+      typeof displayName === "string" && displayName.trim().length > 0
+        ? displayName.trim()
+        : undefined;
+    if (cleanDisplayName) {
+      contentPayload.displayName = cleanDisplayName;
+    }
+    const ack = await this.socket.writeChatMessage(
+      this.channel.id,
+      contentPayload
+    );
+    this.persistSentMessage(ack, message, cleanDisplayName).catch((error) => {
       console.warn("chat persist failed", error);
     });
   }
@@ -195,11 +231,13 @@ export class MatchChatService {
     const createdAt = payload.create_time
       ? Date.parse(payload.create_time)
       : Date.now();
+    const senderId = payload.sender_id || payload.user_id_one || "";
     return {
       messageId: payload.message_id || "",
       matchId: this.matchId ?? "",
-      senderId: payload.user_id_one ?? "",
+      senderId,
       username: payload.username ?? undefined,
+      displayName: decodeMessageDisplayName(payload.content),
       content: decodeMessageContent(payload.content),
       createdAt: Number.isFinite(createdAt) ? createdAt : Date.now(),
       code: payload.code,
@@ -225,7 +263,8 @@ export class MatchChatService {
 
   private async persistSentMessage(
     ack: ChannelMessageAck,
-    content: string
+    content: string,
+    displayName?: string
   ): Promise<void> {
     if (!this.matchId) {
       return;
@@ -242,6 +281,7 @@ export class MatchChatService {
       content,
       createdAt: Number.isFinite(createdAt) ? createdAt : Date.now(),
       username: ack.username ?? undefined,
+      displayName,
       code: typeof ack.code === "number" ? ack.code : undefined,
       persistent:
         typeof ack.persistence === "boolean" ? ack.persistence : undefined,

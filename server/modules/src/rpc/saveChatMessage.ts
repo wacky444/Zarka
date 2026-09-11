@@ -115,6 +115,21 @@ export function saveChatMessageRpc(
     );
   }
 
+  let displayName =
+    typeof json.displayName === "string" && json.displayName.trim().length > 0
+      ? json.displayName.trim()
+      : undefined;
+
+  if (!displayName) {
+    try {
+      const users = nk.usersGetId([ctx.userId]);
+      if (users && users.length > 0 && users[0].displayName) {
+        displayName = users[0].displayName.trim();
+      }
+    } catch {
+    }
+  }
+
   const message: MatchChatMessage = {
     matchId,
     messageId,
@@ -122,6 +137,7 @@ export function saveChatMessageRpc(
     content: trimmedContent,
     createdAt,
     username: typeof json.username === "string" ? json.username : undefined,
+    displayName,
     code: typeof json.code === "number" ? json.code : undefined,
     persistent:
       typeof json.persistent === "boolean" ? json.persistent : undefined,
