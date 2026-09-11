@@ -29,6 +29,7 @@ export function makeButton(
   onClick: () => Promise<void> | void,
   tags: string[] = ["main"]
 ): UIButton {
+  let downPointerId: number | null = null;
   const txt = scene.add
     .text(x, y, `[ ${label} ]`, {
       color: THEME.buttons.default.text,
@@ -43,19 +44,45 @@ export function makeButton(
         backgroundColor: THEME.buttons.hover.background
       })
     )
-    .on("pointerout", () =>
+    .on("pointerout", () => {
+      downPointerId = null;
       txt.setStyle({
         color: THEME.buttons.default.text,
         backgroundColor: THEME.buttons.default.background
-      })
-    )
-    .on("pointerdown", async () => {
-      try {
-        await onClick();
-      } catch (e) {
-        console.error(e);
+      });
+    })
+    .on(
+      "pointerdown",
+      (
+        pointer: Phaser.Input.Pointer,
+        _localX: number,
+        _localY: number,
+        event?: Phaser.Types.Input.EventData
+      ) => {
+        downPointerId = pointer.id;
+        event?.stopPropagation();
       }
-    });
+    )
+    .on(
+      "pointerup",
+      async (
+        pointer: Phaser.Input.Pointer,
+        _localX: number,
+        _localY: number,
+        event?: Phaser.Types.Input.EventData
+      ) => {
+        event?.stopPropagation();
+        if (downPointerId === null || downPointerId !== pointer.id) {
+          return;
+        }
+        downPointerId = null;
+        try {
+          await onClick();
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    );
 
   // Attach tags for view-based visibility control
   const button = txt as UIButton;

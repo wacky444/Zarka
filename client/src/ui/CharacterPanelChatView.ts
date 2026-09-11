@@ -128,16 +128,12 @@ export class CharacterPanelChatView {
       }
       this.focusInput();
     });
-    this.sendButton.on(Phaser.Input.Events.POINTER_UP, () => {
-      this.trySend();
-    });
   }
 
   destroy() {
     this.scene.input.keyboard?.off("keydown", this.keyListener);
     this.inputBackground.off(Phaser.Input.Events.POINTER_DOWN);
     this.inputBackground.disableInteractive();
-    this.sendButton.off(Phaser.Input.Events.POINTER_UP);
     this.sendButton.disableInteractive();
     for (const element of this.elements) {
       element.destroy();

@@ -712,6 +712,9 @@ export class GameScene extends Phaser.Scene {
           ) {
             return;
           }
+          if (pointer.getDistance() > 15) {
+            return;
+          }
           const tileData = img.getData("tile") as HexTile | undefined;
           if (!tileData) {
             return;
@@ -2579,6 +2582,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   private isPointerOverUI(pointer: Phaser.Input.Pointer) {
+    if (this.viewModeButton?.visible) {
+      const bounds = this.viewModeButton.getBounds();
+      if (bounds.contains(pointer.x, pointer.y)) {
+        return true;
+      }
+    }
+    if (this.menuButton?.visible) {
+      const bounds = this.menuButton.getBounds();
+      if (bounds.contains(pointer.x, pointer.y)) {
+        return true;
+      }
+    }
     if (
       !this.characterPanel ||
       !this.uiCam ||
