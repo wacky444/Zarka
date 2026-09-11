@@ -2049,6 +2049,10 @@ export class GameScene extends Phaser.Scene {
         if (typeof payload.turn === "number") {
           this.currentMatch.current_turn = payload.turn;
         }
+        if (typeof payload.lastAutoAdvanceAt === "number") {
+          this.currentMatch.lastAutoAdvanceAt = payload.lastAutoAdvanceAt;
+          this.autoAdvanceLastAt = payload.lastAutoAdvanceAt;
+        }
         if (payload.playerCharacters) {
           this.currentMatch.playerCharacters = payload.playerCharacters;
           this.renderPlayerCharacters(this.currentMatch);
@@ -2072,6 +2076,7 @@ export class GameScene extends Phaser.Scene {
       this.characterPanel?.setReadyState(appliedReady, false);
       if (this.currentMatch) {
         this.updateCharacterPanel(this.currentMatch);
+        this.refreshAutoAdvanceTimer();
       }
     } catch (error) {
       console.warn("update_ready_state failed", error);
@@ -2163,6 +2168,10 @@ export class GameScene extends Phaser.Scene {
     }
     if (payload.readyStates) {
       match.readyStates = payload.readyStates;
+    }
+    if (typeof payload.lastAutoAdvanceAt === "number") {
+      match.lastAutoAdvanceAt = payload.lastAutoAdvanceAt;
+      this.autoAdvanceLastAt = payload.lastAutoAdvanceAt;
     }
     if (payload.deadCharacters) {
       match.deadCharacters = payload.deadCharacters;

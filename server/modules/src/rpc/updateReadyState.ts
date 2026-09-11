@@ -14,6 +14,27 @@ import {
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
 import { resolveTurnForMatch } from "../match/turnResolution";
 import { getAliveCharacterIds } from "../match/checkEndGame";
+import { validateTime } from "../utils/validation";
+
+const READY_ADVANCE_MARGIN_MINUTES = 12 * 60;
+
+function shouldDeferAutomaticAdvance(
+  match: MatchRecord,
+  nowMs: number,
+): boolean {
+  const roundTime = validateTime(match.roundTime);
+  if (!roundTime) {
+    return false;
+  }
+  const [hoursText, minutesText] = roundTime.split(":");
+  const targetMinutes = Number(hoursText) * 60 + Number(minutesText);
+  const now = new Date(nowMs);
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  if (currentMinutes >= targetMinutes) {
+    return true;
+  }
+  return targetMinutes - currentMinutes <= READY_ADVANCE_MARGIN_MINUTES;
+}
 
 export function updateReadyStateRpc(
   ctx: nkruntime.Context,
@@ -90,6 +111,10 @@ export function updateReadyStateRpc(
       resolvedTurnNumber = outcome.resolvedTurn ?? null;
       advanceResult = { events: outcome.events };
       advanced = true;
+      const advancedAtMs = Date.now();
+      if (shouldDeferAutomaticAdvance(match, advancedAtMs)) {
+        match.lastAutoAdvanceAt = Math.floor(advancedAtMs / 1000);
+      }
     }
   }
 
@@ -153,6 +178,7 @@ export function updateReadyStateRpc(
           turn: match.current_turn,
           match_id: matchId,
           readyStates: match.readyStates,
+          lastAutoAdvanceAt: match.lastAutoAdvanceAt,
           deadCharacters: match.deadCharacters,
           playerCharacters: match.playerCharacters,
           teams: match.teams,
@@ -201,6 +227,7 @@ export function updateReadyStateRpc(
     readyStates: match.readyStates,
     deadCharacters: match.deadCharacters,
     advanced,
+    lastAutoAdvanceAt: match.lastAutoAdvanceAt,
     playerCharacters: tailorPlayerCharactersForViewer(
       match.playerCharacters,
       ctx.userId,

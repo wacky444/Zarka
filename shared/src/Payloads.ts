@@ -75,6 +75,7 @@ export type UpdateReadyStatePayload = {
   readyStates?: Record<string, boolean>;
   deadCharacters?: Record<string, boolean>;
   advanced?: boolean;
+  lastAutoAdvanceAt?: number;
   playerCharacters?: Record<string, PlayerCharacter>;
   map?: GameMap;
   items?: MatchItemRecord[];
@@ -162,6 +163,7 @@ export type TurnAdvancedMessagePayload = {
   match_id: string;
   turn: number;
   readyStates?: Record<string, boolean>;
+  lastAutoAdvanceAt?: number;
   deadCharacters?: Record<string, boolean>;
   playerCharacters?: Record<string, PlayerCharacter>;
   advanced?: boolean;

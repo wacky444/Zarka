@@ -153,6 +153,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
           turn: match.current_turn,
           match_id: ctx.matchId,
           readyStates: match.readyStates,
+          lastAutoAdvanceAt: match.lastAutoAdvanceAt,
           playerCharacters: match.playerCharacters,
           events: outcome.events,
           viewDistance: DEFAULT_REPLAY_VIEW_DISTANCE,
