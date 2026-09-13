@@ -1,5 +1,8 @@
 import type { Axial, ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
+import { playRandomSound } from "../soundPlayer";
+
+const SCARE_SOUNDS = ["horror_sting", "ghost", "ghost_long"];
 
 function readMetadataAxial(value: unknown): Axial | null {
   if (!value || typeof value !== "object") {
@@ -20,6 +23,7 @@ export async function animateScareEvent(
   if (targets.length === 0) {
     return;
   }
+  playRandomSound(context.scene, SCARE_SOUNDS);
   const animations: Array<Promise<void>> = [];
   for (const target of targets) {
     if (!target?.targetId) {

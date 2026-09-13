@@ -20,6 +20,12 @@ import {
   updateSkinLayers,
   type SkinLayers
 } from "../ui/PlayerSkinRenderer";
+import {
+  preloadReplaySounds,
+  getStoredVolumeLevel,
+  setGameVolumeLevel,
+  playRandomSound
+} from "../animation/soundPlayer";
 
 function buildSkinItems(category: SkinCategory): GridSelectItem[] {
   const options = SKIN_OPTIONS[category];
@@ -47,6 +53,15 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   setOrigin?: (x: number, y?: number) => void;
 };
 
+type SliderInstance = Phaser.GameObjects.GameObject & {
+  value: number;
+  layout: () => void;
+  getValue: (min?: number, max?: number) => number;
+  setValue: (value?: number, min?: number, max?: number) => SliderInstance;
+  setGap: (gap?: number, min?: number, max?: number) => SliderInstance;
+  setPosition: (x: number, y: number) => SliderInstance;
+};
+
 const ACCOUNT_LAYOUT = {
   maxWidth: 760,
   horizontalPadding: 20,
@@ -63,6 +78,9 @@ export class AccountScene extends Phaser.Scene {
   private skinStatsTitle!: Phaser.GameObjects.Text;
   private skinTitle!: Phaser.GameObjects.Text;
   private facebookTitle!: Phaser.GameObjects.Text;
+  private audioTitle!: Phaser.GameObjects.Text;
+  private volumeLabel!: Phaser.GameObjects.Text;
+  private volumeSlider!: SliderInstance;
   private linkFacebookButton!: UIButton;
   private unlinkFacebookButton!: UIButton;
   private backButton!: UIButton;
@@ -94,6 +112,7 @@ export class AccountScene extends Phaser.Scene {
         assetPath("assets/spritesheets/roguelikeChar_transparent.xml")
       );
     }
+    preloadReplaySounds(this);
   }
 
   async create(data?: { client?: Client; session?: Session }) {
@@ -247,6 +266,51 @@ export class AccountScene extends Phaser.Scene {
     ).setOrigin(0.5, 0);
     this.accountRoot.add(this.unlinkFacebookButton);
 
+    const initialVolume = getStoredVolumeLevel();
+    setGameVolumeLevel(this, initialVolume);
+
+    this.audioTitle = this.add
+      .text(0, 0, "Audio Settings", {
+        color: "#ffffff",
+        fontSize: "18px"
+      })
+      .setOrigin(0.5, 0);
+    this.accountRoot.add(this.audioTitle);
+
+    this.volumeLabel = this.add
+      .text(0, 0, `Volume: ${initialVolume}`, {
+        color: "#cccccc",
+        fontSize: "13px",
+        align: "center"
+      })
+      .setOrigin(0.5, 0);
+    this.accountRoot.add(this.volumeLabel);
+
+    const sliderWidth = 240;
+    this.volumeSlider = this.rexUI.add.slider({
+      x: 0,
+      y: 0,
+      width: sliderWidth,
+      height: 28,
+      orientation: "x",
+      track: this.rexUI.add.roundRectangle(0, 0, sliderWidth, 8, 4, 0x1f2a4a),
+      indicator: this.rexUI.add.roundRectangle(0, 0, 0, 8, 4, 0x3b82f6),
+      thumb: this.rexUI.add.roundRectangle(0, 0, 18, 18, 9, 0x60a5fa),
+      input: "click",
+      gap: 0.1,
+      value: initialVolume / 10,
+      valuechangeCallback: (newValue: number) => {
+        const level = Math.round(newValue * 10);
+        setGameVolumeLevel(this, level);
+        this.volumeLabel.setText(`Volume: ${level}`);
+      }
+    }) as SliderInstance;
+    this.volumeSlider.on("inputend", () => {
+      playRandomSound(this, ["pop_1"]);
+    });
+    this.volumeSlider.layout();
+    this.accountRoot.add(this.volumeSlider);
+
     this.backButton = makeButton(this, 0, 0, "Back to Game", () => {
       this.scene.start("MainScene", {
         client: this.client,
@@ -383,6 +447,15 @@ export class AccountScene extends Phaser.Scene {
       this.unlinkFacebookButton.setPosition(centerX, cursorY);
       cursorY += this.unlinkFacebookButton.height + ACCOUNT_LAYOUT.sectionGap;
     }
+
+    this.audioTitle.setPosition(centerX, cursorY);
+    cursorY += this.audioTitle.height + 6;
+
+    this.volumeLabel.setPosition(centerX, cursorY);
+    cursorY += this.volumeLabel.height + 12;
+
+    this.volumeSlider.setPosition(centerX, cursorY + 14);
+    cursorY += 34 + ACCOUNT_LAYOUT.sectionGap;
 
     this.backButton.setPosition(centerX, cursorY);
     cursorY += this.backButton.height + ACCOUNT_LAYOUT.horizontalPadding;

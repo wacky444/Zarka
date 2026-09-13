@@ -1,6 +1,13 @@
 import { ReplayActionEffect, type ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
 import { hasEffect, showGuardOverlay } from "./GuardOverlay";
+import { playRandomSound } from "../soundPlayer";
+
+const CHEMICAL_WEAPON_SOUNDS = [
+  "squelching_1",
+  "squelching_2",
+  "water_splashing",
+];
 
 export async function animateChemicalWeaponEvent(
   context: MoveReplayContext,
@@ -10,6 +17,7 @@ export async function animateChemicalWeaponEvent(
   if (!targets || targets.length === 0) {
     return;
   }
+  playRandomSound(context.scene, CHEMICAL_WEAPON_SOUNDS);
   const attackerSprite = context.getSprite(event.actorId) ?? null;
   const animations: Array<Promise<void>> = [];
   const guardedIds: string[] = [];

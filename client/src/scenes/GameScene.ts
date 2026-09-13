@@ -48,6 +48,7 @@ import { collectItemSpriteInfos, resolveItemTexture } from "../ui/itemIcons";
 import { ItemTooltipManager, composeItemDescription } from "../ui/ItemTooltip";
 import { HoverTooltip } from "../ui/HoverTooltip";
 import { TopBanner, type TopBannerPayload } from "../ui/TopBanner";
+import { preloadReplaySounds, applyStoredVolume } from "../animation/soundPlayer";
 import { assetPath } from "../utils/assetPath";
 import { createSkinContainer, SkinContainer } from "../ui/PlayerSkinRenderer";
 import { AccountService } from "../services/AccountService";
@@ -217,9 +218,11 @@ export class GameScene extends Phaser.Scene {
         this.load.image(key, buildBoardIconUrl(frame));
       }
     }
+    preloadReplaySounds(this);
   }
 
   async create() {
+    applyStoredVolume(this);
     this.cam = this.cameras.main;
     this.uiCam = this.cameras.add(0, 0, this.cam.width, this.cam.height);
     this.uiCam.setScroll(0, 0);

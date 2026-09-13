@@ -1,5 +1,13 @@
 import type { ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
+import { playRandomSound } from "../soundPlayer";
+
+const MOVE_SOUNDS = [
+  "foley_footstep_concrete_1",
+  "foley_footstep_concrete_2",
+  "foley_footstep_concrete_3",
+  "foley_footstep_concrete_4",
+];
 
 export async function animateMoveEvent(
   context: MoveReplayContext,
@@ -26,6 +34,7 @@ export async function animateMoveEvent(
     return;
   }
   const targetWorld = context.axialToWorld(targetCoord);
+  playRandomSound(context.scene, MOVE_SOUNDS);
   await new Promise<void>((resolve) => {
     context.tweens.add({
       targets: sprite,

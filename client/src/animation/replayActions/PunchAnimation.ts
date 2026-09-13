@@ -1,6 +1,9 @@
 import { ReplayActionEffect, type ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
 import { hasEffect, showGuardOverlay } from "./GuardOverlay";
+import { playRandomSound } from "../soundPlayer";
+
+const PUNCH_SOUNDS = ["punch", "punch_2", "punch_3"];
 
 export async function animatePunchEvent(
   context: MoveReplayContext,
@@ -10,6 +13,7 @@ export async function animatePunchEvent(
   if (!targets || targets.length === 0) {
     return;
   }
+  playRandomSound(context.scene, PUNCH_SOUNDS);
   const attackerSprite = context.getSprite(event.actorId) ?? null;
   const animations: Array<Promise<void>> = [];
   const guardedIds: string[] = [];

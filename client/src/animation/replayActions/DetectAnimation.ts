@@ -1,6 +1,8 @@
 import type { ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
+import { playRandomSound } from "../soundPlayer";
 
+const DETECT_SOUNDS = ["sci_fi_hover", "sci_fi_select", "pop_1"];
 const PULSE_DURATION = 500;
 const PULSE_RADIUS_START = 8;
 const PULSE_RADIUS_END = 64;
@@ -15,6 +17,7 @@ export async function animateDetectEvent(
   if (!originCoord) {
     return;
   }
+  playRandomSound(context.scene, DETECT_SOUNDS);
   const worldPos = context.axialToWorld(originCoord);
 
   return new Promise<void>((resolve) => {

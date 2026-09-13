@@ -5,6 +5,9 @@ import {
   type ReplayPlayerEvent,
 } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
+import { playRandomSound } from "../soundPlayer";
+
+const FAILED_ACTION_SOUNDS = ["undesired_effect", "sci_fi_error", "cancel"];
 
 export async function animateFailedActionEvent(
   context: MoveReplayContext,
@@ -17,6 +20,7 @@ export async function animateFailedActionEvent(
   if (!sprite) {
     return;
   }
+  playRandomSound(context.scene, FAILED_ACTION_SOUNDS);
   const scene = context.scene;
   const baseOffset = sprite.displayHeight * 0.65;
   const label = scene.add.text(

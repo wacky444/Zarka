@@ -2,7 +2,13 @@ import type Phaser from "phaser";
 import { type ItemId, type ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
 import { resolveItemLabel, resolveItemVisual } from "./ItemVisuals";
+import { playRandomSound } from "../soundPlayer";
 
+const PICK_UP_SOUNDS = [
+  "weapon_pick_up",
+  "item_equip",
+  "wood_small_pickup",
+];
 const PICKUP_TRAIL_DURATION = 420;
 
 type ReplayPickUpItemMetadata = {
@@ -59,6 +65,8 @@ export async function animatePickUpEvent(
   if (!originCoord && !actorSprite) {
     return;
   }
+
+  playRandomSound(context.scene, PICK_UP_SOUNDS);
 
   const originWorld = originCoord
     ? context.axialToWorld(originCoord)

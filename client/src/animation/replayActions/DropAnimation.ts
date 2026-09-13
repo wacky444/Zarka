@@ -2,7 +2,13 @@ import type Phaser from "phaser";
 import { type ItemId, type ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
 import { resolveItemLabel, resolveItemVisual } from "./ItemVisuals";
+import { playRandomSound } from "../soundPlayer";
 
+const DROP_SOUNDS = [
+  "weapon_drop",
+  "wood_small_drop",
+  "cardboard_drop",
+];
 const DROP_ANIMATION_DURATION = 420;
 
 type ReplayDropItemMetadata = {
@@ -55,6 +61,8 @@ export async function animateDropEvent(
   if (!originCoord && !actorSprite) {
     return;
   }
+
+  playRandomSound(context.scene, DROP_SOUNDS);
 
   const actorWorld = actorSprite
     ? { x: actorSprite.x, y: actorSprite.y, depth: actorSprite.depth + 1 }

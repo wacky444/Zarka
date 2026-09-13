@@ -28,6 +28,9 @@ declare module "phaser3-rex-plugins/templates/ui/ui-plugin" {
         config: Record<string, unknown>
       ): Phaser.GameObjects.GameObject;
       sizer(config: Record<string, unknown>): Phaser.GameObjects.GameObject;
+      slider(
+        config: Record<string, unknown>
+      ): Phaser.GameObjects.GameObject;
       gridTable(config: Record<string, unknown>): Phaser.GameObjects.GameObject;
       BBCodeText(
         x: number,
@@ -69,6 +72,9 @@ declare global {
             config: Record<string, unknown>
           ): Phaser.GameObjects.GameObject;
           sizer(config: Record<string, unknown>): Phaser.GameObjects.GameObject;
+          slider(
+            config: Record<string, unknown>
+          ): Phaser.GameObjects.GameObject;
           gridTable(
             config: Record<string, unknown>
           ): Phaser.GameObjects.GameObject;

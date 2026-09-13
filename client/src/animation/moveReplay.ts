@@ -20,6 +20,9 @@ import { animateFocusEvent } from "./replayActions/FocusAnimation";
 import { animateFailedActionEvent } from "./replayActions/FailedActionAnimation";
 import { animateDetectEvent } from "./replayActions/DetectAnimation";
 import { animateChemicalWeaponEvent } from "./replayActions/ChemicalWeaponAnimation";
+import { playRandomSound } from "./soundPlayer";
+
+const TILE_DESTROYED_SOUNDS = ["explosion_small", "explosion_medium"];
 
 export async function playReplayEvents(
   context: MoveReplayContext,
@@ -27,6 +30,7 @@ export async function playReplayEvents(
 ): Promise<void> {
   for (const event of events) {
     if (event.kind === "map" && event.action === "destroyed" && event.cell) {
+      playRandomSound(context.scene, TILE_DESTROYED_SOUNDS);
       if (context.showTileDestroyedBanner) {
         context.showTileDestroyedBanner(event.cell);
       }

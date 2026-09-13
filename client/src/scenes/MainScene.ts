@@ -8,6 +8,7 @@ import { makeButton, UIButton } from "../ui/button";
 import { MatchesListView } from "./MatchesList";
 import { MyMatchesListView } from "./MyMatchesList";
 import { LobbyView } from "./LobbyView";
+import { applyStoredVolume } from "../animation/soundPlayer";
 import type {
   LeaveMatchPayload,
   JoinMatchPayload,
@@ -171,6 +172,7 @@ export class MainScene extends Phaser.Scene {
   preload() {}
 
   async create(data?: { client?: Client; session?: Session }) {
+    applyStoredVolume(this);
     this.mainRoot = this.add.container(0, 0);
 
     this.titleText = this.add

@@ -3,7 +3,9 @@ import { type ItemId, type MatchRecord, type ReplayPlayerEvent } from "@shared";
 import { deriveBoardIconKey } from "../../ui/actionIcons";
 import type { MoveReplayContext } from "../MoveReplayContext";
 import { resolveItemLabel, resolveItemVisual } from "./ItemVisuals";
+import { playRandomSound } from "../soundPlayer";
 
+const SEARCH_SOUNDS = ["page_turn", "paper_move", "paper_scrunch"];
 const SEARCH_TEXTURE_KEY = deriveBoardIconKey("cards_seek.png");
 
 type ReplaySearchItemMetadata = {
@@ -75,6 +77,7 @@ export async function animateSearchEvent(
   if (!coord && !sprite) {
     return;
   }
+  playRandomSound(context.scene, SEARCH_SOUNDS);
   const scene = context.scene;
   const base = sprite
     ? { x: sprite.x, y: sprite.y }

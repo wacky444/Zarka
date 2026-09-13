@@ -1,6 +1,9 @@
 import { ReplayActionEffect, type ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
 import { hasEffect, showGuardOverlay } from "./GuardOverlay";
+import { playRandomSound } from "../soundPlayer";
+
+const BAT_ATTACK_SOUNDS = ["harsh_thud", "cardboard_hit", "metal_blunt_tap"];
 
 export async function animateBatAttackEvent(
   context: MoveReplayContext,
@@ -10,6 +13,7 @@ export async function animateBatAttackEvent(
   if (!targets || targets.length === 0) {
     return;
   }
+  playRandomSound(context.scene, BAT_ATTACK_SOUNDS);
   const attackerSprite = context.getSprite(event.actorId) ?? null;
   const animations: Array<Promise<void>> = [];
   const guardedIds: string[] = [];

@@ -1,6 +1,9 @@
 import { ReplayActionEffect, type ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
 import { hasEffect, showGuardOverlay } from "./GuardOverlay";
+import { playRandomSound } from "../soundPlayer";
+
+const KNIFE_ATTACK_SOUNDS = ["sword_light", "cork_stabbed", "sword_sharpen"];
 
 export async function animateKnifeAttackEvent(
   context: MoveReplayContext,
@@ -10,6 +13,7 @@ export async function animateKnifeAttackEvent(
   if (!targets || targets.length === 0) {
     return;
   }
+  playRandomSound(context.scene, KNIFE_ATTACK_SOUNDS);
   const attackerSprite = context.getSprite(event.actorId) ?? null;
   const animations: Array<Promise<void>> = [];
   const guardedIds: string[] = [];
