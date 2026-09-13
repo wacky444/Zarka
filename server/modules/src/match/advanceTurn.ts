@@ -140,8 +140,8 @@ function applyDailyPension(match: MatchRecord): void {
   }
 }
 
-function applyPendingZarkanPayout(match: MatchRecord, resolvedTurn: number): void {
-  if (resolvedTurn % 5 !== 0 || !match.playerCharacters) {
+function applyPendingZarkanPayout(match: MatchRecord): void {
+  if (!match.playerCharacters) {
     return;
   }
   for (const playerId in match.playerCharacters) {
@@ -253,7 +253,7 @@ export function advanceTurn(
       replayEvents.push(...events);
     }
   }
-  applyPendingZarkanPayout(match, resolvedTurn);
+  applyPendingZarkanPayout(match);
   // removeProtectedState(match);
 
   if (match.map?.tiles) {

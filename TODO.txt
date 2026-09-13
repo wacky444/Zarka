@@ -47,5 +47,3 @@
 - move status_dead out of actionLibrary
 
 - animation for detroyed cell, maybe zoom to the cell then exposion sprite?
-
-- sounds

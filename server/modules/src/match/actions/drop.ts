@@ -8,7 +8,7 @@ import {
   type ItemId,
   type PlayerCharacter,
   type ReplayActionDone,
-  type ReplayPlayerEvent,
+  type ReplayPlayerEvent
 } from "@shared";
 import { type PlannedActionParticipant } from "./utils";
 import { findTileById } from "./search";
@@ -61,7 +61,10 @@ function removeItemFromInventory(
   itemType: ItemId,
   weight: number
 ): boolean {
-  if (!character.inventory || !Array.isArray(character.inventory.carriedItems)) {
+  if (
+    !character.inventory ||
+    !Array.isArray(character.inventory.carriedItems)
+  ) {
     return false;
   }
   const carried = character.inventory.carriedItems;
@@ -101,7 +104,10 @@ function selectItemsToDrop(
   limit: number
 ): ItemId[] {
   const selected: ItemId[] = [];
-  if (!character.inventory || !Array.isArray(character.inventory.carriedItems)) {
+  if (
+    !character.inventory ||
+    !Array.isArray(character.inventory.carriedItems)
+  ) {
     return selected;
   }
   const counts: Record<string, number> = {};
@@ -221,22 +227,22 @@ export class DropAction extends BaseAction {
               : 0;
           const salesmanBonus =
             getSkillRank(participant.character, "salesman") > 0 ? 1 : 0;
-          const earned = baseValue > 0 ? baseValue + salesmanBonus : 0;
+          const earned = baseValue + salesmanBonus;
           totalEarnedZarkans += earned;
 
           if (!participant.character.economy) {
             participant.character.economy = {
               zarkans: 0,
               pendingZarkans: 0,
-              incomeInterval: 5,
+              incomeInterval: 5
             };
           }
-          const currentPending =
-            typeof participant.character.economy.pendingZarkans === "number" &&
-            isFinite(participant.character.economy.pendingZarkans)
-              ? participant.character.economy.pendingZarkans
+          const currentZarkans =
+            typeof participant.character.economy.zarkans === "number" &&
+            isFinite(participant.character.economy.zarkans)
+              ? participant.character.economy.zarkans
               : 0;
-          participant.character.economy.pendingZarkans = currentPending + earned;
+          participant.character.economy.zarkans = currentZarkans + earned;
 
           processedItems.push({ itemType, zarkans: earned });
         } else {
@@ -272,10 +278,10 @@ export class DropAction extends BaseAction {
       const metadata: Record<string, unknown> = {
         droppedCount: processedItems.length,
         droppedItems: processedItems.map((item) => ({
-          itemType: item.itemType,
+          itemType: item.itemType
         })),
         sellInstead: isSell,
-        extraExecutions: extraReps,
+        extraExecutions: extraReps
       };
       if (isSell) {
         metadata.zarkansEarned = totalEarnedZarkans;
@@ -289,13 +295,13 @@ export class DropAction extends BaseAction {
         actionId,
         originLocation: coord,
         targetLocation: coord,
-        metadata,
+        metadata
       };
 
       events.push({
         kind: "player",
         actorId: participant.playerId,
-        action,
+        action
       });
     }
 

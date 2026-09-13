@@ -180,6 +180,17 @@ export function updateSecondaryActionRpc(
   ) {
     throw makeNakamaError("skill_required:agility4", 9);
   }
+  if (!clearAction && normalizedActionId) {
+    const otherPlanKey =
+      planKey === "extraSecondary" ? "secondary" : "extraSecondary";
+    const otherActionId = character.actionPlan?.[otherPlanKey]?.actionId;
+    if (otherActionId && otherActionId === normalizedActionId) {
+      throw makeNakamaError(
+        "duplicate_secondary_action",
+        nkruntime.Codes.INVALID_ARGUMENT
+      );
+    }
+  }
   if (prioritizeFoodDrink) {
     if (normalizedActionId !== "search") {
       throw makeNakamaError("search_priority_requires_search", 3);

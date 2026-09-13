@@ -14,6 +14,7 @@ export const THEME = {
     textMuted: "#94a3b8",
     textDisabled: "#94a3b8",
     cooldown: "#f87171",
+    warning: "#fb923c",
     energyCost: "#facc15",
     energyAccent: 0xfacc15,
     healthAccent: 0x4ade80,

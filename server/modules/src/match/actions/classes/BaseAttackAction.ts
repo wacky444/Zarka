@@ -27,8 +27,11 @@ function resolveDodge(target: PlayerCharacter): boolean {
   if (attempts <= 0) {
     return false;
   }
-  target.statuses.dodgeAttempts = attempts - 1;
-  return Math.random() < getDodgeSuccessChance(target);
+  const isDodged = Math.random() < getDodgeSuccessChance(target);
+  if (isDodged && target.statuses) {
+    target.statuses.dodgeAttempts = attempts - 1;
+  }
+  return isDodged;
 }
 
 export abstract class BaseAttackAction extends BaseAction {

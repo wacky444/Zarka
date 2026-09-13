@@ -11,6 +11,7 @@ export interface GridSelectItem {
   iconScale?: number;
   tags?: string[];
   cooldownRemaining?: number;
+  missingRequirement?: string | null;
   energyCost?: number;
   disabled?: boolean;
   isEmptyOption?: boolean;
@@ -547,6 +548,18 @@ export class GridSelect extends Phaser.GameObjects.Container {
         event.stopPropagation();
       },
     );
+    backgroundGO.on(
+      "wheel",
+      (
+        _pointer: Phaser.Input.Pointer,
+        _dx: number,
+        _dy: number,
+        _dz: number,
+        event: WheelEvent,
+      ) => {
+        event?.stopPropagation?.();
+      },
+    );
 
     const header = scene.add
       .text(0, 0, this.modalTitle, {
@@ -887,14 +900,29 @@ export class GridSelect extends Phaser.GameObjects.Container {
       }) as Phaser.GameObjects.Text;
       descText.setOrigin(0.5, 0.5);
 
-      const cooldownText = scene.add
-        .text(0, 0, "", {
-          fontSize: "14px",
-          color: THEME.colors.cooldown,
-          fontStyle: "bold",
-        })
-        .setOrigin(1, 0)
-        .setVisible(false);
+      const cooldownText = (
+        scene.rexUI?.add?.BBCodeText
+          ? scene.rexUI.add.BBCodeText(0, 0, "", {
+              fontSize: "12px",
+              fontStyle: "bold",
+              align: "right",
+              wrap: {
+                mode: "word",
+                width: 95,
+              },
+            })
+          : scene.add.text(0, 0, "", {
+              fontSize: "12px",
+              color: THEME.colors.cooldown,
+              fontStyle: "bold",
+              align: "right",
+              wordWrap: {
+                width: 95,
+              },
+            })
+      ) as Phaser.GameObjects.Text;
+      cooldownText.setOrigin(1, 0);
+      cooldownText.setVisible(false);
 
       const nameTruncated = this.applySingleLineText(
         nameText,
@@ -967,7 +995,6 @@ export class GridSelect extends Phaser.GameObjects.Container {
         container as unknown as { setMinSize?: (w: number, h: number) => void }
       ).setMinSize?.(cellWidth, cellHeight);
 
-      container.layout();
       const created = container as unknown as Phaser.GameObjects.GameObject;
       this.updateCellAppearance(created, {
         item,
@@ -981,6 +1008,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         textWidth: usableTextWidth,
         isSelected: this.selectedItem?.id === item.id,
       });
+      container.layout();
       return created;
     }
 
@@ -1156,10 +1184,37 @@ export class GridSelect extends Phaser.GameObjects.Container {
       | undefined;
     if (cooldownText) {
       const remaining = config.item.cooldownRemaining ?? 0;
-      if (disabled && remaining > 0) {
-        cooldownText.setText(`CD: ${remaining}`);
+      const missing = config.item.missingRequirement?.trim();
+      const isBBCode =
+        typeof (cooldownText as unknown as { getWrappedText?: unknown })
+          .getWrappedText === "function";
+
+      const parts: string[] = [];
+      if (remaining > 0) {
+        parts.push(
+          isBBCode
+            ? `[color=${THEME.colors.cooldown}]CD: ${remaining}[/color]`
+            : `CD: ${remaining}`
+        );
+      }
+      if (missing) {
+        parts.push(
+          isBBCode
+            ? `[color=${THEME.colors.warning}]${missing}[/color]`
+            : missing
+        );
+      }
+
+      if (parts.length > 0) {
+        cooldownText.setText(parts.join("\n"));
+        if (!isBBCode) {
+          cooldownText.setColor(
+            missing ? THEME.colors.warning : THEME.colors.cooldown
+          );
+        }
         cooldownText.setVisible(true);
       } else {
+        cooldownText.setText("");
         cooldownText.setVisible(false);
       }
     }

@@ -55,6 +55,8 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
     });
     this.grid.setPosition(0, this.label.height + 6);
     this.grid.on("change", this.handleSelection);
+    this.grid.on("modal-open", this.handleModalOpen);
+    this.grid.on("modal-close", this.handleModalClose);
 
     this.add(this.label);
     this.add(this.grid);
@@ -152,16 +154,36 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
     this.grid.hideModal();
   }
 
+  isModalOpen(): boolean {
+    return this.grid.isModalOpen();
+  }
+
   override destroy(fromScene?: boolean): void {
     if (this.disposed) {
       return;
     }
     this.disposed = true;
     this.grid.off("change", this.handleSelection);
+    this.grid.off("modal-open", this.handleModalOpen);
+    this.grid.off("modal-close", this.handleModalClose);
     this.grid.destroy();
     this.label.destroy();
     super.destroy(fromScene);
   }
+
+  private readonly handleModalOpen = () => {
+    if (this.disposed) {
+      return;
+    }
+    this.emit("modal-open");
+  };
+
+  private readonly handleModalClose = () => {
+    if (this.disposed) {
+      return;
+    }
+    this.emit("modal-close");
+  };
 
   private readonly handleSelection = (value: string | null) => {
     if (this.disposed) {
