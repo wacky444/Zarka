@@ -49,6 +49,13 @@ export abstract class BaseAttackAction extends BaseAction {
     return this.baseDamage + usableExtra;
   }
 
+  protected getActionMetadata(
+    _participant: PlannedActionParticipant,
+    _match: MatchRecord
+  ): Record<string, unknown> | undefined {
+    return undefined;
+  }
+
   protected processRoster(
     roster: PlannedActionParticipant[],
     match: MatchRecord
@@ -112,10 +119,26 @@ export abstract class BaseAttackAction extends BaseAction {
       if (targetEntries.length === 0) {
         continue;
       }
+      const definition = actionId ? ActionLibrary[actionId] : undefined;
+      const usableExtra = definition
+        ? getUsableExtraExecutions(
+            participant.character,
+            participant.plan,
+            definition
+          )
+        : 0;
+      const customMetadata = this.getActionMetadata(participant, match);
+      const actionMetadata: Record<string, unknown> = {
+        ...(usableExtra > 0 ? { extraExecutions: usableExtra } : {}),
+        ...(customMetadata ?? {}),
+      };
       const action: ReplayActionDone = {
         actionId,
         damageDealt: totalDamage,
         effects: this.effectType,
+        ...(Object.keys(actionMetadata).length > 0
+          ? { metadata: actionMetadata }
+          : {}),
       };
       if (participant.character.position?.coord) {
         action.originLocation = participant.character.position.coord;

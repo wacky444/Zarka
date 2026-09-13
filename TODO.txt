@@ -35,3 +35,17 @@
 - train and experience
 
 - stealing
+
+- end game animation, screen, stats, achievements (who killed the most, or pacifist)
+
+- description color, for energy and health values
+
+- i18n
+
+- ask luna if its worth it to migrate to phaser 4
+
+- move status_dead out of actionLibrary
+
+- animation for detroyed cell, maybe zoom to the cell then exposion sprite?
+
+- sounds

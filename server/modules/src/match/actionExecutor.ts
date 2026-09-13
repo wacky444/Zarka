@@ -16,14 +16,17 @@ import { executeProtectAction } from "./actions/protect";
 import { executePunchAction } from "./actions/punch";
 import { executeKnifeAttackAction } from "./actions/knifeAttack";
 import { executeAxeAttackAction } from "./actions/axeAttack";
+import { executeBatAttackAction } from "./actions/batAttack";
 import { executeSleepAction } from "./actions/sleep";
 import { executeRecoverAction } from "./actions/recover";
 import { executeBreakfastAction } from "./actions/breakfast";
 import { canFeedParticipant, executeFeedAction } from "./actions/feed";
 import { executeFocusAction } from "./actions/focus";
 import { executeUseBandageAction } from "./actions/useBandage";
+import { executeUseChemicalWeaponAction } from "./actions/UseChemicalWeapon";
 import { executeSearchAction } from "./actions/search";
 import { executePickUpAction } from "./actions/pickup";
+import { executeDropAction } from "./actions/drop";
 import { applyActionCooldown } from "./actions/cooldowns";
 import {
   applyActionEnergyCost,
@@ -262,6 +265,49 @@ export function executeAction(
       }
       handled = true;
     }
+  } else if (action.id === ActionLibrary.use_chemical_weapon.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const eligible: PlannedActionParticipant[] = [];
+      const missing: PlannedActionParticipant[] = [];
+      for (const participant of participants) {
+        if (hasCarriedItem(participant.character, "chemical_weapon")) {
+          eligible.push(participant);
+        } else {
+          missing.push(participant);
+          clearPlanByKey(participant.character, participant.planKey);
+          match.playerCharacters![participant.playerId] = participant.character;
+        }
+      }
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = eligible.length
+        ? executeUseChemicalWeaponAction(eligible, match)
+        : [];
+      const failureEvents = missing.length
+        ? missing.map((participant) =>
+            createFailedActionEvent(participant, action.id, {
+              reason: "missing_item",
+              missingItemId: "chemical_weapon",
+            }),
+          )
+        : [];
+      eventsForAction = [...energyEvents, ...actionEvents, ...failureEvents];
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
   } else if (action.id === ActionLibrary.sleep.id) {
     const participants = collectParticipants(match, action.id);
     if (participants.length > 0) {
@@ -427,6 +473,30 @@ export function executeAction(
       }
       handled = true;
     }
+  } else if (action.id === ActionLibrary.drop.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = executeDropAction(participants, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
   } else if (action.id === ActionLibrary.search.id) {
     const participants = collectParticipants(match, action.id);
     if (participants.length > 0) {
@@ -570,6 +640,52 @@ export function executeAction(
             createFailedActionEvent(participant, action.id, {
               reason: "missing_item",
               missingItemId: "axe",
+            }),
+          )
+        : [];
+      eventsForAction = [...energyEvents, ...actionEvents, ...failureEvents];
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.bat_attack.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const eligible: PlannedActionParticipant[] = [];
+      const missing: PlannedActionParticipant[] = [];
+      for (const participant of participants) {
+        if (
+          hasCarriedItem(participant.character, "nail_bat") ||
+          hasCarriedItem(participant.character, "bat")
+        ) {
+          eligible.push(participant);
+        } else {
+          missing.push(participant);
+          clearPlanByKey(participant.character, participant.planKey);
+          match.playerCharacters![participant.playerId] = participant.character;
+        }
+      }
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = eligible.length
+        ? executeBatAttackAction(eligible, match)
+        : [];
+      const failureEvents = missing.length
+        ? missing.map((participant) =>
+            createFailedActionEvent(participant, action.id, {
+              reason: "missing_item",
+              missingItemId: "bat",
             }),
           )
         : [];

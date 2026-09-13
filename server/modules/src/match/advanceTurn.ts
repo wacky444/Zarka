@@ -140,6 +140,37 @@ function applyDailyPension(match: MatchRecord): void {
   }
 }
 
+function applyPendingZarkanPayout(match: MatchRecord, resolvedTurn: number): void {
+  if (resolvedTurn % 5 !== 0 || !match.playerCharacters) {
+    return;
+  }
+  for (const playerId in match.playerCharacters) {
+    if (
+      !Object.prototype.hasOwnProperty.call(match.playerCharacters, playerId)
+    ) {
+      continue;
+    }
+    const character = match.playerCharacters[playerId];
+    if (!character || isCharacterDead(character) || !character.economy) {
+      continue;
+    }
+    const pending =
+      typeof character.economy.pendingZarkans === "number" &&
+      isFinite(character.economy.pendingZarkans)
+        ? character.economy.pendingZarkans
+        : 0;
+    if (pending > 0) {
+      const current =
+        typeof character.economy.zarkans === "number" &&
+        isFinite(character.economy.zarkans)
+          ? character.economy.zarkans
+          : 0;
+      character.economy.zarkans = current + pending;
+      character.economy.pendingZarkans = 0;
+    }
+  }
+}
+
 function clearDodgeAttempts(match: MatchRecord) {
   if (!match.playerCharacters) {
     return;
@@ -222,6 +253,7 @@ export function advanceTurn(
       replayEvents.push(...events);
     }
   }
+  applyPendingZarkanPayout(match, resolvedTurn);
   // removeProtectedState(match);
 
   if (match.map?.tiles) {

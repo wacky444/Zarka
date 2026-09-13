@@ -10,6 +10,7 @@ import type {
   Axial,
 } from "@shared";
 import {
+  ItemLibrary,
   ReplayActionEffect,
   getCharacterSpeed,
   getKnockoutThreshold,
@@ -223,6 +224,60 @@ export function hasCarriedItem(
       typeof stack.quantity === "number" &&
       stack.quantity >= minimumQuantity
   );
+}
+
+export function consumeCarriedItem(
+  character: PlayerCharacter,
+  itemId: string,
+  amount: number = 1
+): boolean {
+  if (!itemId || amount <= 0) {
+    return false;
+  }
+  const stacks = character.inventory?.carriedItems;
+  if (!Array.isArray(stacks)) {
+    return false;
+  }
+  let index = -1;
+  for (let i = 0; i < stacks.length; i += 1) {
+    const s = stacks[i];
+    if (
+      s &&
+      s.itemId === itemId &&
+      typeof s.quantity === "number" &&
+      s.quantity >= amount
+    ) {
+      index = i;
+      break;
+    }
+  }
+  if (index === -1) {
+    return false;
+  }
+  const stack = stacks[index];
+  const currentQuantity =
+    typeof stack.quantity === "number" ? stack.quantity : 0;
+  const def = ItemLibrary[itemId as keyof typeof ItemLibrary];
+  const itemWeight =
+    (typeof stack.weight === "number" && currentQuantity > 0
+      ? stack.weight / currentQuantity
+      : 0) ||
+    (def && typeof def.weight === "number" ? def.weight : 0);
+
+  const load = character.stats?.load;
+  if (load && typeof load.current === "number") {
+    load.current = Math.max(0, load.current - itemWeight * amount);
+  }
+
+  if (currentQuantity <= amount) {
+    stacks.splice(index, 1);
+  } else {
+    stack.quantity = currentQuantity - amount;
+    if (typeof stack.weight === "number") {
+      stack.weight = Math.max(0, stack.weight - itemWeight * amount);
+    }
+  }
+  return true;
 }
 
 const STATUS_UNCONSCIOUS_ACTION_ID: ActionId = "status_unconscious";

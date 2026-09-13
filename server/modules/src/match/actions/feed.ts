@@ -3,7 +3,6 @@
 import type { MatchRecord } from "../../models/types";
 import {
   getSkillEffectTotal,
-  ItemLibrary,
   ReplayActionEffect,
   type ActionId,
   type ItemId,
@@ -14,6 +13,7 @@ import {
 } from "@shared";
 import {
   applyHealthDelta,
+  consumeCarriedItem,
   mergeCharacterState,
   type PlannedActionParticipant
 } from "./utils";
@@ -120,65 +120,12 @@ function applyEnergy(character: PlayerCharacter, amount: number): number {
   return next - current;
 }
 
-function computePerItemWeight(
-  itemId: ItemId,
-  totalWeight: number,
-  quantity: number
-): number {
-  if (quantity <= 0) {
-    return 0;
-  }
-  const definition = ItemLibrary[itemId];
-  if (definition && typeof definition.weight === "number") {
-    return definition.weight;
-  }
-  if (typeof totalWeight === "number" && isFinite(totalWeight)) {
-    return totalWeight / quantity;
-  }
-  return 0;
-}
-
 function consumeFeedItem(character: PlayerCharacter): ItemId | null {
-  const inventory = character.inventory;
-  if (!inventory || !Array.isArray(inventory.carriedItems)) {
-    return null;
-  }
-  for (let index = 0; index < inventory.carriedItems.length; index += 1) {
-    const stack = inventory.carriedItems[index];
-    if (!stack || typeof stack.itemId !== "string") {
-      continue;
+  for (let i = 0; i < FEED_ITEM_PRIORITY.length; i += 1) {
+    const candidateId = FEED_ITEM_PRIORITY[i];
+    if (consumeCarriedItem(character, candidateId, 1)) {
+      return candidateId;
     }
-    const itemId = stack.itemId as ItemId;
-    if (FEED_ITEM_PRIORITY.indexOf(itemId) === -1) {
-      continue;
-    }
-    const quantity =
-      typeof stack.quantity === "number" && isFinite(stack.quantity)
-        ? Math.max(0, Math.floor(stack.quantity))
-        : 0;
-    if (quantity <= 0) {
-      continue;
-    }
-    const perItemWeight = computePerItemWeight(
-      itemId,
-      typeof stack.weight === "number" ? stack.weight : 0,
-      quantity
-    );
-    const load = character.stats?.load;
-    if (load && typeof load.current === "number") {
-      load.current = Math.max(0, load.current - perItemWeight);
-    }
-    if (quantity === 1) {
-      inventory.carriedItems.splice(index, 1);
-    } else {
-      stack.quantity = quantity - 1;
-      if (typeof stack.weight === "number") {
-        stack.weight = Math.max(0, stack.weight - perItemWeight);
-      } else if (perItemWeight > 0) {
-        stack.weight = perItemWeight * (stack.quantity ?? 0);
-      }
-    }
-    return itemId;
   }
   return null;
 }

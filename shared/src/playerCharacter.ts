@@ -128,6 +128,8 @@ export interface PlayerPlannedAction {
   extraExecutions?: number;
   extraEffort?: number;
   prioritizeFoodDrink?: boolean;
+  sellInstead?: boolean;
+  singleTarget?: boolean;
   conditions?: Array<ActionCondition>;
   targetLocationId?: Axial;
   targetPlayerIds?: string[];

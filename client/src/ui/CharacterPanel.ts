@@ -102,6 +102,8 @@ export type SecondaryActionSelection = {
   targetItemIds?: string[];
   extraExecutions?: number;
   prioritizeFoodDrink?: boolean;
+  singleTarget?: boolean;
+  sellInstead?: boolean;
 };
 
 type LogEliminationPayload = {
@@ -172,8 +174,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private secondaryPlayerSelector: PlayerSelector;
   private secondaryItemSelector: ItemPrioritySelector;
   private secondarySearchPriorityToggle: Phaser.GameObjects.Text;
+  private secondaryDropSellToggle: Phaser.GameObjects.Text;
+  private secondaryChemicalTargetToggle: Phaser.GameObjects.Text;
   private extraSecondaryLocationSelector: LocationSelector;
   private extraSecondarySearchPriorityToggle: Phaser.GameObjects.Text;
+  private extraSecondaryDropSellToggle: Phaser.GameObjects.Text;
+  private extraSecondaryChemicalTargetToggle: Phaser.GameObjects.Text;
   private extraSecondaryPlayerSelector: PlayerSelector;
   private extraSecondaryItemSelector: ItemPrioritySelector;
   private itemsBackground!: Phaser.GameObjects.Rectangle;
@@ -202,8 +208,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private mainActionPriorityItems: string[] = [];
   private secondaryActionPriorityItems: string[] = [];
   private secondaryPrioritizeFoodDrink = false;
+  private secondaryChemicalSingleTarget = false;
+  private secondarySellInstead = false;
   private extraSecondaryActionPriorityItems: string[] = [];
   private extraSecondaryPrioritizeFoodDrink = false;
+  private extraSecondaryChemicalSingleTarget = false;
+  private extraSecondarySellInstead = false;
   private lastMainActionItem: GridSelectItem | null = null;
   private lastSecondaryActionItem: GridSelectItem | null = null;
   private lastExtraSecondaryActionItem: GridSelectItem | null = null;
@@ -215,6 +225,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private secondaryPlayerOptions: PlayerOption[] = [];
   private extraSecondaryPlayerOptions: PlayerOption[] = [];
   private itemOptions: ItemPriorityOption[] = [];
+  private inventoryItemOptions: ItemPriorityOption[] = [];
   private currentMatch: MatchRecord | null = null;
   private currentUserId: string | null = null;
   private currentPlayerSkin: import("@shared").Skin | null = null;
@@ -310,8 +321,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.refreshPlayerOptionsForSelectors();
     this.refreshSecondaryExtraExecutionSelectorState();
     this.refreshSecondaryLocationSelectorState();
+    this.refreshSecondaryChemicalTargetState();
     this.refreshSecondaryPlayerSelectorState();
+    this.refreshSecondaryItemSelectorState();
     this.refreshSecondarySearchPriorityState();
+    this.refreshSecondaryDropSellState();
     this.emitSecondaryActionChange();
   };
   private readonly handleSecondaryLocationPickRequest = () => {
@@ -337,8 +351,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.refreshPlayerOptionsForSelectors();
     this.refreshExtraSecondaryExecutionSelectorState();
     this.refreshExtraSecondaryLocationSelectorState();
+    this.refreshExtraSecondaryChemicalTargetState();
     this.refreshExtraSecondaryPlayerSelectorState();
+    this.refreshExtraSecondaryItemSelectorState();
     this.refreshExtraSecondarySearchPriorityState();
+    this.refreshExtraSecondaryDropSellState();
     this.emitExtraSecondaryActionChange();
   };
   private readonly handleExtraSecondaryLocationPickRequest = () => {
@@ -396,6 +413,85 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.extraSecondaryPrioritizeFoodDrink
     );
     this.emitExtraSecondaryActionChange();
+    event.stopPropagation();
+  };
+  private readonly handleSecondaryDropSellToggle = (
+    _pointer: Phaser.Input.Pointer,
+    _localX: number,
+    _localY: number,
+    event: Phaser.Types.Input.EventData
+  ) => {
+    if (!this.secondaryDropSellToggle.visible) {
+      return;
+    }
+    this.secondarySellInstead = !this.secondarySellInstead;
+    this.updateDropSellToggleText(
+      this.secondaryDropSellToggle,
+      this.secondarySellInstead
+    );
+    this.emitSecondaryActionChange();
+    event.stopPropagation();
+  };
+  private readonly handleExtraSecondaryDropSellToggle = (
+    _pointer: Phaser.Input.Pointer,
+    _localX: number,
+    _localY: number,
+    event: Phaser.Types.Input.EventData
+  ) => {
+    if (!this.extraSecondaryDropSellToggle.visible) {
+      return;
+    }
+    this.extraSecondarySellInstead = !this.extraSecondarySellInstead;
+    this.updateDropSellToggleText(
+      this.extraSecondaryDropSellToggle,
+      this.extraSecondarySellInstead
+    );
+    this.emitExtraSecondaryActionChange();
+    event.stopPropagation();
+  };
+  private readonly handleSecondaryChemicalTargetToggle = (
+    _pointer: Phaser.Input.Pointer,
+    _localX: number,
+    _localY: number,
+    event: Phaser.Types.Input.EventData
+  ) => {
+    if (!this.secondaryChemicalTargetToggle.visible) {
+      return;
+    }
+    this.secondaryChemicalSingleTarget = !this.secondaryChemicalSingleTarget;
+    this.updateChemicalTargetToggleText(
+      this.secondaryChemicalTargetToggle,
+      this.secondaryChemicalSingleTarget
+    );
+    if (!this.secondaryChemicalSingleTarget) {
+      this.setSecondaryActionTargetPlayer(null, false);
+    }
+    this.refreshSecondaryPlayerSelectorState();
+    this.emitSecondaryActionChange();
+    this.updateScrollLayout();
+    event.stopPropagation();
+  };
+  private readonly handleExtraSecondaryChemicalTargetToggle = (
+    _pointer: Phaser.Input.Pointer,
+    _localX: number,
+    _localY: number,
+    event: Phaser.Types.Input.EventData
+  ) => {
+    if (!this.extraSecondaryChemicalTargetToggle.visible) {
+      return;
+    }
+    this.extraSecondaryChemicalSingleTarget =
+      !this.extraSecondaryChemicalSingleTarget;
+    this.updateChemicalTargetToggleText(
+      this.extraSecondaryChemicalTargetToggle,
+      this.extraSecondaryChemicalSingleTarget
+    );
+    if (!this.extraSecondaryChemicalSingleTarget) {
+      this.setExtraSecondaryActionTargetPlayer(null, false);
+    }
+    this.refreshExtraSecondaryPlayerSelectorState();
+    this.emitExtraSecondaryActionChange();
+    this.updateScrollLayout();
     event.stopPropagation();
   };
   private readonly handleSecondaryLocationClear = () => {
@@ -824,6 +920,32 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.handleSecondarySearchPriorityToggle
     );
     this.scrollContent.add(this.secondarySearchPriorityToggle);
+    this.secondaryDropSellToggle = scene.add
+      .text(0, 0, "[ ] Sell instead", {
+        fontSize: "13px",
+        color: "#facc15"
+      })
+      .setOrigin(0, 0)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.secondaryDropSellToggle.on(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleSecondaryDropSellToggle
+    );
+    this.scrollContent.add(this.secondaryDropSellToggle);
+    this.secondaryChemicalTargetToggle = scene.add
+      .text(0, 0, "[ ] Single target (Area)", {
+        fontSize: "13px",
+        color: "#facc15"
+      })
+      .setOrigin(0, 0)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.secondaryChemicalTargetToggle.on(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleSecondaryChemicalTargetToggle
+    );
+    this.scrollContent.add(this.secondaryChemicalTargetToggle);
 
     this.extraSecondaryActionBox = scene.add
       .rectangle(0, 0, boxWidth, BOX_HEIGHT, 0x1b2440)
@@ -937,6 +1059,32 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.handleExtraSecondarySearchPriorityToggle
     );
     this.scrollContent.add(this.extraSecondarySearchPriorityToggle);
+    this.extraSecondaryDropSellToggle = scene.add
+      .text(0, 0, "[ ] Sell instead", {
+        fontSize: "13px",
+        color: "#facc15"
+      })
+      .setOrigin(0, 0)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.extraSecondaryDropSellToggle.on(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleExtraSecondaryDropSellToggle
+    );
+    this.scrollContent.add(this.extraSecondaryDropSellToggle);
+    this.extraSecondaryChemicalTargetToggle = scene.add
+      .text(0, 0, "[ ] Single target (Area)", {
+        fontSize: "13px",
+        color: "#facc15"
+      })
+      .setOrigin(0, 0)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.extraSecondaryChemicalTargetToggle.on(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleExtraSecondaryChemicalTargetToggle
+    );
+    this.scrollContent.add(this.extraSecondaryChemicalTargetToggle);
     this.updateScrollLayout();
     const itemsBoxY = contentTop;
     const itemsBoxHeight = Math.max(
@@ -1263,9 +1411,25 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       Phaser.Input.Events.POINTER_UP,
       this.handleSecondarySearchPriorityToggle
     );
+    this.secondaryChemicalTargetToggle.off(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleSecondaryChemicalTargetToggle
+    );
+    this.secondaryDropSellToggle.off(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleSecondaryDropSellToggle
+    );
     this.extraSecondarySearchPriorityToggle.off(
       Phaser.Input.Events.POINTER_UP,
       this.handleExtraSecondarySearchPriorityToggle
+    );
+    this.extraSecondaryChemicalTargetToggle.off(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleExtraSecondaryChemicalTargetToggle
+    );
+    this.extraSecondaryDropSellToggle.off(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleExtraSecondaryDropSellToggle
     );
     try {
       this.extraSecondaryPlayerSelector.hideDropdown();
@@ -1345,13 +1509,18 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.extraSecondaryActionDropdown.setActive(hasExtraSecondaryAction);
     this.refreshSecondaryExtraExecutionSelectorState();
     this.refreshSecondaryLocationSelectorState();
+    this.refreshSecondaryChemicalTargetState();
     this.refreshSecondaryPlayerSelectorState();
+    this.refreshSecondaryItemSelectorState();
+    this.refreshSecondarySearchPriorityState();
+    this.refreshSecondaryDropSellState();
     this.refreshExtraSecondaryExecutionSelectorState();
     this.refreshExtraSecondaryLocationSelectorState();
+    this.refreshExtraSecondaryChemicalTargetState();
     this.refreshExtraSecondaryPlayerSelectorState();
     this.refreshExtraSecondaryItemSelectorState();
-    this.refreshSecondarySearchPriorityState();
     this.refreshExtraSecondarySearchPriorityState();
+    this.refreshExtraSecondaryDropSellState();
     this.setReadyEnabled(this.readyEnabled);
   }
 
@@ -1382,6 +1551,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.secondaryPlayerSelector.hideDropdown();
     this.secondaryPlayerSelector.setVisible(false);
     this.secondaryPlayerSelector.setActive(false);
+    this.secondaryItemSelector.setVisible(false);
+    this.secondaryItemSelector.setActive(false);
     this.extraSecondaryActionBox.setVisible(false);
     this.extraSecondaryActionLabel.setVisible(false);
     this.extraSecondaryActionDropdown.setVisible(false);
@@ -1397,8 +1568,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.extraSecondaryItemSelector.setActive(false);
     this.secondarySearchPriorityToggle.setVisible(false);
     this.secondarySearchPriorityToggle.setActive(false);
+    this.secondaryChemicalTargetToggle.setVisible(false);
+    this.secondaryChemicalTargetToggle.setActive(false);
+    this.secondaryDropSellToggle.setVisible(false);
+    this.secondaryDropSellToggle.setActive(false);
     this.extraSecondarySearchPriorityToggle.setVisible(false);
     this.extraSecondarySearchPriorityToggle.setActive(false);
+    this.extraSecondaryChemicalTargetToggle.setVisible(false);
+    this.extraSecondaryChemicalTargetToggle.setActive(false);
+    this.extraSecondaryDropSellToggle.setVisible(false);
+    this.extraSecondaryDropSellToggle.setActive(false);
     this.readyToggle.disableInteractive();
     this.scrollPanel?.setMouseWheelScrollerEnable?.(false);
   }
@@ -1752,9 +1931,27 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.setLocationSelectionPending(false);
     this.playerSelector.setPending(false);
     const secondaryActions = this.collectSecondaryActions(character);
+    const secondaryId = character.actionPlan?.secondary?.actionId ?? null;
     this.secondaryPrioritizeFoodDrink =
       character.actionPlan?.secondary?.prioritizeFoodDrink === true;
-    const secondaryId = character.actionPlan?.secondary?.actionId ?? null;
+    this.secondarySellInstead =
+      secondaryId === "drop" &&
+      character.actionPlan?.secondary?.sellInstead === true;
+    this.updateDropSellToggleText(
+      this.secondaryDropSellToggle,
+      this.secondarySellInstead
+    );
+    const secondaryTargetPlayers =
+      character.actionPlan?.secondary?.targetPlayerIds ?? null;
+    this.secondaryChemicalSingleTarget =
+      secondaryId === "use_chemical_weapon" &&
+      (character.actionPlan?.secondary?.singleTarget === true ||
+        (Array.isArray(secondaryTargetPlayers) &&
+          secondaryTargetPlayers.length > 0));
+    this.updateChemicalTargetToggleText(
+      this.secondaryChemicalTargetToggle,
+      this.secondaryChemicalSingleTarget
+    );
     const secondaryExtraExecutions =
       character.actionPlan?.secondary?.extraExecutions ?? 0;
     this.applySecondaryActions(
@@ -1769,8 +1966,6 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       secondaryTargetLocation
     );
     this.setSecondaryActionTarget(normalizedSecondaryTargetLocation, false);
-    const secondaryTargetPlayers =
-      character.actionPlan?.secondary?.targetPlayerIds ?? null;
     const secondaryServerTargetPlayerId = this.normalizePlayerId(
       Array.isArray(secondaryTargetPlayers) && secondaryTargetPlayers.length > 0
         ? secondaryTargetPlayers[0]
@@ -1789,10 +1984,28 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const extraSecondaryActions = character.actionPlan?.extraSecondary?.actionId
       ? [character.actionPlan.extraSecondary.actionId as ActionId]
       : [];
-    this.extraSecondaryPrioritizeFoodDrink =
-      character.actionPlan?.extraSecondary?.prioritizeFoodDrink === true;
     const extraSecondaryId =
       character.actionPlan?.extraSecondary?.actionId ?? null;
+    this.extraSecondaryPrioritizeFoodDrink =
+      character.actionPlan?.extraSecondary?.prioritizeFoodDrink === true;
+    this.extraSecondarySellInstead =
+      extraSecondaryId === "drop" &&
+      character.actionPlan?.extraSecondary?.sellInstead === true;
+    this.updateDropSellToggleText(
+      this.extraSecondaryDropSellToggle,
+      this.extraSecondarySellInstead
+    );
+    const extraSecondaryTargetPlayers =
+      character.actionPlan?.extraSecondary?.targetPlayerIds ?? null;
+    this.extraSecondaryChemicalSingleTarget =
+      extraSecondaryId === "use_chemical_weapon" &&
+      (character.actionPlan?.extraSecondary?.singleTarget === true ||
+        (Array.isArray(extraSecondaryTargetPlayers) &&
+          extraSecondaryTargetPlayers.length > 0));
+    this.updateChemicalTargetToggleText(
+      this.extraSecondaryChemicalTargetToggle,
+      this.extraSecondaryChemicalSingleTarget
+    );
     const extraSecondaryExtraExecutions =
       character.actionPlan?.extraSecondary?.extraExecutions ?? 0;
     this.applyExtraSecondaryActions(
@@ -1810,8 +2023,6 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       normalizedExtraSecondaryTargetLocation,
       false
     );
-    const extraSecondaryTargetPlayers =
-      character.actionPlan?.extraSecondary?.targetPlayerIds ?? null;
     const extraSecondaryServerTargetPlayerId = this.normalizePlayerId(
       Array.isArray(extraSecondaryTargetPlayers) &&
         extraSecondaryTargetPlayers.length > 0
@@ -1841,14 +2052,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       normalizedSecondaryTargetLocation,
       secondaryServerTargetPlayerId,
       secondaryTargetItems,
-      character.actionPlan?.secondary?.prioritizeFoodDrink === true
+      character.actionPlan?.secondary?.prioritizeFoodDrink === true,
+      character.actionPlan?.secondary?.sellInstead === true
     );
     this.syncExtraSecondaryActionWithServer(
       extraSecondaryId,
       normalizedExtraSecondaryTargetLocation,
       extraSecondaryServerTargetPlayerId,
       extraSecondaryTargetItems,
-      character.actionPlan?.extraSecondary?.prioritizeFoodDrink === true
+      character.actionPlan?.extraSecondary?.prioritizeFoodDrink === true,
+      character.actionPlan?.extraSecondary?.sellInstead === true
     );
     this.updateInventoryPanel(character);
     this.updateScrollLayout();
@@ -2071,9 +2284,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     this.refreshSecondaryExtraExecutionSelectorState(storedExtraExecutions);
     this.refreshSecondaryLocationSelectorState();
+    this.refreshSecondaryChemicalTargetState();
     this.refreshSecondaryPlayerSelectorState();
     this.refreshSecondaryItemSelectorState();
     this.refreshSecondarySearchPriorityState();
+    this.refreshSecondaryDropSellState();
   }
 
   private applyExtraSecondaryActions(
@@ -2114,9 +2329,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     this.refreshExtraSecondaryExecutionSelectorState(storedExtraExecutions);
     this.refreshExtraSecondaryLocationSelectorState();
+    this.refreshExtraSecondaryChemicalTargetState();
     this.refreshExtraSecondaryPlayerSelectorState();
     this.refreshExtraSecondaryItemSelectorState();
     this.refreshExtraSecondarySearchPriorityState();
+    this.refreshExtraSecondaryDropSellState();
   }
 
   private collectMainActions(character: PlayerCharacter) {
@@ -2425,8 +2642,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private refreshExtraSecondaryItemSelectorState() {
+    const isDrop = this.extraSecondaryActionSelection === "drop";
+    const availableOptions = isDrop
+      ? this.inventoryItemOptions
+      : this.itemOptions;
+    this.extraSecondaryItemSelector.setOptions(availableOptions);
     const supports = this.selectedExtraSecondaryActionSupportsItemPriority();
-    const shouldShow = supports && this.itemOptions.length > 0;
+    const shouldShow = supports && availableOptions.length > 0;
     this.extraSecondaryItemSelector.setVisible(shouldShow);
     this.extraSecondaryItemSelector.setActive(shouldShow);
     if (!shouldShow) {
@@ -2438,6 +2660,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.updateScrollLayout();
       return;
     }
+    const filtered = this.filterPriorityIds(
+      this.extraSecondaryActionPriorityItems,
+      availableOptions
+    );
+    this.extraSecondaryActionPriorityItems = filtered;
+    this.extraSecondaryItemSelector.setValue(filtered, false);
     this.extraSecondaryItemSelector.setEnabled(
       this.extraSecondaryActionSelection !== null
     );
@@ -2489,6 +2717,79 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.updateSearchPriorityToggleText(
       this.extraSecondarySearchPriorityToggle,
       this.extraSecondaryPrioritizeFoodDrink
+    );
+    this.updateScrollLayout();
+  }
+
+  private updateChemicalTargetToggleText(
+    toggle: Phaser.GameObjects.Text,
+    singleTarget: boolean
+  ): void {
+    toggle.setText(
+      singleTarget ? "[x] Single target" : "[ ] Single target (Area)"
+    );
+  }
+
+  private refreshSecondaryChemicalTargetState(): void {
+    const visible = this.secondaryActionSelection === "use_chemical_weapon";
+    this.secondaryChemicalTargetToggle.setVisible(visible);
+    this.secondaryChemicalTargetToggle.setActive(visible);
+    if (!visible) {
+      this.secondaryChemicalSingleTarget = false;
+    }
+    this.updateChemicalTargetToggleText(
+      this.secondaryChemicalTargetToggle,
+      this.secondaryChemicalSingleTarget
+    );
+    this.updateScrollLayout();
+  }
+
+  private refreshExtraSecondaryChemicalTargetState(): void {
+    const visible =
+      this.extraSecondaryActionSelection === "use_chemical_weapon";
+    this.extraSecondaryChemicalTargetToggle.setVisible(visible);
+    this.extraSecondaryChemicalTargetToggle.setActive(visible);
+    if (!visible) {
+      this.extraSecondaryChemicalSingleTarget = false;
+    }
+    this.updateChemicalTargetToggleText(
+      this.extraSecondaryChemicalTargetToggle,
+      this.extraSecondaryChemicalSingleTarget
+    );
+    this.updateScrollLayout();
+  }
+
+  private updateDropSellToggleText(
+    toggle: Phaser.GameObjects.Text,
+    sellInstead: boolean
+  ): void {
+    toggle.setText(sellInstead ? "[x] Sell instead" : "[ ] Sell instead");
+  }
+
+  private refreshSecondaryDropSellState(): void {
+    const visible = this.secondaryActionSelection === "drop";
+    this.secondaryDropSellToggle.setVisible(visible);
+    this.secondaryDropSellToggle.setActive(visible);
+    if (!visible) {
+      this.secondarySellInstead = false;
+    }
+    this.updateDropSellToggleText(
+      this.secondaryDropSellToggle,
+      this.secondarySellInstead
+    );
+    this.updateScrollLayout();
+  }
+
+  private refreshExtraSecondaryDropSellState(): void {
+    const visible = this.extraSecondaryActionSelection === "drop";
+    this.extraSecondaryDropSellToggle.setVisible(visible);
+    this.extraSecondaryDropSellToggle.setActive(visible);
+    if (!visible) {
+      this.extraSecondarySellInstead = false;
+    }
+    this.updateDropSellToggleText(
+      this.extraSecondaryDropSellToggle,
+      this.extraSecondarySellInstead
     );
     this.updateScrollLayout();
   }
@@ -2619,8 +2920,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private refreshSecondaryItemSelectorState() {
+    const isDrop = this.secondaryActionSelection === "drop";
+    const availableOptions = isDrop
+      ? this.inventoryItemOptions
+      : this.itemOptions;
+    this.secondaryItemSelector.setOptions(availableOptions);
     const supports = this.selectedSecondaryActionSupportsItemPriority();
-    const hasOptions = this.itemOptions.length > 0;
+    const hasOptions = availableOptions.length > 0;
     const shouldShow = supports && hasOptions;
     this.secondaryItemSelector.setVisible(shouldShow);
     this.secondaryItemSelector.setActive(shouldShow);
@@ -2635,6 +2941,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.updateScrollLayout();
       return;
     }
+    const filtered = this.filterPriorityIds(
+      this.secondaryActionPriorityItems,
+      availableOptions
+    );
+    this.secondaryActionPriorityItems = filtered;
+    this.secondaryItemSelector.setValue(filtered, false);
     const hasSelection = this.secondaryActionSelection !== null;
     this.secondaryItemSelector.setEnabled(hasSelection);
     if (!hasSelection) {
@@ -2662,7 +2974,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       locationSelector: LocationSelector,
       playerSelector: PlayerSelector,
       itemSelector: ItemPrioritySelector,
-      searchPriorityToggle: Phaser.GameObjects.Text | null
+      searchPriorityToggle: Phaser.GameObjects.Text | null,
+      chemicalTargetToggle?: Phaser.GameObjects.Text | null,
+      dropSellToggle?: Phaser.GameObjects.Text | null
     ) => {
       box.setPosition(0, cursorY);
       box.setSize(width, BOX_HEIGHT);
@@ -2683,6 +2997,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       if (locationSelector.visible) {
         innerCursor += locationSelector.height + 8;
       }
+      if (chemicalTargetToggle) {
+        chemicalTargetToggle.setPosition(horizontalPadding, innerCursor);
+        if (chemicalTargetToggle.visible) {
+          innerCursor += chemicalTargetToggle.height + 8;
+        }
+      }
       playerSelector.setSelectorWidth(width - horizontalPadding * 2);
       playerSelector.setPosition(horizontalPadding, innerCursor);
       if (playerSelector.visible) {
@@ -2699,6 +3019,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
           innerCursor += searchPriorityToggle.height + 8;
         }
       }
+      if (dropSellToggle) {
+        dropSellToggle.setPosition(horizontalPadding, innerCursor);
+        if (dropSellToggle.visible) {
+          innerCursor += dropSellToggle.height + 8;
+        }
+      }
       const blockHeight = Math.max(BOX_HEIGHT, innerCursor - cursorY + 16);
       box.setSize(width, blockHeight);
       box.setDisplaySize(width, blockHeight);
@@ -2713,6 +3039,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.locationSelector,
       this.playerSelector,
       this.itemSelector,
+      null,
+      null,
       null
     );
     cursorY += 16;
@@ -2724,7 +3052,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.secondaryLocationSelector,
       this.secondaryPlayerSelector,
       this.secondaryItemSelector,
-      this.secondarySearchPriorityToggle
+      this.secondarySearchPriorityToggle,
+      this.secondaryChemicalTargetToggle,
+      this.secondaryDropSellToggle
     );
     cursorY += 16;
     if (this.hasExtraSecondaryAction()) {
@@ -2738,7 +3068,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.extraSecondaryLocationSelector,
         this.extraSecondaryPlayerSelector,
         this.extraSecondaryItemSelector,
-        this.extraSecondarySearchPriorityToggle
+        this.extraSecondarySearchPriorityToggle,
+        this.extraSecondaryChemicalTargetToggle,
+        this.extraSecondaryDropSellToggle
       );
       cursorY += 16;
     } else {
@@ -2987,7 +3319,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     return definition?.tags?.includes("CanTargetSelf") === true;
   }
 
-  private filterPriorityIds(ids: string[]): string[] {
+  private filterPriorityIds(
+    ids: string[],
+    optionsList: ItemPriorityOption[] = this.itemOptions
+  ): string[] {
     if (!Array.isArray(ids) || ids.length === 0) {
       return [];
     }
@@ -3001,7 +3336,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       if (!trimmed || seen.has(trimmed)) {
         continue;
       }
-      const option = this.itemOptions.find((entry) => entry.id === trimmed);
+      const option = optionsList.find((entry) => entry.id === trimmed);
       if (!option || option.disabled) {
         continue;
       }
@@ -3053,7 +3388,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       }
       return hadValues;
     }
-    const filtered = this.filterPriorityIds(ids);
+    const optionsList =
+      this.secondaryActionSelection === "drop"
+        ? this.inventoryItemOptions
+        : this.itemOptions;
+    const filtered = this.filterPriorityIds(ids, optionsList);
     if (this.isSameTargetItems(this.secondaryActionPriorityItems, filtered)) {
       this.secondaryItemSelector.setValue(filtered, false);
       return false;
@@ -3120,18 +3459,77 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         }
       }
     }
+    const inventoryOptions: ItemPriorityOption[] = [];
+    if (match && currentUserId) {
+      const character = match.playerCharacters?.[currentUserId] ?? null;
+      if (
+        character?.inventory &&
+        Array.isArray(character.inventory.carriedItems)
+      ) {
+        for (const stack of character.inventory.carriedItems) {
+          if (
+            !stack ||
+            typeof stack.itemId !== "string" ||
+            stack.quantity <= 0
+          ) {
+            continue;
+          }
+          const itemType = stack.itemId as ItemId;
+          const definition = ItemLibrary[itemType] as
+            | ItemDefinition
+            | undefined;
+          const baseName = definition?.name ?? itemType;
+          const label =
+            stack.quantity > 1
+              ? `${baseName} (x${stack.quantity})`
+              : baseName;
+          const description = definition?.description;
+          let texture = "hex";
+          let frame: string | undefined = "grass_01.png";
+          let iconScale: number | undefined;
+          if (definition) {
+            const visual = resolveItemTexture(definition);
+            texture = visual.texture;
+            frame = visual.frame;
+          }
+          inventoryOptions.push({
+            id: itemType,
+            label,
+            description,
+            texture,
+            frame,
+            iconScale
+          });
+        }
+      }
+    }
+    this.inventoryItemOptions = inventoryOptions;
     this.itemOptions = options;
     this.itemSelector.setOptions(options);
-    this.secondaryItemSelector.setOptions(options);
-    this.extraSecondaryItemSelector.setOptions(options);
+    this.secondaryItemSelector.setOptions(
+      this.secondaryActionSelection === "drop"
+        ? this.inventoryItemOptions
+        : options
+    );
+    this.extraSecondaryItemSelector.setOptions(
+      this.extraSecondaryActionSelection === "drop"
+        ? this.inventoryItemOptions
+        : options
+    );
     const normalizedMain = this.filterPriorityIds(this.mainActionPriorityItems);
     this.mainActionPriorityItems = normalizedMain;
     const normalizedSecondary = this.filterPriorityIds(
-      this.secondaryActionPriorityItems
+      this.secondaryActionPriorityItems,
+      this.secondaryActionSelection === "drop"
+        ? this.inventoryItemOptions
+        : this.itemOptions
     );
     this.secondaryActionPriorityItems = normalizedSecondary;
     const normalizedExtraSecondary = this.filterPriorityIds(
-      this.extraSecondaryActionPriorityItems
+      this.extraSecondaryActionPriorityItems,
+      this.extraSecondaryActionSelection === "drop"
+        ? this.inventoryItemOptions
+        : this.itemOptions
     );
     this.extraSecondaryActionPriorityItems = normalizedExtraSecondary;
     if (this.selectedActionSupportsItemPriority()) {
@@ -3252,6 +3650,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private selectedSecondaryActionSupportsSingleTarget() {
+    if (this.secondaryActionSelection === "use_chemical_weapon") {
+      return this.secondaryChemicalSingleTarget;
+    }
     return (
       this.lastSecondaryActionItem?.tags?.includes("SingleTarget") ?? false
     );
@@ -3275,6 +3676,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private selectedExtraSecondaryActionSupportsSingleTarget() {
+    if (this.extraSecondaryActionSelection === "use_chemical_weapon") {
+      return this.extraSecondaryChemicalSingleTarget;
+    }
     return (
       this.lastExtraSecondaryActionItem?.tags?.includes("SingleTarget") ?? false
     );
@@ -3347,6 +3751,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       prioritizeFoodDrink:
         this.secondaryActionSelection === "search" &&
         this.secondaryPrioritizeFoodDrink,
+      sellInstead:
+        this.secondaryActionSelection === "drop" &&
+        this.secondarySellInstead,
+      singleTarget:
+        this.secondaryActionSelection === "use_chemical_weapon"
+          ? this.secondaryChemicalSingleTarget
+          : undefined,
       targetLocation:
         supportsLocation && this.secondaryActionTarget
           ? {
@@ -3377,6 +3788,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       prioritizeFoodDrink:
         this.extraSecondaryActionSelection === "search" &&
         this.extraSecondaryPrioritizeFoodDrink,
+      sellInstead:
+        this.extraSecondaryActionSelection === "drop" &&
+        this.extraSecondarySellInstead,
+      singleTarget:
+        this.extraSecondaryActionSelection === "use_chemical_weapon"
+          ? this.extraSecondaryChemicalSingleTarget
+          : undefined,
       targetLocation:
         supportsLocation && this.extraSecondaryActionTarget
           ? {
@@ -3433,7 +3851,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     serverTargetLocation: Axial | null,
     serverTargetPlayerId: string | null,
     serverTargetItems: string[] | null,
-    serverPrioritizeFoodDrink: boolean
+    serverPrioritizeFoodDrink: boolean,
+    serverSellInstead: boolean = false
   ): void {
     const matchesSelection =
       (this.secondaryActionSelection ?? null) === (serverActionId ?? null);
@@ -3451,12 +3870,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const matchesFoodDrinkPriority =
       this.secondaryActionSelection !== "search" ||
       this.secondaryPrioritizeFoodDrink === serverPrioritizeFoodDrink;
+    const matchesSellInstead =
+      this.secondaryActionSelection !== "drop" ||
+      this.secondarySellInstead === serverSellInstead;
     if (
       !matchesSelection ||
       !matchesLocation ||
       !matchesPlayer ||
       !matchesItems ||
-      !matchesFoodDrinkPriority
+      !matchesFoodDrinkPriority ||
+      !matchesSellInstead
     ) {
       this.emitSecondaryActionChange();
     }
@@ -3467,7 +3890,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     serverTargetLocation: Axial | null,
     serverTargetPlayerId: string | null,
     serverTargetItems: string[] | null,
-    serverPrioritizeFoodDrink: boolean
+    serverPrioritizeFoodDrink: boolean,
+    serverSellInstead: boolean = false
   ): void {
     const matchesSelection =
       (this.extraSecondaryActionSelection ?? null) ===
@@ -3486,12 +3910,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const matchesFoodDrinkPriority =
       this.extraSecondaryActionSelection !== "search" ||
       this.extraSecondaryPrioritizeFoodDrink === serverPrioritizeFoodDrink;
+    const matchesSellInstead =
+      this.extraSecondaryActionSelection !== "drop" ||
+      this.extraSecondarySellInstead === serverSellInstead;
     if (
       !matchesSelection ||
       !matchesLocation ||
       !matchesPlayer ||
       !matchesItems ||
-      !matchesFoodDrinkPriority
+      !matchesFoodDrinkPriority ||
+      !matchesSellInstead
     ) {
       this.emitExtraSecondaryActionChange();
     }
@@ -3600,7 +4028,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       }
       return changed;
     }
-    const filtered = this.filterPriorityIds(ids);
+    const optionsList =
+      this.extraSecondaryActionSelection === "drop"
+        ? this.inventoryItemOptions
+        : this.itemOptions;
+    const filtered = this.filterPriorityIds(ids, optionsList);
     if (this.isSameTargetItems(this.extraSecondaryActionPriorityItems, filtered)) {
       this.extraSecondaryItemSelector.setValue(filtered, false);
       return false;
@@ -3672,6 +4104,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       prioritizeFoodDrink:
         this.secondaryActionSelection === "search" &&
         this.secondaryPrioritizeFoodDrink,
+      singleTarget:
+        this.secondaryActionSelection === "use_chemical_weapon"
+          ? this.secondaryChemicalSingleTarget
+          : undefined,
       targetLocation:
         supportsLocation && this.secondaryActionTarget
           ? {

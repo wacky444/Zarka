@@ -50,6 +50,7 @@ export type UpdateMainActionPayload = {
   targetPlayerIds?: string[];
   targetItemIds?: string[];
   extraExecutions?: number;
+  singleTarget?: boolean;
   error?: string;
 };
 
@@ -63,6 +64,8 @@ export type UpdateSecondaryActionPayload = {
   targetItemIds?: string[];
   extraExecutions?: number;
   prioritizeFoodDrink?: boolean;
+  sellInstead?: boolean;
+  singleTarget?: boolean;
   error?: string;
 };
 

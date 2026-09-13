@@ -517,6 +517,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 1,
     cooldown: 3,
+    developed: true,
     requirements: [{ description: "Debe poseer el objeto a dejar." }],
     effects: [
       {
@@ -533,7 +534,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "token_remove.png",
     actionOrder: 8,
     actionSubOrder: 0,
-    tags: ["Logistics"]
+    tags: ["Logistics", "TargetItems"]
   },
   throw_object: {
     id: "throw_object",
@@ -573,6 +574,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 3,
     cooldown: 3,
+    developed: true,
     experience: {
       base: 1,
       conditional: [
@@ -594,7 +596,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "flask_full.png",
     actionOrder: 9,
     actionSubOrder: 0,
-    tags: ["Attack", "Area"]
+    tags: ["Attack", "Area", "SingleTarget"]
   },
   scare: {
     id: "scare",
@@ -687,6 +689,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 3,
     cooldown: 3,
+    developed: true,
     experience: {
       base: 1,
       conditional: [
@@ -694,8 +697,10 @@ export const ActionLibrary: ActionLibraryDefinition = {
         { value: 5, condition: "Si mata." }
       ]
     },
-    requiredItems: ["bat"],
-    requirements: [{ description: "Requiere tener un bate." }],
+    requiredItems: ["bat", "nail_bat"],
+    requirements: [
+      { description: "Requiere tener un bate o bate con clavos." }
+    ],
     effects: [
       {
         description:

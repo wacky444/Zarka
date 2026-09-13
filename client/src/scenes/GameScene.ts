@@ -1801,7 +1801,9 @@ export class GameScene extends Phaser.Scene {
         typeof selection?.extraExecutions === "number"
           ? selection.extraExecutions
           : undefined,
-      prioritizeFoodDrink: selection?.prioritizeFoodDrink === true
+      prioritizeFoodDrink: selection?.prioritizeFoodDrink === true,
+      sellInstead: selection?.sellInstead === true,
+      singleTarget: selection?.singleTarget === true
     };
     const character =
       this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
@@ -1830,7 +1832,11 @@ export class GameScene extends Phaser.Scene {
       (normalizedSelection.extraExecutions ?? 0) ===
         (previousPlan?.extraExecutions ?? 0) &&
       normalizedSelection.prioritizeFoodDrink ===
-        (previousPlan?.prioritizeFoodDrink ?? false)
+        (previousPlan?.prioritizeFoodDrink ?? false) &&
+      normalizedSelection.sellInstead ===
+        (previousPlan?.sellInstead ?? false) &&
+      normalizedSelection.singleTarget ===
+        (previousPlan?.singleTarget ?? false)
     ) {
       return;
     }
@@ -1848,7 +1854,9 @@ export class GameScene extends Phaser.Scene {
             normalizedSelection.targetPlayerIds,
             normalizedSelection.targetItemIds,
             normalizedSelection.extraExecutions,
-            normalizedSelection.prioritizeFoodDrink
+            normalizedSelection.prioritizeFoodDrink,
+            normalizedSelection.sellInstead,
+            normalizedSelection.singleTarget
           )
         : null;
       const res = await this.turnService.updateSecondaryAction(
@@ -1913,6 +1921,16 @@ export class GameScene extends Phaser.Scene {
         } else {
           delete nextPlan.prioritizeFoodDrink;
         }
+        if (payload.sellInstead === true) {
+          nextPlan.sellInstead = true;
+        } else {
+          delete nextPlan.sellInstead;
+        }
+        if (payload.singleTarget === true) {
+          nextPlan.singleTarget = true;
+        } else {
+          delete nextPlan.singleTarget;
+        }
         target.actionPlan.secondary = nextPlan;
       }
       this.updateCharacterPanel(this.currentMatch);
@@ -1949,7 +1967,9 @@ export class GameScene extends Phaser.Scene {
         typeof selection?.extraExecutions === "number"
           ? selection.extraExecutions
           : undefined,
-      prioritizeFoodDrink: selection?.prioritizeFoodDrink === true
+      prioritizeFoodDrink: selection?.prioritizeFoodDrink === true,
+      sellInstead: selection?.sellInstead === true,
+      singleTarget: selection?.singleTarget === true
     };
     const character =
       this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
@@ -1971,7 +1991,11 @@ export class GameScene extends Phaser.Scene {
       (normalizedSelection.extraExecutions ?? 0) ===
         (previousPlan?.extraExecutions ?? 0) &&
       normalizedSelection.prioritizeFoodDrink ===
-        (previousPlan?.prioritizeFoodDrink ?? false)
+        (previousPlan?.prioritizeFoodDrink ?? false) &&
+      normalizedSelection.sellInstead ===
+        (previousPlan?.sellInstead ?? false) &&
+      normalizedSelection.singleTarget ===
+        (previousPlan?.singleTarget ?? false)
     ) {
       return;
     }
@@ -1989,7 +2013,9 @@ export class GameScene extends Phaser.Scene {
             normalizedSelection.targetPlayerIds,
             normalizedSelection.targetItemIds,
             normalizedSelection.extraExecutions,
-            normalizedSelection.prioritizeFoodDrink
+            normalizedSelection.prioritizeFoodDrink,
+            normalizedSelection.sellInstead,
+            normalizedSelection.singleTarget
           )
         : null;
       const res = await this.turnService.updateSecondaryAction(
@@ -2049,6 +2075,16 @@ export class GameScene extends Phaser.Scene {
           nextPlan.prioritizeFoodDrink = true;
         } else {
           delete nextPlan.prioritizeFoodDrink;
+        }
+        if (payload.sellInstead === true) {
+          nextPlan.sellInstead = true;
+        } else {
+          delete nextPlan.sellInstead;
+        }
+        if (payload.singleTarget === true) {
+          nextPlan.singleTarget = true;
+        } else {
+          delete nextPlan.singleTarget;
         }
         target.actionPlan.extraSecondary = nextPlan;
       }
@@ -2418,7 +2454,9 @@ export class GameScene extends Phaser.Scene {
     targetPlayerIds: string[] | undefined,
     targetItemIds: string[] | undefined,
     extraExecutions?: number,
-    prioritizeFoodDrink = false
+    prioritizeFoodDrink = false,
+    sellInstead = false,
+    singleTarget?: boolean
   ): ActionSubmission {
     const typedId = actionId as ActionId;
     const definition = ActionLibrary[typedId] ?? null;
@@ -2444,6 +2482,12 @@ export class GameScene extends Phaser.Scene {
     }
     if (prioritizeFoodDrink) {
       submission.prioritizeFoodDrink = true;
+    }
+    if (sellInstead) {
+      submission.sellInstead = true;
+    }
+    if (singleTarget !== undefined) {
+      submission.singleTarget = singleTarget;
     }
     return submission;
   }

@@ -60,6 +60,8 @@ export function updateSecondaryActionRpc(
   let targetItemIds: string[] | undefined;
   let extraExecutions: number | undefined;
   let prioritizeFoodDrink = false;
+  let sellInstead = false;
+  let singleTarget = false;
   if (submission) {
     actionId = normalizeActionId(submission.actionId);
     if (actionId.length === 0) {
@@ -78,6 +80,8 @@ export function updateSecondaryActionRpc(
     }
     normalizedActionId = candidate;
     prioritizeFoodDrink = submission.prioritizeFoodDrink === true;
+    sellInstead = submission.sellInstead === true;
+    singleTarget = submission.singleTarget === true;
     const locationCandidate = submission.targetLocationId as Axial | undefined;
     if (locationCandidate) {
       const rawCandidate = locationCandidate as unknown as {
@@ -184,6 +188,9 @@ export function updateSecondaryActionRpc(
       throw makeNakamaError("skill_required:perception5", 9);
     }
   }
+  if (sellInstead && normalizedActionId !== "drop") {
+    throw makeNakamaError("sell_requires_drop", 3);
+  }
   const isDead = isCharacterIncapacitated(character);
   if (!clearAction && isDead) {
     throw makeNakamaError("character_incapacitated", 9);
@@ -247,6 +254,16 @@ export function updateSecondaryActionRpc(
     } else {
       delete nextPlan.prioritizeFoodDrink;
     }
+    if (sellInstead) {
+      nextPlan.sellInstead = true;
+    } else {
+      delete nextPlan.sellInstead;
+    }
+    if (singleTarget) {
+      nextPlan.singleTarget = true;
+    } else {
+      delete nextPlan.singleTarget;
+    }
     character.actionPlan[planKey] = nextPlan;
   }
   storage.writeMatch(match, read.version);
@@ -265,7 +282,9 @@ export function updateSecondaryActionRpc(
         ? undefined
         : targetItemIds,
     extraExecutions: clearAction ? undefined : extraExecutions,
-    prioritizeFoodDrink: clearAction ? undefined : prioritizeFoodDrink
+    prioritizeFoodDrink: clearAction ? undefined : prioritizeFoodDrink,
+    sellInstead: clearAction ? undefined : sellInstead,
+    singleTarget: clearAction ? undefined : singleTarget
   };
   return JSON.stringify(response);
 }

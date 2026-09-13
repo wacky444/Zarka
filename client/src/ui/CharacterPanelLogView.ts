@@ -428,19 +428,44 @@ export class CharacterPanelLogView {
           const extraLabel =
             extraExecutions > 0 ? ` (+${extraExecutions} extra)` : "";
           lines.push(`${actor} used ${actionName}${extraLabel}`);
-          if (actionId === "axe_attack" || actionId === "knife_attack") {
+          if (
+            actionId === "axe_attack" ||
+            actionId === "knife_attack" ||
+            actionId === "bat_attack"
+          ) {
             const totalDamage =
               typeof event.action.damageDealt === "number"
                 ? event.action.damageDealt
                 : 0;
+            const weaponUsed = (
+              event.action.metadata as { weaponUsed?: string }
+            )?.weaponUsed;
             const weaponLabel =
-              actionId === "axe_attack" ? "an axe" : "a knife";
+              actionId === "axe_attack"
+                ? "an axe"
+                : actionId === "knife_attack"
+                ? "a knife"
+                : weaponUsed === "nail_bat"
+                ? "a nail bat"
+                : "a bat";
             if (totalDamage > 0) {
               lines.push(
                 `${actor} dealt ${totalDamage} damage with ${weaponLabel}`
               );
             } else {
               lines.push(`${actor} failed to connect with ${weaponLabel}`);
+            }
+          } else if (actionId === "use_chemical_weapon") {
+            const totalDamage =
+              typeof event.action.damageDealt === "number"
+                ? event.action.damageDealt
+                : 0;
+            if (totalDamage > 0) {
+              lines.push(
+                `${actor} dealt ${totalDamage} damage with a chemical weapon`
+              );
+            } else {
+              lines.push(`${actor} hit nobody with the chemical weapon`);
             }
           } else if (actionId === "search") {
             const foundItems = this.extractSearchItemNames(
@@ -475,6 +500,30 @@ export class CharacterPanelLogView {
             );
             if (pickedItems.length > 0) {
               lines.push(`${actor} picked up ${pickedItems.join(", ")}`);
+            }
+          } else if (actionId === "drop") {
+            const meta = event.action.metadata as
+              | {
+                  droppedItems?: unknown;
+                  sellInstead?: unknown;
+                  zarkansEarned?: unknown;
+                }
+              | undefined;
+            const droppedItems = this.extractDroppedItemNames(
+              event.action.metadata
+            );
+            if (droppedItems.length > 0) {
+              if (meta?.sellInstead === true) {
+                const zarkans =
+                  typeof meta.zarkansEarned === "number"
+                    ? meta.zarkansEarned
+                    : 0;
+                lines.push(
+                  `${actor} sold ${droppedItems.join(", ")} for ${zarkans} zarkans`
+                );
+              } else {
+                lines.push(`${actor} dropped ${droppedItems.join(", ")}`);
+              }
             }
           }
         }
@@ -711,6 +760,30 @@ export class CharacterPanelLogView {
           continue;
         }
         const name = this.resolveItemName(entry);
+        result.push(name);
+      }
+    }
+    return result;
+  }
+
+  private extractDroppedItemNames(metadata: unknown): string[] {
+    if (!metadata || typeof metadata !== "object") {
+      return [];
+    }
+    const container = metadata as {
+      droppedItems?: unknown;
+    };
+    const result: string[] = [];
+    if (Array.isArray(container.droppedItems)) {
+      for (const entry of container.droppedItems) {
+        if (!entry || typeof entry !== "object") {
+          continue;
+        }
+        const record = entry as { itemType?: unknown };
+        if (typeof record.itemType !== "string") {
+          continue;
+        }
+        const name = this.resolveItemName(record.itemType);
         result.push(name);
       }
     }

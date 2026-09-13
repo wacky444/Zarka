@@ -5,9 +5,11 @@ import { animateBreakfastEvent } from "./replayActions/BreakfastAnimation";
 import { animateDeathEvent } from "./replayActions/DeathAnimation";
 import { animateMoveEvent } from "./replayActions/MoveAnimation";
 import { animatePickUpEvent } from "./replayActions/PickUpAnimation";
+import { animateDropEvent } from "./replayActions/DropAnimation";
 import { animateProtectEvent } from "./replayActions/ProtectAnimation";
 import { animatePunchEvent } from "./replayActions/PunchAnimation";
 import { animateAxeAttackEvent } from "./replayActions/AxeAttackAnimation";
+import { animateBatAttackEvent } from "./replayActions/BatAttackAnimation";
 import { animateKnifeAttackEvent } from "./replayActions/KnifeAttackAnimation";
 import { animateRecoverEvent } from "./replayActions/RecoverAnimation";
 import { animateScareEvent } from "./replayActions/ScareAnimation";
@@ -17,6 +19,7 @@ import { animateUseBandageEvent } from "./replayActions/UseBandageAnimation";
 import { animateFocusEvent } from "./replayActions/FocusAnimation";
 import { animateFailedActionEvent } from "./replayActions/FailedActionAnimation";
 import { animateDetectEvent } from "./replayActions/DetectAnimation";
+import { animateChemicalWeaponEvent } from "./replayActions/ChemicalWeaponAnimation";
 
 export async function playReplayEvents(
   context: MoveReplayContext,
@@ -55,10 +58,14 @@ export async function playReplayEvents(
       await animateKnifeAttackEvent(context, event);
     } else if (actionId === ActionLibrary.axe_attack.id) {
       await animateAxeAttackEvent(context, event);
+    } else if (actionId === ActionLibrary.bat_attack.id) {
+      await animateBatAttackEvent(context, event);
     } else if (actionId === ActionLibrary.punch.id) {
       await animatePunchEvent(context, event);
     } else if (actionId === ActionLibrary.pick_up.id) {
       await animatePickUpEvent(context, event);
+    } else if (actionId === ActionLibrary.drop.id) {
+      await animateDropEvent(context, event);
     } else if (actionId === ActionLibrary.search.id) {
       await animateSearchEvent(context, event);
     } else if (actionId === ActionLibrary.status_dead.id) {
@@ -67,6 +74,8 @@ export async function playReplayEvents(
       await animateFailedActionEvent(context, event);
     } else if (actionId === ActionLibrary.detect.id) {
       await animateDetectEvent(context, event);
+    } else if (actionId === ActionLibrary.use_chemical_weapon.id) {
+      await animateChemicalWeaponEvent(context, event);
     }
   }
 }
