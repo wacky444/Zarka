@@ -19,7 +19,7 @@ services:
       retries: 20
 
   nakama:
-    image: heroiclabs/nakama:3.21.0
+    image: heroiclabs/nakama:3.40.0
     container_name: nakama
     depends_on:
       postgres:

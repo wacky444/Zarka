@@ -150,7 +150,7 @@ export function facebookDataDeletionStatusRpc(
   _nk: nkruntime.Nakama,
   _payload: string
 ): string {
-  const code = ctx.queryParams["code"]?.[0] ?? "";
+  const code = ctx.queryParams?.["code"]?.[0] ?? "";
   if (!/^[A-Za-z0-9]{20,64}$/.test(code)) {
     throw new Error("valid deletion confirmation code is required");
   }

@@ -15,6 +15,6 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
-    "nakama-runtime": "https://github.com/heroiclabs/nakama-common#v1.31.0"
+    "nakama-runtime": "https://github.com/heroiclabs/nakama-common#v1.47.0"
   }
 }

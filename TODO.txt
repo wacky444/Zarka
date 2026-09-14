@@ -51,3 +51,5 @@
 - debounce on extra power, laggy
 
 - selects in mobile should be full screen
+
+- test with, cd server, docker compose up -d --build nakama

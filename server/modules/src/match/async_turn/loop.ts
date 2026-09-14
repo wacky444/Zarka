@@ -36,6 +36,10 @@ function hasAutoAdvancedToday(
 
 export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
   function (ctx, logger, nk, dispatcher, tick, state, messages) {
+    const runtimeMatchId = ctx.matchId;
+    if (!runtimeMatchId) {
+      return { state };
+    }
     const nowMs = Date.now();
     const lastCheck = state.lastAutoCheckAt ?? 0;
     if (nowMs - lastCheck < AUTO_CHECK_INTERVAL_MS) {
@@ -69,7 +73,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
 
     const nkWrapper = createNakamaWrapper(nk);
     const storage = new StorageService(nkWrapper);
-    const gameId = state.game_id || ctx.matchId;
+    const gameId = state.game_id || runtimeMatchId;
     const stored = storage.getMatch(gameId);
     if (!stored) {
       return { state };
@@ -114,7 +118,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
     if (!outcome.advanced || !outcome.resolvedTurn) {
       return { state };
     }
-    logger.debug("9Auto-checking turn advancement for match %s", ctx.matchId);
+    logger.debug("9Auto-checking turn advancement for match %s", runtimeMatchId);
     const timestampSeconds = Math.floor(nowMs / 1000);
     match.lastAutoAdvanceAt = timestampSeconds;
 
@@ -123,7 +127,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
     } catch (error) {
       logger.warn(
         "autoskip write failed for %s: %s",
-        ctx.matchId,
+        runtimeMatchId,
         (error as Error).message,
       );
       return { state };
@@ -140,7 +144,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       } catch (error) {
         logger.warn(
           "autoskip replay write failed for %s: %s",
-          ctx.matchId,
+          runtimeMatchId,
           (error as Error).message,
         );
       }
@@ -148,7 +152,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
 
     try {
       nkWrapper.matchSignal(
-        ctx.matchId,
+        runtimeMatchId,
         JSON.stringify({
           type: "turn_advanced",
           turn: match.current_turn,
@@ -165,7 +169,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
     } catch (error) {
       logger.debug(
         "autoskip matchSignal failed for %s: %s",
-        ctx.matchId,
+        runtimeMatchId,
         (error as Error).message,
       );
     }
@@ -176,7 +180,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
         const winnerId = alive.length === 1 ? alive[0] : undefined;
         const reason = alive.length === 0 ? "all_dead" : "last_alive";
         nkWrapper.matchSignal(
-          ctx.matchId,
+          runtimeMatchId,
           JSON.stringify({
             type: "match_ended",
             match_id: match.match_id,
@@ -187,7 +191,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       } catch (error) {
         logger.debug(
           "autoskip match_ended signal failed for %s: %s",
-          ctx.matchId,
+          runtimeMatchId,
           (error as Error).message,
         );
       }
