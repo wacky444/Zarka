@@ -65,6 +65,9 @@ type RexGridTable = Phaser.GameObjects.GameObject & {
     mask: Phaser.Display.Masks.BitmapMask | Phaser.Display.Masks.GeometryMask,
   ) => Phaser.GameObjects.GameObject;
   clearMask?: (destroyMask?: boolean) => Phaser.GameObjects.GameObject;
+  setScrollerEnable?: (enabled: boolean) => void;
+  setMouseWheelScrollerEnable?: (enabled: boolean) => void;
+  setScrollFactor?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
 };
 
 type RexRoundRectangle = Phaser.GameObjects.GameObject & {
@@ -198,7 +201,38 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.icon.setVisible(false);
     this.updateLabelPosition();
 
-    this.hitAreaZone.on(Phaser.Input.Events.POINTER_UP, this.openModal, this);
+    let pointerDownPos: { x: number; y: number } | null = null;
+    this.hitAreaZone.on(
+      Phaser.Input.Events.POINTER_DOWN,
+      (pointer: Phaser.Input.Pointer) => {
+        pointerDownPos = { x: pointer.x, y: pointer.y };
+      },
+    );
+    this.hitAreaZone.on(
+      Phaser.Input.Events.POINTER_UP,
+      (pointer: Phaser.Input.Pointer) => {
+        if (pointerDownPos) {
+          const dist = Phaser.Math.Distance.Between(
+            pointerDownPos.x,
+            pointerDownPos.y,
+            pointer.x,
+            pointer.y,
+          );
+          pointerDownPos = null;
+          if (dist > 10) {
+            return;
+          }
+        }
+        if (
+          pointer &&
+          typeof pointer.getDistance === "function" &&
+          pointer.getDistance() > 10
+        ) {
+          return;
+        }
+        this.openModal();
+      },
+    );
     this.hitAreaZone.on(Phaser.Input.Events.POINTER_OVER, () => {
       if (!this.enabled) {
         this.scene.input.setDefaultCursor("default");
@@ -431,6 +465,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.modalCover?.setVisible(true);
       this.modalCover?.setInteractive();
       this.gridTable?.setItems(this.items);
+      this.gridTable?.setScrollerEnable?.(true);
+      this.gridTable?.setMouseWheelScrollerEnable?.(true);
       this.gridTable?.refresh?.();
       this.gridTable?.layout?.();
       this.tooltip?.hide();
@@ -650,6 +686,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
     } else {
       this.overlay.setVisible(false);
       this.overlay.setActive(false);
+      this.gridTable?.setScrollerEnable?.(false);
+      this.gridTable?.setMouseWheelScrollerEnable?.(false);
       const coverScene = this.modalCover?.scene as unknown as { sys?: unknown } | undefined;
       if (this.modalCover && coverScene?.sys) {
         try {
@@ -721,25 +759,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
       ) => this.buildCellContainer(cell, cellContainer),
     }) as RexGridTable;
 
+    gridTable.setScrollFactor?.(0);
     gridTable.setItems(this.items);
     gridTable.resetAllCellsSize?.(cellWidth, cellHeight);
 
     gridTable.on(
       "cell.click",
-      (_cellContainer: Phaser.GameObjects.GameObject, cellIndex: number) => {
-        const item = this.items[cellIndex];
-        if (!item || item.disabled) {
-          this.tooltip?.hide();
-          return;
-        }
-        this.applySelection(item, true);
-        this.closeModal();
-      },
-      this,
-    );
-
-    gridTable.on(
-      "cell.up",
       (_cellContainer: Phaser.GameObjects.GameObject, cellIndex: number) => {
         const item = this.items[cellIndex];
         if (!item || item.disabled) {

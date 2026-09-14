@@ -14,6 +14,9 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   layout?: () => void;
   setMouseWheelScrollerEnable?: (enabled: boolean) => void;
   mouseWheelScrollerEnable?: boolean;
+  setScrollerEnable?: (enabled: boolean) => void;
+  scrollerEnable?: boolean;
+  setScrollFactor?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
   setVisible?: (value: boolean) => Phaser.GameObjects.GameObject;
   setMinSize?: (width: number, height: number) => void;
   setSize?: (width: number, height: number) => void;
@@ -220,10 +223,30 @@ export class CharacterPanelPlayerListView {
       space: { left: 0, right: 2, top: 0, bottom: 0, panel: 6 }
     }) as ScrollablePanelInstance;
     this.playersTabListScrollPanel.setOrigin?.(0, 0);
+    this.playersTabListScrollPanel.setScrollFactor?.(0);
+    const rawPlayersListPanel = this.playersTabListScrollPanel as unknown as {
+      childrenMap?: {
+        scrollableBlock?: { setScrollFactor?: (x: number, y?: number) => void; scrollFactorX?: number; scrollFactorY?: number };
+        child?: { setScrollFactor?: (x: number, y?: number) => void; scrollFactorX?: number; scrollFactorY?: number };
+      };
+    };
+    if (rawPlayersListPanel?.childrenMap?.scrollableBlock) {
+      rawPlayersListPanel.childrenMap.scrollableBlock.setScrollFactor?.(0);
+      rawPlayersListPanel.childrenMap.scrollableBlock.scrollFactorX = 0;
+      rawPlayersListPanel.childrenMap.scrollableBlock.scrollFactorY = 0;
+    }
+    if (rawPlayersListPanel?.childrenMap?.child) {
+      rawPlayersListPanel.childrenMap.child.setScrollFactor?.(0);
+      rawPlayersListPanel.childrenMap.child.scrollFactorX = 0;
+      rawPlayersListPanel.childrenMap.child.scrollFactorY = 0;
+    }
+    this.playersTabListContent.setScrollFactor(0);
     if (this.playersTabScrollMask) {
       this.playersTabListScrollPanel.setMask?.(this.playersTabScrollMask);
     }
     this.playersTabListScrollPanel.setVisible?.(false);
+    this.playersTabListScrollPanel.setMouseWheelScrollerEnable?.(false);
+    this.playersTabListScrollPanel.setScrollerEnable?.(false);
     parent.add(this.playersTabListScrollPanel);
 
     const cardRight =
@@ -277,9 +300,28 @@ export class CharacterPanelPlayerListView {
       space: { left: 0, right: 2, top: 0, bottom: 0, panel: 6 }
     }) as ScrollablePanelInstance;
     this.playersTabCardDetailsPanel.setOrigin?.(0, 0);
+    this.playersTabCardDetailsPanel.setScrollFactor?.(0);
+    const rawDetailsPanel = this.playersTabCardDetailsPanel as unknown as {
+      childrenMap?: {
+        scrollableBlock?: { setScrollFactor?: (x: number, y?: number) => void; scrollFactorX?: number; scrollFactorY?: number };
+        child?: { setScrollFactor?: (x: number, y?: number) => void; scrollFactorX?: number; scrollFactorY?: number };
+      };
+    };
+    if (rawDetailsPanel?.childrenMap?.scrollableBlock) {
+      rawDetailsPanel.childrenMap.scrollableBlock.setScrollFactor?.(0);
+      rawDetailsPanel.childrenMap.scrollableBlock.scrollFactorX = 0;
+      rawDetailsPanel.childrenMap.scrollableBlock.scrollFactorY = 0;
+    }
+    if (rawDetailsPanel?.childrenMap?.child) {
+      rawDetailsPanel.childrenMap.child.setScrollFactor?.(0);
+      rawDetailsPanel.childrenMap.child.scrollFactorX = 0;
+      rawDetailsPanel.childrenMap.child.scrollFactorY = 0;
+    }
+    this.playersTabCardDetailsContent.setScrollFactor(0);
     this.playersTabCardDetailsPanel.setMask?.(this.playersTabCardDetailsMask);
     this.playersTabCardDetailsPanel.setVisible?.(false);
     this.playersTabCardDetailsPanel.setMouseWheelScrollerEnable?.(false);
+    this.playersTabCardDetailsPanel.setScrollerEnable?.(false);
     parent.add(this.playersTabCardDetailsPanel);
 
     this.playersTabEmpty = scene.add
@@ -336,10 +378,30 @@ export class CharacterPanelPlayerListView {
       space: { left: 0, right: 0, top: 0, bottom: 0 }
     }) as ScrollablePanelInstance;
     this.teamsTabListScrollPanel.setOrigin?.(0, 0);
+    this.teamsTabListScrollPanel.setScrollFactor?.(0);
+    const rawTeamsPanel = this.teamsTabListScrollPanel as unknown as {
+      childrenMap?: {
+        scrollableBlock?: { setScrollFactor?: (x: number, y?: number) => void; scrollFactorX?: number; scrollFactorY?: number };
+        child?: { setScrollFactor?: (x: number, y?: number) => void; scrollFactorX?: number; scrollFactorY?: number };
+      };
+    };
+    if (rawTeamsPanel?.childrenMap?.scrollableBlock) {
+      rawTeamsPanel.childrenMap.scrollableBlock.setScrollFactor?.(0);
+      rawTeamsPanel.childrenMap.scrollableBlock.scrollFactorX = 0;
+      rawTeamsPanel.childrenMap.scrollableBlock.scrollFactorY = 0;
+    }
+    if (rawTeamsPanel?.childrenMap?.child) {
+      rawTeamsPanel.childrenMap.child.setScrollFactor?.(0);
+      rawTeamsPanel.childrenMap.child.scrollFactorX = 0;
+      rawTeamsPanel.childrenMap.child.scrollFactorY = 0;
+    }
+    this.teamsTabListContent.setScrollFactor(0);
     if (this.teamsTabScrollMask) {
       this.teamsTabListScrollPanel.setMask?.(this.teamsTabScrollMask);
     }
     this.teamsTabListScrollPanel.setVisible?.(false);
+    this.teamsTabListScrollPanel.setMouseWheelScrollerEnable?.(false);
+    this.teamsTabListScrollPanel.setScrollerEnable?.(false);
     parent.add(this.teamsTabListScrollPanel);
 
     this.teamsTabEmpty = scene.add
@@ -395,6 +457,8 @@ export class CharacterPanelPlayerListView {
 
     this.playersTabListTitle.setVisible(isPlayersActive);
     this.playersTabListScrollPanel.setVisible?.(isPlayersActive);
+    this.playersTabListScrollPanel.setMouseWheelScrollerEnable?.(isPlayersActive);
+    this.playersTabListScrollPanel.setScrollerEnable?.(isPlayersActive);
     this.playersTabCardBackground.setVisible(isPlayersActive);
     this.playersTabCardName.setVisible(isPlayersActive);
     this.playersTabCardTeam.setVisible(isPlayersActive);
@@ -402,6 +466,7 @@ export class CharacterPanelPlayerListView {
       isPlayersActive && this.playersTabCardDetails.text.length > 0;
     this.playersTabCardDetailsPanel.setVisible?.(showDetails);
     this.playersTabCardDetailsPanel.setMouseWheelScrollerEnable?.(showDetails);
+    this.playersTabCardDetailsPanel.setScrollerEnable?.(showDetails);
     this.playersTabCardSprite.setVisible(
       isPlayersActive &&
         Boolean(
@@ -417,6 +482,8 @@ export class CharacterPanelPlayerListView {
 
     this.teamsTabListTitle.setVisible(isTeamsActive);
     this.teamsTabListScrollPanel.setVisible?.(isTeamsActive);
+    this.teamsTabListScrollPanel.setMouseWheelScrollerEnable?.(isTeamsActive);
+    this.teamsTabListScrollPanel.setScrollerEnable?.(isTeamsActive);
     const teamCount = match?.teamCounts
       ? Object.keys(match.teamCounts).length
       : match?.teams?.length ?? 0;
@@ -844,9 +911,23 @@ export class CharacterPanelPlayerListView {
     return true;
   }
 
+  setScrollerEnable(enabled: boolean): void {
+    if (!enabled) {
+      this.playersTabListScrollPanel.setMouseWheelScrollerEnable?.(false);
+      this.playersTabListScrollPanel.setScrollerEnable?.(false);
+      this.playersTabCardDetailsPanel.setMouseWheelScrollerEnable?.(false);
+      this.playersTabCardDetailsPanel.setScrollerEnable?.(false);
+      this.teamsTabListScrollPanel.setMouseWheelScrollerEnable?.(false);
+      this.teamsTabListScrollPanel.setScrollerEnable?.(false);
+    } else {
+      this.updateSubtabVisibility();
+    }
+  }
+
   clearSelectionStyles(): void {
     this.playersTabCardDetailsPanel.setVisible?.(false);
     this.playersTabCardDetailsPanel.setMouseWheelScrollerEnable?.(false);
+    this.playersTabCardDetailsPanel.setScrollerEnable?.(false);
     for (const entry of this.playersTabEntries) {
       entry.button.setFillStyle(0x202b4a, 0.95);
       entry.button.setStrokeStyle(1, 0x2f3a5d, 1);

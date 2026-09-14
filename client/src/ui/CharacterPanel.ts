@@ -59,6 +59,9 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   layout?: () => void;
   setMouseWheelScrollerEnable?: (enabled: boolean) => void;
   mouseWheelScrollerEnable?: boolean;
+  setScrollerEnable?: (enabled: boolean) => void;
+  scrollerEnable?: boolean;
+  setScrollFactor?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
   setMinSize?: (width: number, height: number) => void;
   setSize?: (width: number, height: number) => void;
   setOrigin?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
@@ -594,6 +597,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.gridModalOpenCount += 1;
     if (this.gridModalOpenCount === 1) {
       this.scrollPanel?.setMouseWheelScrollerEnable?.(false);
+      this.scrollPanel?.setScrollerEnable?.(false);
+      this.skillsView?.setScrollerEnable?.(false);
+      this.playersTabView?.setScrollerEnable?.(false);
       this.emit("grid-modal-open");
     }
   };
@@ -601,6 +607,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.gridModalOpenCount = Math.max(0, this.gridModalOpenCount - 1);
     if (this.gridModalOpenCount === 0) {
       this.scrollPanel?.setMouseWheelScrollerEnable?.(true);
+      this.scrollPanel?.setScrollerEnable?.(true);
+      this.skillsView?.setScrollerEnable?.(true);
+      this.playersTabView?.setScrollerEnable?.(true);
       this.emit("grid-modal-close");
     }
   };
@@ -644,7 +653,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.setDepth(1000);
     this.background = scene.add
       .rectangle(0, 0, width, height, 0x151a2f, 0.92)
-      .setOrigin(0, 0);
+      .setOrigin(0, 0)
+      .setInteractive();
     this.add(this.background);
     const tabWidth = width / this.tabConfigs.length;
     this.tabConfigs.forEach((tab, index) => {
@@ -866,6 +876,24 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       space: { left: 0, right: 0, top: 0, bottom: 0 }
     }) as ScrollablePanelInstance;
     this.scrollPanel?.setOrigin?.(0, 0);
+    this.scrollPanel?.setScrollFactor?.(0);
+    const rawScrollPanel = this.scrollPanel as unknown as {
+      childrenMap?: {
+        scrollableBlock?: { setScrollFactor?: (x: number, y?: number) => void; scrollFactorX?: number; scrollFactorY?: number };
+        child?: { setScrollFactor?: (x: number, y?: number) => void; scrollFactorX?: number; scrollFactorY?: number };
+      };
+    };
+    if (rawScrollPanel?.childrenMap?.scrollableBlock) {
+      rawScrollPanel.childrenMap.scrollableBlock.setScrollFactor?.(0);
+      rawScrollPanel.childrenMap.scrollableBlock.scrollFactorX = 0;
+      rawScrollPanel.childrenMap.scrollableBlock.scrollFactorY = 0;
+    }
+    if (rawScrollPanel?.childrenMap?.child) {
+      rawScrollPanel.childrenMap.child.setScrollFactor?.(0);
+      rawScrollPanel.childrenMap.child.scrollFactorX = 0;
+      rawScrollPanel.childrenMap.child.scrollFactorY = 0;
+    }
+    this.scrollContent.setScrollFactor(0);
     if (this.scrollMask) {
       this.scrollPanel.setMask?.(this.scrollMask);
     }
@@ -1773,6 +1801,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       target.setActive?.(true);
     }
     this.scrollPanel?.setMouseWheelScrollerEnable?.(true);
+    this.scrollPanel?.setScrollerEnable?.(true);
     this.mainActionDropdown.setVisible(true);
     this.mainActionDropdown.setActive(true);
     this.refreshExtraExecutionSelectorState();
@@ -1865,6 +1894,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.extraSecondaryDropSellToggle.setActive(false);
     this.readyToggle.disableInteractive();
     this.scrollPanel?.setMouseWheelScrollerEnable?.(false);
+    this.scrollPanel?.setScrollerEnable?.(false);
   }
 
   private hideCharacterTabContents(): void {

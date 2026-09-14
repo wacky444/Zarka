@@ -27,6 +27,9 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   layout?: () => void;
   setMouseWheelScrollerEnable?: (enabled: boolean) => void;
   mouseWheelScrollerEnable?: boolean;
+  setScrollerEnable?: (enabled: boolean) => void;
+  scrollerEnable?: boolean;
+  setScrollFactor?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
   setVisible?: (value: boolean) => Phaser.GameObjects.GameObject;
   setMinSize?: (width: number, height: number) => void;
   setSize?: (width: number, height: number) => void;
@@ -302,6 +305,24 @@ export class CharacterPanelSkillsView {
       space: { left: 0, right: 2, top: 0, bottom: 0, panel: 6 }
     }) as ScrollablePanelInstance;
     this.scrollPanel.setOrigin?.(0, 0);
+    this.scrollPanel.setScrollFactor?.(0);
+    const rawScrollPanel = this.scrollPanel as unknown as {
+      childrenMap?: {
+        scrollableBlock?: { setScrollFactor?: (x: number, y?: number) => void; scrollFactorX?: number; scrollFactorY?: number };
+        child?: { setScrollFactor?: (x: number, y?: number) => void; scrollFactorX?: number; scrollFactorY?: number };
+      };
+    };
+    if (rawScrollPanel?.childrenMap?.scrollableBlock) {
+      rawScrollPanel.childrenMap.scrollableBlock.setScrollFactor?.(0);
+      rawScrollPanel.childrenMap.scrollableBlock.scrollFactorX = 0;
+      rawScrollPanel.childrenMap.scrollableBlock.scrollFactorY = 0;
+    }
+    if (rawScrollPanel?.childrenMap?.child) {
+      rawScrollPanel.childrenMap.child.setScrollFactor?.(0);
+      rawScrollPanel.childrenMap.child.scrollFactorX = 0;
+      rawScrollPanel.childrenMap.child.scrollFactorY = 0;
+    }
+    this.scrollContent.setScrollFactor(0);
     if (this.scrollMask) {
       this.scrollPanel.setMask?.(this.scrollMask);
     }
@@ -340,6 +361,12 @@ export class CharacterPanelSkillsView {
     this.confirmBtnText.setVisible(visible);
     this.scrollPanel.setVisible?.(visible);
     this.scrollPanel.setMouseWheelScrollerEnable?.(visible);
+    this.scrollPanel.setScrollerEnable?.(visible);
+  }
+
+  setScrollerEnable(enabled: boolean): void {
+    this.scrollPanel.setMouseWheelScrollerEnable?.(enabled);
+    this.scrollPanel.setScrollerEnable?.(enabled);
   }
 
   setOnConfirmSkills(callback: (skillIds: SkillId[]) => void): void {
