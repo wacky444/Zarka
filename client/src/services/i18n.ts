@@ -53,6 +53,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Select target": "Seleccionar objetivo",
   "Target Location": "Ubicación objetivo",
   "Target Player": "Jugador objetivo",
+  "Second Target Player": "Segundo jugador objetivo",
   "None selected": "Ninguno seleccionado",
   "Extra power": "Potencia adicional",
   "Priority Items": "Objetos prioritarios",

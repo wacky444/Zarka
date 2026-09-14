@@ -65,6 +65,11 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
     this.updateState();
   }
 
+  setLabel(label: string): void {
+    this.label.setText(label);
+    this.refreshSize();
+  }
+
   setOptions(options: PlayerOption[]): void {
     if (this.disposed) {
       return;

@@ -227,6 +227,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private extraSecondaryExtraExecutions = 0;
   private locationSelector: LocationSelector;
   private playerSelector: PlayerSelector;
+  private scareSecondPlayerSelector: PlayerSelector;
   private itemSelector: ItemPrioritySelector;
   private secondaryLocationSelector: LocationSelector;
   private secondaryPlayerSelector: PlayerSelector;
@@ -261,6 +262,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private secondaryActionTarget: Axial | null = null;
   private extraSecondaryActionTarget: Axial | null = null;
   private mainActionTargetPlayerId: string | null = null;
+  private scareSecondTargetPlayerId: string | null = null;
   private secondaryActionTargetPlayerId: string | null = null;
   private extraSecondaryActionTargetPlayerId: string | null = null;
   private mainActionPriorityItems: string[] = [];
@@ -295,6 +297,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   >();
   private readonly handleMainExtraExecutionChange = (reps: number) => {
     this.mainExtraExecutions = reps;
+    this.refreshLocationSelectorState();
+    this.refreshScareSecondPlayerSelectorState();
     this.emitMainActionChange();
   };
   private readonly handleSecondaryExtraExecutionChange = (reps: number) => {
@@ -330,6 +334,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   };
   private readonly handlePlayerSelection = (playerId: string | null) => {
     this.setMainActionTargetPlayer(playerId ?? null, true);
+  };
+  private readonly handleScareSecondPlayerSelection = (
+    playerId: string | null
+  ) => {
+    this.setScareSecondTargetPlayer(playerId ?? null, true);
   };
   private readonly handleItemPriorityChange = (itemIds: string[]) => {
     this.setMainActionPriorityItems(itemIds ?? [], true);
@@ -926,6 +935,23 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.playerSelector.on("modal-open", this.handleActionModalOpen);
     this.playerSelector.on("modal-close", this.handleActionModalClose);
     this.scrollContent.add(this.playerSelector);
+    this.scareSecondPlayerSelector = new PlayerSelector(
+      scene,
+      0,
+      0,
+      this.mainActionDropdownWidth
+    );
+    this.scareSecondPlayerSelector.setLabel("Second Target Player");
+    this.scareSecondPlayerSelector.setEnabled(false);
+    this.scareSecondPlayerSelector.setVisible(false);
+    this.scareSecondPlayerSelector.setActive(false);
+    this.scareSecondPlayerSelector.on(
+      "change",
+      this.handleScareSecondPlayerSelection
+    );
+    this.scareSecondPlayerSelector.on("modal-open", this.handleActionModalOpen);
+    this.scareSecondPlayerSelector.on("modal-close", this.handleActionModalClose);
+    this.scrollContent.add(this.scareSecondPlayerSelector);
     this.itemSelector = new ItemPrioritySelector(
       scene,
       0,
@@ -1460,6 +1486,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.bringToTop(this.mainActionDropdown);
     this.bringToTop(this.locationSelector);
     this.bringToTop(this.playerSelector);
+    this.bringToTop(this.scareSecondPlayerSelector);
     this.bringToTop(this.secondaryActionDropdown);
     this.bringToTop(this.secondaryLocationSelector);
     this.bringToTop(this.secondaryPlayerSelector);
@@ -1506,6 +1533,26 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.playerSelector.hideDropdown();
     } catch (e) {
       console.warn("hideDropdown playerSelector skipped during teardown", e);
+    }
+    this.scareSecondPlayerSelector.off(
+      "change",
+      this.handleScareSecondPlayerSelection
+    );
+    this.scareSecondPlayerSelector.off(
+      "modal-open",
+      this.handleActionModalOpen
+    );
+    this.scareSecondPlayerSelector.off(
+      "modal-close",
+      this.handleActionModalClose
+    );
+    try {
+      this.scareSecondPlayerSelector.hideDropdown();
+    } catch (e) {
+      console.warn(
+        "hideDropdown scareSecondPlayerSelector skipped during teardown",
+        e
+      );
     }
     this.itemSelector.off("change", this.handleItemPriorityChange);
     this.itemSelector.off("modal-open", this.handleActionModalOpen);
@@ -2318,6 +2365,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         : null
     );
     this.setMainActionTargetPlayer(serverTargetPlayerId, false);
+    const serverSecondTargetPlayerId = this.normalizePlayerId(
+      Array.isArray(targetPlayers) && targetPlayers.length > 1
+        ? targetPlayers[1]
+        : null
+    );
+    this.setScareSecondTargetPlayer(serverSecondTargetPlayerId, false);
     const targetItems = Array.isArray(character.actionPlan?.main?.targetItemIds)
       ? (character.actionPlan?.main?.targetItemIds as string[])
       : [];
@@ -3405,6 +3458,42 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.playerSelector.setPending(false);
       this.playerSelector.hideDropdown();
     }
+    this.refreshScareSecondPlayerSelectorState();
+    this.updateScrollLayout();
+  }
+
+  private refreshScareSecondPlayerSelectorState(): void {
+    const shouldShow =
+      this.mainActionSelection === "scare" &&
+      this.mainExtraExecutions > 0 &&
+      this.mainPlayerOptions.length > 1;
+    this.scareSecondPlayerSelector.setVisible(shouldShow);
+    this.scareSecondPlayerSelector.setActive(shouldShow);
+    if (!shouldShow) {
+      this.scareSecondTargetPlayerId = null;
+      this.scareSecondPlayerSelector.setValue(null);
+      this.scareSecondPlayerSelector.setEnabled(false);
+      this.scareSecondPlayerSelector.hideDropdown();
+      this.updateScrollLayout();
+      return;
+    }
+    const options = this.mainPlayerOptions.filter(
+      (option) => option.id !== this.mainActionTargetPlayerId
+    );
+    this.scareSecondPlayerSelector.setOptions(options);
+    if (
+      this.scareSecondTargetPlayerId &&
+      !options.some((option) => option.id === this.scareSecondTargetPlayerId)
+    ) {
+      this.scareSecondTargetPlayerId = null;
+    }
+    this.scareSecondPlayerSelector.setValue(
+      this.scareSecondTargetPlayerId,
+      false
+    );
+    this.scareSecondPlayerSelector.setEnabled(
+      this.mainActionSelection !== null
+    );
     this.updateScrollLayout();
   }
 
@@ -3541,7 +3630,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       itemSelector: ItemPrioritySelector,
       searchPriorityToggle: Phaser.GameObjects.Text | null,
       chemicalTargetToggle?: Phaser.GameObjects.Text | null,
-      dropSellToggle?: Phaser.GameObjects.Text | null
+      dropSellToggle?: Phaser.GameObjects.Text | null,
+      additionalPlayerSelector: PlayerSelector | null = null
     ) => {
       box.setPosition(0, cursorY);
       box.setSize(width, BOX_HEIGHT);
@@ -3572,6 +3662,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       playerSelector.setPosition(horizontalPadding, innerCursor);
       if (playerSelector.visible) {
         innerCursor += playerSelector.height + 8;
+      }
+      if (additionalPlayerSelector) {
+        additionalPlayerSelector.setSelectorWidth(width - horizontalPadding * 2);
+        additionalPlayerSelector.setPosition(horizontalPadding, innerCursor);
+        if (additionalPlayerSelector.visible) {
+          innerCursor += additionalPlayerSelector.height + 8;
+        }
       }
       itemSelector.setSelectorWidth(width - horizontalPadding * 2);
       itemSelector.setPosition(horizontalPadding, innerCursor);
@@ -3606,7 +3703,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.itemSelector,
       null,
       null,
-      null
+      null,
+      this.scareSecondPlayerSelector
     );
     cursorY += 16;
     layoutActionBlock(
@@ -3679,6 +3777,53 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     this.mainActionTargetPlayerId = normalized;
     this.playerSelector.setValue(normalized);
+    if (
+      normalized &&
+      this.mainActionSelection === "scare" &&
+      this.mainExtraExecutions > 0 &&
+      this.mainActionTarget !== null
+    ) {
+      this.setMainActionTarget(null, false);
+    }
+    this.refreshScareSecondPlayerSelectorState();
+    if (emit) {
+      this.emitMainActionChange();
+    }
+    return true;
+  }
+
+  private setScareSecondTargetPlayer(
+    targetId: string | null,
+    emit = false
+  ): boolean {
+    const supports =
+      this.mainActionSelection === "scare" && this.mainExtraExecutions > 0;
+    if (!supports) {
+      const changed = this.scareSecondTargetPlayerId !== null;
+      this.scareSecondTargetPlayerId = null;
+      this.scareSecondPlayerSelector.setValue(null);
+      if (emit && changed) {
+        this.emitMainActionChange();
+      }
+      return changed;
+    }
+    let normalized: string | null = null;
+    if (
+      targetId &&
+      targetId !== this.mainActionTargetPlayerId &&
+      this.mainPlayerOptions.some((option) => option.id === targetId)
+    ) {
+      normalized = targetId;
+    }
+    const changed = this.scareSecondTargetPlayerId !== normalized;
+    if (!changed) {
+      return false;
+    }
+    this.scareSecondTargetPlayerId = normalized;
+    this.scareSecondPlayerSelector.setValue(normalized);
+    if (normalized && this.mainActionTarget !== null) {
+      this.setMainActionTarget(null, false);
+    }
     if (emit) {
       this.emitMainActionChange();
     }
@@ -3847,10 +3992,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
 
     this.playerSelector.setOptions(mainOptions);
+    this.scareSecondPlayerSelector.setOptions(
+      mainOptions.filter(
+        (option) => option.id !== this.mainActionTargetPlayerId
+      )
+    );
     this.secondaryPlayerSelector.setOptions(secondaryOptions);
     this.extraSecondaryPlayerSelector.setOptions(extraSecondaryOptions);
 
     this.playerSelector.setValue(this.mainActionTargetPlayerId ?? null);
+    this.scareSecondPlayerSelector.setValue(
+      this.scareSecondTargetPlayerId,
+      false
+    );
     this.secondaryPlayerSelector.setValue(
       this.secondaryActionTargetPlayerId ?? null
     );
@@ -4294,9 +4448,17 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
           ? { q: this.mainActionTarget.q, r: this.mainActionTarget.r }
           : null,
       targetPlayerIds: supportsPlayer
-        ? this.mainActionTargetPlayerId
-          ? [this.mainActionTargetPlayerId]
-          : []
+        ? [
+            ...new Set(
+              [
+                this.mainActionTargetPlayerId,
+                this.mainActionSelection === "scare" &&
+                this.mainExtraExecutions > 0
+                  ? this.scareSecondTargetPlayerId
+                  : null
+              ].filter((id): id is string => id !== null)
+            )
+          ]
         : undefined,
       targetItemIds: supportsItems
         ? [...this.mainActionPriorityItems]
@@ -4509,6 +4671,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       return false;
     }
     this.mainActionTarget = normalized;
+    if (
+      normalized &&
+      this.mainActionSelection === "scare" &&
+      this.mainExtraExecutions > 0 &&
+      this.scareSecondTargetPlayerId !== null
+    ) {
+      this.setScareSecondTargetPlayer(null, false);
+    }
     this.locationSelector.setValue(
       normalized ? { q: normalized.q, r: normalized.r } : null
     );

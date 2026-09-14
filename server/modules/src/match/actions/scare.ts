@@ -5,13 +5,18 @@ import type {
   ReplayActionDone,
   ReplayActionTarget,
   ReplayPlayerEvent,
+  Axial,
+  HexTileSnapshot,
 } from "@shared";
+import { neighbors } from "@shared";
+import { ActionLibrary } from "@shared";
 import {
   isTargetProtected,
   resolvePlanDestination,
   type PlannedActionParticipant,
 } from "./utils";
 import { collectTargets } from "./targeting";
+import { getUsableExtraExecutions } from "../../utils/energy";
 import { BaseAction } from "./classes/BaseAction";
 
 const CURRENT_CELL_DISTANCE = 0;
@@ -27,6 +32,33 @@ function reduceEnergy(character: PlayerCharacter, amount: number): number {
   return spent;
 }
 
+function sameCoord(left: Axial, right: Axial): boolean {
+  return left.q === right.q && left.r === right.r;
+}
+
+function randomAdjacentDestination(
+  match: MatchRecord,
+  origin: Axial
+): { tileId: string; coord: Axial } | undefined {
+  const candidates: HexTileSnapshot[] = [];
+  for (const coord of neighbors(origin)) {
+    for (const tile of match.map?.tiles ?? []) {
+      if (
+        sameCoord(tile.coord, coord) &&
+        tile.walkable !== false &&
+        tile.meta?.destroyed !== true
+      ) {
+        candidates.push(tile);
+        break;
+      }
+    }
+  }
+  const tile = candidates[Math.floor(Math.random() * candidates.length)];
+  return tile
+    ? { tileId: tile.id, coord: { q: tile.coord.q, r: tile.coord.r } }
+    : undefined;
+}
+
 export class ScareAction extends BaseAction {
   protected processRoster(
     roster: PlannedActionParticipant[],
@@ -39,57 +71,74 @@ export class ScareAction extends BaseAction {
         this.clearPlan(participant);
         continue;
       }
-      const destination = resolvePlanDestination(match, participant.plan);
-      const origin = participant.character.position?.coord;
-      const selection = origin
-        ? collectTargets(actionId, participant, match, {
-            allowMultiple: false,
-            filter: (candidate) =>
-              !isTargetProtected(candidate.character) &&
-              candidate.distance === CURRENT_CELL_DISTANCE,
-          })
-        : [];
-      this.clearPlan(participant);
-      const targetSelection = selection[0];
-      if (!destination || !origin || !targetSelection) {
-        continue;
-      }
-      const target = match.playerCharacters?.[targetSelection.id];
-      if (!target) {
-        continue;
-      }
-      const previous = target.position;
-      target.position = {
-        tileId: destination.tileId,
-        coord: destination.coord,
-      };
-      const energyLost = reduceEnergy(target, 3);
-      if (!match.playerCharacters) {
-        match.playerCharacters = {};
-      }
-      match.playerCharacters[targetSelection.id] = target;
-      const action: ReplayActionDone = {
-        actionId,
-        originLocation: origin,
-        targetLocation: destination.coord,
-      };
-      const metadata: Record<string, unknown> = {
-        movedTo: destination.coord,
-        energyLost,
-      };
-      if (previous?.coord) {
-        metadata.movedFrom = previous.coord;
-      }
-      const targetEvent: ReplayActionTarget = {
-        targetId: targetSelection.id,
-        metadata,
-      };
-      events.push({
-        kind: "player",
-        actorId: participant.playerId,
-        action,
-        targets: [targetEvent],
+      const extraExecutions = getUsableExtraExecutions(
+        participant.character,
+        participant.plan,
+        ActionLibrary.scare,
+        false
+      );
+      const selection = collectTargets(actionId, participant, match, {
+        allowMultiple: extraExecutions > 0,
+        filter: (candidate) =>
+          !isTargetProtected(candidate.character) &&
+          candidate.distance === CURRENT_CELL_DISTANCE,
       });
+      const origin = participant.character.position?.coord;
+      const requestedTargets = participant.plan.targetPlayerIds ?? [];
+      const pushingTwoPlayers =
+        extraExecutions > 0 && requestedTargets.length > 1;
+      const chosenDestination = resolvePlanDestination(match, participant.plan);
+      this.clearPlan(participant);
+      if (!origin || selection.length === 0) {
+        continue;
+      }
+
+      const targets = pushingTwoPlayers ? selection.slice(0, 2) : selection.slice(0, 1);
+      for (const targetSelection of targets) {
+        const target = match.playerCharacters?.[targetSelection.id];
+        if (!target) {
+          continue;
+        }
+        const destination = pushingTwoPlayers
+          ? randomAdjacentDestination(match, target.position?.coord ?? origin)
+          : chosenDestination ??
+            randomAdjacentDestination(match, target.position?.coord ?? origin);
+        if (!destination) {
+          continue;
+        }
+        const previous = target.position;
+        target.position = {
+          tileId: destination.tileId,
+          coord: destination.coord,
+        };
+        const energyLost = reduceEnergy(target, 3);
+        if (!match.playerCharacters) {
+          match.playerCharacters = {};
+        }
+        match.playerCharacters[targetSelection.id] = target;
+        const action: ReplayActionDone = {
+          actionId,
+          originLocation: origin,
+          targetLocation: destination.coord,
+        };
+        const metadata: Record<string, unknown> = {
+          movedTo: destination.coord,
+          energyLost,
+        };
+        if (previous?.coord) {
+          metadata.movedFrom = previous.coord;
+        }
+        const targetEvent: ReplayActionTarget = {
+          targetId: targetSelection.id,
+          metadata,
+        };
+        events.push({
+          kind: "player",
+          actorId: participant.playerId,
+          action,
+          targets: [targetEvent],
+        });
+      }
     }
     return events;
   }
