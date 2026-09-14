@@ -15,6 +15,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Link Facebook": "Vincular Facebook",
   "Unlink Facebook": "Desvincular Facebook",
   "Audio Settings": "Configuración de audio",
+  "[ ] View all actions and players": "[ ] Ver todas las acciones y jugadores",
+  "[x] View all actions and players": "[x] Ver todas las acciones y jugadores",
   "Back to Game": "Volver al juego",
   Preview: "Vista previa",
   "Skin saved!": "¡Apariencia guardada!",

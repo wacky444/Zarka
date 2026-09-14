@@ -53,6 +53,7 @@ import { assetPath } from "../utils/assetPath";
 import { createSkinContainer, SkinContainer } from "../ui/PlayerSkinRenderer";
 import { AccountService } from "../services/AccountService";
 import { VictoryOverlay } from "../ui/VictoryOverlay";
+import { isAdminViewEnabled } from "../services/adminView";
 
 type PlayerEliminationBannerEvent = {
   playerId: string;
@@ -138,6 +139,7 @@ export class GameScene extends Phaser.Scene {
   private pendingMatchEndPayload:
     | import("@shared").MatchEndedMessagePayload
     | null = null;
+  private adminViewEnabled = false;
 
   private readonly turnAdvancedHandler = (
     payload: TurnAdvancedMessagePayload
@@ -335,6 +337,19 @@ export class GameScene extends Phaser.Scene {
       .setVisible(false);
     this.cam.ignore(this.autoAdvanceText);
 
+    this.adminViewEnabled = isAdminViewEnabled();
+    const adminMatchId = this.registry.get("currentMatchId") as string | null;
+    if (this.turnService && adminMatchId) {
+      try {
+        await this.turnService.setAdminView(
+          adminMatchId,
+          this.adminViewEnabled
+        );
+      } catch {
+        // Non-admin users and stale runtime matches can ignore this sync.
+      }
+    }
+
     const match = await this.fetchMatchFromServer();
     this.currentMatch = match;
     this.logReplayCache.clear();
@@ -487,7 +502,7 @@ export class GameScene extends Phaser.Scene {
       return null;
     }
     try {
-      const res = await service.getState(matchId);
+      const res = await service.getState(matchId, this.adminViewEnabled);
       const payload = this.parseRpcPayload<GetStatePayload>(res);
       if (payload && payload.match) {
         return payload.match;
@@ -2119,7 +2134,11 @@ export class GameScene extends Phaser.Scene {
     const previous =
       this.currentMatch?.readyStates?.[this.currentUserId] ?? false;
     try {
-      const res = await this.turnService.updateReadyState(matchId, ready);
+      const res = await this.turnService.updateReadyState(
+        matchId,
+        ready,
+        this.adminViewEnabled
+      );
       const payload = this.parseRpcPayload<UpdateReadyStatePayload>(res);
       if (payload.error) {
         throw new Error(payload.error);
@@ -2937,7 +2956,11 @@ export class GameScene extends Phaser.Scene {
     this.logPendingTurn = null;
     panel.setLogLoading(true);
     try {
-      const res = await service.getReplay(matchId, turn);
+      const res = await service.getReplay(
+        matchId,
+        turn,
+        this.adminViewEnabled
+      );
       const payload = this.parseRpcPayload<GetReplayPayload>(res);
       if (payload.error) {
         throw new Error(payload.error);

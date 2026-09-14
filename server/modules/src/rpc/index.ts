@@ -16,6 +16,7 @@ export { getChatHistoryRpc } from "./getChatHistory";
 export { getUserAccountRpc } from "./getUserAccount";
 export { updateSkinRpc } from "./updateSkin";
 export { upgradeSkillRpc } from "./upgradeSkill";
+export { setAdminViewRpc } from "./setAdminView";
 export {
   facebookDataDeletionRpc,
   facebookDataDeletionStatusRpc,

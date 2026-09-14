@@ -20,6 +20,7 @@ import {
   getUserAccountRpc,
   updateSkinRpc,
   upgradeSkillRpc,
+  setAdminViewRpc,
   facebookDataDeletionRpc,
   facebookDataDeletionStatusRpc
 } from "./rpc";
@@ -176,6 +177,14 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register upgrade_skill: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("set_admin_view", setAdminViewRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register set_admin_view: %s",
       (error && (error as Error).message) || String(error)
     );
   }

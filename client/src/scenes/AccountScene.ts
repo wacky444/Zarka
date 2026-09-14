@@ -4,6 +4,10 @@ import { makeButton, type UIButton } from "../ui/button";
 import { SessionManager } from "../services/sessionManager";
 import { FacebookService } from "../services/facebookService";
 import { t } from "../services/i18n";
+import {
+  isAdminViewEnabled,
+  setAdminViewEnabled
+} from "../services/adminView";
 import type { AccountService } from "../services/AccountService";
 import type { TurnService } from "../services/turnService";
 import { GridSelect, type GridSelectItem } from "../ui/GridSelect";
@@ -94,6 +98,9 @@ export class AccountScene extends Phaser.Scene {
   private userInfoText!: Phaser.GameObjects.Text;
   private displayNameText!: Phaser.GameObjects.Text;
   private changeDisplayNameButton!: UIButton;
+  private adminViewToggle!: UIButton;
+  private isAdmin = false;
+  private adminViewEnabled = false;
   private currentDisplayName = "";
   private playerStatsText!: Phaser.GameObjects.Text;
   private facebookStatusText!: Phaser.GameObjects.Text;
@@ -208,6 +215,21 @@ export class AccountScene extends Phaser.Scene {
     this.changeDisplayNameButton.setPadding(4, 2);
     this.changeDisplayNameButton.setVisible(false);
     this.accountRoot.add(this.changeDisplayNameButton);
+
+    this.adminViewToggle = makeButton(
+      this,
+      0,
+      0,
+      "[ ] View all actions and players",
+      () => {
+        this.adminViewEnabled = !this.adminViewEnabled;
+        setAdminViewEnabled(this.adminViewEnabled);
+        this.updateAdminViewToggle();
+      },
+      ["account"]
+    ).setOrigin(0.5, 0);
+    this.adminViewToggle.setVisible(false);
+    this.accountRoot.add(this.adminViewToggle);
 
     this.skinStatsTitle = this.add
       .text(0, 0, "Player Stats", {
@@ -361,7 +383,11 @@ export class AccountScene extends Phaser.Scene {
     cursorY += this.displayNameText.height + 6;
     if (this.changeDisplayNameButton.visible) {
       this.changeDisplayNameButton.setPosition(centerX, cursorY);
-      cursorY += this.changeDisplayNameButton.height + ACCOUNT_LAYOUT.sectionGap;
+      cursorY += this.changeDisplayNameButton.height + 8;
+    }
+    if (this.adminViewToggle.visible) {
+      this.adminViewToggle.setPosition(centerX, cursorY);
+      cursorY += this.adminViewToggle.height + ACCOUNT_LAYOUT.sectionGap;
     } else {
       cursorY += ACCOUNT_LAYOUT.sectionGap;
     }
@@ -600,6 +626,10 @@ export class AccountScene extends Phaser.Scene {
           | undefined;
         if (rpcPayload?.ok && rpcPayload.account) {
           userAccount = rpcPayload.account;
+          this.isAdmin = rpcPayload.account.isAdmin === true;
+          this.adminViewEnabled = this.isAdmin && isAdminViewEnabled();
+          this.adminViewToggle.setVisible(this.isAdmin);
+          this.updateAdminViewToggle();
         }
       } catch (e) {
         console.warn("Failed to load user account metadata:", e);
@@ -706,6 +736,17 @@ export class AccountScene extends Phaser.Scene {
       console.error("Error unlinking Facebook:", error);
       this.statusText.setText("Failed to unlink Facebook account");
     }
+  }
+
+  private updateAdminViewToggle(): void {
+    if (!this.adminViewToggle) {
+      return;
+    }
+    this.adminViewToggle.setText(
+      this.adminViewEnabled
+        ? "[x] View all actions and players"
+        : "[ ] View all actions and players"
+    );
   }
 
   private async promptChangeDisplayName() {

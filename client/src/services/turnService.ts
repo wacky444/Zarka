@@ -151,13 +151,19 @@ export class TurnService {
     return res;
   }
 
-  async getState(match_id: string) {
-    const res = await this.client.rpc(this.session, "get_state", { match_id });
+  async getState(match_id: string, viewAll = false) {
+    const res = await this.client.rpc(this.session, "get_state", {
+      match_id,
+      view_all: viewAll
+    });
     return res;
   }
 
-  async getReplay(match_id: string, turn?: number) {
-    const payload: { match_id: string; turn?: number } = { match_id };
+  async getReplay(match_id: string, turn?: number, viewAll = false) {
+    const payload: { match_id: string; turn?: number; view_all: boolean } = {
+      match_id,
+      view_all: viewAll
+    };
     if (typeof turn === "number") {
       payload.turn = turn;
     }
@@ -208,10 +214,23 @@ export class TurnService {
     return res;
   }
 
-  async updateReadyState(match_id: string, ready: boolean) {
+  async updateReadyState(
+    match_id: string,
+    ready: boolean,
+    viewAll = false
+  ) {
     const res = await this.client.rpc(this.session, "update_ready_state", {
       match_id,
-      ready
+      ready,
+      view_all: viewAll
+    });
+    return res;
+  }
+
+  async setAdminView(match_id: string, enabled: boolean) {
+    const res = await this.client.rpc(this.session, "set_admin_view", {
+      match_id,
+      enabled
     });
     return res;
   }

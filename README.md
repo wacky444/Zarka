@@ -86,6 +86,16 @@ Add the deployed site's origin to the OAuth client's authorized JavaScript origi
 
 The client supports English and Spanish. It selects Spanish automatically when the browser language starts with `es`; otherwise it uses English. The selected locale is stored in `localStorage` under `zarka_locale`. The login and main menu screens include a language toggle.
 
+### Admin Match Visibility
+
+Admin status is configured in the Nakama Console, not in the client. Set the account metadata to:
+
+```json
+{"zarka":{"admin":true}}
+```
+
+An admin account will then see a **View all actions and players** checkbox in Account Settings. The server validates the metadata flag and performs the visibility expansion server-side. Normal players only receive their own actions and actions that directly target or affect them.
+
 ### Account Management
 
 Once authenticated, users can:

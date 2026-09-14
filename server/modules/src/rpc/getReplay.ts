@@ -9,6 +9,7 @@ import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { tailorReplayEvents } from "../match/replay/tailorReplay";
+import { isAdminUser } from "../utils/admin";
 
 export function getReplayRpc(
   ctx: nkruntime.Context,
@@ -72,11 +73,13 @@ export function getReplayRpc(
   if (turn >= 0) {
     const replay = storage.readReplay(matchId, turn);
     if (replay && Array.isArray(replay.events)) {
+      const viewAll = json.view_all === true && isAdminUser(nk, ctx.userId);
       events = tailorReplayEvents(
         replay.events,
         ctx.userId,
         match.playerCharacters,
-        DEFAULT_REPLAY_VIEW_DISTANCE
+        DEFAULT_REPLAY_VIEW_DISTANCE,
+        viewAll
       );
     }
   }

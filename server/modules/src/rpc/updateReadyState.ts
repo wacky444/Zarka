@@ -16,6 +16,7 @@ import { resolveTurnForMatch } from "../match/turnResolution";
 import { getAliveCharacterIds } from "../match/checkEndGame";
 import { validateTime } from "../utils/validation";
 import { getRuntimeMatchId } from "../utils/matchIds";
+import { isAdminUser } from "../utils/admin";
 
 const READY_ADVANCE_MARGIN_MINUTES = 12 * 60;
 
@@ -67,6 +68,7 @@ export function updateReadyStateRpc(
   }
 
   const requestedReady = json.ready === true;
+  const viewAll = json.view_all === true && isAdminUser(nk, ctx.userId);
 
   const nkWrapper = createNakamaWrapper(nk);
   const storage = new StorageService(nkWrapper);
@@ -232,9 +234,12 @@ export function updateReadyStateRpc(
     playerCharacters: tailorPlayerCharactersForViewer(
       match.playerCharacters,
       ctx.userId,
+      viewAll,
     ),
-    map: tailorMapForCharacter(match.map, viewerCharacter),
-    items: tailorMatchItemsForCharacter(match.items, viewerCharacter),
+    map: viewAll ? match.map : tailorMapForCharacter(match.map, viewerCharacter),
+    items: viewAll
+      ? match.items
+      : tailorMatchItemsForCharacter(match.items, viewerCharacter),
   };
 
   return JSON.stringify(response);

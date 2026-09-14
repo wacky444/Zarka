@@ -175,6 +175,11 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             true,
           );
         } catch {}
+      } else if (msg && msg.type === "set_admin_view") {
+        if (typeof msg.user_id === "string") {
+          state.adminViewers = state.adminViewers ?? {};
+          state.adminViewers[msg.user_id] = msg.enabled === true;
+        }
       } else if (msg && msg.type === "turn_advanced") {
         try {
           const viewDistance =
@@ -246,27 +251,36 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             );
           } else {
             for (const [playerId, presence] of entries) {
+              const viewAll = state.adminViewers[playerId] === true;
               const tailored = tailorReplayEvents(
                 events,
                 playerId,
                 msg.playerCharacters,
                 viewDistance,
+                viewAll,
               );
               const payload = JSON.stringify({
                 ...payloadBase,
+                viewDistance: viewAll ? Number.MAX_VALUE : viewDistance,
                 replay: tailored,
-                playerCharacters: tailorPlayerCharactersForViewer(
-                  msg.playerCharacters,
-                  playerId,
-                ),
-                map: tailorMapForCharacter(
-                  msg.map,
-                  msg.playerCharacters?.[playerId] ?? null,
-                ),
-                items: tailorMatchItemsForCharacter(
-                  msg.items,
-                  msg.playerCharacters?.[playerId] ?? null,
-                ),
+                playerCharacters: viewAll
+                  ? msg.playerCharacters
+                  : tailorPlayerCharactersForViewer(
+                      msg.playerCharacters,
+                      playerId,
+                    ),
+                map: viewAll
+                  ? msg.map
+                  : tailorMapForCharacter(
+                      msg.map,
+                      msg.playerCharacters?.[playerId] ?? null,
+                    ),
+                items: viewAll
+                  ? msg.items
+                  : tailorMatchItemsForCharacter(
+                      msg.items,
+                      msg.playerCharacters?.[playerId] ?? null,
+                    ),
               });
               dispatcher.broadcastMessage(
                 OPCODE_TURN_ADVANCED,

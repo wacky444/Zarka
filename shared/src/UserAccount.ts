@@ -55,6 +55,7 @@ export type UserAccount = {
   readonly langTag?: string;
   readonly location?: string;
   readonly timezone?: string;
+  readonly isAdmin?: boolean;
 
   // Game-specific data (stored in Nakama user metadata under `metadata.zarka`).
   readonly stats: PlayerStats;

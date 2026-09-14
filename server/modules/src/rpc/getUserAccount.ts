@@ -154,6 +154,8 @@ function buildAccountFromUser(
     langTag: user.langTag || undefined,
     location: user.location || undefined,
     timezone: user.timezone || undefined,
+    isAdmin:
+      metadata?.admin === true || zarka?.admin === true ? true : undefined,
     stats,
     cosmetics,
     createdAtMs,

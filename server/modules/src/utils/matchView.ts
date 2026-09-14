@@ -84,10 +84,14 @@ function computeViewRange(
 
 export function tailorPlayerCharactersForViewer(
   playerCharacters: Record<string, PlayerCharacter> | undefined,
-  viewerId: string | undefined | null
+  viewerId: string | undefined | null,
+  viewAll = false
 ): Record<string, PlayerCharacter> | undefined {
   if (!playerCharacters) {
     return playerCharacters;
+  }
+  if (viewAll) {
+    return { ...playerCharacters };
   }
   const viewerKey = typeof viewerId === "string" ? viewerId : "";
   if (!viewerKey) {
@@ -154,18 +158,22 @@ export function tailorMatchItemsForCharacter(
 
 export function tailorMatchForPlayer(
   match: MatchRecord,
-  playerId: string | undefined | null
+  playerId: string | undefined | null,
+  viewAll = false
 ): SharedMatchRecord {
   const character =
     playerId && match.playerCharacters
       ? match.playerCharacters[playerId]
       : undefined;
   const found = buildFoundItemLookup(character);
-  const map = filterMapByFoundLookup(match.map, found);
-  const items = filterItemsByFoundLookup(match.items, found);
+  const map = viewAll ? match.map : filterMapByFoundLookup(match.map, found);
+  const items = viewAll
+    ? match.items
+    : filterItemsByFoundLookup(match.items, found);
   const playerCharacters = tailorPlayerCharactersForViewer(
     match.playerCharacters,
-    playerId
+    playerId,
+    viewAll
   );
   const playerList: Record<string, PlayerCharacterUnknown> = {};
   const deadCharacters: Record<string, boolean> = {};

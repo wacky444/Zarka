@@ -14,6 +14,7 @@ export type TurnRecord = SharedTurnRecord;
 
 export interface AsyncTurnState extends nkruntime.MatchState {
   game_id: string;
+  adminViewers: { [userId: string]: boolean };
   players: { [userId: string]: nkruntime.Presence };
   order: string[];
   size: number;

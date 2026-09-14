@@ -22,6 +22,7 @@ export const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
 
     const state: AsyncTurnState = {
       game_id: gameId,
+      adminViewers: {},
       players: {},
       order: [],
       size,

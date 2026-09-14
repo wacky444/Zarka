@@ -4,6 +4,7 @@ import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { MatchRecord } from "../models/types";
 import { tailorMatchForPlayer } from "../utils/matchView";
+import { isAdminUser } from "../utils/admin";
 
 export function getStateRpc(
   ctx: nkruntime.Context,
@@ -45,7 +46,8 @@ export function getStateRpc(
   const turns = storage.readTurns(matchId, start, match.current_turn || 0);
 
   const viewerId = ctx?.userId ?? null;
-  const tailoredMatch = tailorMatchForPlayer(match, viewerId);
+  const viewAll = json.view_all === true && isAdminUser(nk, viewerId);
+  const tailoredMatch = tailorMatchForPlayer(match, viewerId, viewAll);
 
   const response: import("@shared").GetStatePayload = {
     match: tailoredMatch,

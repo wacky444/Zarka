@@ -5,56 +5,25 @@ import type {
   ReplayMapEvent,
   ReplayPlayerEvent,
 } from "@shared";
-import { axialDistance, canSeeCoord } from "../../utils/location";
+import { canSeeCoord } from "../../utils/location";
 
-function canSenseMoveDirection(
-  event: ReplayPlayerEvent,
-  viewer: Axial | null,
-  viewDistance: number
-): boolean {
-  if (!viewer || event.action.actionId !== "move") {
-    return false;
-  }
-  const origin = event.action.originLocation;
-  const target = event.action.targetLocation;
-  if (!origin || !target) {
-    return false;
-  }
-  const canSeeOrigin = canSeeCoord(origin, viewer, viewDistance);
-  if (!canSeeOrigin) {
-    return false;
-  }
-  return axialDistance(target, viewer) <= viewDistance + 1;
+function affectsPlayer(event: ReplayPlayerEvent, playerId: string): boolean {
+  return Array.isArray(event.targets)
+    ? event.targets.some((target) => target.targetId === playerId)
+    : false;
 }
 
 function filterPlayerEvent(
   event: ReplayPlayerEvent,
-  playerId: string,
-  viewer: Axial | null,
-  viewDistance: number
+  playerId: string
 ): boolean {
   if (event.visibility && event.visibility.scope === "limited") {
     return event.visibility.playerIds.indexOf(playerId) !== -1;
   }
-  if (event.action.actionId === "team_assigned") {
-    return event.actorId === playerId;
-  }
-  if (event.actorId === playerId) {
+  if (event.actorId === playerId || affectsPlayer(event, playerId)) {
     return true;
   }
-  if (event.action.actionId === "status_dead") {
-    return true;
-  }
-  if (!viewer) {
-    return false;
-  }
-  if (canSeeCoord(event.action.originLocation, viewer, viewDistance)) {
-    return true;
-  }
-  if (canSeeCoord(event.action.targetLocation, viewer, viewDistance)) {
-    return true;
-  }
-  return canSenseMoveDirection(event, viewer, viewDistance);
+  return false;
 }
 
 function filterMapEvent(
@@ -62,23 +31,24 @@ function filterMapEvent(
   viewer: Axial | null,
   viewDistance: number
 ): boolean {
-  if (event.action === "destroyed") {
-    return true;
-  }
   if (!viewer) {
     return false;
   }
-  return canSeeCoord(event.cell, viewer, viewDistance);
+  return canSeeCoord(event.cell, viewer, Math.max(0, viewDistance));
 }
 
 export function tailorReplayEvents(
   events: ReplayEvent[],
   playerId: string,
   playerCharacters: Record<string, PlayerCharacter> | undefined,
-  viewDistance: number
+  viewDistance: number,
+  viewAll = false
 ): ReplayEvent[] {
   if (!Array.isArray(events) || events.length === 0) {
     return [];
+  }
+  if (viewAll) {
+    return events.map((event) => ({ ...event }));
   }
   const character = playerCharacters?.[playerId] ?? null;
   const viewerCoord = character?.position?.coord ?? null;
@@ -86,7 +56,7 @@ export function tailorReplayEvents(
   const result: ReplayEvent[] = [];
   for (const event of events) {
     if (event.kind === "player") {
-      if (filterPlayerEvent(event, playerId, viewerCoord, allowedDistance)) {
+      if (filterPlayerEvent(event, playerId)) {
         result.push(event);
       }
     } else if (event.kind === "map") {
