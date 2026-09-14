@@ -48,7 +48,10 @@ import { collectItemSpriteInfos, resolveItemTexture } from "../ui/itemIcons";
 import { ItemTooltipManager, composeItemDescription } from "../ui/ItemTooltip";
 import { HoverTooltip } from "../ui/HoverTooltip";
 import { TopBanner, type TopBannerPayload } from "../ui/TopBanner";
-import { preloadReplaySounds, applyStoredVolume } from "../animation/soundPlayer";
+import {
+  preloadReplaySounds,
+  applyStoredVolume
+} from "../animation/soundPlayer";
 import { assetPath } from "../utils/assetPath";
 import { createSkinContainer, SkinContainer } from "../ui/PlayerSkinRenderer";
 import { AccountService } from "../services/AccountService";
@@ -353,7 +356,8 @@ export class GameScene extends Phaser.Scene {
       .text(10, 10, "", {
         fontFamily: "Arial",
         fontSize: "14px",
-        color: "#cbd5f5"
+        color: "#cbd5f5",
+        resolution: 3
       })
       .setScrollFactor(0)
       .setVisible(false);
@@ -890,7 +894,8 @@ export class GameScene extends Phaser.Scene {
             fontSize: "10px",
             color: "#ffffff",
             stroke: "#000000",
-            strokeThickness: 4
+            strokeThickness: 4,
+            resolution: 3
           });
           label.setOrigin(0.5, 0.5);
           label.setDepth(6);
@@ -1050,7 +1055,8 @@ export class GameScene extends Phaser.Scene {
             fontSize: "12px",
             color: "#ffffff",
             stroke: "#000000",
-            strokeThickness: 3
+            strokeThickness: 3,
+            resolution: 3
           });
           label.setOrigin(0.5, 0);
           label.setInteractive({ useHandCursor: true });
@@ -1126,8 +1132,7 @@ export class GameScene extends Phaser.Scene {
 
   private getMapTouchPointers(): Phaser.Input.Pointer[] {
     return [this.input.pointer1, this.input.pointer2].filter(
-      (pointer) =>
-        pointer.isDown && this.mapTouchPointerIds.has(pointer.id)
+      (pointer) => pointer.isDown && this.mapTouchPointerIds.has(pointer.id)
     );
   }
 
@@ -1745,7 +1750,9 @@ export class GameScene extends Phaser.Scene {
     try {
       const displayName =
         this.currentPlayerName ??
-        (this.currentUserId ? this.playerNameMap[this.currentUserId] : undefined);
+        (this.currentUserId
+          ? this.playerNameMap[this.currentUserId]
+          : undefined);
       await this.chatService.send(message, displayName ?? undefined);
     } catch (error) {
       console.warn("chat send failed", error);
@@ -1980,8 +1987,7 @@ export class GameScene extends Phaser.Scene {
         (previousPlan?.prioritizeFoodDrink ?? false) &&
       normalizedSelection.sellInstead ===
         (previousPlan?.sellInstead ?? false) &&
-      normalizedSelection.singleTarget ===
-        (previousPlan?.singleTarget ?? false)
+      normalizedSelection.singleTarget === (previousPlan?.singleTarget ?? false)
     ) {
       return;
     }
@@ -2139,8 +2145,7 @@ export class GameScene extends Phaser.Scene {
         (previousPlan?.prioritizeFoodDrink ?? false) &&
       normalizedSelection.sellInstead ===
         (previousPlan?.sellInstead ?? false) &&
-      normalizedSelection.singleTarget ===
-        (previousPlan?.singleTarget ?? false)
+      normalizedSelection.singleTarget === (previousPlan?.singleTarget ?? false)
     ) {
       return;
     }
@@ -2787,11 +2792,7 @@ export class GameScene extends Phaser.Scene {
         return true;
       }
     }
-    if (
-      !this.characterPanel ||
-      !this.uiCam ||
-      !this.characterPanel.visible
-    ) {
+    if (!this.characterPanel || !this.uiCam || !this.characterPanel.visible) {
       return false;
     }
     const panelX = this.characterPanel.x;
@@ -3082,11 +3083,7 @@ export class GameScene extends Phaser.Scene {
     this.logPendingTurn = null;
     panel.setLogLoading(true);
     try {
-      const res = await service.getReplay(
-        matchId,
-        turn,
-        this.adminViewEnabled
-      );
+      const res = await service.getReplay(matchId, turn, this.adminViewEnabled);
       const payload = this.parseRpcPayload<GetReplayPayload>(res);
       if (payload.error) {
         throw new Error(payload.error);
