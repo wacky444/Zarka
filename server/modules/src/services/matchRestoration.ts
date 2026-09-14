@@ -81,36 +81,21 @@ export function restoreMatchesFromStorage(
 
   try {
     const activeMatchesByGameId = listActiveMatchesByGameId(nkWrapper);
-    let cursor = "";
-    let hasMore = true;
+    const allStoredMatches = storage.listAllMatches();
 
-    while (hasMore) {
-      const result = storage.listServerMatches(100, cursor);
+    for (const stored of allStoredMatches) {
+      const match = stored.match;
 
-      if (!result || !result.objects || result.objects.length === 0) {
-        hasMore = false;
-        break;
+      if (typeof match.started !== "boolean") {
+        match.started = false;
       }
 
-      for (const obj of result.objects) {
-        if (obj && obj.value) {
-          const match = obj.value as MatchRecord;
-
-          if (typeof match.started !== "boolean") {
-            match.started = false;
-          }
-
-          if (match.removed && match.removed !== 0) {
-            logger.debug("Match %s marked removed, skipping", match.match_id);
-            continue;
-          }
-
-          matchesToRestore.push({ match, version: obj.version });
-        }
+      if (match.removed && match.removed !== 0) {
+        logger.debug("Match %s marked removed, skipping", match.match_id);
+        continue;
       }
 
-      cursor = result.cursor || "";
-      hasMore = !!cursor;
+      matchesToRestore.push(stored);
     }
 
     logger.info("Found %d stored matches to reconcile", matchesToRestore.length);

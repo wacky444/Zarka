@@ -381,6 +381,35 @@ export class StorageService {
     return this.nk.storageList(SERVER_USER_ID, MATCH_COLLECTION, limit, cursor);
   }
 
+  listAllMatches(): MatchStorageObject[] {
+    const items: MatchStorageObject[] = [];
+    let cursor = "";
+    let hasMore = true;
+
+    while (hasMore) {
+      const response = this.listServerMatches(100, cursor);
+      const objects = response?.objects ?? [];
+      if (!objects.length) {
+        break;
+      }
+
+      for (const obj of objects) {
+        if (!obj || !obj.value) {
+          continue;
+        }
+        items.push({
+          match: obj.value as MatchRecord,
+          version: obj.version,
+        });
+      }
+
+      cursor = response?.cursor ?? "";
+      hasMore = !!cursor;
+    }
+
+    return items;
+  }
+
   isMatchActive(matchId: string): boolean {
     try {
       this.nk.matchSignal(matchId, JSON.stringify({ type: "ping" }));

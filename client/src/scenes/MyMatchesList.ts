@@ -6,6 +6,7 @@ import type { ListMyMatchesPayload } from "@shared";
 // Type for my matches entries from the RPC response
 type MyMatch = {
   match_id: string;
+  runtime_match_id?: string;
   size: number;
   players: string[];
   current_turn: number;

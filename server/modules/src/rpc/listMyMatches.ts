@@ -19,7 +19,7 @@ export function listMyMatchesRpc(
   const storage = new StorageService(nkWrapper);
 
   try {
-    const result = storage.listServerMatches(100, "");
+    const allMatches = storage.listAllMatches();
     const matches: Array<{
       match_id: string;
       runtime_match_id?: string;
@@ -37,38 +37,35 @@ export function listMyMatchesRpc(
       started?: boolean;
     }> = [];
 
-    if (result && result.objects) {
-      for (const obj of result.objects) {
-        if (obj && obj.value) {
-          const match = obj.value as MatchRecord;
-          if (typeof match.started !== "boolean") {
-            match.started = false;
-          }
-          if (
-            match.players &&
-            match.players.indexOf(ctx.userId) !== -1 &&
-            (match.removed === 0 || match.removed === undefined)
-          ) {
-            matches.push({
-              match_id: match.match_id,
-              runtime_match_id: match.runtime_match_id,
-              size: match.size,
-              players: match.players,
-              current_turn: match.current_turn,
-              created_at: match.created_at,
-              creator: match.creator,
-              cols: match.cols,
-              rows: match.rows,
-              roundTime: match.roundTime,
-              autoSkip: match.autoSkip,
-              botPlayers: match.botPlayers,
-              name: match.name,
-              started: match.started,
-            });
-          }
-        }
+    for (const { match } of allMatches) {
+      if (typeof match.started !== "boolean") {
+        match.started = false;
+      }
+      if (
+        match.players &&
+        match.players.indexOf(ctx.userId) !== -1 &&
+        (match.removed === 0 || match.removed === undefined)
+      ) {
+        matches.push({
+          match_id: match.match_id,
+          runtime_match_id: match.runtime_match_id ?? match.match_id,
+          size: match.size,
+          players: match.players,
+          current_turn: match.current_turn,
+          created_at: match.created_at,
+          creator: match.creator,
+          cols: match.cols,
+          rows: match.rows,
+          roundTime: match.roundTime,
+          autoSkip: match.autoSkip,
+          botPlayers: match.botPlayers,
+          name: match.name,
+          started: match.started,
+        });
       }
     }
+
+    matches.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
 
     const response: import("@shared").ListMyMatchesPayload = {
       ok: true,

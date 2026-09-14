@@ -9,20 +9,15 @@ import { validateTime } from "../utils/validation";
 import { DEFAULT_MAP_COLS, DEFAULT_MAP_ROWS } from "@shared";
 
 function getNumberOfMatches(storage: StorageService, userId: string): number {
-  const existingMatches = storage.listServerMatches(100, "");
+  const allMatches = storage.listAllMatches();
   let creatorMatchCount = 0;
 
-  if (existingMatches && existingMatches.objects) {
-    for (const obj of existingMatches.objects) {
-      if (obj && obj.value) {
-        const match = obj.value as MatchRecord;
-        if (
-          match.creator === userId &&
-          (match.removed === 0 || match.removed === undefined)
-        ) {
-          creatorMatchCount++;
-        }
-      }
+  for (const { match } of allMatches) {
+    if (
+      match.creator === userId &&
+      (match.removed === 0 || match.removed === undefined)
+    ) {
+      creatorMatchCount++;
     }
   }
 
