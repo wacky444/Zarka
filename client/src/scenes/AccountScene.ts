@@ -3,6 +3,7 @@ import { Client, Session } from "@heroiclabs/nakama-js";
 import { makeButton, type UIButton } from "../ui/button";
 import { SessionManager } from "../services/sessionManager";
 import { FacebookService } from "../services/facebookService";
+import { t } from "../services/i18n";
 import type { AccountService } from "../services/AccountService";
 import type { TurnService } from "../services/turnService";
 import { GridSelect, type GridSelectItem } from "../ui/GridSelect";
@@ -708,7 +709,7 @@ export class AccountScene extends Phaser.Scene {
 
   private async promptChangeDisplayName() {
     const current = this.currentDisplayName || "";
-    const input = window.prompt("Enter new display name:", current);
+    const input = window.prompt(t("Enter new display name:"), current);
     if (input === null) {
       return;
     }

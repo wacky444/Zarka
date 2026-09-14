@@ -9,6 +9,7 @@ import { MatchesListView } from "./MatchesList";
 import { MyMatchesListView } from "./MyMatchesList";
 import { LobbyView } from "./LobbyView";
 import { applyStoredVolume } from "../animation/soundPlayer";
+import { getLocale, toggleLocale } from "../services/i18n";
 import type {
   LeaveMatchPayload,
   JoinMatchPayload,
@@ -635,6 +636,18 @@ export class MainScene extends Phaser.Scene {
       ["main"]
     ).setOrigin(0.5);
 
+    const languageButton = makeButton(
+      this,
+      0,
+      0,
+      this.getLanguageToggleLabel(),
+      () => {
+        toggleLocale();
+        languageButton.setText(`[ ${this.getLanguageToggleLabel()} ]`);
+      },
+      ["main"]
+    ).setOrigin(0.5);
+
     const logoutButton = makeButton(
       this,
       0,
@@ -651,6 +664,7 @@ export class MainScene extends Phaser.Scene {
       listMatchesButton,
       myMatchesButton,
       accountSettingsButton,
+      languageButton,
       logoutButton
     ];
     this.mainRoot.add(this.mainButtons);
@@ -679,6 +693,10 @@ export class MainScene extends Phaser.Scene {
         MAIN_LAYOUT.controlsY + index * MAIN_LAYOUT.buttonGap
       );
     });
+  }
+
+  private getLanguageToggleLabel(): string {
+    return getLocale() === "en" ? "Español" : "English";
   }
 
   private logout(message?: string) {

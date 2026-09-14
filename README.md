@@ -82,6 +82,10 @@ VITE_GOOGLE_CLIENT_ID=your-google-oauth-web-client-id
 
 Add the deployed site's origin to the OAuth client's authorized JavaScript origins in Google Cloud Console. For GitHub Pages deployments, set the `GOOGLE_CLIENT_ID` repository variable so the deployment workflow injects `VITE_GOOGLE_CLIENT_ID` at build time.
 
+### Localization
+
+The client supports English and Spanish. It selects Spanish automatically when the browser language starts with `es`; otherwise it uses English. The selected locale is stored in `localStorage` under `zarka_locale`. The login and main menu screens include a language toggle.
+
 ### Account Management
 
 Once authenticated, users can:

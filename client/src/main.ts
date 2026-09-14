@@ -5,6 +5,7 @@ import { GameScene } from "./scenes/GameScene";
 import { AccountScene } from "./scenes/AccountScene";
 import RexUIPlugin from "phaser3-rex-plugins/templates/ui/ui-plugin";
 import { SessionManager } from "./services/sessionManager";
+import { installPhaserLocalization } from "./services/i18n";
 
 const isMobile =
   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
@@ -32,6 +33,8 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: isMobile ? Phaser.Scale.RESIZE : Phaser.Scale.RESIZE
   }
 };
+
+installPhaserLocalization();
 
 // Initialize the game and check for existing session
 async function initGame() {

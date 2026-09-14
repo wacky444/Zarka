@@ -10,6 +10,7 @@ import {
   UIButton
 } from "../ui/button";
 import { InMatchSettings } from "@shared";
+import { t } from "../services/i18n";
 
 type FixWidthSizerInstance = Phaser.GameObjects.GameObject & {
   width: number;
@@ -218,7 +219,9 @@ export class LobbyView {
         if (this.started || this.startMatchBusy) return;
         if (!this.onStartMatch) return;
         const confirmed = window.confirm(
-          "Are you sure you want to start the match? Players will no longer be able to join."
+          t(
+            "Are you sure you want to start the match? Players will no longer be able to join."
+          )
         );
         if (!confirmed) return;
         this.setStartMatchBusy(true);
@@ -240,7 +243,9 @@ export class LobbyView {
       async () => {
         if (!this.onRemoveMatch) return;
         const confirmed = window.confirm(
-          "Are you sure you want to remove this match? This action cannot be undone."
+          t(
+            "Are you sure you want to remove this match? This action cannot be undone."
+          )
         );
         if (confirmed) {
           await this.onRemoveMatch();
@@ -715,7 +720,7 @@ export class LobbyView {
 
   private promptRename() {
     if (!this.isHost) return;
-    const input = window.prompt("Match name", this.matchName);
+    const input = window.prompt(t("Match name"), this.matchName);
     if (input === null) return;
     const changed = this.applyMatchName(input);
     if (changed) {

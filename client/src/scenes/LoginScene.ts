@@ -5,6 +5,7 @@ import { getEnv, healthProbe } from "../services/nakama";
 import { SessionManager } from "../services/sessionManager";
 import { FacebookService } from "../services/facebookService";
 import { GoogleService } from "../services/googleService";
+import { getLocale, toggleLocale } from "../services/i18n";
 
 enum LoginGuiState {
   Entry = "entry",
@@ -53,6 +54,7 @@ export class LoginScene extends Phaser.Scene {
   private usernameDisplay!: Phaser.GameObjects.Text;
   private formActionButton!: UIButton;
   private formBackButton!: UIButton;
+  private languageButton!: UIButton;
 
   private entryObjects: VisibleGameObject[] = [];
   private entryButtons: UIButton[] = [];
@@ -115,6 +117,17 @@ export class LoginScene extends Phaser.Scene {
 
     this.createEntryButtons();
     this.createAuthForm();
+    this.languageButton = makeButton(
+      this,
+      0,
+      0,
+      this.getLanguageToggleLabel(),
+      () => {
+        toggleLocale();
+        this.languageButton.setText(`[ ${this.getLanguageToggleLabel()} ]`);
+      }
+    ).setOrigin(0.5);
+    this.loginRoot.add(this.languageButton);
     this.setGuiState(LoginGuiState.Entry);
     this.layoutLogin();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutLogin, this);
@@ -284,6 +297,7 @@ export class LoginScene extends Phaser.Scene {
     const left = -contentWidth / 2;
 
     this.loginRoot.setPosition(viewportWidth / 2, top);
+    this.languageButton?.setPosition(0, 82);
     this.titleText.setPosition(0, LOGIN_LAYOUT.titleY);
     this.statusText.setPosition(0, LOGIN_LAYOUT.statusY);
 
@@ -324,6 +338,10 @@ export class LoginScene extends Phaser.Scene {
       actionGroupWidth / 2 - backWidth / 2,
       actionsY
     );
+  }
+
+  private getLanguageToggleLabel(): string {
+    return getLocale() === "en" ? "Español" : "English";
   }
 
   private setGuiState(state: LoginGuiState) {
