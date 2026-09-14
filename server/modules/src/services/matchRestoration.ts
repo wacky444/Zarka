@@ -110,6 +110,28 @@ export function restoreMatchesFromStorage(
           );
         }
 
+        const turnEntries = storage.listTurnsForMatch(oldMatchId);
+        if (turnEntries.length > 0) {
+          for (const entry of turnEntries) {
+            const updatedTurn = {
+              ...entry.turn,
+              match_id: newMatchId,
+            };
+            try {
+              storage.appendTurn(updatedTurn);
+              storage.deleteTurnByKey(entry.key);
+            } catch (turnError) {
+              logger.warn(
+                "Failed to migrate turn %s for %s -> %s: %s",
+                entry.turn.turn,
+                oldMatchId,
+                newMatchId,
+                (turnError as Error).message || String(turnError)
+              );
+            }
+          }
+        }
+
         const replayEntries = storage.listReplaysForMatch(oldMatchId);
         if (replayEntries.length > 0) {
           for (const entry of replayEntries) {

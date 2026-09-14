@@ -23,6 +23,11 @@ export interface ReplayStorageObject {
   replay: ReplayRecord;
 }
 
+export interface TurnStorageObject {
+  key: string;
+  turn: TurnRecord;
+}
+
 export interface ChatLogStorageObject {
   chat: MatchChatLog;
   version: string;
@@ -138,6 +143,41 @@ export class StorageService {
       return null;
     }
     return reads[0].value as ReplayRecord;
+  }
+
+  listTurnsForMatch(matchId: string): TurnStorageObject[] {
+    const items: TurnStorageObject[] = [];
+    let cursor = "";
+    let hasMore = true;
+
+    while (hasMore) {
+      const response = this.nk.storageList(
+        SERVER_USER_ID,
+        TURN_COLLECTION,
+        100,
+        cursor
+      );
+
+      const objects = response?.objects ?? [];
+      if (!objects.length) {
+        break;
+      }
+
+      for (const obj of objects) {
+        if (!obj || !obj.key || !obj.value) {
+          continue;
+        }
+        const turn = obj.value as TurnRecord;
+        if (turn.match_id === matchId) {
+          items.push({ key: obj.key, turn });
+        }
+      }
+
+      cursor = response?.cursor ?? "";
+      hasMore = !!cursor;
+    }
+
+    return items;
   }
 
   listReplaysForMatch(matchId: string): ReplayStorageObject[] {
@@ -297,6 +337,16 @@ export class StorageService {
     this.nk.storageDelete([
       {
         collection: REPLAY_COLLECTION,
+        key,
+        userId: SERVER_USER_ID,
+      },
+    ]);
+  }
+
+  deleteTurnByKey(key: string): void {
+    this.nk.storageDelete([
+      {
+        collection: TURN_COLLECTION,
         key,
         userId: SERVER_USER_ID,
       },
