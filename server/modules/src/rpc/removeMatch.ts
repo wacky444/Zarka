@@ -4,6 +4,7 @@ import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { MatchRecord } from "../models/types";
+import { getRuntimeMatchId } from "../utils/matchIds";
 
 export function removeMatchRpc(
   ctx: nkruntime.Context,
@@ -59,7 +60,10 @@ export function removeMatchRpc(
   }
 
   try {
-    nk.matchSignal(matchId, JSON.stringify({ type: "match_removed" }));
+    nk.matchSignal(
+      getRuntimeMatchId(match),
+      JSON.stringify({ type: "match_removed" })
+    );
   } catch (e) {
     logger.warn("Failed to signal match removal: %v", e);
   }

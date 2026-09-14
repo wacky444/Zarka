@@ -14,6 +14,7 @@ import {
   ReplayEvent
 } from "@shared";
 import { tailorMapForCharacter } from "../utils/matchView";
+import { getRuntimeMatchId } from "../utils/matchIds";
 
 export function startMatchRpc(
   ctx: nkruntime.Context,
@@ -161,7 +162,7 @@ export function startMatchRpc(
 
   try {
     nkWrapper.matchSignal(
-      matchId,
+      getRuntimeMatchId(match),
       JSON.stringify({
         type: "start_match"
       })

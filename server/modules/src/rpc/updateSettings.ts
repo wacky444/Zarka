@@ -2,6 +2,7 @@
 
 import { DEFAULT_MATCH_NAME } from "../constants";
 import { MatchRecord } from "../models/types";
+import { getRuntimeMatchId } from "../utils/matchIds";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
@@ -89,7 +90,7 @@ export function updateSettingsRpc(
     storage.writeMatch(match, read.version);
     try {
       nkWrapper.matchSignal(
-        matchId,
+        getRuntimeMatchId(match),
         JSON.stringify({
           type: "update_settings",
           size: match.size,

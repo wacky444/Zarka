@@ -14,6 +14,7 @@ import {
   ensureAllPlayerCharacters,
   ensurePlayerCharacter,
 } from "../utils/playerCharacter";
+import { getRuntimeMatchId } from "../utils/matchIds";
 
 export function joinMatchRpc(
   ctx: nkruntime.Context,
@@ -119,7 +120,7 @@ export function joinMatchRpc(
     storage.writeMatch(match, read.version);
     try {
       nkWrapper.matchSignal(
-        matchId,
+        getRuntimeMatchId(match),
         JSON.stringify({
           type: "sync_players",
           players: match.players,
@@ -139,6 +140,7 @@ export function joinMatchRpc(
   const response: import("@shared").JoinMatchPayload = {
     ok: true,
     match_id: matchId,
+    runtime_match_id: getRuntimeMatchId(match),
     size: match.size,
     players: match.players,
     joined: joinedNow,

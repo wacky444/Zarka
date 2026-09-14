@@ -91,6 +91,7 @@ export function createMatchRpc(
     } as nkruntime.Error;
   }
 
+  const gameId = nk.uuidv4();
   const params: { [key: string]: string } = {
     size: String(size),
     creator: ctx.userId,
@@ -99,13 +100,15 @@ export function createMatchRpc(
     rows: String(DEFAULT_MAP_ROWS),
     roundTime,
     autoSkip: String(autoSkip),
-    turnsToBeAt1Tile: String(turnsToBeAt1Tile)
+    turnsToBeAt1Tile: String(turnsToBeAt1Tile),
+    game_id: gameId
   };
 
-  const matchId = nkWrapper.matchCreate("async_turn", params);
+  const runtimeMatchId = nkWrapper.matchCreate("async_turn", params);
 
   const record: MatchRecord = {
-    match_id: matchId,
+    match_id: gameId,
+    runtime_match_id: runtimeMatchId,
     players: [],
     playerCharacters: {},
     playerList: {},
@@ -127,7 +130,8 @@ export function createMatchRpc(
   storage.writeMatch(record);
 
   const response: import("@shared").CreateMatchPayload = {
-    match_id: matchId,
+    match_id: gameId,
+    runtime_match_id: runtimeMatchId,
     size,
     turnsToBeAt1Tile,
     name,

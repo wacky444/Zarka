@@ -1,7 +1,6 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
 import { MatchRecord } from "../models/types";
-import type { ReplayRecord } from "@shared";
 import { createNakamaWrapper } from "./nakamaWrapper";
 import { StorageService } from "./storageService";
 
@@ -16,7 +15,7 @@ export function restoreMatchesFromStorage(
   const storage = new StorageService(nkWrapper);
 
   let restoredCount = 0;
-  const matchesToRestore: Array<{ match: MatchRecord; version: string }> = [];
+  const matchesToRestore: MatchRecord[] = [];
 
   try {
     let cursor = "";
@@ -43,10 +42,15 @@ export function restoreMatchesFromStorage(
             continue;
           }
 
-          if (!storage.isMatchActive(match.match_id)) {
-            matchesToRestore.push({ match, version: obj.version });
+          const runtimeMatchId = match.runtime_match_id ?? match.match_id;
+          if (!storage.isMatchActive(runtimeMatchId)) {
+            matchesToRestore.push(match);
           } else {
-            logger.debug("Match %s already active, skipping", match.match_id);
+            logger.debug(
+              "Match %s already active with runtime ID %s, skipping",
+              match.match_id,
+              runtimeMatchId
+            );
           }
         }
       }
@@ -57,9 +61,7 @@ export function restoreMatchesFromStorage(
 
     logger.info("Found %d matches to restore", matchesToRestore.length);
 
-    for (const { match, version } of matchesToRestore) {
-      const oldMatchId = match.match_id;
-
+    for (const match of matchesToRestore) {
       try {
         const params: { [key: string]: string } = {
           size: String(match.size),
@@ -73,102 +75,29 @@ export function restoreMatchesFromStorage(
           current_turn: String(match.current_turn),
           started: String(match.started),
           lastAutoAdvanceAt: String(match.lastAutoAdvanceAt || 0),
+          game_id: match.match_id,
           restore: "true",
-          old_match_id: oldMatchId,
           players: JSON.stringify(match.players),
         };
 
-        const newMatchId = nkWrapper.matchCreate("async_turn", params);
+        const newRuntimeMatchId = nkWrapper.matchCreate("async_turn", params);
+        match.runtime_match_id = newRuntimeMatchId;
+        storage.writeMatch(match);
 
         logger.info(
-          "Restored match. Old ID: %s, New ID: %s (%s) with %d players, turn %d",
-          oldMatchId,
-          newMatchId,
+          "Restored match %s with new runtime ID %s (%s), %d players, turn %d",
+          match.match_id,
+          newRuntimeMatchId,
           match.name,
           match.players.length,
           match.current_turn
         );
 
-        try {
-          storage.deleteMatch(oldMatchId);
-        } catch (deleteError) {
-          logger.warn(
-            "Failed to delete old match record %s: %s",
-            oldMatchId,
-            (deleteError as Error).message || String(deleteError)
-          );
-        }
-
-        match.match_id = newMatchId;
-        try {
-          storage.writeMatch(match);
-        } catch (writeError) {
-          logger.error(
-            "Failed to write new match record for %s: %s",
-            newMatchId,
-            (writeError as Error).message || String(writeError)
-          );
-        }
-
-        const turnEntries = storage.listTurnsForMatch(oldMatchId);
-        if (turnEntries.length > 0) {
-          for (const entry of turnEntries) {
-            const updatedTurn = {
-              ...entry.turn,
-              match_id: newMatchId,
-            };
-            try {
-              storage.appendTurn(updatedTurn);
-              storage.deleteTurnByKey(entry.key);
-            } catch (turnError) {
-              logger.warn(
-                "Failed to migrate turn %s for %s -> %s: %s",
-                entry.turn.turn,
-                oldMatchId,
-                newMatchId,
-                (turnError as Error).message || String(turnError)
-              );
-            }
-          }
-        }
-
-        const replayEntries = storage.listReplaysForMatch(oldMatchId);
-        if (replayEntries.length > 0) {
-          for (const entry of replayEntries) {
-            const updatedReplay: ReplayRecord = {
-              ...entry.replay,
-              match_id: newMatchId,
-            };
-            try {
-              storage.appendReplayTurn(updatedReplay);
-              storage.deleteReplayByKey(entry.key);
-            } catch (replayError) {
-              logger.warn(
-                "Failed to migrate replay turn %s for %s: %s",
-                entry.key,
-                newMatchId,
-                (replayError as Error).message || String(replayError)
-              );
-            }
-          }
-        }
-
-        try {
-          storage.migrateChatLog(oldMatchId, newMatchId);
-        } catch (chatError) {
-          logger.warn(
-            "Failed to migrate chat log for %s -> %s: %s",
-            oldMatchId,
-            newMatchId,
-            (chatError as Error).message || String(chatError)
-          );
-        }
-
         restoredCount++;
       } catch (e) {
         logger.error(
           "Failed to restore match %s: %s",
-          oldMatchId,
+          match.match_id,
           (e as Error).message || String(e)
         );
       }

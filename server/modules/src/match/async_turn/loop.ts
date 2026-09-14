@@ -69,7 +69,8 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
 
     const nkWrapper = createNakamaWrapper(nk);
     const storage = new StorageService(nkWrapper);
-    const stored = storage.getMatch(ctx.matchId);
+    const gameId = state.game_id || ctx.matchId;
+    const stored = storage.getMatch(gameId);
     if (!stored) {
       return { state };
     }
@@ -131,7 +132,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
     if (outcome.events.length > 0) {
       try {
         storage.appendReplayTurn({
-          match_id: ctx.matchId,
+          match_id: match.match_id,
           turn: outcome.resolvedTurn,
           events: outcome.events,
           created_at: timestampSeconds,
@@ -151,7 +152,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
         JSON.stringify({
           type: "turn_advanced",
           turn: match.current_turn,
-          match_id: ctx.matchId,
+          match_id: match.match_id,
           readyStates: match.readyStates,
           lastAutoAdvanceAt: match.lastAutoAdvanceAt,
           playerCharacters: match.playerCharacters,
@@ -178,7 +179,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
           ctx.matchId,
           JSON.stringify({
             type: "match_ended",
-            match_id: ctx.matchId,
+            match_id: match.match_id,
             winnerId,
             reason,
           }),

@@ -17,6 +17,7 @@ export const OPCODE_READY_STATE_UPDATE = 104;
 
 export type CreateMatchPayload = {
   match_id: string;
+  runtime_match_id?: string;
   size: number;
   turnsToBeAt1Tile?: number;
   name?: string;
@@ -28,6 +29,7 @@ export type JoinMatchPayload = {
   ok?: boolean;
   joined?: boolean;
   players?: string[];
+  runtime_match_id?: string;
   size?: number;
   match_id?: string;
   name?: string;
@@ -130,6 +132,7 @@ export type ListMyMatchesPayload = {
   ok?: boolean;
   matches?: Array<{
     match_id: string;
+    runtime_match_id?: string;
     size: number;
     players: string[];
     current_turn: number;

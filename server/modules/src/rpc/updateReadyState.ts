@@ -15,6 +15,7 @@ import { isCharacterIncapacitated } from "../utils/playerCharacter";
 import { resolveTurnForMatch } from "../match/turnResolution";
 import { getAliveCharacterIds } from "../match/checkEndGame";
 import { validateTime } from "../utils/validation";
+import { getRuntimeMatchId } from "../utils/matchIds";
 
 const READY_ADVANCE_MARGIN_MINUTES = 12 * 60;
 
@@ -152,7 +153,7 @@ export function updateReadyStateRpc(
   if (!advanced) {
     try {
       nkWrapper.matchSignal(
-        matchId,
+        getRuntimeMatchId(match),
         JSON.stringify({
           type: "ready_state_changed",
           match_id: matchId,
@@ -172,7 +173,7 @@ export function updateReadyStateRpc(
     const events = advanceResult?.events ?? [];
     try {
       nkWrapper.matchSignal(
-        matchId,
+        getRuntimeMatchId(match),
         JSON.stringify({
           type: "turn_advanced",
           turn: match.current_turn,
@@ -201,7 +202,7 @@ export function updateReadyStateRpc(
         const winnerId = alive.length === 1 ? alive[0] : undefined;
         const reason = alive.length === 0 ? "all_dead" : "last_alive";
         nkWrapper.matchSignal(
-          matchId,
+          getRuntimeMatchId(match),
           JSON.stringify({
             type: "match_ended",
             match_id: matchId,

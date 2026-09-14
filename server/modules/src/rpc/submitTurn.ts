@@ -4,6 +4,7 @@ import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { MatchRecord, TurnRecord } from "../models/types";
+import { getRuntimeMatchId } from "../utils/matchIds";
 
 // Maybe we don't need this, we just update the state and mark ready
 // The turn will advance when all players are ready
@@ -80,7 +81,7 @@ export function submitTurnRpc(
   if (!wasStarted) {
     try {
       nkWrapper.matchSignal(
-        matchId,
+        getRuntimeMatchId(match),
         JSON.stringify({
           type: "start_match",
         })

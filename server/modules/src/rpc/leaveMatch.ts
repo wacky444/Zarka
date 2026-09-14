@@ -4,6 +4,7 @@ import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { MatchRecord } from "../models/types";
+import { getRuntimeMatchId } from "../utils/matchIds";
 
 export function leaveMatchRpc(
   ctx: nkruntime.Context,
@@ -58,7 +59,7 @@ export function leaveMatchRpc(
       storage.writeMatch(match, read.version);
       try {
         nkWrapper.matchSignal(
-          matchId,
+          getRuntimeMatchId(match),
           JSON.stringify({
             type: "sync_players",
             players: match.players,

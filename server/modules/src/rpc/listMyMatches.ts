@@ -22,6 +22,7 @@ export function listMyMatchesRpc(
     const result = storage.listServerMatches(100, "");
     const matches: Array<{
       match_id: string;
+      runtime_match_id?: string;
       size: number;
       players: string[];
       current_turn: number;
@@ -50,6 +51,7 @@ export function listMyMatchesRpc(
           ) {
             matches.push({
               match_id: match.match_id,
+              runtime_match_id: match.runtime_match_id,
               size: match.size,
               players: match.players,
               current_turn: match.current_turn,

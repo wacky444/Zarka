@@ -12,6 +12,8 @@ export const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
     const sizeStr = params && params["size"];
     const size = Math.max(2, Math.min(8, parseInt(sizeStr || "2", 10) || 2));
     const creator = params && params["creator"];
+    const gameId =
+      params && params["game_id"] ? params["game_id"] : ctx.matchId;
     const nameParam = params && params["name"];
     const name =
       typeof nameParam === "string"
@@ -19,6 +21,7 @@ export const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
         : DEFAULT_MATCH_NAME;
 
     const state: AsyncTurnState = {
+      game_id: gameId,
       players: {},
       order: [],
       size,
@@ -54,6 +57,7 @@ export const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
     }
 
     const label = buildMatchLabel({
+      gameId: state.game_id,
       name: state.name,
       size: state.size,
       players: state.order.length,

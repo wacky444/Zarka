@@ -36,6 +36,7 @@ export class MainScene extends Phaser.Scene {
   private turnService: TurnService | null = null;
   private accountService: AccountService | null = null;
   private currentMatchId: string | null = null;
+  private currentRuntimeMatchId: string | null = null;
   private currentMatchName: string | null = null;
   private moveCounter = 0;
   private matchesListView!: MatchesListView;
@@ -55,9 +56,10 @@ export class MainScene extends Phaser.Scene {
     const res = await this.turnService.joinMatch(matchId);
     const parsed = this.parseRpcPayload<JoinMatchPayload>(res);
     if (parsed && parsed.ok) {
+      const runtimeMatchId = parsed.runtime_match_id ?? matchId;
       // Establish realtime presence in the authoritative match so players appear in state
       try {
-        await this.turnService.joinRealtimeMatch(matchId);
+        await this.turnService.joinRealtimeMatch(runtimeMatchId);
       } catch (e) {
         console.warn("Realtime join failed", e);
         this.statusText.setText(
@@ -67,6 +69,7 @@ export class MainScene extends Phaser.Scene {
       }
       // Track joined match
       this.setCurrentMatchId(matchId);
+      this.currentRuntimeMatchId = runtimeMatchId;
       this.moveCounter = 0;
       const count = Array.isArray(parsed.players)
         ? parsed.players.length
@@ -289,9 +292,10 @@ export class MainScene extends Phaser.Scene {
         if (this.scene.isSleeping("MainScene")) {
           this.scene.wake("MainScene");
         }
-        if (this.currentMatchId && this.turnService) {
+        const runtimeMatchId = this.getCurrentRuntimeMatchId();
+        if (runtimeMatchId && this.turnService) {
           this.turnService
-            .leaveRealtimeMatch(this.currentMatchId)
+            .leaveRealtimeMatch(runtimeMatchId)
             .catch((e) => console.warn("Failed to leave realtime match", e));
         }
         this.setCurrentMatchId(null);
@@ -323,10 +327,13 @@ export class MainScene extends Phaser.Scene {
         const parsed = this.parseRpcPayload<LeaveMatchPayload>(res);
         if (parsed && parsed.ok) {
           this.statusText.setText("Left match.");
-          // Also leave the realtime match to remove presence from state
-          await this.turnService.leaveRealtimeMatch(matchId);
-          // If we're leaving the current match, clear it
+          // If we're leaving the current match, remove its realtime presence too.
           if (this.currentMatchId === matchId) {
+            const runtimeMatchId = this.getCurrentRuntimeMatchId();
+            if (runtimeMatchId) {
+              await this.turnService.leaveRealtimeMatch(runtimeMatchId);
+            }
+            // Clear the current match after leaving its realtime presence.
             this.setCurrentMatchId(null);
             this.currentMatchName = null;
             this.lobbyView.setPlayers([]);
@@ -360,7 +367,10 @@ export class MainScene extends Phaser.Scene {
         const parsed = this.parseRpcPayload<LeaveMatchPayload>(res);
         if (parsed && parsed.ok) {
           // Also leave the realtime match to remove presence from state
-          await this.turnService.leaveRealtimeMatch(this.currentMatchId);
+          const runtimeMatchId = this.getCurrentRuntimeMatchId();
+          if (runtimeMatchId) {
+            await this.turnService.leaveRealtimeMatch(runtimeMatchId);
+          }
           this.setCurrentMatchId(null);
           this.currentMatchName = null;
           this.lobbyView.setPlayers([]);
@@ -429,7 +439,10 @@ export class MainScene extends Phaser.Scene {
           const res = await this.turnService.removeMatch(this.currentMatchId);
           const parsed = this.parseRpcPayload<RemoveMatchPayload>(res);
           if (parsed && parsed.ok) {
-            await this.turnService.leaveRealtimeMatch(this.currentMatchId);
+            const runtimeMatchId = this.getCurrentRuntimeMatchId();
+            if (runtimeMatchId) {
+              await this.turnService.leaveRealtimeMatch(runtimeMatchId);
+            }
             this.setCurrentMatchId(null);
             this.currentMatchName = null;
             this.lobbyView.setPlayers([]);
@@ -467,8 +480,15 @@ export class MainScene extends Phaser.Scene {
 
   private setCurrentMatchId(matchId: string | null) {
     this.currentMatchId = matchId;
+    if (matchId === null) {
+      this.currentRuntimeMatchId = null;
+    }
     this.registry.set("currentMatchId", matchId);
     this.registry.set("currentMatchMap", null);
+  }
+
+  private getCurrentRuntimeMatchId(): string | null {
+    return this.currentRuntimeMatchId ?? this.currentMatchId;
   }
 
   private parseRpcPayload<T>(res: RpcResponse): T {

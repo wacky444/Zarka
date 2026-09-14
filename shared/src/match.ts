@@ -11,7 +11,10 @@ export interface MatchItemRecord {
 }
 
 export interface MatchRecord {
+  /** Stable logical game identifier used by storage and client RPCs. */
   match_id: string;
+  /** Current Nakama authoritative match identifier. It changes after a restart. */
+  runtime_match_id?: string;
   players: string[];
   playerCharacters: Record<string, PlayerCharacter>;
   playerList: Record<string, PlayerCharacterUnknown>;

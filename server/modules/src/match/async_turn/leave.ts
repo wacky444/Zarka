@@ -16,6 +16,7 @@ export const asyncTurnMatchLeave: nkruntime.MatchLeaveFunction<AsyncTurnState> =
 
     try {
       const label = buildMatchLabel({
+        gameId: state.game_id,
         name: state.name,
         size: state.size,
         players: playerCount,

@@ -47,6 +47,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
 
         try {
           const label = buildMatchLabel({
+            gameId: state.game_id,
             name: state.name,
             size: state.size,
             players: state.order.length,
@@ -81,6 +82,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
           state.started = true;
           try {
             const label = buildMatchLabel({
+              gameId: state.game_id,
               name: state.name,
               size: state.size,
               players: state.order.length,
@@ -144,6 +146,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
         }
         try {
           const label = buildMatchLabel({
+            gameId: state.game_id,
             name: state.name,
             size: state.size,
             players: state.order.length,
@@ -206,7 +209,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             }
           }
           const payloadBase = {
-            match_id: ctx.matchId,
+            match_id: state.game_id,
             turn: msg.turn,
             readyStates: msg.readyStates,
             deadCharacters: msg.deadCharacters,
@@ -278,7 +281,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
       } else if (msg && msg.type === "ready_state_changed") {
         try {
           const payload = JSON.stringify({
-            match_id: msg.match_id ?? ctx.matchId,
+            match_id: msg.match_id ?? state.game_id,
             readyStates: msg.readyStates ?? {},
           });
           dispatcher.broadcastMessage(
@@ -304,7 +307,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
       } else if (msg && msg.type === "match_ended") {
         try {
           const payload = JSON.stringify({
-            match_id: msg.match_id ?? ctx.matchId,
+            match_id: msg.match_id ?? state.game_id,
             winnerId:
               typeof msg.winnerId === "string" ? msg.winnerId : undefined,
             reason: msg.reason === "all_dead" ? "all_dead" : "last_alive",

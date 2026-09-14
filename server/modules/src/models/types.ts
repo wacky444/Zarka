@@ -13,6 +13,7 @@ export type MatchRecord = Omit<SharedMatchRecord, "playerCharacters"> & {
 export type TurnRecord = SharedTurnRecord;
 
 export interface AsyncTurnState extends nkruntime.MatchState {
+  game_id: string;
   players: { [userId: string]: nkruntime.Presence };
   order: string[];
   size: number;

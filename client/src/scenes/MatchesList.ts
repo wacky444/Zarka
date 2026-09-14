@@ -212,6 +212,7 @@ export class MatchesListView {
       if (m.label) {
         try {
           const parsed = JSON.parse(m.label) as {
+            game_id?: string;
             name?: string;
             started?: boolean;
             players?: number;
@@ -242,7 +243,7 @@ export class MatchesListView {
               }. ${displayName} | ${hostName} | ${currentPlayers}/${maxDisplay}`;
               const status = stateTag ? ` | ${stateTag}` : "";
               const text = line + status;
-              this.createRow(matchId, text);
+              this.createRow(parsed.game_id || matchId, text);
               return;
             }
           }
