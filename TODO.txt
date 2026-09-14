@@ -6,9 +6,13 @@
 
 - when a player joined without doing f5, in the player list it shows a guid
 
-- in the player list, the tab to switch between teams and players, have to click in the text to swap when the scroll is under it
-
 - player list cant be scrolled with finger -> bug
+
+- end game animation, screen, stats, achievements (who killed the most, or pacifist)
+
+- debounce on extra power, laggy
+
+- selects in mobile should be full screen
 
 - traps
 
@@ -22,21 +26,13 @@
 
 - stealing
 
-- end game animation, screen, stats, achievements (who killed the most, or pacifist)
-
 - description color, for energy and health values
-
-- i18n
 
 - ask luna if its worth it to migrate to phaser 4
 
 - move status_dead out of actionLibrary
 
 - animation for detroyed cell, maybe zoom to the cell then exposion sprite?
-
-- debounce on extra power, laggy
-
-- selects in mobile should be full screen
 
 - when changing to older logs the map should load with the info from that turn, and maybe a text at the top that says REPLAY
 

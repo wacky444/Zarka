@@ -1241,12 +1241,29 @@ export class GameScene extends Phaser.Scene {
         if (this.gridModalActive || this.isPointerOverUI(pointer)) {
           return;
         }
-        const worldPointBefore = cam.getWorldPoint(pointer.x, pointer.y);
+        const oldZoom = cam.zoom;
         const zoomFactor = dy > 0 ? 0.9 : 1.1;
-        cam.setZoom(Phaser.Math.Clamp(cam.zoom * zoomFactor, minZoom, maxZoom));
-        const worldPointAfter = cam.getWorldPoint(pointer.x, pointer.y);
-        cam.scrollX += worldPointBefore.x - worldPointAfter.x;
-        cam.scrollY += worldPointBefore.y - worldPointAfter.y;
+        const nextZoom = Phaser.Math.Clamp(
+          oldZoom * zoomFactor,
+          minZoom,
+          maxZoom
+        );
+        if (nextZoom === oldZoom) {
+          return;
+        }
+
+        const originX = cam.width * cam.originX;
+        const originY = cam.height * cam.originY;
+        const relX = pointer.x - cam.x - originX;
+        const relY = pointer.y - cam.y - originY;
+
+        cam.setZoom(nextZoom);
+        cam.scrollX += relX * (1 / oldZoom - 1 / nextZoom);
+        cam.scrollY += relY * (1 / oldZoom - 1 / nextZoom);
+        if (cam.useBounds) {
+          cam.scrollX = cam.clampX(cam.scrollX);
+          cam.scrollY = cam.clampY(cam.scrollY);
+        }
       }
     );
   }
