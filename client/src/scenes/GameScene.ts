@@ -1280,6 +1280,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.characterPanel) {
+      this.characterPanel.setMobileTabNavigation(isMobile);
       if (isMobile) {
         const showSidebar = this.mobileViewMode === "sidebar";
         this.characterPanel.setPosition(0, 0);

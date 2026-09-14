@@ -71,6 +71,8 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
 
 const DEFAULT_WIDTH = 420;
 const TAB_HEIGHT = 40;
+const TAB_ARROW_WIDTH = 36;
+const MOBILE_TAB_MIN_WIDTH = 82;
 const MARGIN = 16;
 const PORTRAIT_SIZE = 96;
 const BAR_HEIGHT = 20;
@@ -182,6 +184,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   ];
   private background: Phaser.GameObjects.Rectangle;
   private tabs: CharacterPanelTabEntry[] = [];
+  private tabPreviousButton!: Phaser.GameObjects.Rectangle;
+  private tabPreviousText!: Phaser.GameObjects.Text;
+  private tabNextButton!: Phaser.GameObjects.Rectangle;
+  private tabNextText!: Phaser.GameObjects.Text;
+  private mobileTabNavigation = false;
+  private tabStartIndex = 0;
   private characterElements: Phaser.GameObjects.GameObject[] = [];
   private characterSubtabs!: Subtabs<CharacterSubTabKey>;
   private skillsView!: CharacterPanelSkillsView;
@@ -643,11 +651,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         .setOrigin(0, 0)
         .setInteractive({ useHandCursor: true });
       const text = scene.add
-        .text(index * tabWidth + 12, 10, tab.label, {
+        .text(index * tabWidth + tabWidth / 2, TAB_HEIGHT / 2, tab.label, {
           fontSize: "16px",
           color: "#ffffff"
         })
-        .setOrigin(0, 0)
+        .setOrigin(0.5, 0.5)
         .setInteractive({ useHandCursor: true });
       const badge = scene.add
         .rectangle(index * tabWidth + tabWidth - 10, 6, 8, 8, 0xff6600)
@@ -664,6 +672,47 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.add(badge);
       this.tabs.push({ key: tab.key as TabKey, rect, text, badge });
     });
+
+    this.tabPreviousButton = scene.add
+      .rectangle(0, 0, TAB_ARROW_WIDTH, TAB_HEIGHT, 0x1c233f)
+      .setOrigin(0, 0)
+      .setInteractive({ useHandCursor: true });
+    this.tabPreviousText = scene.add
+      .text(TAB_ARROW_WIDTH / 2, TAB_HEIGHT / 2, "‹", {
+        fontSize: "28px",
+        color: "#ffffff"
+      })
+      .setOrigin(0.5, 0.5)
+      .setInteractive({ useHandCursor: true });
+    this.tabNextButton = scene.add
+      .rectangle(0, 0, TAB_ARROW_WIDTH, TAB_HEIGHT, 0x1c233f)
+      .setOrigin(0, 0)
+      .setInteractive({ useHandCursor: true });
+    this.tabNextText = scene.add
+      .text(0, TAB_HEIGHT / 2, "›", {
+        fontSize: "28px",
+        color: "#ffffff"
+      })
+      .setOrigin(0.5, 0.5)
+      .setInteractive({ useHandCursor: true });
+    this.tabPreviousButton.on(Phaser.Input.Events.POINTER_UP, () => {
+      this.moveTabWindow(-1);
+    });
+    this.tabPreviousText.on(Phaser.Input.Events.POINTER_UP, () => {
+      this.moveTabWindow(-1);
+    });
+    this.tabNextButton.on(Phaser.Input.Events.POINTER_UP, () => {
+      this.moveTabWindow(1);
+    });
+    this.tabNextText.on(Phaser.Input.Events.POINTER_UP, () => {
+      this.moveTabWindow(1);
+    });
+    this.add(this.tabPreviousButton);
+    this.add(this.tabPreviousText);
+    this.add(this.tabNextButton);
+    this.add(this.tabNextText);
+    this.layoutTabs(width);
+
     const contentTop = TAB_HEIGHT + MARGIN;
     const subtabY = TAB_HEIGHT + 8;
     const subtabHeight = 28;
@@ -1396,6 +1445,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.logView.handleVisibilityChange({ visible, forceEnsure });
       },
       onTabChange: (key, previous) => {
+        this.revealTab(key);
         this.emit("tab-change", key, previous);
       },
       onLogTabOpened: () => {
@@ -1423,6 +1473,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.bringToTop(tab.badge);
       }
     }
+    this.bringToTop(this.tabPreviousButton);
+    this.bringToTop(this.tabPreviousText);
+    this.bringToTop(this.tabNextButton);
+    this.bringToTop(this.tabNextText);
     for (const element of this.characterSubtabs.getElements()) {
       this.bringToTop(element);
     }
@@ -1776,6 +1830,161 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     return this;
   }
 
+  setMobileTabNavigation(enabled: boolean): void {
+    const modeChanged = this.mobileTabNavigation !== enabled;
+    this.mobileTabNavigation = enabled;
+    if (!enabled) {
+      this.tabStartIndex = 0;
+      this.layoutTabs(this.panelWidth);
+      return;
+    }
+    if (modeChanged) {
+      this.tabStartIndex = 0;
+      const activeKey = this.tabsController?.getActiveTab();
+      if (activeKey) {
+        this.revealTab(activeKey);
+        return;
+      }
+    }
+    this.layoutTabs(this.panelWidth);
+  }
+
+  private getMobileVisibleTabCount(width: number): number {
+    if (width >= this.tabs.length * MOBILE_TAB_MIN_WIDTH) {
+      return this.tabs.length;
+    }
+    const availableWidth = Math.max(1, width - TAB_ARROW_WIDTH * 2);
+    return Math.max(
+      1,
+      Math.min(
+        this.tabs.length,
+        Math.floor(availableWidth / MOBILE_TAB_MIN_WIDTH)
+      )
+    );
+  }
+
+  private revealTab(key: TabKey): void {
+    if (!this.mobileTabNavigation) {
+      return;
+    }
+    const tabIndex = this.tabs.findIndex((tab) => tab.key === key);
+    const visibleCount = this.getMobileVisibleTabCount(this.panelWidth);
+    if (tabIndex < 0 || visibleCount >= this.tabs.length) {
+      this.tabStartIndex = 0;
+      this.layoutTabs(this.panelWidth);
+      return;
+    }
+    if (tabIndex < this.tabStartIndex) {
+      this.tabStartIndex = tabIndex;
+    } else if (tabIndex >= this.tabStartIndex + visibleCount) {
+      this.tabStartIndex = tabIndex - visibleCount + 1;
+    }
+    this.layoutTabs(this.panelWidth);
+  }
+
+  private moveTabWindow(delta: number): void {
+    if (!this.mobileTabNavigation) {
+      return;
+    }
+    const visibleCount = this.getMobileVisibleTabCount(this.panelWidth);
+    if (visibleCount >= this.tabs.length) {
+      return;
+    }
+    const maxStart = this.tabs.length - visibleCount;
+    this.tabStartIndex = Math.max(
+      0,
+      Math.min(maxStart, this.tabStartIndex + delta)
+    );
+    this.layoutTabs(this.panelWidth);
+  }
+
+  private layoutTabs(width: number): void {
+    const compact =
+      this.mobileTabNavigation &&
+      this.getMobileVisibleTabCount(width) < this.tabs.length;
+    const visibleCount = compact
+      ? this.getMobileVisibleTabCount(width)
+      : this.tabs.length;
+    const tabAreaWidth = compact ? Math.max(1, width - TAB_ARROW_WIDTH * 2) : width;
+    const tabWidth = tabAreaWidth / Math.max(1, visibleCount);
+
+    if (!compact) {
+      this.tabStartIndex = 0;
+    } else {
+      this.tabStartIndex = Math.max(
+        0,
+        Math.min(this.tabs.length - visibleCount, this.tabStartIndex)
+      );
+    }
+
+    this.tabs.forEach((tab, index) => {
+      const visible =
+        !compact ||
+        (index >= this.tabStartIndex &&
+          index < this.tabStartIndex + visibleCount);
+      if (!visible) {
+        tab.rect.setVisible(false).disableInteractive();
+        tab.text.setVisible(false).disableInteractive();
+        tab.badge?.setVisible(false);
+        return;
+      }
+      const displayIndex = compact ? index - this.tabStartIndex : index;
+      const tabX = (compact ? TAB_ARROW_WIDTH : 0) + displayIndex * tabWidth;
+      tab.rect
+        .setPosition(tabX, 0)
+        .setSize(tabWidth, TAB_HEIGHT)
+        .setVisible(true)
+        .setInteractive({ useHandCursor: true });
+      tab.text
+        .setPosition(tabX + tabWidth / 2, TAB_HEIGHT / 2)
+        .setVisible(true)
+        .setInteractive({ useHandCursor: true });
+      tab.badge
+        ?.setPosition(tabX + tabWidth - 10, 6)
+        .setVisible(this.tabsController?.isTabUnread(tab.key) ?? false);
+    });
+
+    const showArrows = compact;
+    this.tabPreviousButton.setVisible(showArrows);
+    this.tabPreviousText.setVisible(showArrows);
+    this.tabNextButton.setVisible(showArrows);
+    this.tabNextText.setVisible(showArrows);
+    if (!showArrows) {
+      this.tabPreviousButton.disableInteractive();
+      this.tabPreviousText.disableInteractive();
+      this.tabNextButton.disableInteractive();
+      this.tabNextText.disableInteractive();
+      return;
+    }
+
+    const canMovePrevious = this.tabStartIndex > 0;
+    const canMoveNext = this.tabStartIndex + visibleCount < this.tabs.length;
+    this.tabPreviousButton.setPosition(0, 0).setAlpha(canMovePrevious ? 1 : 0.35);
+    this.tabPreviousText
+      .setPosition(TAB_ARROW_WIDTH / 2, TAB_HEIGHT / 2)
+      .setAlpha(canMovePrevious ? 1 : 0.35);
+    this.tabNextButton
+      .setPosition(width - TAB_ARROW_WIDTH, 0)
+      .setAlpha(canMoveNext ? 1 : 0.35);
+    this.tabNextText
+      .setPosition(width - TAB_ARROW_WIDTH / 2, TAB_HEIGHT / 2)
+      .setAlpha(canMoveNext ? 1 : 0.35);
+    if (canMovePrevious) {
+      this.tabPreviousButton.setInteractive({ useHandCursor: true });
+      this.tabPreviousText.setInteractive({ useHandCursor: true });
+    } else {
+      this.tabPreviousButton.disableInteractive();
+      this.tabPreviousText.disableInteractive();
+    }
+    if (canMoveNext) {
+      this.tabNextButton.setInteractive({ useHandCursor: true });
+      this.tabNextText.setInteractive({ useHandCursor: true });
+    } else {
+      this.tabNextButton.disableInteractive();
+      this.tabNextText.disableInteractive();
+    }
+  }
+
   private updateScrollMaskPosition(): void {
     if (!this.scrollMaskShape) {
       return;
@@ -1793,6 +2002,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.barWidth = width - (PORTRAIT_SIZE + MARGIN * 3);
     this.setSize(width, height);
     this.background.setSize(width, height);
+    this.layoutTabs(width);
     const contentTop = TAB_HEIGHT + MARGIN;
     const subtabY = TAB_HEIGHT + 8;
     const subtabHeight = 28;

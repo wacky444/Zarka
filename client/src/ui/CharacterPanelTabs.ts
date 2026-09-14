@@ -49,6 +49,10 @@ export class CharacterPanelTabs {
     return this.activeKey === key;
   }
 
+  isTabUnread(key: TabKey): boolean {
+    return this.unreadTabs.has(key) && !this.isActive(key);
+  }
+
   setTabUnread(key: TabKey, unread: boolean): void {
     if (unread) {
       this.unreadTabs.add(key);
