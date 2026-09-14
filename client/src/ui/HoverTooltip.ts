@@ -123,10 +123,17 @@ export class HoverTooltip {
     if (posX + contentWidth > width) {
       posX = width - contentWidth - 12;
     }
+    if (posX < 12) {
+      posX = 12;
+    }
     if (posY + contentHeight > height) {
       posY = height - contentHeight - 12;
     }
+    if (posY < 12) {
+      posY = 12;
+    }
 
+    this.scene.children.bringToTop(this.container);
     this.container.setPosition(posX, posY);
     this.container.setVisible(true);
   }

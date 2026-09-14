@@ -201,8 +201,14 @@ export class InventoryGrid extends Phaser.GameObjects.Container {
       bodyText.on(
         Phaser.Input.Events.POINTER_UP,
         (pointer: Phaser.Input.Pointer) => {
+          if (pointer.button !== 0 && !pointer.wasTouch) {
+            return;
+          }
+          if (pointer.getDistance() > 15) {
+            return;
+          }
           this.ensureTooltip();
-          this.tooltip?.show(pointer.worldX, pointer.worldY, {
+          this.tooltip?.show(pointer.x, pointer.y, {
             title: item.name,
             body: description,
           });
@@ -211,10 +217,15 @@ export class InventoryGrid extends Phaser.GameObjects.Container {
       bodyText.on(Phaser.Input.Events.POINTER_OVER, () => {
         this.scene.input.setDefaultCursor("pointer");
       });
-      bodyText.on(Phaser.Input.Events.POINTER_OUT, () => {
-        this.scene.input.setDefaultCursor("default");
-        this.tooltip?.hide();
-      });
+      bodyText.on(
+        Phaser.Input.Events.POINTER_OUT,
+        (pointer?: Phaser.Input.Pointer) => {
+          this.scene.input.setDefaultCursor("default");
+          if (!pointer?.wasTouch) {
+            this.tooltip?.hide();
+          }
+        }
+      );
     } else {
       bodyText.disableInteractive();
     }

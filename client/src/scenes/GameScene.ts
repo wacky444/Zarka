@@ -1015,10 +1015,13 @@ export class GameScene extends Phaser.Scene {
             definition.notes
           );
           const showTooltip = (pointer: Phaser.Input.Pointer) => {
-            if (pointer.button !== 0) {
+            if (pointer.button !== 0 && !pointer.wasTouch) {
               return;
             }
-            if (this.locationSelectionActive) {
+            if (this.locationSelectionActive || this.pinchGestureInProgress) {
+              return;
+            }
+            if (pointer.getDistance() > 15) {
               return;
             }
             const tooltipManager = this.itemTooltip;
@@ -1043,10 +1046,15 @@ export class GameScene extends Phaser.Scene {
               this.input.setDefaultCursor("pointer");
             }
           });
-          sprite.on(Phaser.Input.Events.POINTER_OUT, () => {
-            this.resetDefaultCursor();
-            this.itemTooltip?.hide();
-          });
+          sprite.on(
+            Phaser.Input.Events.POINTER_OUT,
+            (pointer?: Phaser.Input.Pointer) => {
+              this.resetDefaultCursor();
+              if (!pointer?.wasTouch) {
+                this.itemTooltip?.hide();
+              }
+            }
+          );
           container.add(sprite);
           const capped =
             quantity > 999 ? "999+" : quantity > 99 ? "99+" : `${quantity}`;
@@ -1066,10 +1074,15 @@ export class GameScene extends Phaser.Scene {
               this.input.setDefaultCursor("pointer");
             }
           });
-          label.on(Phaser.Input.Events.POINTER_OUT, () => {
-            this.resetDefaultCursor();
-            this.itemTooltip?.hide();
-          });
+          label.on(
+            Phaser.Input.Events.POINTER_OUT,
+            (pointer?: Phaser.Input.Pointer) => {
+              this.resetDefaultCursor();
+              if (!pointer?.wasTouch) {
+                this.itemTooltip?.hide();
+              }
+            }
+          );
           container.add(label);
         }
       }
