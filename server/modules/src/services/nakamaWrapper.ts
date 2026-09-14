@@ -6,6 +6,7 @@ export interface NakamaWrapper {
   storageList: nkruntime.Nakama["storageList"];
   storageDelete: nkruntime.Nakama["storageDelete"];
   matchCreate: nkruntime.Nakama["matchCreate"];
+  matchList: nkruntime.Nakama["matchList"];
   matchSignal: nkruntime.Nakama["matchSignal"];
 }
 
@@ -16,6 +17,7 @@ export function createNakamaWrapper(nk: nkruntime.Nakama): NakamaWrapper {
     storageList: nk.storageList.bind(nk),
     storageDelete: nk.storageDelete.bind(nk),
     matchCreate: nk.matchCreate.bind(nk),
+    matchList: nk.matchList.bind(nk),
     matchSignal: nk.matchSignal.bind(nk),
   };
 }
