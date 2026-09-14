@@ -140,6 +140,15 @@ export class GameScene extends Phaser.Scene {
     | import("@shared").MatchEndedMessagePayload
     | null = null;
   private adminViewEnabled = false;
+  private pinchActive = false;
+  private pinchGestureInProgress = false;
+  private pinchStartDistance = 0;
+  private pinchStartZoom = 1;
+  private pinchWorldAnchorX = 0;
+  private pinchWorldAnchorY = 0;
+  private pinchStartCenterX = 0;
+  private pinchStartCenterY = 0;
+  private mapTouchPointerIds = new Set<number>();
 
   private readonly turnAdvancedHandler = (
     payload: TurnAdvancedMessagePayload
@@ -160,6 +169,14 @@ export class GameScene extends Phaser.Scene {
     const overUI = this.isPointerOverUI(pointer);
     this.pointerDownInUI = overUI;
     this.itemTooltip?.hide();
+    if (pointer.id > 0) {
+      if (overUI) {
+        this.mapTouchPointerIds.delete(pointer.id);
+      } else {
+        this.mapTouchPointerIds.add(pointer.id);
+      }
+      this.beginPinchIfPossible();
+    }
     if (this.locationSelectionActive) {
       this.locationSelectionPointerId = overUI ? null : pointer.id;
     }
@@ -172,7 +189,12 @@ export class GameScene extends Phaser.Scene {
     ) {
       this.locationSelectionPointerId = null;
     }
+    this.mapTouchPointerIds.delete(pointer.id);
+    this.endPinchIfNeeded();
     this.pointerDownInUI = false;
+  };
+  private readonly pinchMoveHandler = () => {
+    this.updatePinchZoom();
   };
   private readonly gridModalOpenHandler = () => {
     this.gridModalActive = true;
@@ -388,9 +410,14 @@ export class GameScene extends Phaser.Scene {
 
     this.enableDragPan();
     this.enableWheelZoom();
+    this.enablePinchZoom();
 
     this.input.on(Phaser.Input.Events.POINTER_DOWN, this.pointerDownHandler);
     this.input.on(Phaser.Input.Events.POINTER_UP, this.pointerUpHandler);
+    this.input.on(
+      Phaser.Input.Events.POINTER_UP_OUTSIDE,
+      this.pointerUpHandler
+    );
 
     this.layoutUI();
     this.scale.on("resize", this.handleResize, this);
@@ -398,6 +425,11 @@ export class GameScene extends Phaser.Scene {
       this.scale.off("resize", this.handleResize, this);
       this.input.off(Phaser.Input.Events.POINTER_DOWN, this.pointerDownHandler);
       this.input.off(Phaser.Input.Events.POINTER_UP, this.pointerUpHandler);
+      this.input.off(
+        Phaser.Input.Events.POINTER_UP_OUTSIDE,
+        this.pointerUpHandler
+      );
+      this.input.off(Phaser.Input.Events.POINTER_MOVE, this.pinchMoveHandler);
       this.characterPanel?.off(
         "main-action-change",
         this.handleMainActionSelection,
@@ -718,7 +750,7 @@ export class GameScene extends Phaser.Scene {
       img.on(
         Phaser.Input.Events.POINTER_UP,
         (pointer: Phaser.Input.Pointer) => {
-          if (!this.locationSelectionActive) {
+          if (!this.locationSelectionActive || this.pinchGestureInProgress) {
             return;
           }
           if (pointer.button !== 0) {
@@ -1070,7 +1102,14 @@ export class GameScene extends Phaser.Scene {
     // No-op handlers removed
 
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
-      if (!p.isDown || this.pointerDownInUI || this.gridModalActive) return;
+      if (
+        !p.isDown ||
+        this.pointerDownInUI ||
+        this.gridModalActive ||
+        this.pinchActive
+      ) {
+        return;
+      }
 
       // const { x, y } = p.velocity; // camStart.x - dx
       const diffX = p.position.x - p.prevPosition.x;
@@ -1079,6 +1118,93 @@ export class GameScene extends Phaser.Scene {
       cam.scrollX -= diffX / cam.zoom;
       cam.scrollY -= diffY / cam.zoom;
     });
+  }
+
+  private enablePinchZoom() {
+    this.input.on(Phaser.Input.Events.POINTER_MOVE, this.pinchMoveHandler);
+  }
+
+  private getMapTouchPointers(): Phaser.Input.Pointer[] {
+    return [this.input.pointer1, this.input.pointer2].filter(
+      (pointer) =>
+        pointer.isDown && this.mapTouchPointerIds.has(pointer.id)
+    );
+  }
+
+  private beginPinchIfPossible(): void {
+    if (this.pinchActive || this.gridModalActive) {
+      return;
+    }
+    const pointers = this.getMapTouchPointers();
+    if (pointers.length < 2) {
+      return;
+    }
+    const [first, second] = pointers;
+    const distance = Phaser.Math.Distance.Between(
+      first.x,
+      first.y,
+      second.x,
+      second.y
+    );
+    if (distance <= 0) {
+      return;
+    }
+    this.pinchActive = true;
+    this.pinchGestureInProgress = true;
+    this.pinchStartDistance = distance;
+    this.pinchStartZoom = this.cam.zoom;
+    this.pinchStartCenterX = (first.x + second.x) / 2;
+    this.pinchStartCenterY = (first.y + second.y) / 2;
+    const worldAnchor = this.cam.getWorldPoint(
+      this.pinchStartCenterX,
+      this.pinchStartCenterY
+    );
+    this.pinchWorldAnchorX = worldAnchor.x;
+    this.pinchWorldAnchorY = worldAnchor.y;
+  }
+
+  private endPinchIfNeeded(): void {
+    const activePointers = this.getMapTouchPointers().length;
+    if (activePointers < 2) {
+      this.pinchActive = false;
+      this.pinchStartDistance = 0;
+      if (activePointers === 0) {
+        this.pinchGestureInProgress = false;
+      }
+    }
+  }
+
+  private updatePinchZoom(): void {
+    if (!this.pinchActive) {
+      this.beginPinchIfPossible();
+      return;
+    }
+    const pointers = this.getMapTouchPointers();
+    if (pointers.length < 2) {
+      this.endPinchIfNeeded();
+      return;
+    }
+    const [first, second] = pointers;
+    const distance = Phaser.Math.Distance.Between(
+      first.x,
+      first.y,
+      second.x,
+      second.y
+    );
+    if (distance <= 0 || this.pinchStartDistance <= 0) {
+      return;
+    }
+    const centerX = (first.x + second.x) / 2;
+    const centerY = (first.y + second.y) / 2;
+    const nextZoom = Phaser.Math.Clamp(
+      this.pinchStartZoom * (distance / this.pinchStartDistance),
+      0.5,
+      3
+    );
+    this.cam.setZoom(nextZoom);
+    const worldPointAfter = this.cam.getWorldPoint(centerX, centerY);
+    this.cam.scrollX += this.pinchWorldAnchorX - worldPointAfter.x;
+    this.cam.scrollY += this.pinchWorldAnchorY - worldPointAfter.y;
   }
 
   private enableWheelZoom() {

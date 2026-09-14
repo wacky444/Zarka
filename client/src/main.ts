@@ -19,6 +19,9 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 600,
   backgroundColor: "#202030",
   pixelArt: true,
+  input: {
+    activePointers: 2
+  },
   plugins: {
     scene: [
       {
