@@ -1477,6 +1477,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.bringToTop(this.tabPreviousText);
     this.bringToTop(this.tabNextButton);
     this.bringToTop(this.tabNextText);
+    this.playersTabView.bringSubtabsToTop();
     for (const element of this.characterSubtabs.getElements()) {
       this.bringToTop(element);
     }

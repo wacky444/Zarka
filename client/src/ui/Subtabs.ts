@@ -114,6 +114,16 @@ export class Subtabs<T extends string = string> {
     });
   }
 
+  bringToTop(): void {
+    if (!this.options.parent) {
+      return;
+    }
+    for (const entry of this.entries) {
+      this.options.parent.bringToTop(entry.button);
+      this.options.parent.bringToTop(entry.label);
+    }
+  }
+
   destroy(): void {
     for (const entry of this.entries) {
       entry.button.destroy();
@@ -143,16 +153,11 @@ export class Subtabs<T extends string = string> {
           color: DEFAULT_INACTIVE_TEXT_COLOR
         })
         .setOrigin(0.5, 0.5)
-        .setInteractive({ useHandCursor: true })
         .setVisible(false);
 
       button.on(Phaser.Input.Events.POINTER_UP, () => {
         this.setActiveKey(tab.key);
       });
-      label.on(Phaser.Input.Events.POINTER_UP, () => {
-        this.setActiveKey(tab.key);
-      });
-
       if (parent) {
         parent.add(button);
         parent.add(label);

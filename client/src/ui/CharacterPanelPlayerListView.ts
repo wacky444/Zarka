@@ -369,6 +369,10 @@ export class CharacterPanelPlayerListView {
     return this.elements;
   }
 
+  bringSubtabsToTop(): void {
+    this.subtabs.bringToTop();
+  }
+
   setActiveSubtab(subtab: PlayerSubTabKey): void {
     this.subtabs.setActiveKey(subtab);
     this.updateSubtabVisibility();
