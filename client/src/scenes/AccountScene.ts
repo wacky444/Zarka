@@ -144,6 +144,7 @@ export class AccountScene extends Phaser.Scene {
       },
       scroller: {
         threshold: 10,
+        rectBoundsInteractive: true,
         slidingDeceleration: 5000,
         backDeceleration: 2000,
         pointerOutRelease: true

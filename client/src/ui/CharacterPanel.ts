@@ -845,6 +845,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       slider: false,
       scroller: {
         threshold: 10,
+        rectBoundsInteractive: true,
         slidingDeceleration: 5000,
         backDeceleration: 2000,
         pointerOutRelease: true
