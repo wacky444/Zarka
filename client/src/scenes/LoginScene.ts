@@ -4,6 +4,7 @@ import { makeButton, type UIButton } from "../ui/button";
 import { getEnv, healthProbe } from "../services/nakama";
 import { SessionManager } from "../services/sessionManager";
 import { FacebookService } from "../services/facebookService";
+import { GoogleService } from "../services/googleService";
 
 enum LoginGuiState {
   Entry = "entry",
@@ -137,6 +138,16 @@ export class LoginScene extends Phaser.Scene {
       },
     ).setOrigin(0.5);
 
+    const googleButton = makeButton(
+      this,
+      0,
+      0,
+      "Login with Google",
+      async () => {
+        await this.loginWithGoogle();
+      },
+    ).setOrigin(0.5);
+
     const loginButton = makeButton(this, 0, 0, "Login", async () => {
       this.setGuiState(LoginGuiState.Login);
     }).setOrigin(0.5);
@@ -157,6 +168,7 @@ export class LoginScene extends Phaser.Scene {
 
     this.entryButtons = [
       facebookButton,
+      googleButton,
       loginButton,
       guestButton,
       registerButton
@@ -559,6 +571,47 @@ export class LoginScene extends Phaser.Scene {
       console.error("Facebook login error:", error);
       this.statusText.setText(
         "Facebook login failed. Please try again or use email login.",
+      );
+    }
+  }
+
+  private async loginWithGoogle() {
+    this.statusText.setText("Initializing Google login...");
+
+    try {
+      const { googleClientId } = getEnv();
+      if (!googleClientId) {
+        this.statusText.setText(
+          "Google login is not configured. Please use another login method.",
+        );
+        return;
+      }
+
+      const initialized = await GoogleService.initialize(googleClientId);
+      if (!initialized) {
+        this.statusText.setText(
+          "Google login is unavailable. Please check your internet connection.",
+        );
+        return;
+      }
+
+      this.statusText.setText("Please complete Google login...");
+      const authResponse = await GoogleService.login(googleClientId);
+      if (!authResponse) {
+        this.statusText.setText("Google login was cancelled or failed.");
+        return;
+      }
+
+      this.statusText.setText("Authenticating with game server...");
+      const session = await this.client.authenticateGoogle(
+        authResponse.idToken,
+        true,
+      );
+      this.proceedToGame(session);
+    } catch (error) {
+      console.error("Google login error:", error);
+      this.statusText.setText(
+        "Google login failed. Please try again or use another login method.",
       );
     }
   }

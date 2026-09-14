@@ -21,7 +21,8 @@ export function getEnv() {
   const port = String(parseInt(import.meta.env.VITE_NAKAMA_PORT || "7350", 10));
   const useSSL = (import.meta.env.VITE_NAKAMA_SSL || "false") === "true";
   const serverKey = import.meta.env.VITE_NAKAMA_SERVER_KEY || "defaultkey";
-  return { host, port, useSSL, serverKey };
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+  return { host, port, useSSL, serverKey, googleClientId };
 }
 
 export function getOrCreateDeviceId(): string {

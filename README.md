@@ -62,14 +62,25 @@ Open http://localhost:5173. The application now starts with a **login screen** f
 ### Authentication Options
 
 1. **Facebook Login** - Integrated Facebook SDK authentication (requires Facebook App ID configuration)
-2. **Email Registration/Login** - Create accounts or login with email and password
-3. **Guest Access** - Quick device-based authentication for immediate access
+2. **Google Login** - Google Identity Services authentication (requires a Google OAuth web client ID)
+3. **Email Registration/Login** - Create accounts or login with email and password
+4. **Guest Access** - Quick device-based authentication for immediate access
 
 ### Login Flow
 
 - **First Visit**: Shows login screen with authentication options
 - **Returning Users**: Automatically restores valid sessions and proceeds to main game
 - **Session Management**: Persistent login state across browser sessions with automatic token refresh
+
+### Google Login Configuration
+
+Google login uses Google Identity Services to obtain a browser ID token, which is passed to Nakama's `authenticateGoogle` endpoint. Configure the OAuth web client ID in `client/.env`:
+
+```text
+VITE_GOOGLE_CLIENT_ID=your-google-oauth-web-client-id
+```
+
+Add the deployed site's origin to the OAuth client's authorized JavaScript origins in Google Cloud Console. For GitHub Pages deployments, set the `GOOGLE_CLIENT_ID` repository variable so the deployment workflow injects `VITE_GOOGLE_CLIENT_ID` at build time.
 
 ### Account Management
 
