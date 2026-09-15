@@ -20,6 +20,7 @@ import { animateFocusEvent } from "./replayActions/FocusAnimation";
 import { animateFailedActionEvent } from "./replayActions/FailedActionAnimation";
 import { animateDetectEvent } from "./replayActions/DetectAnimation";
 import { animateChemicalWeaponEvent } from "./replayActions/ChemicalWeaponAnimation";
+import { animateTrapEvent } from "./replayActions/TrapAnimation";
 import { animateShootPistolEvent } from "./replayActions/ShootPistolAnimation";
 import { animateShootHarpoonEvent } from "./replayActions/ShootHarpoonAnimation";
 import { playRandomSound } from "./soundPlayer";
@@ -86,6 +87,8 @@ export async function playReplayEvents(
       await animateDetectEvent(context, event);
     } else if (actionId === ActionLibrary.use_chemical_weapon.id) {
       await animateChemicalWeaponEvent(context, event);
+    } else if (actionId === ActionLibrary.place_trap.id) {
+      await animateTrapEvent(context, event);
     }
   }
 }

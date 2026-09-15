@@ -223,6 +223,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             teamCounts,
             advanced: true,
             viewDistance,
+            traps: msg.traps,
           };
           const entries: Array<[string, nkruntime.Presence]> = [];
           const playerMap = state.players ?? {};
@@ -281,6 +282,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
                       msg.items,
                       msg.playerCharacters?.[playerId] ?? null,
                     ),
+                traps: msg.traps,
               });
               dispatcher.broadcastMessage(
                 OPCODE_TURN_ADVANCED,

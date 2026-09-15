@@ -1,4 +1,9 @@
-import type { MatchItemRecord, MatchRecord, TurnRecord } from "./match";
+import type {
+  MatchItemRecord,
+  MatchRecord,
+  TrapRecord,
+  TurnRecord,
+} from "./match";
 import type { GameMap, Axial } from "./hexTile";
 import type {
   PlayerCharacter,
@@ -85,6 +90,7 @@ export type UpdateReadyStatePayload = {
   playerCharacters?: Record<string, PlayerCharacter>;
   map?: GameMap;
   items?: MatchItemRecord[];
+  traps?: TrapRecord[];
   error?: string;
 };
 
@@ -190,6 +196,7 @@ export type TurnAdvancedMessagePayload = {
   viewDistance?: number;
   map?: GameMap;
   items?: MatchItemRecord[];
+  traps?: TrapRecord[];
 };
 
 export type MatchEndedMessagePayload = {
@@ -202,6 +209,7 @@ export type ReadyStateUpdateMessagePayload = {
   match_id: string;
   readyStates: Record<string, boolean>;
   deadCharacters?: Record<string, boolean>;
+  traps?: TrapRecord[];
 };
 
 export type SaveChatMessagePayload = {

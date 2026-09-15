@@ -10,6 +10,7 @@ import { ActionLibrary, ExtraExecutionEffect } from "@shared";
 import { axialDistance } from "../../utils/location";
 import { getUsableExtraExecutions } from "../../utils/energy";
 import { BaseAction } from "./classes/BaseAction";
+import { triggerTrapsForMovement } from "./placeTrap";
 
 export class MoveAction extends BaseAction {
   protected processRoster(
@@ -69,6 +70,16 @@ export class MoveAction extends BaseAction {
         actorId: entry.playerId,
         action,
       });
+      if (previousPosition && entry.character.position) {
+        events.push(
+          ...triggerTrapsForMovement(
+            match,
+            entry.playerId,
+            previousPosition,
+            entry.character.position,
+          ),
+        );
+      }
       this.clearPlan(entry);
     }
     return events;

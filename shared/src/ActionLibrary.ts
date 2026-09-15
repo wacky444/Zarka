@@ -256,6 +256,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 2,
     cooldown: 3,
     requiredItems: ["trap"],
+    developed: true,
+    range: [1],
     requirements: [
       { description: "Requiere tener una trampa.", consumesResource: true }
     ],
@@ -273,7 +275,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "puzzle.png",
     actionOrder: 2,
     actionSubOrder: 3,
-    tags: ["Attack", "Logistics"]
+    tags: ["Attack", "Logistics", "Ranged"]
   },
   protect: {
     id: "protect",

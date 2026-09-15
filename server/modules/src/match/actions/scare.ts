@@ -18,6 +18,7 @@ import {
 import { collectTargets } from "./targeting";
 import { getUsableExtraExecutions } from "../../utils/energy";
 import { BaseAction } from "./classes/BaseAction";
+import { triggerTrapsForTransition } from "./placeTrap";
 
 const CURRENT_CELL_DISTANCE = 0;
 
@@ -138,6 +139,14 @@ export class ScareAction extends BaseAction {
           action,
           targets: [targetEvent],
         });
+        if (previous?.coord && previous.tileId) {
+          events.push(
+            ...triggerTrapsForTransition(match, targetSelection.id, previous, {
+              tileId: destination.tileId,
+              coord: destination.coord,
+            }),
+          );
+        }
       }
     }
     return events;

@@ -1,4 +1,4 @@
-import type { GameMap } from "./hexTile";
+import type { Axial, GameMap } from "./hexTile";
 import type {
   PlayerCharacter,
   PlayerCharacterUnknown
@@ -9,6 +9,21 @@ import type { MatchReportProgress } from "./matchReport";
 export interface MatchItemRecord {
   item_id: string;
   item_type: ItemId;
+}
+
+export interface TrapRecord {
+  id: string;
+  ownerId: string;
+  from: {
+    tileId: string;
+    coord: Axial;
+  };
+  to: {
+    tileId: string;
+    coord: Axial;
+  };
+  damage: number;
+  placedTurn: number;
 }
 
 export interface MatchRecord {
@@ -36,6 +51,7 @@ export interface MatchRecord {
   removed: number;
   map?: GameMap;
   items?: MatchItemRecord[];
+  traps?: TrapRecord[];
   teams?: string[];
   teamCounts?: Record<string, number>;
   lastAutoAdvanceAt?: number;

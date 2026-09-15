@@ -25,6 +25,7 @@ import {
   generateGameMap,
   type GetStatePayload,
   type MatchRecord,
+  type TrapRecord,
   type UpdateMainActionPayload,
   type UpdateSecondaryActionPayload,
   type UpdateReadyStatePayload,
@@ -86,6 +87,7 @@ export class GameScene extends Phaser.Scene {
     image: Phaser.GameObjects.Image;
     skullImage?: Phaser.GameObjects.Image;
   }> = [];
+  private trapVisuals: Phaser.GameObjects.Graphics[] = [];
   private playerSprites = new Map<string, SkinContainer>();
   private playerNameLabels = new Map<string, Phaser.GameObjects.Text>();
   private playerNameMap: Record<string, string> = {};
@@ -649,6 +651,7 @@ export class GameScene extends Phaser.Scene {
       }
       this.tileItemContainers.clear();
       this.mapTileSprites = [];
+      this.clearTrapVisuals();
       this.locationSelectionHoverText?.destroy();
       this.locationSelectionHoverText = null;
       this.itemTooltip?.destroy();
@@ -818,6 +821,39 @@ export class GameScene extends Phaser.Scene {
       entry.skullImage?.destroy();
     }
     this.mapTileSprites = [];
+    this.clearTrapVisuals();
+  }
+
+  private clearTrapVisuals(): void {
+    for (const visual of this.trapVisuals) {
+      visual.destroy();
+    }
+    this.trapVisuals = [];
+  }
+
+  private renderTraps(traps: TrapRecord[] | undefined): void {
+    this.clearTrapVisuals();
+    for (const trap of traps ?? []) {
+      const from = this.getTileWorldPosition(trap.from.tileId, trap.from.coord);
+      const to = this.getTileWorldPosition(trap.to.tileId, trap.to.coord);
+      const midpoint = {
+        x: (from.x + to.x) / 2,
+        y: (from.y + to.y) / 2,
+      };
+      const visual = this.add.graphics();
+      visual.lineStyle(7, 0xd65858, 0.9);
+      visual.beginPath();
+      visual.moveTo(from.x, from.y);
+      visual.lineTo(to.x, to.y);
+      visual.strokePath();
+      visual.fillStyle(0xf97373, 1);
+      visual.fillCircle(midpoint.x, midpoint.y, 7);
+      visual.lineStyle(2, 0xffcccc, 1);
+      visual.strokeCircle(midpoint.x, midpoint.y, 7);
+      visual.setDepth(4);
+      this.uiCam.ignore(visual);
+      this.trapVisuals.push(visual);
+    }
   }
 
   private renderMap(map: GameMap) {
@@ -949,6 +985,7 @@ export class GameScene extends Phaser.Scene {
     this.cam.centerOn(gridWidth / 2, gridHeight / 2);
     this.registry.set("currentMatchMap", map);
     this.renderItems(map);
+    this.renderTraps(this.currentMatch?.traps);
   }
 
   private getTileWorldPosition(
@@ -2584,6 +2621,10 @@ export class GameScene extends Phaser.Scene {
         if (Array.isArray(payload.items)) {
           this.currentMatch.items = payload.items;
         }
+        if (Array.isArray(payload.traps)) {
+          this.currentMatch.traps = payload.traps;
+          this.renderTraps(payload.traps);
+        }
         if (payload.map) {
           this.currentMatch.map = payload.map;
           this.renderItems(payload.map);
@@ -2672,6 +2713,12 @@ export class GameScene extends Phaser.Scene {
     if (payload.deadCharacters) {
       match.deadCharacters = payload.deadCharacters;
     }
+    if (Array.isArray(payload.traps)) {
+      match.traps = payload.traps;
+      if (match.map) {
+        this.renderTraps(match.traps);
+      }
+    }
     this.updateCharacterPanel(match);
   }
 
@@ -2705,6 +2752,9 @@ export class GameScene extends Phaser.Scene {
     }
     if (Array.isArray(payload.items)) {
       match.items = payload.items;
+    }
+    if (Array.isArray(payload.traps)) {
+      match.traps = payload.traps;
     }
     if (payload.map) {
       match.map = payload.map;

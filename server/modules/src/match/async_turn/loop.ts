@@ -164,6 +164,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
           viewDistance: DEFAULT_REPLAY_VIEW_DISTANCE,
           map: match.map,
           items: match.items,
+          traps: match.traps,
         }),
       );
     } catch (error) {

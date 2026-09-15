@@ -189,6 +189,7 @@ export function updateReadyStateRpc(
           viewDistance,
           map: match.map,
           items: match.items,
+          traps: match.traps,
         }),
       );
     } catch (e) {
@@ -240,6 +241,7 @@ export function updateReadyStateRpc(
     items: viewAll
       ? match.items
       : tailorMatchItemsForCharacter(match.items, viewerCharacter),
+    traps: match.traps,
   };
 
   return JSON.stringify(response);
