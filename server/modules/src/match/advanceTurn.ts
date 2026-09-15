@@ -109,7 +109,7 @@ function removeStateFromAllCharacters(
   }
 }
 
-function applyDailyPension(match: MatchRecord): void {
+function applyZarkanIncome(match: MatchRecord): void {
   if (!match.playerCharacters) {
     return;
   }
@@ -121,15 +121,15 @@ function applyDailyPension(match: MatchRecord): void {
     if (!character || isCharacterDead(character)) {
       continue;
     }
-    const income = getSkillEffectTotal(character, "daily_zarkan_income");
-    if (income <= 0) {
-      continue;
-    }
+    const skillIncome = getSkillEffectTotal(
+      character,
+      "daily_zarkan_income",
+    );
     if (!character.economy) {
       character.economy = {
         zarkans: 0,
         pendingZarkans: 0,
-        incomeInterval: 5
+        incomeInterval: 1,
       };
     }
     const current =
@@ -137,7 +137,8 @@ function applyDailyPension(match: MatchRecord): void {
       isFinite(character.economy.zarkans)
         ? character.economy.zarkans
         : 0;
-    character.economy.zarkans = current + income;
+    character.economy.zarkans = current + 1 + Math.max(0, skillIncome);
+    character.economy.incomeInterval = 1;
   }
 }
 
@@ -207,7 +208,7 @@ export function advanceTurn(
   }
   const tileLookup = buildTileLookup(match);
   activateTemporaryEnergy(match);
-  applyDailyPension(match);
+  applyZarkanIncome(match);
   clearDodgeAttempts(match);
   removeStateFromAllCharacters(match, "protected");
   removeStateFromAllCharacters(match, "unconscious");

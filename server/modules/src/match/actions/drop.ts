@@ -234,7 +234,7 @@ export class DropAction extends BaseAction {
             participant.character.economy = {
               zarkans: 0,
               pendingZarkans: 0,
-              incomeInterval: 5
+              incomeInterval: 1
             };
           }
           const currentZarkans =

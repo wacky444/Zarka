@@ -39,7 +39,7 @@ export function createDefaultCharacter(userId: string): PlayerCharacter {
     economy: {
       zarkans: 3,
       pendingZarkans: 0,
-      incomeInterval: 5
+      incomeInterval: 1
     },
     inventory: {
       carriedItems: [

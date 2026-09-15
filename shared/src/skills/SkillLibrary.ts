@@ -381,7 +381,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
   pensioner: {
     id: "pensioner",
     name: "H4 Pensionista",
-    description: "Recibe 1 zarkan cada día",
+    description: "Recibe 1 zarkan extra cada turno",
     cost: 3,
     max: 1,
     implemented: true,
