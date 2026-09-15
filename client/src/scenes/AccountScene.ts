@@ -101,6 +101,8 @@ export class AccountScene extends Phaser.Scene {
   private adminViewToggle!: UIButton;
   private isAdmin = false;
   private adminViewEnabled = false;
+  private skinSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  private skinSavePending = false;
   private currentDisplayName = "";
   private playerStatsText!: Phaser.GameObjects.Text;
   private facebookStatusText!: Phaser.GameObjects.Text;
@@ -349,6 +351,10 @@ export class AccountScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutAccount, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutAccount, this);
+      if (this.skinSaveTimer !== null) {
+        clearTimeout(this.skinSaveTimer);
+        this.skinSaveTimer = null;
+      }
     });
 
     await this.loadUserInfo();
@@ -559,7 +565,7 @@ export class AccountScene extends Phaser.Scene {
         if (id) {
           this.currentSkin = { ...this.currentSkin, [cat]: id };
           this.updatePreview();
-          this.saveSkin();
+          this.scheduleSkinSave();
         }
       });
       selector.on("modal-open", () => {
@@ -585,8 +591,23 @@ export class AccountScene extends Phaser.Scene {
     this.updatePreview();
   }
 
+  private scheduleSkinSave(): void {
+    this.skinSavePending = true;
+    if (this.skinSaveTimer !== null) {
+      clearTimeout(this.skinSaveTimer);
+    }
+    this.skinSaveTimer = setTimeout(() => {
+      this.skinSaveTimer = null;
+      this.skinSavePending = false;
+      void this.saveSkin();
+    }, 250);
+  }
+
   private async saveSkin() {
-    if (this.saving) return;
+    if (this.saving) {
+      this.skinSavePending = true;
+      return;
+    }
     this.saving = true;
     try {
       const rpcRes = await this.client.rpc(this.session, "update_skin", {
@@ -606,6 +627,9 @@ export class AccountScene extends Phaser.Scene {
       this.statusText.setText("Failed to save skin");
     } finally {
       this.saving = false;
+      if (this.skinSavePending && this.skinSaveTimer === null) {
+        this.scheduleSkinSave();
+      }
     }
   }
 

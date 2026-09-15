@@ -89,6 +89,7 @@ export class LobbyView {
 
   private started = false;
   private startMatchBusy = false;
+  private settingsDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   private static readonly CONTENT_MAX_WIDTH = 920;
   private static readonly HORIZONTAL_PADDING = 24;
@@ -694,7 +695,15 @@ export class LobbyView {
   }
 
   private emitSettings() {
-    if (this.onSettingsChange) this.onSettingsChange(this.getSettings());
+    if (this.settingsDebounceTimer !== null) {
+      clearTimeout(this.settingsDebounceTimer);
+    }
+    this.settingsDebounceTimer = setTimeout(() => {
+      this.settingsDebounceTimer = null;
+      if (this.onSettingsChange) {
+        this.onSettingsChange(this.getSettings());
+      }
+    }, 250);
   }
 
   private normalizeMatchName(value?: string): string {

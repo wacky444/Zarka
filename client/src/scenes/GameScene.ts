@@ -99,11 +99,25 @@ export class GameScene extends Phaser.Scene {
   private pointerDownInUI = false;
   private mainActionUpdateRunning = false;
   private pendingMainActionSelection: MainActionSelection | undefined;
+  private mainActionDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private queuedMainActionSelection: MainActionSelection | null | undefined;
   private secondaryActionUpdateRunning = false;
   private pendingSecondaryActionSelection: SecondaryActionSelection | undefined;
+  private secondaryActionDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private queuedSecondaryActionSelection:
+    | SecondaryActionSelection
+    | null
+    | undefined;
   private extraSecondaryActionUpdateRunning = false;
   private pendingExtraSecondaryActionSelection:
     | SecondaryActionSelection
+    | undefined;
+  private extraSecondaryActionDebounceTimer:
+    | ReturnType<typeof setTimeout>
+    | null = null;
+  private queuedExtraSecondaryActionSelection:
+    | SecondaryActionSelection
+    | null
     | undefined;
   private readyUpdateRunning = false;
   private pendingReadyState: boolean | undefined;
@@ -272,17 +286,17 @@ export class GameScene extends Phaser.Scene {
     this.cam.ignore(this.characterPanel);
     this.characterPanel.on(
       "main-action-change",
-      this.handleMainActionSelection,
+      this.scheduleMainActionSelection,
       this
     );
     this.characterPanel.on(
       "secondary-action-change",
-      this.handleSecondaryActionSelection,
+      this.scheduleSecondaryActionSelection,
       this
     );
     this.characterPanel.on(
       "extra-secondary-action-change",
-      this.handleExtraSecondaryActionSelection,
+      this.scheduleExtraSecondaryActionSelection,
       this
     );
     this.characterPanel.on(
@@ -426,6 +440,18 @@ export class GameScene extends Phaser.Scene {
     this.layoutUI();
     this.scale.on("resize", this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this.mainActionDebounceTimer !== null) {
+        clearTimeout(this.mainActionDebounceTimer);
+        this.mainActionDebounceTimer = null;
+      }
+      if (this.secondaryActionDebounceTimer !== null) {
+        clearTimeout(this.secondaryActionDebounceTimer);
+        this.secondaryActionDebounceTimer = null;
+      }
+      if (this.extraSecondaryActionDebounceTimer !== null) {
+        clearTimeout(this.extraSecondaryActionDebounceTimer);
+        this.extraSecondaryActionDebounceTimer = null;
+      }
       this.scale.off("resize", this.handleResize, this);
       this.input.off(Phaser.Input.Events.POINTER_DOWN, this.pointerDownHandler);
       this.input.off(Phaser.Input.Events.POINTER_UP, this.pointerUpHandler);
@@ -436,17 +462,17 @@ export class GameScene extends Phaser.Scene {
       this.input.off(Phaser.Input.Events.POINTER_MOVE, this.pinchMoveHandler);
       this.characterPanel?.off(
         "main-action-change",
-        this.handleMainActionSelection,
+        this.scheduleMainActionSelection,
         this
       );
       this.characterPanel?.off(
         "secondary-action-change",
-        this.handleSecondaryActionSelection,
+        this.scheduleSecondaryActionSelection,
         this
       );
       this.characterPanel?.off(
         "extra-secondary-action-change",
-        this.handleExtraSecondaryActionSelection,
+        this.scheduleExtraSecondaryActionSelection,
         this
       );
       this.characterPanel?.off(
@@ -1824,6 +1850,51 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private scheduleMainActionSelection = (
+    selection: MainActionSelection | null | undefined
+  ): void => {
+    this.queuedMainActionSelection = selection;
+    if (this.mainActionDebounceTimer !== null) {
+      clearTimeout(this.mainActionDebounceTimer);
+    }
+    this.mainActionDebounceTimer = setTimeout(() => {
+      const nextSelection = this.queuedMainActionSelection;
+      this.queuedMainActionSelection = undefined;
+      this.mainActionDebounceTimer = null;
+      void this.handleMainActionSelection(nextSelection);
+    }, 250);
+  };
+
+  private scheduleSecondaryActionSelection = (
+    selection: SecondaryActionSelection | null | undefined
+  ): void => {
+    this.queuedSecondaryActionSelection = selection;
+    if (this.secondaryActionDebounceTimer !== null) {
+      clearTimeout(this.secondaryActionDebounceTimer);
+    }
+    this.secondaryActionDebounceTimer = setTimeout(() => {
+      const nextSelection = this.queuedSecondaryActionSelection;
+      this.queuedSecondaryActionSelection = undefined;
+      this.secondaryActionDebounceTimer = null;
+      void this.handleSecondaryActionSelection(nextSelection);
+    }, 250);
+  };
+
+  private scheduleExtraSecondaryActionSelection = (
+    selection: SecondaryActionSelection | null | undefined
+  ): void => {
+    this.queuedExtraSecondaryActionSelection = selection;
+    if (this.extraSecondaryActionDebounceTimer !== null) {
+      clearTimeout(this.extraSecondaryActionDebounceTimer);
+    }
+    this.extraSecondaryActionDebounceTimer = setTimeout(() => {
+      const nextSelection = this.queuedExtraSecondaryActionSelection;
+      this.queuedExtraSecondaryActionSelection = undefined;
+      this.extraSecondaryActionDebounceTimer = null;
+      void this.handleExtraSecondaryActionSelection(nextSelection);
+    }, 250);
+  };
+
   private async handleMainActionSelection(
     selection: MainActionSelection | null | undefined
   ) {
@@ -1947,7 +2018,12 @@ export class GameScene extends Phaser.Scene {
         }
         target.actionPlan.main = nextPlan;
       }
-      this.updateCharacterPanel(this.currentMatch);
+      if (
+        this.pendingMainActionSelection === undefined &&
+        this.queuedMainActionSelection === undefined
+      ) {
+        this.updateCharacterPanel(this.currentMatch);
+      }
     } catch (error) {
       console.warn("update_main_action failed", error);
       // this.updateCharacterPanel(this.currentMatch); TODO it creates a loop
@@ -2114,7 +2190,12 @@ export class GameScene extends Phaser.Scene {
         }
         target.actionPlan.secondary = nextPlan;
       }
-      this.updateCharacterPanel(this.currentMatch);
+      if (
+        this.pendingSecondaryActionSelection === undefined &&
+        this.queuedSecondaryActionSelection === undefined
+      ) {
+        this.updateCharacterPanel(this.currentMatch);
+      }
     } catch (error) {
       console.warn("update_secondary_action failed", error);
       // this.updateCharacterPanel(this.currentMatch); TODO it creates a loop
@@ -2268,7 +2349,12 @@ export class GameScene extends Phaser.Scene {
         }
         target.actionPlan.extraSecondary = nextPlan;
       }
-      this.updateCharacterPanel(this.currentMatch);
+      if (
+        this.pendingExtraSecondaryActionSelection === undefined &&
+        this.queuedExtraSecondaryActionSelection === undefined
+      ) {
+        this.updateCharacterPanel(this.currentMatch);
+      }
     } catch (error) {
       console.warn("update_extra_secondary_action failed", error);
     } finally {
