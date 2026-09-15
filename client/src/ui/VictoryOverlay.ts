@@ -140,7 +140,6 @@ export class VictoryOverlay {
         backgroundColor: "#854d0e"
       });
       this.rewardBadge.setVisible(true);
-      this.createVictoryParticles();
     } else if (data.result === "loss") {
       this.titleText.setText("DEFEAT");
       this.titleText.setStyle({
@@ -159,6 +158,8 @@ export class VictoryOverlay {
       this.subtitleText.setText("All fighters were eliminated.");
       this.rewardBadge.setVisible(false);
     }
+
+    this.createVictoryParticles();
 
     if (typeof data.turns === "number" && data.turns > 0) {
       this.statsText.setText(`Match completed in ${data.turns} turns`);
