@@ -114,7 +114,6 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private readonly labelActiveColor: string;
   private readonly iconTextGap: number;
   private currentWidth: number;
-  private cellContentVersion = 0;
   private modalVisible = false;
 
   constructor(
@@ -264,7 +263,6 @@ export class GridSelect extends Phaser.GameObjects.Container {
   }
 
   setItems(items: GridSelectItem[]) {
-    this.cellContentVersion += 1;
     const cloned = items.slice();
     this.items = this.emptyOptionItem
       ? [
@@ -1104,21 +1102,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
         isSelected: this.selectedItem?.id === item.id,
       });
       container.layout();
-      created.setData("renderVersion", this.cellContentVersion);
-      created.setData("renderedSelected", this.selectedItem?.id === item.id);
       return created;
     }
 
     const containerGO = container as unknown as Phaser.GameObjects.GameObject;
-    const sameItem = containerGO.getData("id") === item.id;
-    const sameVersion =
-      containerGO.getData("renderVersion") === this.cellContentVersion;
-    const sameSelection =
-      containerGO.getData("renderedSelected") ===
-      (this.selectedItem?.id === item.id);
-    if (sameItem && sameVersion && sameSelection) {
-      return containerGO;
-    }
     const bg = containerGO.getData("bg") as RexRoundRectangle | undefined;
     const icon = containerGO.getData("icon") as
       | Phaser.GameObjects.Image
@@ -1205,8 +1192,6 @@ export class GridSelect extends Phaser.GameObjects.Container {
         )
       : false;
     containerGO.setData("id", item.id);
-    containerGO.setData("renderVersion", this.cellContentVersion);
-    containerGO.setData("renderedSelected", this.selectedItem?.id === item.id);
     containerGO.setData("showTooltip", nameTruncated || descTruncated);
     if (cooldownText) {
       cooldownText.setVisible(false);
