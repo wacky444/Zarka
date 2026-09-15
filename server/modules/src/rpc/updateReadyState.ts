@@ -17,6 +17,7 @@ import { getAliveCharacterIds } from "../match/checkEndGame";
 import { validateTime } from "../utils/validation";
 import { getRuntimeMatchId } from "../utils/matchIds";
 import { isAdminUser } from "../utils/admin";
+import { createReplaySnapshot } from "../match/replay/snapshot";
 
 const READY_ADVANCE_MARGIN_MINUTES = 12 * 60;
 
@@ -131,17 +132,13 @@ export function updateReadyStateRpc(
     throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
   }
 
-  if (
-    advanced &&
-    advanceResult &&
-    advanceResult.events.length > 0 &&
-    resolvedTurnNumber !== null
-  ) {
+  if (advanced && advanceResult && resolvedTurnNumber !== null) {
     try {
       storage.appendReplayTurn({
         match_id: matchId,
         turn: resolvedTurnNumber,
         events: advanceResult.events,
+        snapshot: createReplaySnapshot(match),
         created_at: Math.floor(Date.now() / 1000),
       });
     } catch (e) {

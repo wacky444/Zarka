@@ -9,7 +9,7 @@ import type {
   PlayerCharacter,
   PlayerCharacterUnknown
 } from "./playerCharacter";
-import type { ReplayEvent } from "./Replay";
+import type { ReplayEvent, ReplaySnapshot } from "./Replay";
 import type { MatchChatMessage } from "./chat";
 import type { Skin, UserAccount } from "./UserAccount";
 import type { MatchReport } from "./matchReport";
@@ -106,6 +106,7 @@ export type GetReplayPayload = {
   turn?: number;
   max_turn?: number;
   events?: ReplayEvent[];
+  snapshot?: ReplaySnapshot;
   error?: string;
 };
 

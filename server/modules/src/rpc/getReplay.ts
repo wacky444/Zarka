@@ -3,12 +3,18 @@
 import {
   DEFAULT_REPLAY_VIEW_DISTANCE,
   type GetReplayPayload,
-  type ReplayEvent
+  type ReplayEvent,
+  type ReplaySnapshot,
 } from "@shared";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { tailorReplayEvents } from "../match/replay/tailorReplay";
+import {
+  tailorMapForCharacter,
+  tailorMatchItemsForCharacter,
+  tailorPlayerCharactersForViewer,
+} from "../utils/matchView";
 import { isAdminUser } from "../utils/admin";
 
 export function getReplayRpc(
@@ -69,18 +75,43 @@ export function getReplayRpc(
     turn = 0;
   }
 
+  const viewAll = json.view_all === true && isAdminUser(nk, ctx.userId);
   let events: ReplayEvent[] = [];
+  let snapshot: ReplaySnapshot | undefined;
   if (turn >= 0) {
     const replay = storage.readReplay(matchId, turn);
-    if (replay && Array.isArray(replay.events)) {
-      const viewAll = json.view_all === true && isAdminUser(nk, ctx.userId);
-      events = tailorReplayEvents(
-        replay.events,
-        ctx.userId,
-        match.playerCharacters,
-        DEFAULT_REPLAY_VIEW_DISTANCE,
-        viewAll
-      );
+    if (replay) {
+      const sourceCharacters =
+        replay.snapshot?.playerCharacters ?? match.playerCharacters;
+      events = Array.isArray(replay.events)
+        ? tailorReplayEvents(
+            replay.events,
+            ctx.userId,
+            sourceCharacters,
+            DEFAULT_REPLAY_VIEW_DISTANCE,
+            viewAll,
+          )
+        : [];
+      if (replay.snapshot) {
+        if (viewAll) {
+          snapshot = replay.snapshot;
+        } else {
+          const viewerCharacter = sourceCharacters?.[ctx.userId] ?? null;
+          snapshot = {
+            ...replay.snapshot,
+            map: tailorMapForCharacter(replay.snapshot.map, viewerCharacter),
+            items: tailorMatchItemsForCharacter(
+              replay.snapshot.items,
+              viewerCharacter,
+            ),
+            playerCharacters: tailorPlayerCharactersForViewer(
+              replay.snapshot.playerCharacters,
+              ctx.userId,
+              false,
+            ),
+          };
+        }
+      }
     }
   }
 
@@ -89,7 +120,8 @@ export function getReplayRpc(
     match_id: matchId,
     turn,
     max_turn: maxTurn,
-    events
+    events,
+    snapshot,
   };
 
   return JSON.stringify(response);

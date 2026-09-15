@@ -1,5 +1,7 @@
 import type { ActionId } from "./Action";
-import type { Axial } from "./hexTile";
+import type { Axial, GameMap } from "./hexTile";
+import type { MatchItemRecord, TrapRecord } from "./match";
+import type { PlayerCharacter } from "./playerCharacter";
 
 export interface ReplayTurn {
   turnNumber: number;
@@ -57,10 +59,19 @@ export enum ReplayActionEffect {
 
 export type ReplayActionEffectMask = number;
 
+export interface ReplaySnapshot {
+  map?: GameMap;
+  items?: MatchItemRecord[];
+  traps?: TrapRecord[];
+  playerCharacters?: Record<string, PlayerCharacter>;
+  deadCharacters?: Record<string, boolean>;
+}
+
 export interface ReplayRecord {
   match_id: string;
   turn: number;
   events: ReplayEvent[];
+  snapshot?: ReplaySnapshot;
   created_at: number;
 }
 

@@ -32,6 +32,7 @@ import {
   type TurnAdvancedMessagePayload,
   type ReadyStateUpdateMessagePayload,
   type ReplayEvent,
+  type ReplaySnapshot,
   type GetReplayPayload,
   type MatchChatMessage,
   getHexTileOffsets,
@@ -71,6 +72,11 @@ type PlayerEliminationBannerEvent = {
 };
 
 type MobileViewMode = "map" | "sidebar";
+
+type CachedReplay = {
+  events: ReplayEvent[];
+  snapshot?: ReplaySnapshot;
+};
 
 const MOBILE_LAYOUT_BREAKPOINT = 760;
 
@@ -132,7 +138,12 @@ export class GameScene extends Phaser.Scene {
   private locationSelectionHoverText: Phaser.GameObjects.Text | null = null;
   private replayQueue: ReplayEvent[][] = [];
   private replayPlaying = false;
-  private logReplayCache = new Map<number, ReplayEvent[]>();
+  private logReplayCache = new Map<number, CachedReplay>();
+  private replayView: {
+    turn: number;
+    snapshot: ReplaySnapshot;
+    match: MatchRecord;
+  } | null = null;
   private logTabActive = false;
   private logFetchRunning = false;
   private logPendingTurn: number | null = null;
@@ -738,10 +749,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private getCurrentPlayerViewRange(): number {
-    if (!this.currentMatch || !this.currentUserId) {
+    const match = this.replayView?.match ?? this.currentMatch;
+    if (!match || !this.currentUserId) {
       return 0;
     }
-    const character = this.currentMatch.playerCharacters?.[this.currentUserId];
+    const character = match.playerCharacters?.[this.currentUserId];
     const viewRange = character?.stats?.baseViewRange;
     return typeof viewRange === "number" && isFinite(viewRange)
       ? Math.max(0, Math.floor(viewRange))
@@ -765,7 +777,8 @@ export class GameScene extends Phaser.Scene {
       isHovered?: boolean;
     } = {}
   ): void {
-    const currentTurn = this.currentMatch?.current_turn ?? 0;
+    const currentTurn =
+      this.replayView?.turn ?? this.currentMatch?.current_turn ?? 0;
     const destructionTurn =
       typeof tile.meta?.destructionTurn === "number"
         ? tile.meta.destructionTurn
@@ -871,7 +884,8 @@ export class GameScene extends Phaser.Scene {
     this.playerCoordForTinting = playerCoord;
     this.playerViewRange = viewRange;
 
-    const currentTurn = this.currentMatch?.current_turn ?? 0;
+    const currentTurn =
+      this.replayView?.turn ?? this.currentMatch?.current_turn ?? 0;
 
     for (const snapshot of map.tiles) {
       let tile: HexTile;
@@ -985,7 +999,9 @@ export class GameScene extends Phaser.Scene {
     this.cam.centerOn(gridWidth / 2, gridHeight / 2);
     this.registry.set("currentMatchMap", map);
     this.renderItems(map);
-    this.renderTraps(this.currentMatch?.traps);
+    this.renderTraps(
+      this.replayView?.snapshot.traps ?? this.currentMatch?.traps,
+    );
   }
 
   private getTileWorldPosition(
@@ -1135,7 +1151,8 @@ export class GameScene extends Phaser.Scene {
     const iconsPerRow = 3;
     const spacing = 28;
     const verticalOffset = GameScene.TILE_HEIGHT * 0.35;
-    const matchItemsRaw = this.currentMatch?.items;
+    const matchItemsRaw =
+      this.replayView?.snapshot.items ?? this.currentMatch?.items;
     const matchItems = Array.isArray(matchItemsRaw) ? matchItemsRaw : [];
     const itemTypeById = new Map<string, string>();
     for (const entry of matchItems) {
@@ -2060,6 +2077,9 @@ export class GameScene extends Phaser.Scene {
   private scheduleMainActionSelection = (
     selection: MainActionSelection | null | undefined
   ): void => {
+    if (this.replayView) {
+      return;
+    }
     this.queuedMainActionSelection = selection;
     if (this.mainActionDebounceTimer !== null) {
       clearTimeout(this.mainActionDebounceTimer);
@@ -2075,6 +2095,9 @@ export class GameScene extends Phaser.Scene {
   private scheduleSecondaryActionSelection = (
     selection: SecondaryActionSelection | null | undefined
   ): void => {
+    if (this.replayView) {
+      return;
+    }
     this.queuedSecondaryActionSelection = selection;
     if (this.secondaryActionDebounceTimer !== null) {
       clearTimeout(this.secondaryActionDebounceTimer);
@@ -2090,6 +2113,9 @@ export class GameScene extends Phaser.Scene {
   private scheduleExtraSecondaryActionSelection = (
     selection: SecondaryActionSelection | null | undefined
   ): void => {
+    if (this.replayView) {
+      return;
+    }
     this.queuedExtraSecondaryActionSelection = selection;
     if (this.extraSecondaryActionDebounceTimer !== null) {
       clearTimeout(this.extraSecondaryActionDebounceTimer);
@@ -2575,6 +2601,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private async handleReadyStateChange(ready: boolean) {
+    if (this.replayView) {
+      return;
+    }
     const matchId = this.registry.get("currentMatchId") as string | null;
     if (!this.turnService || !this.currentUserId || !matchId) {
       return;
@@ -2616,20 +2645,26 @@ export class GameScene extends Phaser.Scene {
         }
         if (payload.playerCharacters) {
           this.currentMatch.playerCharacters = payload.playerCharacters;
-          this.renderPlayerCharacters(this.currentMatch);
+          if (!this.replayView) {
+            this.renderPlayerCharacters(this.currentMatch);
+          }
         }
         if (Array.isArray(payload.items)) {
           this.currentMatch.items = payload.items;
         }
         if (Array.isArray(payload.traps)) {
           this.currentMatch.traps = payload.traps;
-          this.renderTraps(payload.traps);
+          if (!this.replayView) {
+            this.renderTraps(payload.traps);
+          }
         }
-        if (payload.map) {
+        if (!this.replayView && payload.map) {
           this.currentMatch.map = payload.map;
           this.renderItems(payload.map);
-        } else if (this.currentMatch.map) {
+        } else if (!this.replayView && this.currentMatch.map) {
           this.renderItems(this.currentMatch.map);
+        } else if (payload.map) {
+          this.currentMatch.map = payload.map;
         }
       }
       const appliedReady =
@@ -2758,8 +2793,10 @@ export class GameScene extends Phaser.Scene {
     }
     if (payload.map) {
       match.map = payload.map;
-      this.renderMap(payload.map);
-    } else if (match.map) {
+      if (!this.replayView) {
+        this.renderMap(payload.map);
+      }
+    } else if (match.map && !this.replayView) {
       this.renderMap(match.map);
     }
 
@@ -2779,11 +2816,13 @@ export class GameScene extends Phaser.Scene {
         : (match.current_turn ?? 0);
     this.topBanner?.show({ text: `Turn ${turnNumber}` });
     if (replayEvents.length > 0) {
-      this.logReplayCache.set(turnNumber, replayEvents);
+      this.logReplayCache.set(turnNumber, { events: replayEvents });
       this.enqueueReplay(replayEvents);
     } else if (payload.playerCharacters) {
-      this.renderPlayerCharacters(match);
-      this.logReplayCache.set(turnNumber, []);
+      if (!this.replayView) {
+        this.renderPlayerCharacters(match);
+      }
+      this.logReplayCache.set(turnNumber, { events: [] });
     }
 
     this.updateCharacterPanel(match);
@@ -2795,13 +2834,17 @@ export class GameScene extends Phaser.Scene {
 
   private enqueueReplay(events: ReplayEvent[]) {
     if (!Array.isArray(events) || events.length === 0) {
-      if (this.currentMatch) {
+      if (this.currentMatch && !this.replayView) {
         this.renderPlayerCharacters(this.currentMatch);
       }
       return;
     }
     this.replayQueue.push(events);
-    if (!this.replayPlaying && !this.manualReplayPlaying) {
+    if (
+      !this.replayView &&
+      !this.replayPlaying &&
+      !this.manualReplayPlaying
+    ) {
       void this.flushReplayQueue();
     }
   }
@@ -2814,7 +2857,7 @@ export class GameScene extends Phaser.Scene {
         continue;
       }
       await playReplayEvents(this.createMoveReplayContext(), events);
-      if (this.currentMatch) {
+      if (this.currentMatch && !this.replayView) {
         this.renderPlayerCharacters(this.currentMatch);
       }
     }
@@ -2833,7 +2876,7 @@ export class GameScene extends Phaser.Scene {
       getSprite: (playerId) => this.playerSprites.get(playerId),
       getLabel: (playerId) => this.playerNameLabels.get(playerId),
       positionLabel: (label, sprite) => this.positionNameLabel(label, sprite),
-      currentMatch: this.currentMatch,
+      currentMatch: this.replayView?.match ?? this.currentMatch,
       scene: this,
       showTileDestroyedBanner: (cell) => this.showTileDestroyedBanner(cell),
       ignoreUI: (object) => {
@@ -2845,7 +2888,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private beginMainActionLocationPick() {
-    if (this.locationSelectionActive) {
+    if (this.replayView || this.locationSelectionActive) {
       return;
     }
     const selection = this.characterPanel?.getMainActionSelection();
@@ -2878,6 +2921,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private completeMainActionLocationPick(tile: HexTile) {
+    if (this.replayView) {
+      this.cancelMainActionLocationPick();
+      return;
+    }
     const selection = this.characterPanel?.getMainActionSelection();
     if (!selection || !selection.actionId) {
       this.cancelMainActionLocationPick();
@@ -3170,12 +3217,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   private getCurrentPlayerCoord(): Axial | null {
-    if (!this.currentMatch || !this.currentUserId) {
+    const match = this.replayView?.match ?? this.currentMatch;
+    if (!match || !this.currentUserId) {
       return null;
     }
     return (
-      this.currentMatch.playerCharacters?.[this.currentUserId]?.position
-        ?.coord ?? null
+      match.playerCharacters?.[this.currentUserId]?.position?.coord ?? null
     );
   }
 
@@ -3201,8 +3248,9 @@ export class GameScene extends Phaser.Scene {
       texture: "board_icon_skull"
     };
     this.topBanner?.show(bannerPayload);
-    if (this.currentMatch?.map) {
-      const tile = this.currentMatch.map.tiles.find(
+    const displayedMap = this.replayView?.match.map ?? this.currentMatch?.map;
+    if (displayedMap) {
+      const tile = displayedMap.tiles.find(
         (t) => t.coord.q === cell.q && t.coord.r === cell.r
       );
       if (tile) {
@@ -3366,6 +3414,46 @@ export class GameScene extends Phaser.Scene {
     this.locationSelectionHoverText.setVisible(true);
   }
 
+  private applyReplaySnapshot(
+    turn: number,
+    snapshot: ReplaySnapshot | undefined,
+  ): void {
+    if (!this.currentMatch) {
+      return;
+    }
+    if (!snapshot) {
+      this.clearReplaySnapshot();
+      return;
+    }
+    const replayMatch: MatchRecord = {
+      ...this.currentMatch,
+      current_turn: turn,
+      map: snapshot.map ?? this.currentMatch.map,
+      items: snapshot.items ?? this.currentMatch.items,
+      traps: snapshot.traps ?? this.currentMatch.traps,
+      playerCharacters:
+        snapshot.playerCharacters ?? this.currentMatch.playerCharacters,
+      deadCharacters:
+        snapshot.deadCharacters ?? this.currentMatch.deadCharacters,
+    };
+    this.replayView = { turn, snapshot, match: replayMatch };
+    if (replayMatch.map) {
+      this.renderMap(replayMatch.map);
+    }
+    this.renderPlayerCharacters(replayMatch);
+  }
+
+  private clearReplaySnapshot(): void {
+    if (!this.replayView) {
+      return;
+    }
+    this.replayView = null;
+    if (this.currentMatch?.map) {
+      this.renderMap(this.currentMatch.map);
+      this.renderPlayerCharacters(this.currentMatch);
+    }
+  }
+
   private handleLogTabOpened() {
     this.logTabActive = true;
     const turns = this.currentMatch?.current_turn ?? 0;
@@ -3378,9 +3466,7 @@ export class GameScene extends Phaser.Scene {
     this.logTabActive = false;
     this.manualReplayPlaying = false;
     this.characterPanel?.setLogPlaybackState(false);
-    if (this.currentMatch) {
-      this.renderPlayerCharacters(this.currentMatch);
-    }
+    this.clearReplaySnapshot();
     if (this.replayQueue.length > 0 && !this.replayPlaying) {
       void this.flushReplayQueue();
     }
@@ -3397,7 +3483,8 @@ export class GameScene extends Phaser.Scene {
     }
     const cached = this.logReplayCache.get(targetTurn);
     if (cached !== undefined) {
-      this.characterPanel.setLogReplay(targetTurn, maxTurn, cached);
+      this.characterPanel.setLogReplay(targetTurn, maxTurn, cached.events);
+      this.applyReplaySnapshot(targetTurn, cached.snapshot);
       return;
     }
     void this.fetchReplayForTurn(targetTurn);
@@ -3428,8 +3515,13 @@ export class GameScene extends Phaser.Scene {
       const maxTurn =
         payload.max_turn ?? this.currentMatch?.current_turn ?? resolvedTurn;
       const events = Array.isArray(payload.events) ? payload.events : [];
-      this.logReplayCache.set(resolvedTurn, events);
+      const replay: CachedReplay = {
+        events,
+        snapshot: payload.snapshot,
+      };
+      this.logReplayCache.set(resolvedTurn, replay);
       panel.setLogReplay(resolvedTurn, maxTurn, events);
+      this.applyReplaySnapshot(resolvedTurn, payload.snapshot);
     } catch (error) {
       console.warn("get_replay failed", error);
       panel.setLogError("Replay not available.");
@@ -3451,20 +3543,26 @@ export class GameScene extends Phaser.Scene {
     if (this.replayPlaying) {
       return;
     }
-    const events = this.logReplayCache.get(turn);
-    if (!events || events.length === 0) {
+    const replay = this.logReplayCache.get(turn);
+    if (!replay || replay.events.length === 0) {
       return;
     }
+    this.applyReplaySnapshot(turn, replay.snapshot);
     this.manualReplayPlaying = true;
     this.characterPanel?.setLogPlaybackState(true);
     try {
-      await playReplayEvents(this.createMoveReplayContext(), events);
+      await playReplayEvents(this.createMoveReplayContext(), replay.events);
     } catch (error) {
       console.warn("log replay failed", error);
     } finally {
       this.manualReplayPlaying = false;
       this.characterPanel?.setLogPlaybackState(false);
-      if (this.currentMatch) {
+      if (this.replayView) {
+        if (this.replayView.match.map) {
+          this.renderMap(this.replayView.match.map);
+        }
+        this.renderPlayerCharacters(this.replayView.match);
+      } else if (this.currentMatch) {
         this.renderPlayerCharacters(this.currentMatch);
       }
       if (this.replayQueue.length > 0 && !this.replayPlaying) {

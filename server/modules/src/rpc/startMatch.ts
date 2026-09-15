@@ -14,6 +14,7 @@ import {
   ReplayEvent
 } from "@shared";
 import { tailorMapForCharacter } from "../utils/matchView";
+import { createReplaySnapshot } from "../match/replay/snapshot";
 import { getRuntimeMatchId } from "../utils/matchIds";
 
 export function startMatchRpc(
@@ -148,6 +149,7 @@ export function startMatchRpc(
       match_id: matchId,
       turn: 0,
       events: turn0Events,
+      snapshot: createReplaySnapshot(match),
       created_at: Math.floor(Date.now() / 1000)
     });
   } catch (e) {

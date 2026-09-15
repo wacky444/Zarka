@@ -8,6 +8,7 @@ import { resolveTurnForMatch } from "../turnResolution";
 import { validateTime } from "../../utils/validation";
 import { isCharacterIncapacitated } from "../../utils/playerCharacter";
 import { getAliveCharacterIds } from "../checkEndGame";
+import { createReplaySnapshot } from "../replay/snapshot";
 
 const AUTO_CHECK_INTERVAL_MS = 60 * 1000;
 
@@ -133,21 +134,20 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       return { state };
     }
 
-    if (outcome.events.length > 0) {
-      try {
-        storage.appendReplayTurn({
-          match_id: match.match_id,
-          turn: outcome.resolvedTurn,
-          events: outcome.events,
-          created_at: timestampSeconds,
-        });
-      } catch (error) {
-        logger.warn(
-          "autoskip replay write failed for %s: %s",
-          runtimeMatchId,
-          (error as Error).message,
-        );
-      }
+    try {
+      storage.appendReplayTurn({
+        match_id: match.match_id,
+        turn: outcome.resolvedTurn,
+        events: outcome.events,
+        snapshot: createReplaySnapshot(match),
+        created_at: timestampSeconds,
+      });
+    } catch (error) {
+      logger.warn(
+        "autoskip replay write failed for %s: %s",
+        runtimeMatchId,
+        (error as Error).message,
+      );
     }
 
     try {
