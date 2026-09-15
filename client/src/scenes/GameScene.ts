@@ -57,6 +57,7 @@ import { createSkinContainer, SkinContainer } from "../ui/PlayerSkinRenderer";
 import { AccountService } from "../services/AccountService";
 import { VictoryOverlay } from "../ui/VictoryOverlay";
 import { isAdminViewEnabled } from "../services/adminView";
+import { t } from "../services/i18n";
 
 type PlayerEliminationBannerEvent = {
   playerId: string;
@@ -154,6 +155,12 @@ export class GameScene extends Phaser.Scene {
   private playerCoordForTinting: Axial | null = null;
   private victoryOverlay: VictoryOverlay | null = null;
   private reportTransitionStarted = false;
+  private loadingOverlay: Phaser.GameObjects.Container | null = null;
+  private loadingTrack: Phaser.GameObjects.Rectangle | null = null;
+  private loadingFill: Phaser.GameObjects.Rectangle | null = null;
+  private loadingLabel: Phaser.GameObjects.Text | null = null;
+  private loadingPercent: Phaser.GameObjects.Text | null = null;
+  private loadingProgress = 0;
   private pendingMatchEndPayload:
     | import("@shared").MatchEndedMessagePayload
     | null = null;
@@ -225,7 +232,118 @@ export class GameScene extends Phaser.Scene {
     super("GameScene");
   }
 
+  private createLoadingOverlay() {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const barWidth = Math.min(420, Math.max(220, width - 64));
+    const barHeight = 18;
+    const barX = (width - barWidth) / 2;
+    const barY = height / 2 + 14;
+
+    this.loadingOverlay = this.add.container(0, 0).setDepth(10000);
+    const background = this.add
+      .rectangle(width / 2, height / 2, width, height, 0x080b18, 1)
+      .setScrollFactor(0);
+    const title = this.add
+      .text(width / 2, height / 2 - 42, "Zarka", {
+        color: "#f8fafc",
+        fontFamily: "Arial",
+        fontSize: "30px",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0);
+    this.loadingLabel = this.add
+      .text(width / 2, height / 2 - 8, t("Loading game..."), {
+        color: "#cbd5e1",
+        fontFamily: "Arial",
+        fontSize: "16px",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0);
+    this.loadingTrack = this.add
+      .rectangle(width / 2, barY, barWidth, barHeight, 0x1e293b, 1)
+      .setOrigin(0.5)
+      .setScrollFactor(0);
+    this.loadingFill = this.add
+      .rectangle(barX, barY, 1, barHeight, 0x4f8cff, 1)
+      .setOrigin(0, 0.5)
+      .setScrollFactor(0);
+    this.loadingPercent = this.add
+      .text(width / 2, barY + 32, "0%", {
+        color: "#93c5fd",
+        fontFamily: "Arial",
+        fontSize: "14px",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0);
+    this.loadingOverlay.add([
+      background,
+      title,
+      this.loadingLabel,
+      this.loadingTrack,
+      this.loadingFill,
+      this.loadingPercent,
+    ]);
+
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.resizeLoadingOverlay, this);
+    this.resizeLoadingOverlay();
+  }
+
+  private updateLoadingProgress(value: number) {
+    this.loadingProgress = Phaser.Math.Clamp(value, 0, 1);
+    this.resizeLoadingOverlay();
+    if (this.loadingPercent) {
+      this.loadingPercent.setText(`${Math.round(this.loadingProgress * 100)}%`);
+    }
+  }
+
+  private completeLoadingAssets() {
+    this.loadingProgress = 1;
+    this.resizeLoadingOverlay();
+    this.loadingPercent?.setText("100%");
+  }
+
+  private resizeLoadingOverlay() {
+    if (!this.loadingOverlay || !this.loadingTrack || !this.loadingFill) {
+      return;
+    }
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const barWidth = Math.min(420, Math.max(220, width - 64));
+    const barHeight = 18;
+    const barY = height / 2 + 14;
+    const barX = (width - barWidth) / 2;
+    const children = this.loadingOverlay.list;
+    const background = children[0] as Phaser.GameObjects.Rectangle;
+    const title = children[1] as Phaser.GameObjects.Text;
+    background.setPosition(width / 2, height / 2).setSize(width, height);
+    title.setPosition(width / 2, height / 2 - 42);
+    this.loadingLabel?.setPosition(width / 2, height / 2 - 8);
+    this.loadingTrack.setPosition(width / 2, barY).setSize(barWidth, barHeight);
+    this.loadingFill
+      .setPosition(barX, barY)
+      .setSize(Math.max(1, barWidth * this.loadingProgress), barHeight);
+    this.loadingPercent?.setPosition(width / 2, barY + 32);
+  }
+
+  private hideLoadingOverlay() {
+    this.load.off("progress", this.updateLoadingProgress, this);
+    this.load.off("complete", this.completeLoadingAssets, this);
+    this.scale.off(Phaser.Scale.Events.RESIZE, this.resizeLoadingOverlay, this);
+    this.loadingOverlay?.destroy(true);
+    this.loadingOverlay = null;
+    this.loadingTrack = null;
+    this.loadingFill = null;
+    this.loadingLabel = null;
+    this.loadingPercent = null;
+  }
+
   preload() {
+    this.createLoadingOverlay();
+    this.load.on("progress", this.updateLoadingProgress, this);
+    this.load.once("complete", this.completeLoadingAssets, this);
+
     // Load the texture atlas (PNG + XML) from the public assets folder
     this.load.atlasXML(
       "hex",
@@ -432,6 +550,7 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.layoutUI();
+    this.hideLoadingOverlay();
     this.scale.on("resize", this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       if (this.mainActionDebounceTimer !== null) {
@@ -447,6 +566,7 @@ export class GameScene extends Phaser.Scene {
         this.extraSecondaryActionDebounceTimer = null;
       }
       this.scale.off("resize", this.handleResize, this);
+      this.hideLoadingOverlay();
       this.input.off(Phaser.Input.Events.POINTER_DOWN, this.pointerDownHandler);
       this.input.off(Phaser.Input.Events.POINTER_UP, this.pointerUpHandler);
       this.input.off(
