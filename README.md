@@ -80,7 +80,9 @@ Google login uses Google Identity Services to obtain a browser ID token, which i
 VITE_GOOGLE_CLIENT_ID=your-google-oauth-web-client-id
 ```
 
-Add the deployed site's origin to the OAuth client's authorized JavaScript origins in Google Cloud Console. For GitHub Pages deployments, set the `GOOGLE_CLIENT_ID` repository variable so the deployment workflow injects `VITE_GOOGLE_CLIENT_ID` at build time.
+Add every origin used by the client to the OAuth client's **Authorized JavaScript origins** in Google Cloud Console. Origins must match the scheme, host, and port exactly; do not include a path. Typical local entries are `http://localhost:5173` and `http://127.0.0.1:5173`. Add the deployed GitHub Pages origin separately, for example `https://<owner>.github.io`.
+
+For GitHub Pages deployments, set the Actions **repository variable** `GOOGLE_CLIENT_ID` (or `VITE_GOOGLE_CLIENT_ID`) and run a new deployment. The client ID is public and is embedded into the production bundle at build time; changing the variable does not update an already deployed build.
 
 ### Localization
 
