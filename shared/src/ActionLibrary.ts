@@ -25,7 +25,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Genera un incendio que inflige [color=#f97373]2[/color] de vida a quienes actúan en la localización durante los próximos 3 turnos."
+          "Genera un incendio que inflige [health-damage]2[/health-damage] de vida a quienes actúan en la localización durante los próximos 3 turnos."
       }
     ],
     notes: [
@@ -48,7 +48,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requirements: [{ description: "Debe realizarse en el hospital." }],
     effects: [
       {
-        description: "Recupera [color=#4ade80]5[/color] puntos de vida."
+        description: "Recupera [health-recover]5[/health-recover] puntos de vida."
       }
     ],
     tags: ["Support", "Status"]
@@ -73,7 +73,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Recupera [color=#facc15]20[/color] de esfuerzo con comida o cadáver, [color=#facc15]12[/color] con bebida; comer cadáver resta [color=#f97373]1[/color] de vida."
+          "Recupera [energy-recover]20[/energy-recover] de esfuerzo con comida o cadáver, [energy-recover]12[/energy-recover] con bebida; comer cadáver resta [health-damage]1[/health-damage] de vida."
       },
       {
         description:
@@ -87,7 +87,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         "Permite consumir una segunda ración en la misma acción, incluidos cadáveres si se es caníbal."
     },
     notes: [
-      "Si no se dispone de esfuerzo suficiente al ejecutar la acción se pierde [color=#f97373]1[/color] punto de vida adicional tras completarla."
+      "Si no se dispone de esfuerzo suficiente al ejecutar la acción se pierde [health-damage]1[/health-damage] punto de vida adicional tras completarla."
     ],
     tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"]
   },
@@ -106,7 +106,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Recupera [color=#facc15]20[/color] puntos de esfuerzo sin consumir recursos propios."
+          "Recupera [energy-recover]20[/energy-recover] puntos de esfuerzo sin consumir recursos propios."
       }
     ],
     tags: ["Support", "Status"]
@@ -132,7 +132,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Recupera [color=#4ade80]5[/color] puntos de vida y puede aplicarse a un aliado en la misma localización."
+          "Recupera [health-recover]5[/health-recover] puntos de vida y puede aplicarse a un aliado en la misma localización."
       }
     ],
     extraExecution: {
@@ -159,7 +159,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Recupera [color=#4ade80]8[/color] puntos de vida y puede aplicarse a otro personaje en la misma localización."
+          "Recupera [health-recover]8[/health-recover] puntos de vida y puede aplicarse a otro personaje en la misma localización."
       }
     ],
     extraExecution: {
@@ -264,7 +264,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Instala una trampa en una entrada que inflige [color=#f97373]7[/color] de vida al primer personaje que entre o salga por ella."
+          "Instala una trampa en una entrada que inflige [health-damage]7[/health-damage] de vida al primer personaje que entre o salga por ella."
       }
     ],
     extraExecution: {
@@ -346,14 +346,14 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Inflige [color=#f97373]4[/color] puntos de vida al objetivo."
+          "Inflige [health-damage]4[/health-damage] puntos de vida al objetivo."
       }
     ],
     extraExecution: {
       cost: 3,
       maxRepetitions: 3,
       description:
-        "Cada repetición aumenta el daño en [color=#f97373]1[/color] punto, hasta +[color=#f97373]3[/color]."
+        "Cada repetición aumenta el daño en [health-damage]1[/health-damage] punto, hasta +[health-damage]3[/health-damage]."
     },
     texture: "Board Game Icons",
     frame: "hand_cross.png",
@@ -496,7 +496,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Envenena una ración, bebida o alimento visible; al consumirlo el objetivo pierde [color=#f97373]1[/color] de vida durante 5 acciones y duplica su esfuerzo extra."
+          "Envenena una ración, bebida o alimento visible; al consumirlo el objetivo pierde [health-damage]1[/health-damage] de vida durante 5 acciones y duplica su esfuerzo extra."
       }
     ],
     extraExecution: {
@@ -556,7 +556,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Inflige [color=#f97373]4[/color] de vida si es un molotov o [color=#f97373]1[/color] con otro objeto; puede lanzarse a la misma localización o a una adyacente sin priorizar salvo visión especial."
+          "Inflige [health-damage]4[/health-damage] de vida si es un molotov o [health-damage]1[/health-damage] con otro objeto; puede lanzarse a la misma localización o a una adyacente sin priorizar salvo visión especial."
       }
     ],
     extraExecution: {
@@ -591,7 +591,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Inflige [color=#f97373]9[/color] de vida a todos en la localización (excepto al usuario) o [color=#f97373]11[/color] a un único objetivo; no puede esquivarse."
+          "Inflige [health-damage]9[/health-damage] de vida a todos en la localización (excepto al usuario) o [health-damage]11[/health-damage] a un único objetivo; no puede esquivarse."
       }
     ],
     texture: "Board Game Icons",
@@ -611,7 +611,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Obliga al objetivo a huir a una localización aleatoria adyacente y le hace perder [color=#facc15]3[/color] de esfuerzo."
+          "Obliga al objetivo a huir a una localización aleatoria adyacente y le hace perder [energy-damage]3[/energy-damage] de esfuerzo."
       }
     ],
     extraExecution: {
@@ -639,7 +639,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Activa todas las cargas colocadas por el usuario en esa localización infligiendo [color=#f97373]12[/color] de vida; la explosión se oye a dos casillas."
+          "Activa todas las cargas colocadas por el usuario en esa localización infligiendo [health-damage]12[/health-damage] de vida; la explosión se oye a dos casillas."
       }
     ],
     extraExecution: {
@@ -670,14 +670,14 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requirements: [{ description: "Requiere tener un hacha." }],
     effects: [
       {
-        description: "Inflige [color=#f97373]8[/color] de vida al objetivo."
+        description: "Inflige [health-damage]8[/health-damage] de vida al objetivo."
       }
     ],
     extraExecution: {
       cost: 3,
       maxRepetitions: 3,
       description:
-        "Cada repetición añade [color=#f97373]1[/color] punto de daño adicional hasta +[color=#f97373]3[/color]."
+        "Cada repetición añade [health-damage]1[/health-damage] punto de daño adicional hasta +[health-damage]3[/health-damage]."
     },
     texture: "Board Game Icons",
     frame: "sword.png",
@@ -706,14 +706,14 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Inflige [color=#f97373]5[/color] de vida a todos en la localización ([color=#f97373]7[/color] con bate de clavos) permitiendo excluir objetivos específicos."
+          "Inflige [health-damage]5[/health-damage] de vida a todos en la localización ([health-damage]7[/health-damage] con bate de clavos) permitiendo excluir objetivos específicos."
       }
     ],
     extraExecution: {
       cost: 3,
       maxRepetitions: 3,
       description:
-        "Cada repetición aumenta el daño en [color=#f97373]1[/color] punto."
+        "Cada repetición aumenta el daño en [health-damage]1[/health-damage] punto."
     },
     texture: "Board Game Icons",
     frame: "sword.png",
@@ -794,7 +794,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Inflige [color=#f97373]10[/color] de vida a un objetivo en la misma localización o adyacente; el disparo se oye a una casilla salvo silenciador."
+          "Inflige [health-damage]10[/health-damage] de vida a un objetivo en la misma localización o adyacente; el disparo se oye a una casilla salvo silenciador."
       }
     ],
     extraExecution: {
@@ -830,7 +830,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Inflige [color=#f97373]7[/color] de vida en la misma localización o [color=#f97373]6[/color] a una adyacente sin generar ruido."
+          "Inflige [health-damage]7[/health-damage] de vida en la misma localización o [health-damage]6[/health-damage] a una adyacente sin generar ruido."
       }
     ],
     extraExecution: {
@@ -865,7 +865,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Destruye la localización objetivo y todos los objetos, infligiendo [color=#f97373]20[/color] de vida a cada presencia; visible desde todo el pueblo."
+          "Destruye la localización objetivo y todos los objetos, infligiendo [health-damage]20[/health-damage] de vida a cada presencia; visible desde todo el pueblo."
       }
     ],
     texture: "Board Game Icons",
@@ -890,14 +890,14 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     effects: [
       {
-        description: "Inflige [color=#f97373]2[/color] puntos de vida."
+        description: "Inflige [health-damage]2[/health-damage] puntos de vida."
       }
     ],
     extraExecution: {
       cost: 3,
       maxRepetitions: 3,
       description:
-        "Cada repetición añade [color=#f97373]1[/color] punto de daño."
+        "Cada repetición añade [health-damage]1[/health-damage] punto de daño."
     },
     texture: "Board Game Icons",
     frame: "hand.png",
@@ -1032,14 +1032,14 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Otorga [color=#facc15]6[/color] puntos de esfuerzo gratuito para el próximo turno."
+          "Otorga [energy-recover]6[/energy-recover] puntos de esfuerzo gratuito para el próximo turno."
       }
     ],
     extraExecution: {
       cost: 1,
       maxRepetitions: 3,
       description:
-        "Por cada punto de vida sacrificado se recuperan [color=#facc15]3[/color] puntos de esfuerzo, hasta [color=#facc15]9[/color] puntos totales."
+        "Por cada punto de vida sacrificado se recuperan [energy-recover]3[/energy-recover] puntos de esfuerzo, hasta [energy-recover]9[/energy-recover] puntos totales."
     },
     notes: [
       "Concentrarse no provoca pérdida de vida adicional si se está intoxicado."
@@ -1201,7 +1201,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Infecta al objetivo; quienes compartan localización al final del turno pierden [color=#f97373]1[/color] de vida salvo desmayados o el propio infectado."
+          "Infecta al objetivo; quienes compartan localización al final del turno pierden [health-damage]1[/health-damage] de vida salvo desmayados o el propio infectado."
       }
     ],
     texture: "Board Game Icons",
@@ -1247,14 +1247,14 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     effects: [
       {
-        description: "Recupera [color=#4ade80]2[/color] puntos de vida."
+        description: "Recupera [health-recover]2[/health-recover] puntos de vida."
       }
     ],
     extraExecution: {
       cost: 2,
       maxRepetitions: 1,
       description:
-        "Si otro personaje duerme con esfuerzo se recuperan [color=#4ade80]5[/color] puntos de vida adicionales."
+        "Si otro personaje duerme con esfuerzo se recuperan [health-recover]5[/health-recover] puntos de vida adicionales."
     },
     texture: "Board Game Icons",
     frame: "pawn_table.png",

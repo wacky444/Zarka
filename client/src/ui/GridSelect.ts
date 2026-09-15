@@ -2,6 +2,31 @@ import Phaser from "phaser";
 import { HoverTooltip } from "./HoverTooltip";
 import { THEME } from "./ColorPalette";
 
+const ACTION_DESCRIPTION_TAG_PATTERN =
+  /\[(health-damage|energy-damage|energy-recover|health-recover)\]([\s\S]*?)\[\/\1\]/g;
+
+const ACTION_DESCRIPTION_TAG_COLORS: Record<string, string> = {
+  "health-damage": THEME.colors.healthDamage,
+  "energy-damage": THEME.colors.energyDamage,
+  "energy-recover": THEME.colors.energyRecover,
+  "health-recover": THEME.colors.healthRecover,
+};
+
+export function parseActionDescription(content: string): string {
+  return content.replace(
+    ACTION_DESCRIPTION_TAG_PATTERN,
+    (_match, tag: string, value: string) =>
+      `[color=${ACTION_DESCRIPTION_TAG_COLORS[tag]}]${value}[/color]`,
+  );
+}
+
+function stripActionDescriptionMarkup(content: string): string {
+  return parseActionDescription(content).replace(
+    /\[color=[^\]]+\]|\[\/color\]/g,
+    "",
+  );
+}
+
 export interface GridSelectItem {
   id: string;
   name: string;
@@ -872,7 +897,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         const tooltipBody =
           typeof item.description === "string" &&
           item.description.trim().length > 0
-            ? item.description
+            ? stripActionDescriptionMarkup(item.description)
             : undefined;
         const tooltipTitle = item.name?.length ? item.name : undefined;
         if (!tooltipTitle && !tooltipBody) {
@@ -1324,8 +1349,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
     maxWidth: number,
     maxLines: number,
   ): boolean {
-    const textValue = typeof content === "string" ? content : "";
-    const hasContent = textValue.trim().length > 0;
+    const rawTextValue = typeof content === "string" ? content : "";
+    const textValue = parseActionDescription(rawTextValue);
+    const hasContent = rawTextValue.trim().length > 0;
     if (!hasContent) {
       target.setText("");
       target.setVisible(false);
