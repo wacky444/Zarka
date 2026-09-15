@@ -277,6 +277,9 @@ export class MainScene extends Phaser.Scene {
         }
       });
       this.turnService.setOnMatchRemoved(() => {
+        if (this.scene.isActive("EndGameReportScene")) {
+          return;
+        }
         const gameScene = this.scene.get("GameScene") as import("./GameScene").GameScene | undefined;
         if (gameScene && gameScene.isVictoryOverlayActive()) {
           return;
@@ -351,6 +354,9 @@ export class MainScene extends Phaser.Scene {
       this.myMatchesListView.setOnView(async (matchId: string) => {
         // Switch to the match view
         await this.joinMatch(matchId);
+      });
+      this.myMatchesListView.setOnReport((matchId: string) => {
+        this.openMatchReport(matchId);
       });
       this.myMatchesListView.setOnBack(() => {
         this.showView("main");
@@ -501,6 +507,18 @@ export class MainScene extends Phaser.Scene {
       return raw as T; // already parsed
     }
     throw new Error("Unsupported payload type: " + typeof raw);
+  }
+
+  public showMyMatchesView() {
+    this.showView("myMatchList");
+  }
+
+  private openMatchReport(matchId: string) {
+    if (!matchId) {
+      return;
+    }
+    this.scene.sleep("MainScene");
+    this.scene.run("EndGameReportScene", { matchId });
   }
 
   private showView(view: "main" | "matchList" | "myMatchList" | "inMatch") {

@@ -216,8 +216,10 @@ export function tailorMatchForPlayer(
       }
     }
   }
+  const publicMatch = { ...match };
+  delete publicMatch.reportProgress;
   return {
-    ...match,
+    ...publicMatch,
     playerCharacters: playerCharacters ?? {},
     playerList: playerList ?? {},
     deadCharacters,

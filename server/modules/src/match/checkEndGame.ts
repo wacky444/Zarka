@@ -1,7 +1,10 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
+import type { ReplayEvent } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { isCharacterDead } from "../utils/playerCharacter";
+import { createStorageService } from "../services/storageService";
+import { buildMatchReport } from "./matchReport";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -183,6 +186,8 @@ export function finalizeMatchIfEnded(
   match: MatchRecord,
   nk: nkruntime.Nakama,
   logger: nkruntime.Logger,
+  currentTurnEvents: ReplayEvent[] = [],
+  resolvedTurn = match.current_turn,
 ): EndGameOutcome {
   const outcome = checkEndGameOutcome(match);
   logger.info(
@@ -206,9 +211,9 @@ export function finalizeMatchIfEnded(
   const participants = Array.isArray(match.players) ? match.players : [];
   const nowMs = Date.now();
   const winnerId = outcome.winnerId;
+  let users: nkruntime.User[] = [];
 
   if (participants.length > 0) {
-    let users: nkruntime.User[] = [];
     try {
       users = nk.usersGetId(participants) ?? [];
     } catch (error) {
@@ -219,7 +224,31 @@ export function finalizeMatchIfEnded(
       );
       users = [];
     }
+  }
 
+  try {
+    const storage = createStorageService(nk);
+    if (!storage.getMatchReport(match.match_id)) {
+      const report = buildMatchReport(
+        match,
+        storage,
+        Math.floor(nowMs / 1000),
+        outcome.reason,
+        resolvedTurn,
+        currentTurnEvents,
+        users,
+      );
+      storage.writeMatchReport(report);
+    }
+  } catch (error) {
+    logger.error(
+      "finalizeMatchIfEnded report write failed for match %s: %s",
+      match.match_id,
+      (error && (error as Error).message) || String(error),
+    );
+  }
+
+  if (participants.length > 0) {
     const userMap: Record<string, nkruntime.User> = {};
     for (const user of users) {
       const userId =

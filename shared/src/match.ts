@@ -4,6 +4,7 @@ import type {
   PlayerCharacterUnknown
 } from "./playerCharacter";
 import type { ItemId } from "./Item";
+import type { MatchReportProgress } from "./matchReport";
 
 export interface MatchItemRecord {
   item_id: string;
@@ -38,6 +39,7 @@ export interface MatchRecord {
   teams?: string[];
   teamCounts?: Record<string, number>;
   lastAutoAdvanceAt?: number;
+  reportProgress?: MatchReportProgress;
 }
 
 export interface TurnRecord {

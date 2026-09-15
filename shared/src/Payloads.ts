@@ -7,6 +7,7 @@ import type {
 import type { ReplayEvent } from "./Replay";
 import type { MatchChatMessage } from "./chat";
 import type { Skin, UserAccount } from "./UserAccount";
+import type { MatchReport } from "./matchReport";
 import type { SkillId } from "./skills/Skill";
 
 export const OPCODE_SETTINGS_UPDATE = 100;
@@ -146,7 +147,19 @@ export type ListMyMatchesPayload = {
     turnsToBeAt1Tile?: number;
     name?: string;
     started?: boolean;
+    status?: "waiting" | "in_progress" | "finished";
+    ended_at?: number;
+    turns?: number;
+    duration_ms?: number;
+    player_team_won?: boolean;
+    has_report?: boolean;
   }>;
+  error?: string;
+};
+
+export type GetMatchReportPayload = {
+  ok?: boolean;
+  report?: MatchReport;
   error?: string;
 };
 

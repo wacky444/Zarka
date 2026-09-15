@@ -9,6 +9,7 @@ import type {
 } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { finalizeMatchIfEnded } from "./checkEndGame";
+import { recordMatchReportProgress } from "./matchReport";
 import { updateCooldownsForTurn } from "./actions/cooldowns";
 import { executeAction, type TileLookup } from "./actionExecutor";
 
@@ -322,8 +323,9 @@ export function advanceTurn(
     }
   }
 
+  recordMatchReportProgress(match);
   if (nk) {
-    finalizeMatchIfEnded(match, nk, logger);
+    finalizeMatchIfEnded(match, nk, logger, replayEvents, resolvedTurn);
   }
   return { events: replayEvents };
 }

@@ -153,6 +153,7 @@ export class GameScene extends Phaser.Scene {
   private playerViewRange: number = 0;
   private playerCoordForTinting: Axial | null = null;
   private victoryOverlay: VictoryOverlay | null = null;
+  private reportTransitionStarted = false;
   private pendingMatchEndPayload:
     | import("@shared").MatchEndedMessagePayload
     | null = null;
@@ -353,14 +354,7 @@ export class GameScene extends Phaser.Scene {
       camera: this.cam
     });
     this.victoryOverlay = new VictoryOverlay(this, {
-      onReturnToMenu: () => {
-        this.scene.stop("GameScene");
-        if (this.scene.isSleeping("MainScene")) {
-          this.scene.wake("MainScene");
-        } else {
-          this.scene.start("MainScene");
-        }
-      }
+      onTransitionComplete: () => this.openEndGameReport(),
     });
     if (this.uiCam) {
       this.victoryOverlay.ignoreCamera(this.cam);
@@ -1332,7 +1326,11 @@ export class GameScene extends Phaser.Scene {
   private triggerVictoryOverlay(
     payload: import("@shared").MatchEndedMessagePayload
   ) {
-    if (!this.victoryOverlay || !this.currentUserId) {
+    if (
+      !this.victoryOverlay ||
+      !this.currentUserId ||
+      this.reportTransitionStarted
+    ) {
       return;
     }
     const isWinner = payload.winnerId === this.currentUserId;
@@ -1353,8 +1351,45 @@ export class GameScene extends Phaser.Scene {
       result,
       winnerName,
       winnerId: payload.winnerId,
-      turns
+      turns,
     });
+    this.animateEndGameCamera(payload.winnerId);
+  }
+
+  private animateEndGameCamera(winnerId?: string) {
+    const winner = winnerId ? this.playerSprites.get(winnerId) : undefined;
+    const targetZoom = Math.max(this.cam.zoom, 1.25);
+    const config: Phaser.Types.Tweens.TweenBuilderConfig = {
+      targets: this.cam,
+      zoom: targetZoom,
+      duration: 1800,
+      ease: "Cubic.out",
+    };
+    if (winner) {
+      config.scrollX = winner.x - this.cam.width / (2 * targetZoom);
+      config.scrollY = winner.y - this.cam.height / (2 * targetZoom);
+    }
+    this.tweens.add(config);
+  }
+
+  private openEndGameReport() {
+    if (this.reportTransitionStarted) {
+      return;
+    }
+    this.reportTransitionStarted = true;
+    const matchId = this.registry.get("currentMatchId") as string | null;
+    const runtimeMatchId = this.currentMatch?.runtime_match_id ?? matchId;
+    if (runtimeMatchId && this.turnService) {
+      this.turnService
+        .leaveRealtimeMatch(runtimeMatchId)
+        .catch((error) => console.warn("Failed to leave finished match", error));
+    }
+    this.scene.stop("GameScene");
+    if (matchId) {
+      this.scene.run("EndGameReportScene", { matchId });
+    } else if (this.scene.isSleeping("MainScene")) {
+      this.scene.wake("MainScene");
+    }
   }
 
   isVictoryOverlayActive(): boolean {

@@ -8,9 +8,16 @@ import {
   TURN_COLLECTION,
   CHAT_COLLECTION,
   CHAT_KEY_PREFIX,
+  MATCH_REPORT_COLLECTION,
+  MATCH_REPORT_KEY_PREFIX,
 } from "../constants";
 import { MatchRecord, TurnRecord } from "../models/types";
-import type { MatchChatLog, MatchChatMessage, ReplayRecord } from "@shared";
+import type {
+  MatchChatLog,
+  MatchChatMessage,
+  MatchReport,
+  ReplayRecord,
+} from "@shared";
 import { NakamaWrapper, createNakamaWrapper } from "./nakamaWrapper";
 
 export interface MatchStorageObject {
@@ -219,6 +226,33 @@ export class StorageService {
     }
 
     return items;
+  }
+
+  getMatchReport(matchId: string): MatchReport | null {
+    const reads = this.nk.storageRead([
+      {
+        collection: MATCH_REPORT_COLLECTION,
+        key: this.getMatchReportKey(matchId),
+        userId: SERVER_USER_ID,
+      },
+    ]);
+    if (!reads || reads.length === 0 || !reads[0]?.value) {
+      return null;
+    }
+    return reads[0].value as MatchReport;
+  }
+
+  writeMatchReport(report: MatchReport): void {
+    this.nk.storageWrite([
+      {
+        collection: MATCH_REPORT_COLLECTION,
+        key: this.getMatchReportKey(report.match_id),
+        userId: SERVER_USER_ID,
+        value: report,
+        permissionRead: 2,
+        permissionWrite: 0,
+      },
+    ]);
   }
 
   getChatLog(matchId: string): ChatLogStorageObject | null {
@@ -435,6 +469,10 @@ export class StorageService {
 
   private getChatKey(matchId: string): string {
     return CHAT_KEY_PREFIX + matchId;
+  }
+
+  private getMatchReportKey(matchId: string): string {
+    return MATCH_REPORT_KEY_PREFIX + matchId;
   }
 
   private getTurnKey(matchId: string, turnNumber: number): string {

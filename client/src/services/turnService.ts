@@ -264,6 +264,13 @@ export class TurnService {
     return res;
   }
 
+  async getMatchReport(match_id: string) {
+    const res = await this.client.rpc(this.session, "get_match_report", {
+      match_id,
+    });
+    return res;
+  }
+
   async removeMatch(match_id: string) {
     const res = await this.client.rpc(this.session, "remove_match", {
       match_id

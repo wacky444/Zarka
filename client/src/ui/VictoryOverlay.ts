@@ -2,7 +2,7 @@ import Phaser from "phaser";
 
 export interface VictoryOverlayOptions {
   depth?: number;
-  onReturnToMenu: () => void;
+  onTransitionComplete: () => void;
 }
 
 export type MatchEndResultType = "win" | "loss" | "draw";
@@ -25,12 +25,15 @@ export class VictoryOverlay {
   private readonly statsText: Phaser.GameObjects.Text;
   private readonly menuButton: Phaser.GameObjects.Text;
   private readonly emitterContainer: Phaser.GameObjects.Container;
+  private readonly onTransitionComplete: () => void;
   private particleGraphics: Phaser.GameObjects.Graphics[] = [];
   private pulseTween: Phaser.Tweens.Tween | null = null;
+  private transitionTimer: Phaser.Time.TimerEvent | null = null;
   private isVisible = false;
 
   constructor(scene: Phaser.Scene, options: VictoryOverlayOptions) {
     this.scene = scene;
+    this.onTransitionComplete = options.onTransitionComplete;
     const depth = options.depth ?? 10000;
 
     const width = scene.scale.width;
@@ -108,8 +111,9 @@ export class VictoryOverlay {
         this.menuButton.setStyle({ backgroundColor: "#2563eb", color: "#ffffff" });
       })
       .on("pointerdown", () => {
-        options.onReturnToMenu();
+        // The report transition is intentionally not skippable.
       });
+    this.menuButton.disableInteractive();
     this.container.add(this.menuButton);
   }
 
@@ -184,6 +188,8 @@ export class VictoryOverlay {
       });
     }
 
+    this.menuButton.setText("Loading report...");
+    this.menuButton.disableInteractive();
     this.menuButton.setScale(0.8);
     this.menuButton.setAlpha(0);
     this.scene.tweens.add({
@@ -209,6 +215,13 @@ export class VictoryOverlay {
       ease: "Sine.easeInOut",
       delay: 700
     });
+
+    this.transitionTimer?.remove(false);
+    this.transitionTimer = this.scene.time.delayedCall(2400, () => {
+      if (this.isVisible) {
+        this.onTransitionComplete();
+      }
+    });
   }
 
   hide() {
@@ -218,6 +231,8 @@ export class VictoryOverlay {
       this.pulseTween.stop();
       this.pulseTween = null;
     }
+    this.transitionTimer?.remove(false);
+    this.transitionTimer = null;
     this.clearParticles();
   }
 
@@ -243,6 +258,8 @@ export class VictoryOverlay {
     if (this.pulseTween) {
       this.pulseTween.stop();
     }
+    this.transitionTimer?.remove(false);
+    this.transitionTimer = null;
     this.clearParticles();
     this.container.destroy();
   }

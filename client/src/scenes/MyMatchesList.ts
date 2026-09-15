@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { TurnService } from "../services/turnService";
+import { t } from "../services/i18n";
 import { makeButton, type UIButton } from "../ui/button";
 import type { ListMyMatchesPayload } from "@shared";
 
@@ -16,6 +17,12 @@ type MyMatch = {
   rows?: number;
   name?: string;
   started?: boolean;
+  status?: "waiting" | "in_progress" | "finished";
+  ended_at?: number;
+  turns?: number;
+  duration_ms?: number;
+  player_team_won?: boolean;
+  has_report?: boolean;
 };
 
 type MyMatchRowItem = {
@@ -50,6 +57,7 @@ export class MyMatchesListView {
   private fetching = false;
   private onLeave?: (matchId: string) => void | Promise<void>;
   private onView?: (matchId: string) => void | Promise<void>;
+  private onReport?: (matchId: string) => void | Promise<void>;
   private onBack?: () => void;
   private turnService: TurnService | null = null;
 
@@ -126,6 +134,10 @@ export class MyMatchesListView {
 
   setOnView(handler: (matchId: string) => void | Promise<void>) {
     this.onView = handler;
+  }
+
+  setOnReport(handler: (matchId: string) => void | Promise<void>) {
+    this.onReport = handler;
   }
 
   setOnBack(handler: () => void) {
@@ -214,7 +226,15 @@ export class MyMatchesListView {
       const turns = m.current_turn;
       const matchName = m.name && m.name.trim() ? m.name : `Match ${idx + 1}`;
       const isCreator = this.scene.registry.get("currentUserId") === m.creator;
-      const stateLabel = m.started ? "In Progress" : "Waiting";
+      const isFinished = m.status === "finished";
+      let stateLabel: string;
+      if (isFinished) {
+        stateLabel = this.formatFinishedSummary(m);
+      } else if (m.started) {
+        stateLabel = t("In Progress");
+      } else {
+        stateLabel = t("Waiting");
+      }
       const hostName =
         m.creator && hostMap[m.creator]
           ? hostMap[m.creator]
@@ -223,14 +243,28 @@ export class MyMatchesListView {
 
       const text = `${
         idx + 1
-      }. ${matchName} | ${hostDisplay} | ${playerCount}/${maxPlayers} players | ${turns} turns | ${stateLabel}`;
-      this.createRow(matchId, text);
+      }. ${matchName} | ${hostDisplay} | ${playerCount}/${maxPlayers} ${t("Players")} | ${turns} ${t("Turns")} | ${stateLabel}`;
+      this.createRow(matchId, text, isFinished);
     });
 
     this.layoutMyMatches();
   }
 
-  private createRow(matchId: string, text: string) {
+  private formatFinishedSummary(match: MyMatch): string {
+    const duration = this.formatDuration(match.duration_ms ?? 0);
+    return match.player_team_won
+      ? `${t("Finished")} | ${duration} | ${t("Win")}`
+      : `${t("Finished")} | ${duration}`;
+  }
+
+  private formatDuration(durationMs: number): string {
+    const totalSeconds = Math.max(0, Math.round(durationMs / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  }
+
+  private createRow(matchId: string, text: string, isFinished: boolean) {
     const lineObj = this.scene.add
       .text(0, 0, text, {
         color: "#00ccff",
@@ -244,10 +278,12 @@ export class MyMatchesListView {
       this.scene,
       0,
       0,
-      "View",
+      isFinished ? t("Report") : t("View"),
       async () => {
-        if (this.onView) {
-          await this.onView(matchId);
+        if (isFinished) {
+          await this.onReport?.(matchId);
+        } else {
+          await this.onView?.(matchId);
         }
       },
       ["myMatchList"]
@@ -259,16 +295,19 @@ export class MyMatchesListView {
       this.scene,
       0,
       0,
-      "Leave",
+      t("Leave"),
       async () => {
-        if (this.onLeave) {
-          await this.onLeave(matchId);
+        if (!isFinished) {
+          await this.onLeave?.(matchId);
         }
       },
       ["myMatchList"]
     ).setOrigin(0.5);
     this.container.add(leaveBtn);
     this.listItems.push(leaveBtn);
+    if (isFinished) {
+      leaveBtn.setVisible(false).setActive(false);
+    }
 
     this.rowItems.push({ textObj: lineObj, viewBtn, leaveBtn });
   }
