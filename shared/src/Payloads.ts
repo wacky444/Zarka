@@ -249,6 +249,20 @@ export type UpgradeSkillPayload = {
   error?: string;
 };
 
+export type UpdateTestamentPayload = {
+  ok?: boolean;
+  match_id?: string;
+  user_id?: string;
+  recipient_id?: string;
+  character?: PlayerCharacter;
+  error?: string;
+};
+
+export type UpdateTestamentRequest = {
+  match_id: string;
+  recipient_id?: string | null;
+};
+
 export type UpgradeSkillRequest = {
   match_id: string;
   skill_id?: SkillId;

@@ -17,4 +17,6 @@ export * from "./SkinOptions";
 export * from "./skills/Skill";
 export * from "./skills/SkillLibrary";
 export * from "./skills/SkillLogic";
+export * from "./Shop";
+export * from "./ShopLibrary";
 

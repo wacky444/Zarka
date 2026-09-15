@@ -47,6 +47,7 @@ import {
 import { CharacterPanelPlayerListView } from "./CharacterPanelPlayerListView";
 import { Subtabs } from "./Subtabs";
 import { CharacterPanelSkillsView } from "./CharacterPanelSkillsView";
+import { CharacterPanelShopView } from "./CharacterPanelShopView";
 
 export type CharacterSubTabKey = "status" | "skills";
 
@@ -182,6 +183,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private readonly tabConfigs: Array<{ key: TabKey; label: string }> = [
     { key: "character", label: "Character" },
     { key: "items", label: "Items" },
+    { key: "shop", label: "Shop" },
     { key: "players", label: "Players" },
     { key: "chat", label: "Chat" },
     { key: "log", label: "Log" }
@@ -197,8 +199,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private characterElements: Phaser.GameObjects.GameObject[] = [];
   private characterSubtabs!: Subtabs<CharacterSubTabKey>;
   private skillsView!: CharacterPanelSkillsView;
+  private shopView!: CharacterPanelShopView;
   private statusElements: Phaser.GameObjects.GameObject[] = [];
   private itemsElements: Phaser.GameObjects.GameObject[] = [];
+  private shopElements: Phaser.GameObjects.GameObject[] = [];
   private playersElements: Phaser.GameObjects.GameObject[] = [];
   private chatElements: Phaser.GameObjects.GameObject[] = [];
   private tabsController!: CharacterPanelTabs;
@@ -352,6 +356,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       return;
     }
     this.setReadyState(!this.readyState, true);
+  };
+  private readonly handleTestamentChange = (recipientId: string | null) => {
+    this.emit("testament-change", recipientId);
   };
   private readyPointerIsDown = false;
   private readonly handleReadyPointerDown = (
@@ -600,6 +607,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.scrollPanel?.setMouseWheelScrollerEnable?.(false);
       this.scrollPanel?.setScrollerEnable?.(false);
       this.skillsView?.setScrollerEnable?.(false);
+      this.shopView?.setScrollerEnable(false);
       this.playersTabView?.setScrollerEnable?.(false);
       this.emit("grid-modal-open");
     }
@@ -610,6 +618,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.scrollPanel?.setMouseWheelScrollerEnable?.(true);
       this.scrollPanel?.setScrollerEnable?.(true);
       this.skillsView?.setScrollerEnable?.(true);
+      this.shopView?.setScrollerEnable(true);
       this.playersTabView?.setScrollerEnable?.(true);
       this.emit("grid-modal-close");
     }
@@ -1320,6 +1329,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.itemsTitle,
       this.inventoryGrid
     ];
+    this.shopView = new CharacterPanelShopView(scene, this, {
+      margin: MARGIN,
+      contentTop,
+      boxWidth,
+      panelHeight: this.panelHeight
+    });
+    this.shopView.on("testament-change", this.handleTestamentChange, this);
+    this.shopView.on("modal-open", this.handleActionModalOpen, this);
+    this.shopView.on("modal-close", this.handleActionModalClose, this);
+    this.shopElements = this.shopView.getElements();
     this.playersTabView = new CharacterPanelPlayerListView(scene, this, {
       margin: MARGIN,
       contentTop,
@@ -1467,6 +1486,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       defaultKey: "character",
       characterElements: this.characterElements,
       itemsElements: this.itemsElements,
+      shopElements: this.shopElements,
       playersElements: this.playersElements,
       chatElements: this.chatElements,
       onCharacterTabShow: () => {
@@ -1481,6 +1501,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       },
       onItemsTabHide: () => {
         this.inventoryGrid.setActive(false);
+      },
+      onShopTabShow: () => {
+        this.shopView.setVisible(true);
+        this.shopView.setScrollerEnable(true);
+      },
+      onShopTabHide: () => {
+        this.shopView.setVisible(false);
       },
       onPlayersTabShow: () => {
         this.playersTabView.refresh();
@@ -1759,6 +1786,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     );
     this.characterSubtabs?.destroy();
     this.skillsView?.destroy();
+    this.shopView?.off("testament-change", this.handleTestamentChange, this);
+    this.shopView?.off("modal-open", this.handleActionModalOpen, this);
+    this.shopView?.off("modal-close", this.handleActionModalClose, this);
+    this.shopView?.destroy();
     this.logView?.destroy();
     this.chatView?.destroy();
     this.playersTabView?.destroy();
@@ -2157,6 +2188,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       itemsBoxWidth - 24,
       Math.max(0, itemsBoxHeight - 60)
     );
+    this.shopView.layout({
+      margin: MARGIN,
+      contentTop: itemsBoxY,
+      boxWidth: itemsBoxWidth,
+      panelHeight: height
+    });
     this.playersTabView.layout({
       margin: MARGIN,
       contentTop: itemsBoxY,
@@ -2268,6 +2305,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       currentUserId
     );
     this.updateItemOptions(match ?? null, currentUserId);
+    this.shopView.update(match ?? null, currentUserId, this.playerOptions);
     if (!match || !currentUserId) {
       this.currentTurn = 0;
       this.applyCharacter(null, null, false);

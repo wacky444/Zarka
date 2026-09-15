@@ -18,6 +18,8 @@ export interface PlayerCharacter {
   actionPlan?: PlayerActionPlan;
   foundItems?: string[];
   corpseRations?: number;
+  testamentRecipientId?: string;
+  testamentProcessed?: boolean;
 }
 
 export interface PlayerCharacterUnknown {

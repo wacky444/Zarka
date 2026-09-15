@@ -15,7 +15,8 @@ import {
   type GetUserAccountPayload,
   type Skin,
   type SkillId,
-  type UpgradeSkillRequest
+  type UpgradeSkillRequest,
+  type UpdateTestamentRequest
 } from "@shared";
 
 export type Move = { n: number; ts: number };
@@ -248,6 +249,14 @@ export class TurnService {
       match_id,
       skill_ids
     } satisfies UpgradeSkillRequest);
+    return res;
+  }
+
+  async updateTestament(match_id: string, recipient_id: string | null) {
+    const res = await this.client.rpc(this.session, "update_testament", {
+      match_id,
+      recipient_id
+    } satisfies UpdateTestamentRequest);
     return res;
   }
 

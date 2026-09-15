@@ -39,7 +39,8 @@ import {
   ItemLibrary,
   DEFAULT_SKIN,
   type SkillId,
-  type UpgradeSkillPayload
+  type UpgradeSkillPayload,
+  type UpdateTestamentPayload
 } from "@shared";
 import { buildBoardIconUrl, deriveBoardIconKey } from "../ui/actionIcons";
 import {
@@ -471,6 +472,11 @@ export class GameScene extends Phaser.Scene {
     this.characterPanel.on("chat-send", this.handleChatSend, this);
     this.characterPanel.on("chat-tab-opened", this.handleChatTabOpened, this);
     this.characterPanel.on("apply-skills", this.handleApplySkills, this);
+    this.characterPanel.on(
+      "testament-change",
+      this.handleTestamentChange,
+      this
+    );
 
     if (this.turnService) {
       const skin = await this.turnService.getUserSkin();
@@ -2697,6 +2703,50 @@ export class GameScene extends Phaser.Scene {
   }
 
   private isUpgradingSkill = false;
+  private isUpdatingTestament = false;
+  private pendingTestamentRecipient: string | null | undefined;
+
+  private async handleTestamentChange(recipientId: string | null) {
+    this.pendingTestamentRecipient = recipientId;
+    if (this.isUpdatingTestament) {
+      return;
+    }
+    this.isUpdatingTestament = true;
+    try {
+      while (this.pendingTestamentRecipient !== undefined) {
+        const nextRecipient = this.pendingTestamentRecipient;
+        this.pendingTestamentRecipient = undefined;
+        const matchId =
+          (this.registry.get("currentMatchId") as string | null) ??
+          this.currentMatch?.match_id;
+        if (!this.turnService || !this.currentUserId || !matchId) {
+          continue;
+        }
+        const res = await this.turnService.updateTestament(
+          matchId,
+          nextRecipient
+        );
+        const payload = this.parseRpcPayload<UpdateTestamentPayload>(res);
+        if (payload.error) {
+          throw new Error(payload.error);
+        }
+        if (payload.character && this.currentMatch) {
+          this.currentMatch.playerCharacters =
+            this.currentMatch.playerCharacters ?? {};
+          this.currentMatch.playerCharacters[this.currentUserId] =
+            payload.character;
+          this.updateCharacterPanel(this.currentMatch);
+        }
+      }
+    } catch (error) {
+      console.warn("update_testament failed", error);
+      if (this.currentMatch) {
+        this.updateCharacterPanel(this.currentMatch);
+      }
+    } finally {
+      this.isUpdatingTestament = false;
+    }
+  }
 
   private async handleApplySkills(skillIds: SkillId[]) {
     const matchId =

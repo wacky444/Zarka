@@ -1,6 +1,12 @@
 import type Phaser from "phaser";
 
-export type TabKey = "character" | "items" | "players" | "chat" | "log";
+export type TabKey =
+  | "character"
+  | "items"
+  | "shop"
+  | "players"
+  | "chat"
+  | "log";
 
 export interface CharacterPanelTabEntry {
   key: TabKey;
@@ -14,12 +20,15 @@ interface CharacterPanelTabsOptions {
   defaultKey: TabKey;
   characterElements: Phaser.GameObjects.GameObject[];
   itemsElements: Phaser.GameObjects.GameObject[];
+  shopElements: Phaser.GameObjects.GameObject[];
   playersElements: Phaser.GameObjects.GameObject[];
   chatElements: Phaser.GameObjects.GameObject[];
   onCharacterTabShow: () => void;
   onCharacterTabHide: () => void;
   onItemsTabShow: () => void;
   onItemsTabHide: () => void;
+  onShopTabShow: () => void;
+  onShopTabHide: () => void;
   onPlayersTabShow: () => void;
   onPlayersTabHide: () => void;
   onChatTabShow: () => void;
@@ -117,6 +126,13 @@ export class CharacterPanelTabs {
       this.options.onItemsTabShow();
     } else {
       this.options.onItemsTabHide();
+    }
+    const showShop = this.activeKey === "shop";
+    this.toggleElements(this.options.shopElements, showShop);
+    if (showShop) {
+      this.options.onShopTabShow();
+    } else {
+      this.options.onShopTabHide();
     }
     const showPlayers = this.activeKey === "players";
     this.toggleElements(this.options.playersElements, showPlayers);

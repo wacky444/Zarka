@@ -173,6 +173,77 @@ function applyPendingZarkanPayout(match: MatchRecord): void {
   }
 }
 
+function applyTestaments(match: MatchRecord, replayEvents: ReplayEvent[]): void {
+  if (!match.playerCharacters) {
+    return;
+  }
+  for (const playerId in match.playerCharacters) {
+    if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, playerId)) {
+      continue;
+    }
+    const deceased = match.playerCharacters[playerId];
+    if (
+      !deceased ||
+      !isCharacterDead(deceased) ||
+      deceased.testamentProcessed === true
+    ) {
+      continue;
+    }
+    deceased.testamentProcessed = true;
+    const recipientId = deceased.testamentRecipientId;
+    const recipient = recipientId
+      ? match.playerCharacters[recipientId]
+      : undefined;
+    const amount =
+      typeof deceased.economy?.zarkans === "number" &&
+      isFinite(deceased.economy.zarkans)
+        ? Math.max(0, Math.floor(deceased.economy.zarkans))
+        : 0;
+    if (
+      !recipientId ||
+      recipientId === playerId ||
+      !recipient ||
+      isCharacterDead(recipient) ||
+      amount <= 0
+    ) {
+      continue;
+    }
+    if (!recipient.economy) {
+      recipient.economy = {
+        zarkans: 0,
+        pendingZarkans: 0,
+        incomeInterval: 1
+      };
+    }
+    const recipientBalance =
+      typeof recipient.economy.zarkans === "number" &&
+      isFinite(recipient.economy.zarkans)
+        ? recipient.economy.zarkans
+        : 0;
+    recipient.economy.zarkans = recipientBalance + amount;
+    deceased.economy.zarkans = 0;
+    replayEvents.push({
+      kind: "player",
+      actorId: deceased.id,
+      action: {
+        actionId: "give",
+        metadata: {
+          testament: true
+        }
+      },
+      targets: [
+        {
+          targetId: recipientId,
+          metadata: {
+            testament: true,
+            zarkansReceived: amount
+          }
+        }
+      ]
+    });
+  }
+}
+
 function clearDodgeAttempts(match: MatchRecord) {
   if (!match.playerCharacters) {
     return;
@@ -324,6 +395,7 @@ export function advanceTurn(
     }
   }
 
+  applyTestaments(match, replayEvents);
   recordMatchReportProgress(match);
   if (nk) {
     finalizeMatchIfEnded(match, nk, logger, replayEvents, resolvedTurn);

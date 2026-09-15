@@ -411,6 +411,23 @@ export class CharacterPanelLogView {
           lines.push(this.buildFailedActionLine(actor, event.action.metadata));
           continue;
         }
+        const actionMetadata = event.action.metadata as
+          | { testament?: unknown }
+          | undefined;
+        if (actionId === "give" && actionMetadata?.testament === true) {
+          const target = event.targets?.[0];
+          const amount =
+            typeof target?.metadata?.zarkansReceived === "number"
+              ? target.metadata.zarkansReceived
+              : 0;
+          if (target && amount > 0) {
+            const recipient = this.resolvePlayerName(target.targetId);
+            lines.push(
+              `${recipient} received ${amount} zarkans as testamento`
+            );
+          }
+          continue;
+        }
         const definition = ActionLibrary[actionId as ActionId] ?? null;
         const actionName = definition
           ? definition.name

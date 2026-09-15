@@ -21,6 +21,7 @@ import {
   getUserAccountRpc,
   updateSkinRpc,
   upgradeSkillRpc,
+  updateTestamentRpc,
   setAdminViewRpc,
   facebookDataDeletionRpc,
   facebookDataDeletionStatusRpc
@@ -186,6 +187,14 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register upgrade_skill: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("update_testament", updateTestamentRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register update_testament: %s",
       (error && (error as Error).message) || String(error)
     );
   }
