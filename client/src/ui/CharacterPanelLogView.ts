@@ -467,6 +467,37 @@ export class CharacterPanelLogView {
             } else {
               lines.push(`${actor} hit nobody with the chemical weapon`);
             }
+          } else if (actionId === "shoot_pistol") {
+            const totalDamage =
+              typeof event.action.damageDealt === "number"
+                ? event.action.damageDealt
+                : 0;
+            const weaponUsed = (
+              event.action.metadata as { weaponUsed?: string }
+            )?.weaponUsed;
+            const weaponLabel =
+              weaponUsed === "suppressed_pistol"
+                ? "a silenced pistol"
+                : "a pistol";
+            if (totalDamage > 0) {
+              lines.push(
+                `${actor} dealt ${totalDamage} damage with ${weaponLabel}`
+              );
+            } else {
+              lines.push(`${actor} missed with ${weaponLabel}`);
+            }
+          } else if (actionId === "shoot_harpoon") {
+            const totalDamage =
+              typeof event.action.damageDealt === "number"
+                ? event.action.damageDealt
+                : 0;
+            if (totalDamage > 0) {
+              lines.push(
+                `${actor} dealt ${totalDamage} damage with a harpoon`
+              );
+            } else {
+              lines.push(`${actor} missed with a harpoon`);
+            }
           } else if (actionId === "search") {
             const foundItems = this.extractSearchItemNames(
               event.action.metadata

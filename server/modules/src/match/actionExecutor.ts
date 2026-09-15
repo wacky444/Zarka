@@ -17,6 +17,8 @@ import { executePunchAction } from "./actions/punch";
 import { executeKnifeAttackAction } from "./actions/knifeAttack";
 import { executeAxeAttackAction } from "./actions/axeAttack";
 import { executeBatAttackAction } from "./actions/batAttack";
+import { executeShootPistolAction } from "./actions/shootPistol";
+import { executeShootHarpoonAction } from "./actions/shootHarpoon";
 import { executeSleepAction } from "./actions/sleep";
 import { executeRecoverAction } from "./actions/recover";
 import { executeBreakfastAction } from "./actions/breakfast";
@@ -688,6 +690,102 @@ export function executeAction(
               missingItemId: "bat",
             }),
           )
+        : [];
+      eventsForAction = [...energyEvents, ...actionEvents, ...failureEvents];
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.shoot_pistol.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const eligible: PlannedActionParticipant[] = [];
+      const missing: PlannedActionParticipant[] = [];
+      for (const participant of participants) {
+        const hasWeapon =
+          hasCarriedItem(participant.character, "suppressed_pistol") ||
+          hasCarriedItem(participant.character, "pistol");
+        const hasAmmo = hasCarriedItem(participant.character, "bullet", 1);
+        if (hasWeapon && hasAmmo) {
+          eligible.push(participant);
+        } else {
+          missing.push(participant);
+          clearPlanByKey(participant.character, participant.planKey);
+          match.playerCharacters![participant.playerId] = participant.character;
+        }
+      }
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = eligible.length
+        ? executeShootPistolAction(eligible, match)
+        : [];
+      const failureEvents = missing.length
+        ? missing.map((participant) => {
+            const hasWeapon =
+              hasCarriedItem(participant.character, "suppressed_pistol") ||
+              hasCarriedItem(participant.character, "pistol");
+            return createFailedActionEvent(participant, action.id, {
+              reason: "missing_item",
+              missingItemId: hasWeapon ? "bullet" : "pistol",
+            });
+          })
+        : [];
+      eventsForAction = [...energyEvents, ...actionEvents, ...failureEvents];
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.shoot_harpoon.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const eligible: PlannedActionParticipant[] = [];
+      const missing: PlannedActionParticipant[] = [];
+      for (const participant of participants) {
+        const hasWeapon = hasCarriedItem(participant.character, "harpoon");
+        const hasAmmo = hasCarriedItem(participant.character, "arrow", 1);
+        if (hasWeapon && hasAmmo) {
+          eligible.push(participant);
+        } else {
+          missing.push(participant);
+          clearPlanByKey(participant.character, participant.planKey);
+          match.playerCharacters![participant.playerId] = participant.character;
+        }
+      }
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = eligible.length
+        ? executeShootHarpoonAction(eligible, match)
+        : [];
+      const failureEvents = missing.length
+        ? missing.map((participant) => {
+            const hasWeapon = hasCarriedItem(participant.character, "harpoon");
+            return createFailedActionEvent(participant, action.id, {
+              reason: "missing_item",
+              missingItemId: hasWeapon ? "arrow" : "harpoon",
+            });
+          })
         : [];
       eventsForAction = [...energyEvents, ...actionEvents, ...failureEvents];
       for (const participant of participants) {

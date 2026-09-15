@@ -20,6 +20,8 @@ import { animateFocusEvent } from "./replayActions/FocusAnimation";
 import { animateFailedActionEvent } from "./replayActions/FailedActionAnimation";
 import { animateDetectEvent } from "./replayActions/DetectAnimation";
 import { animateChemicalWeaponEvent } from "./replayActions/ChemicalWeaponAnimation";
+import { animateShootPistolEvent } from "./replayActions/ShootPistolAnimation";
+import { animateShootHarpoonEvent } from "./replayActions/ShootHarpoonAnimation";
 import { playRandomSound } from "./soundPlayer";
 
 const TILE_DESTROYED_SOUNDS = ["explosion_small", "explosion_medium"];
@@ -64,6 +66,10 @@ export async function playReplayEvents(
       await animateAxeAttackEvent(context, event);
     } else if (actionId === ActionLibrary.bat_attack.id) {
       await animateBatAttackEvent(context, event);
+    } else if (actionId === ActionLibrary.shoot_pistol.id) {
+      await animateShootPistolEvent(context, event);
+    } else if (actionId === ActionLibrary.shoot_harpoon.id) {
+      await animateShootHarpoonEvent(context, event);
     } else if (actionId === ActionLibrary.punch.id) {
       await animatePunchEvent(context, event);
     } else if (actionId === ActionLibrary.pick_up.id) {

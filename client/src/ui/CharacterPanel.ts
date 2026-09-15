@@ -127,6 +127,7 @@ const ITEM_DISPLAY_NAMES: Record<string, string> = {
   fuel: "fuel",
   chainsaw: "chainsaw",
   pistol: "pistol",
+  suppressed_pistol: "silenced pistol",
   bullet: "bullet",
   harpoon: "harpoon",
   arrow: "arrow",
@@ -3096,6 +3097,28 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         );
         if (!hasBat) {
           return "Missing bat";
+        }
+      } else if (definition.id === "shoot_pistol") {
+        const hasPistol = carried.some(
+          (s) =>
+            (s.itemId === "pistol" || s.itemId === "suppressed_pistol") &&
+            typeof s.quantity === "number" &&
+            s.quantity > 0
+        );
+        const hasBullet = carried.some(
+          (s) =>
+            s.itemId === "bullet" &&
+            typeof s.quantity === "number" &&
+            s.quantity > 0
+        );
+        if (!hasPistol && !hasBullet) {
+          return "Missing pistol, bullet";
+        }
+        if (!hasPistol) {
+          return "Missing pistol";
+        }
+        if (!hasBullet) {
+          return "Missing bullet";
         }
       } else {
         const missingItems: string[] = [];

@@ -71,6 +71,8 @@ export const ACTION_SOUNDS: Record<string, string[]> = {
   axe_attack: ["sword_slice", "swipe", "crunch_quick"],
   bat_attack: ["harsh_thud", "cardboard_hit", "metal_blunt_tap"],
   knife_attack: ["sword_light", "cork_stabbed", "sword_sharpen"],
+  shoot_pistol: ["explosion_small", "air_burst"],
+  shoot_harpoon: ["whoosh_1", "swipe", "cork_stabbed"],
   move: [
     "foley_footstep_concrete_1",
     "foley_footstep_concrete_2",

@@ -776,6 +776,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 2,
     cooldown: 3,
+    developed: true,
     range: [0, 1],
     experience: {
       base: 1,
@@ -811,6 +812,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 2,
     cooldown: 3,
+    developed: true,
     range: [0, 1],
     experience: {
       base: 1,
