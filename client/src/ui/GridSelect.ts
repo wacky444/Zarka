@@ -93,8 +93,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private readonly emptyLabel: string;
   private readonly columns: number;
   private readonly iconTargetSize: number;
-  private readonly modalWidth: number;
-  private readonly modalHeight: number;
+  private readonly defaultModalWidth: number;
+  private readonly defaultModalHeight: number;
+  private modalWidth: number;
+  private modalHeight: number;
   private readonly cellHeight: number;
   private readonly hitAreaZone: Phaser.GameObjects.Zone;
   private readonly emptyOptionItem: GridSelectItem | null;
@@ -103,6 +105,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private selectedItem: GridSelectItem | null = null;
   private overlay: Phaser.GameObjects.Container | null = null;
   private modalCover: Phaser.GameObjects.Rectangle | null = null;
+  private modalCloseButton: Phaser.GameObjects.Container | null = null;
   private gridTable: RexGridTable | null = null;
   private gridTableMask: Phaser.Display.Masks.GeometryMask | null = null;
   private gridTableMaskShape: Phaser.GameObjects.Rectangle | null = null;
@@ -129,10 +132,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.placeholder = config.placeholder ?? "Select";
     this.emptyLabel = config.emptyLabel ?? "Unknown";
     this.iconTextGap = config.iconTextGap ?? 16;
-    this.modalWidth =
+    this.defaultModalWidth =
       config.modalWidth ?? Math.min(scene.scale.width - 80, 600);
-    this.modalHeight =
+    this.defaultModalHeight =
       config.modalHeight ?? Math.min(scene.scale.height - 80, 480);
+    this.modalWidth = this.defaultModalWidth;
+    this.modalHeight = this.defaultModalHeight;
     this.iconTargetSize = Math.min(this.collapsedHeight - 12, 48);
     this.cellHeight = Math.max(96, config.cellHeight ?? 240);
     this.autoSelectFirst = config.autoSelectFirst !== false;
@@ -450,6 +455,17 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.applyEnabledState();
   }
 
+  private isMobileModal(): boolean {
+    const userAgent =
+      typeof navigator === "undefined" ? "" : navigator.userAgent;
+    return (
+      this.scene.scale.width <= 600 ||
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        userAgent
+      )
+    );
+  }
+
   private openModal() {
     if (!this.enabled || this.items.length === 0) {
       return;
@@ -474,6 +490,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
     }
     const scene = this.scene;
     const { width, height } = scene.scale;
+    const mobile = this.isMobileModal();
+    this.modalWidth = mobile ? width : this.defaultModalWidth;
+    this.modalHeight = mobile ? height : this.defaultModalHeight;
 
     const overlay = scene.add.container(0, 0);
     overlay.setDepth(10000);
@@ -527,7 +546,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
         }
         pointerDownOnCover = false;
         this.tooltip?.hide();
-        this.closeModal();
+        if (!mobile) {
+          this.closeModal();
+        }
       },
     );
     cover.on(
@@ -649,6 +670,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.gridTableMask = this.gridTableMaskShape.createGeometryMask();
     gridTable.setMask?.(this.gridTableMask);
 
+    if (mobile) {
+      this.modalCloseButton = this.createMobileCloseButton(scene, overlay, width);
+    }
+
     this.ensureTooltip();
     this.overlay = overlay;
     this.gridTable = gridTable;
@@ -658,6 +683,39 @@ export class GridSelect extends Phaser.GameObjects.Container {
         this.gridTable.layout?.();
       }
     });
+  }
+
+  private createMobileCloseButton(
+    scene: Phaser.Scene,
+    overlay: Phaser.GameObjects.Container,
+    width: number
+  ): Phaser.GameObjects.Container {
+    const button = scene.add.container(width - 52, 36);
+    const background = scene.add
+      .rectangle(0, 0, 40, 40, 0x334155, 0.95)
+      .setOrigin(0.5)
+      .setStrokeStyle(2, 0x94a3b8, 1)
+      .setInteractive();
+    const label = scene.add
+      .text(0, 0, "×", {
+        color: "#ffffff",
+        fontSize: "28px",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5);
+    background.on(Phaser.Input.Events.POINTER_UP, (
+      _pointer: Phaser.Input.Pointer,
+      _localX: number,
+      _localY: number,
+      event: Phaser.Types.Input.EventData,
+    ) => {
+      event.stopPropagation();
+      this.closeModal();
+    });
+    button.add([background, label]);
+    button.setDepth(10002);
+    overlay.add(button);
+    return button;
   }
 
   private closeModal(forceDestroy = false) {
@@ -680,6 +738,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.overlay.destroy(true);
       this.overlay = null;
       this.modalCover = null;
+      this.modalCloseButton = null;
       this.gridTable = null;
       this.tooltip?.destroy();
       this.tooltip = null;
