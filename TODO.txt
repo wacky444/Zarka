@@ -14,6 +14,8 @@
 
 - selects in mobile should be full screen
 
+- loading bar when loading into a match, now its a blue screen
+
 - traps
 
 - crafting
@@ -37,3 +39,38 @@
 - when changing to older logs the map should load with the info from that turn, and maybe a text at the top that says REPLAY
 
 - zooming with the mouse doest zoom to the mouse position
+
+
+
+ ### Localhost
+
+ The Google client ID is being loaded locally. This error:
+
+ ```text
+   [GSI_LOGGER]: The given origin is not allowed for the given client ID
+ ```
+
+ means Google rejected the current browser origin. In Google Cloud Console, open the Web application OAuth client used by
+ VITE_GOOGLE_CLIENT_ID and add the exact origins under Authorized JavaScript origins:
+
+ ```text
+   http://localhost:5173
+   http://127.0.0.1:5173
+ ```
+
+ Add any other port you use, such as http://localhost:3000.
+
+ Do not include a path or trailing route:
+
+ ```text
+   Correct:   https://wacky444.github.io
+   Incorrect: https://wacky444.github.io/zarka/
+ ```
+
+ The client must be a Web application OAuth client ID, ending in something like:
+
+ ```text
+   .apps.googleusercontent.com
+ ```
+
+ After changing client/.env, restart the Vite dev server.
