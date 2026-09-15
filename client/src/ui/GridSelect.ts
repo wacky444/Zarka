@@ -780,6 +780,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       background: scene.rexUI.add.roundRectangle(0, 0, 10, 10, 8, 0x121c34),
       table: {
         columns: this.columns,
+        reuseCellContainer: true,
         mask: { padding: 2 },
         cellWidth,
         cellHeight,
@@ -843,7 +844,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
         cellIndex: number,
         pointer?: Phaser.Input.Pointer,
       ) => {
-        if (!pointer) {
+        if (!pointer || pointer.wasTouch) {
+          this.tooltip?.hide();
           return;
         }
         const shouldShow =
