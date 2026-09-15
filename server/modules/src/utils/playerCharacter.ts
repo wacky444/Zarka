@@ -179,6 +179,29 @@ function radialDistance(
   return Math.sqrt(dq * dq + dr * dr);
 }
 
+function buildSpawnGroupSizes(playerCount: number): number[] {
+  if (playerCount <= 0) {
+    return [];
+  }
+  if (playerCount <= 3) {
+    const sizes: number[] = [];
+    for (let index = 0; index < playerCount; index += 1) {
+      sizes.push(1);
+    }
+    return sizes;
+  }
+
+  const preferredSize = playerCount <= 4 ? 2 : playerCount <= 12 ? 3 : 4;
+  const groupCount = Math.ceil(playerCount / preferredSize);
+  const baseSize = Math.floor(playerCount / groupCount);
+  const remainder = playerCount % groupCount;
+  const sizes: number[] = [];
+  for (let index = 0; index < groupCount; index += 1) {
+    sizes.push(baseSize + (index < remainder ? 1 : 0));
+  }
+  return sizes;
+}
+
 function buildSpawnPool(
   walkableTiles: SpawnTile[],
   cols: number,
@@ -194,46 +217,81 @@ function buildSpawnPool(
   const safeRows = rows > 0 ? rows : 1;
   const centerQ = (safeCols - 1) / 2;
   const centerR = (safeRows - 1) / 2;
-  const radius = Math.max(
-    1,
-    Math.min(safeCols, safeRows) / SPAWN_RING_RADIUS_FACTOR
-  );
+  const groupSizes = buildSpawnGroupSizes(playerCount);
+  const groupCount = groupSizes.length;
+  const radius =
+    groupCount <= 1
+      ? 0
+      : Math.max(
+          1,
+          Math.min(safeCols, safeRows) / SPAWN_RING_RADIUS_FACTOR
+        );
   const angleOffset = rng() * TWO_PI;
-  const slots = Math.min(playerCount, walkableTiles.length);
   const remaining = walkableTiles.slice();
   const ordered: SpawnTile[] = [];
+  const randomTieBreakers: Record<string, number> = {};
+  for (const tile of remaining) {
+    randomTieBreakers[tile.id] = rng();
+  }
 
-  for (let i = 0; i < slots; i += 1) {
-    const angle = angleOffset + (i / slots) * TWO_PI;
-    const targetQ = centerQ + Math.cos(angle) * radius;
-    const targetR = centerR + Math.sin(angle) * radius;
-    let bestIndex = 0;
-    let bestDistance = Number.POSITIVE_INFINITY;
+  const takeNearest = (
+    targetQ: number,
+    targetR: number,
+    preferNearCenter: boolean
+  ): SpawnTile | undefined => {
+    let bestIndex = -1;
+    let bestScore = Number.POSITIVE_INFINITY;
     for (let index = 0; index < remaining.length; index += 1) {
       const candidate = remaining[index];
-      const candidateDistance = distanceSquared(candidate, targetQ, targetR);
+      const distance = distanceSquared(candidate, targetQ, targetR);
+      const centerPenalty = preferNearCenter
+        ? radialDistance(candidate, centerQ, centerR) * 0.05
+        : 0;
+      const score = distance + centerPenalty;
+      const bestCandidate = bestIndex >= 0 ? remaining[bestIndex] : undefined;
       if (
-        candidateDistance < bestDistance ||
-        (candidateDistance === bestDistance &&
-          candidate.id < remaining[bestIndex].id)
+        score < bestScore ||
+        (score === bestScore &&
+          bestCandidate &&
+          randomTieBreakers[candidate.id] < randomTieBreakers[bestCandidate.id])
       ) {
-        bestDistance = candidateDistance;
         bestIndex = index;
+        bestScore = score;
       }
     }
-    ordered.push(remaining[bestIndex]);
-    remaining.splice(bestIndex, 1);
+    if (bestIndex < 0) {
+      return undefined;
+    }
+    const [selected] = remaining.splice(bestIndex, 1);
+    return selected;
+  };
+
+  for (let groupIndex = 0; groupIndex < groupCount; groupIndex += 1) {
+    const angle = angleOffset + (groupIndex / groupCount) * TWO_PI;
+    const targetQ = centerQ + Math.cos(angle) * radius;
+    const targetR = centerR + Math.sin(angle) * radius;
+    const anchor = takeNearest(targetQ, targetR, true);
+    if (!anchor) {
+      break;
+    }
+    ordered.push(anchor);
+
+    for (let memberIndex = 1; memberIndex < groupSizes[groupIndex]; memberIndex += 1) {
+      const member = takeNearest(anchor.coord.q, anchor.coord.r, true);
+      if (!member) {
+        break;
+      }
+      ordered.push(member);
+    }
   }
 
   remaining.sort((left, right) => {
-    const leftDelta = Math.abs(radialDistance(left, centerQ, centerR) - radius);
-    const rightDelta = Math.abs(
-      radialDistance(right, centerQ, centerR) - radius
-    );
-    if (leftDelta !== rightDelta) {
-      return leftDelta - rightDelta;
+    const leftDistance = radialDistance(left, centerQ, centerR);
+    const rightDistance = radialDistance(right, centerQ, centerR);
+    if (leftDistance !== rightDistance) {
+      return leftDistance - rightDistance;
     }
-    return left.id.localeCompare(right.id);
+    return randomTieBreakers[left.id] - randomTieBreakers[right.id];
   });
 
   return ordered.concat(remaining);
