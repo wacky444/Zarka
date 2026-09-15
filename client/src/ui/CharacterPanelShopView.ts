@@ -37,6 +37,7 @@ type ShopCardItem = {
 };
 
 const HEADER_HEIGHT = 44;
+const SELECTOR_TO_LIST_GAP = 81;
 const CARD_PADDING = 12;
 const CARD_SPACING = 8;
 
@@ -107,7 +108,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.testamentSelector.setActive(false);
     parent.add(this.testamentSelector);
 
-    const listTop = selectorY + 66;
+    const listTop = selectorY + SELECTOR_TO_LIST_GAP;
     const listWidth = width - 24;
     const listHeight = Math.max(100, height - (listTop - layout.contentTop) - 8);
     const matrix = parent.getWorldTransformMatrix();
@@ -238,7 +239,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.testamentSelector.setPosition(options.margin + 12, selectorY);
     this.testamentSelector.setSelectorWidth(width - 24);
 
-    const listTop = selectorY + 66;
+    const listTop = selectorY + SELECTOR_TO_LIST_GAP;
     const listWidth = width - 24;
     const listHeight = Math.max(100, height - (listTop - options.contentTop) - 8);
     const matrix = this.parent.getWorldTransformMatrix();
