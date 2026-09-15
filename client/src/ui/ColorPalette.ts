@@ -18,7 +18,13 @@ export const THEME = {
     energyCost: "#facc15",
     energyAccent: 0xfacc15,
     healthAccent: 0x4ade80,
-    healthDamage: "#f97373"
+    healthDamage: "#f97373",
+
+    loadingBackground: 0x0f172a,
+    loadingTrack: 0x1f2a4a,
+    loadingFill: 0x3b82f6,
+    loadingText: "#cbd5f5",
+    loadingPercent: "#93c5fd"
   },
 
   buttons: {

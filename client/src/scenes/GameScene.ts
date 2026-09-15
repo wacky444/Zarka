@@ -58,6 +58,7 @@ import { AccountService } from "../services/AccountService";
 import { VictoryOverlay } from "../ui/VictoryOverlay";
 import { isAdminViewEnabled } from "../services/adminView";
 import { t } from "../services/i18n";
+import { THEME } from "../ui/ColorPalette";
 
 type PlayerEliminationBannerEvent = {
   playerId: string;
@@ -242,11 +243,18 @@ export class GameScene extends Phaser.Scene {
 
     this.loadingOverlay = this.add.container(0, 0).setDepth(10000);
     const background = this.add
-      .rectangle(width / 2, height / 2, width, height, 0x080b18, 1)
+      .rectangle(
+        width / 2,
+        height / 2,
+        width,
+        height,
+        THEME.colors.loadingBackground,
+        1,
+      )
       .setScrollFactor(0);
     const title = this.add
       .text(width / 2, height / 2 - 42, "Zarka", {
-        color: "#f8fafc",
+        color: THEME.colors.textPrimary,
         fontFamily: "Arial",
         fontSize: "30px",
         fontStyle: "bold",
@@ -255,23 +263,30 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0);
     this.loadingLabel = this.add
       .text(width / 2, height / 2 - 8, t("Loading game..."), {
-        color: "#cbd5e1",
+        color: THEME.colors.loadingText,
         fontFamily: "Arial",
         fontSize: "16px",
       })
       .setOrigin(0.5)
       .setScrollFactor(0);
     this.loadingTrack = this.add
-      .rectangle(width / 2, barY, barWidth, barHeight, 0x1e293b, 1)
+      .rectangle(
+        width / 2,
+        barY,
+        barWidth,
+        barHeight,
+        THEME.colors.loadingTrack,
+        1,
+      )
       .setOrigin(0.5)
       .setScrollFactor(0);
     this.loadingFill = this.add
-      .rectangle(barX, barY, 1, barHeight, 0x4f8cff, 1)
+      .rectangle(barX, barY, 1, barHeight, THEME.colors.loadingFill, 1)
       .setOrigin(0, 0.5)
       .setScrollFactor(0);
     this.loadingPercent = this.add
       .text(width / 2, barY + 32, "0%", {
-        color: "#93c5fd",
+        color: THEME.colors.loadingPercent,
         fontFamily: "Arial",
         fontSize: "14px",
       })
