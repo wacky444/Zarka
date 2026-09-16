@@ -3,6 +3,7 @@
 import { ActionLibrary, getSkillEffectTotal } from "@shared";
 import type {
   ActionDefinition,
+  ActionId,
   ReplayEvent,
   HexTileSnapshot,
   PlayerCharacter,
@@ -12,6 +13,8 @@ import { finalizeMatchIfEnded } from "./checkEndGame";
 import { recordMatchReportProgress } from "./matchReport";
 import { updateCooldownsForTurn } from "./actions/cooldowns";
 import { executeAction, type TileLookup } from "./actionExecutor";
+import { applyHealthDelta } from "./actions/utils";
+import { isCharacterDead } from "../utils/playerCharacter";
 
 function sortedActions(): ActionDefinition[] {
   const keys = Object.keys(ActionLibrary) as Array<keyof typeof ActionLibrary>;
@@ -109,7 +112,10 @@ function removeStateFromAllCharacters(
   }
 }
 
-function applyZarkanIncome(match: MatchRecord): void {
+function applyZarkanIncome(
+  match: MatchRecord,
+  replayEvents: ReplayEvent[],
+): void {
   if (!match.playerCharacters) {
     return;
   }
@@ -137,8 +143,20 @@ function applyZarkanIncome(match: MatchRecord): void {
       isFinite(character.economy.zarkans)
         ? character.economy.zarkans
         : 0;
-    character.economy.zarkans = current + 1 + Math.max(0, skillIncome);
+    const income = 1 + Math.max(0, skillIncome);
+    character.economy.zarkans = current + income;
     character.economy.incomeInterval = 1;
+    replayEvents.push({
+      kind: "player",
+      actorId: character.id,
+      action: {
+        actionId: "zarkan_income" as ActionId,
+        metadata: {
+          zarkansReceived: income,
+          daily: true,
+        },
+      },
+    });
   }
 }
 
@@ -261,9 +279,6 @@ function clearDodgeAttempts(match: MatchRecord) {
   }
 }
 
-import { applyHealthDelta } from "./actions/utils";
-import { isCharacterDead } from "../utils/playerCharacter";
-
 export function advanceTurn(
   match: MatchRecord,
   resolvedTurn: number,
@@ -278,14 +293,14 @@ export function advanceTurn(
     return { events: [] };
   }
   const tileLookup = buildTileLookup(match);
+  const replayEvents: ReplayEvent[] = [];
   activateTemporaryEnergy(match);
-  applyZarkanIncome(match);
+  applyZarkanIncome(match, replayEvents);
   clearDodgeAttempts(match);
   removeStateFromAllCharacters(match, "protected");
   removeStateFromAllCharacters(match, "unconscious");
   updateCooldownsForTurn(match, resolvedTurn);
   const actions = sortedActions();
-  const replayEvents: ReplayEvent[] = [];
 
   if (resolvedTurn === 0) {
     for (const playerId in characters) {

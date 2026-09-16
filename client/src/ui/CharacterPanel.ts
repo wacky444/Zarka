@@ -2725,13 +2725,17 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const carried = Array.isArray(character.inventory?.carriedItems)
       ? character.inventory.carriedItems
       : [];
-    const items = this.buildInventoryItems(carried);
+    const items = this.buildInventoryItems(
+      carried,
+      character.economy?.zarkans ?? 0
+    );
     this.inventoryGrid.setItems(items);
     this.inventoryGrid.refreshLayout();
   }
 
   private buildInventoryItems(
-    stacks: Array<{ itemId?: string; quantity?: number; weight?: number }>
+    stacks: Array<{ itemId?: string; quantity?: number; weight?: number }>,
+    walletZarkans = 0
   ): InventoryGridItem[] {
     const aggregated = new Map<
       string,
@@ -2748,6 +2752,15 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       entry.quantity += quantity;
       entry.totalWeight += weight;
       aggregated.set(id, entry);
+    }
+    const walletQuantity = this.normalizeQuantity(walletZarkans);
+    if (walletQuantity > 0) {
+      const zarkanEntry = aggregated.get("zarkans") ?? {
+        quantity: 0,
+        totalWeight: 0,
+      };
+      zarkanEntry.quantity += walletQuantity;
+      aggregated.set("zarkans", zarkanEntry);
     }
     const items: InventoryGridItem[] = [];
     for (const [itemId, entry] of aggregated) {
