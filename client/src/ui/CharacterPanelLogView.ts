@@ -419,6 +419,10 @@ export class CharacterPanelLogView {
           lines.push(`${actor} received ${amount} daily zarkans`);
           continue;
         }
+        if (actionId === "activate_cameras") {
+          lines.push(`${actor} activated the cameras`);
+          continue;
+        }
         if (actionId === "failedAction") {
           lines.push(this.buildFailedActionLine(actor, event.action.metadata));
           continue;

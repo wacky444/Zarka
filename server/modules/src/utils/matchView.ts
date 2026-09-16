@@ -108,6 +108,10 @@ export function tailorPlayerCharactersForViewer(
     typeof currentTurn === "number" && viewer.remoteView?.turn === currentTurn
       ? viewer.remoteView.coord
       : undefined;
+  const cameraView =
+    typeof currentTurn === "number" && viewer.cameraView?.turn === currentTurn
+      ? viewer.cameraView.playerIds
+      : undefined;
   const filtered: Record<string, PlayerCharacter> = {};
   for (const id in playerCharacters) {
     if (!Object.prototype.hasOwnProperty.call(playerCharacters, id)) {
@@ -130,7 +134,9 @@ export function tailorPlayerCharactersForViewer(
       !!remoteView &&
       remoteView.q === candidateCoord.q &&
       remoteView.r === candidateCoord.r;
-    if (isInNormalView || isInRemoteView) {
+    const isInCameraView =
+      !!cameraView && cameraView.indexOf(id) !== -1;
+    if (isInNormalView || isInRemoteView || isInCameraView) {
       const isDead =
         isCharacterDead(candidate) ||
         (typeof candidate.stats?.health?.current === "number" &&
@@ -143,6 +149,7 @@ export function tailorPlayerCharactersForViewer(
       delete sanitized.revealedItemTypesByPlayerId;
       delete sanitized.actionPlan;
       delete sanitized.remoteView;
+      delete sanitized.cameraView;
       if (!isDead && !isConfirmedTeammate && candidate.teamId !== undefined) {
         delete sanitized.teamId;
       }

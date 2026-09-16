@@ -1082,6 +1082,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 1,
     cooldown: 1,
+    developed: true,
     requirements: [{ description: "Debe estar en la sala de seguridad." }],
     effects: [
       {

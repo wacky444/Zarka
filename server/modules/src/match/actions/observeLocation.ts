@@ -2,8 +2,10 @@ import type { MatchRecord } from "../../models/types";
 import {
   ActionLibrary,
   ExtraExecutionEffect,
+  LocalizationType,
   type ActionId,
   type Axial,
+  type HexTileSnapshot,
   type ReplayActionDone,
   type ReplayPlayerEvent,
 } from "@shared";
@@ -115,8 +117,74 @@ export class ObserveLocationAction extends BaseAction {
   }
 }
 
+class ActivateCamerasAction extends BaseAction {
+  protected override readonly shouldShuffleParticipants = false;
+
+  protected processRoster(
+    roster: PlannedActionParticipant[],
+    match: MatchRecord,
+  ): ReplayPlayerEvent[] {
+    const events: ReplayPlayerEvent[] = [];
+    const tilesById: Record<string, HexTileSnapshot> = {};
+    for (const tile of match.map?.tiles ?? []) {
+      tilesById[tile.id] = tile;
+    }
+
+    for (const participant of roster) {
+      const actionId = participant.plan.actionId as ActionId;
+      if (!actionId) {
+        this.clearPlan(participant);
+        continue;
+      }
+      const playerIds: string[] = [];
+      const characters = match.playerCharacters ?? {};
+      for (const playerId in characters) {
+        if (!Object.prototype.hasOwnProperty.call(characters, playerId)) {
+          continue;
+        }
+        const character = characters[playerId];
+        const tileId = character.position?.tileId;
+        const tile = tileId ? tilesById[tileId] : undefined;
+        if (
+          character.position?.coord &&
+          tile &&
+          tile.localizationType !== LocalizationType.House &&
+          tile.localizationType !== LocalizationType.Factory
+        ) {
+          playerIds.push(playerId);
+        }
+      }
+      participant.character.cameraView = {
+        playerIds,
+        turn: match.current_turn + 1,
+      };
+      const action: ReplayActionDone = {
+        actionId,
+        originLocation: participant.character.position?.coord,
+        metadata: {
+          observedCount: playerIds.length,
+          excludedLocations: [
+            LocalizationType.House,
+            LocalizationType.Factory,
+          ],
+        },
+      };
+      this.clearPlan(participant);
+      match.playerCharacters![participant.playerId] = participant.character;
+      events.push({
+        kind: "player",
+        actorId: participant.playerId,
+        action,
+        visibility: { scope: "all" },
+      });
+    }
+    return events;
+  }
+}
+
 const lookThroughWindowAction = new ObserveLocationAction("look_through_window");
 const binocularsAction = new ObserveLocationAction("use_binoculars");
+const activateCamerasAction = new ActivateCamerasAction();
 
 export function executeLookThroughWindowAction(
   participants: PlannedActionParticipant[],
@@ -130,4 +198,11 @@ export function executeUseBinocularsAction(
   match: MatchRecord
 ): ReplayPlayerEvent[] {
   return binocularsAction.execute(participants, match);
+}
+
+export function executeActivateCamerasAction(
+  participants: PlannedActionParticipant[],
+  match: MatchRecord,
+): ReplayPlayerEvent[] {
+  return activateCamerasAction.execute(participants, match);
 }

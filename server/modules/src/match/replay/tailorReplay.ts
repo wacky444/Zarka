@@ -17,6 +17,9 @@ function filterPlayerEvent(
   event: ReplayPlayerEvent,
   playerId: string
 ): boolean {
+  if (event.visibility?.scope === "all") {
+    return true;
+  }
   if (event.visibility && event.visibility.scope === "limited") {
     return event.visibility.playerIds.indexOf(playerId) !== -1;
   }

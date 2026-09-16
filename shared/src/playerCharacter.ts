@@ -25,10 +25,17 @@ export interface PlayerCharacter {
   testamentProcessed?: boolean;
   /** Cell observed remotely by a one-turn reconnaissance action. */
   remoteView?: PlayerRemoteView;
+  /** Character positions revealed by activated cameras for one turn. */
+  cameraView?: PlayerCameraView;
 }
 
 export interface PlayerRemoteView {
   coord: Axial;
+  turn: number;
+}
+
+export interface PlayerCameraView {
+  playerIds: string[];
   turn: number;
 }
 

@@ -30,6 +30,7 @@ import { executeUseChemicalWeaponAction } from "./actions/UseChemicalWeapon";
 import { executeSearchAction } from "./actions/search";
 import { executeInspectAction } from "./actions/inspect";
 import {
+  executeActivateCamerasAction,
   executeLookThroughWindowAction,
   executeUseBinocularsAction,
 } from "./actions/observeLocation";
@@ -662,6 +663,47 @@ export function executeAction(
         match.playerCharacters![participant.playerId] = participant.character;
       }
       handled = true;
+    }
+  } else if (action.id === ActionLibrary.activate_cameras.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const eligible: PlannedActionParticipant[] = [];
+      for (const participant of participants) {
+        if (
+          isActionAllowedAtLocation(
+            tileLookup,
+            participant.character,
+            action.id,
+          )
+        ) {
+          eligible.push(participant);
+        } else {
+          clearPlanByKey(participant.character, participant.planKey);
+          match.playerCharacters![participant.playerId] = participant.character;
+        }
+      }
+      if (eligible.length > 0) {
+        const energyEvents = applyEnergyForParticipants(
+          eligible,
+          action.energyCost,
+          match,
+          logger,
+        );
+        const actionEvents = executeActivateCamerasAction(eligible, match);
+        eventsForAction = energyEvents.length
+          ? [...energyEvents, ...actionEvents]
+          : actionEvents;
+        for (const participant of eligible) {
+          applyActionCooldown(
+            participant.character,
+            action.id,
+            action.cooldown,
+            resolvedTurn,
+          );
+          match.playerCharacters![participant.playerId] = participant.character;
+        }
+        handled = true;
+      }
     }
   } else if (action.id === ActionLibrary.look_through_window.id) {
     const participants = collectParticipants(match, action.id);
