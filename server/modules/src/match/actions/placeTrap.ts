@@ -43,12 +43,24 @@ interface TransitionLocation {
 
 function sameEdge(
   left: TrapRecord,
-  fromTileId: string,
-  toTileId: string,
+  from: TransitionLocation,
+  to: TransitionLocation,
 ): boolean {
+  const sameTileEdge =
+    (left.from.tileId === from.tileId && left.to.tileId === to.tileId) ||
+    (left.from.tileId === to.tileId && left.to.tileId === from.tileId);
+  if (sameTileEdge) {
+    return true;
+  }
   return (
-    (left.from.tileId === fromTileId && left.to.tileId === toTileId) ||
-    (left.from.tileId === toTileId && left.to.tileId === fromTileId)
+    (left.from.coord.q === from.coord.q &&
+      left.from.coord.r === from.coord.r &&
+      left.to.coord.q === to.coord.q &&
+      left.to.coord.r === to.coord.r) ||
+    (left.from.coord.q === to.coord.q &&
+      left.from.coord.r === to.coord.r &&
+      left.to.coord.q === from.coord.q &&
+      left.to.coord.r === from.coord.r)
   );
 }
 
@@ -79,15 +91,20 @@ export class PlaceTrapAction extends BaseAction {
 
     for (const participant of roster) {
       const origin = participant.character.position;
+      const originTile = origin?.coord
+        ? findTileAtCoord(match, origin.coord)
+        : undefined;
       const destination = resolvePlanDestination(match, participant.plan);
       const destinationTile = destination
         ? findTileAtCoord(match, destination.coord)
         : undefined;
       if (
         !origin?.coord ||
-        !origin.tileId ||
+        !originTile ||
         !destination ||
         !destinationTile ||
+        originTile.walkable === false ||
+        originTile.meta?.destroyed === true ||
         destinationTile.walkable === false ||
         destinationTile.meta?.destroyed === true ||
         axialDistance(origin.coord, destination.coord) !== 1
@@ -133,7 +150,7 @@ export class PlaceTrapAction extends BaseAction {
           ),
           ownerId: participant.playerId,
           from: {
-            tileId: origin.tileId,
+            tileId: originTile.id,
             coord: { ...origin.coord },
           },
           to: {
@@ -252,11 +269,11 @@ export function triggerTrapsForTransition(
   to: TransitionLocation,
   logger?: nkruntime.Logger,
 ): ReplayPlayerEvent[] {
-  if (from.tileId === to.tileId || axialDistance(from.coord, to.coord) !== 1) {
+  if (axialDistance(from.coord, to.coord) !== 1) {
     return [];
   }
   const matchingTraps = (match.traps ?? []).filter((trap) =>
-    sameEdge(trap, from.tileId, to.tileId),
+    sameEdge(trap, from, to),
   );
   if (matchingTraps.length === 0) {
     return [];
