@@ -23,7 +23,7 @@ const BASE_DISCOVERY_COUNT = 5;
 
 type ItemLookup = Record<string, MatchItemRecord>;
 
-type FoundTracking = {
+type DiscoveredItemTracking = {
   list: string[];
   lookup: Record<string, true>;
 };
@@ -53,9 +53,11 @@ export function findTileById(
   return undefined;
 }
 
-function ensureFoundTracking(character: PlayerCharacter): FoundTracking {
-  const existing = Array.isArray(character.foundItems)
-    ? character.foundItems
+function ensureDiscoveredItemTracking(
+  character: PlayerCharacter
+): DiscoveredItemTracking {
+  const existing = Array.isArray(character.discoveredItemIds)
+    ? character.discoveredItemIds
     : [];
   const lookup: Record<string, true> = {};
   const list: string[] = [];
@@ -69,7 +71,7 @@ function ensureFoundTracking(character: PlayerCharacter): FoundTracking {
     lookup[entry] = true;
     list.push(entry);
   }
-  character.foundItems = list;
+  character.discoveredItemIds = list;
   return { list, lookup };
 }
 
@@ -167,7 +169,7 @@ export class SearchAction extends BaseAction {
       }
       const tile = findTileById(match, tileId);
       const tileItems = Array.isArray(tile?.itemIds) ? tile!.itemIds : [];
-      const { list, lookup } = ensureFoundTracking(participant.character);
+      const { list, lookup } = ensureDiscoveredItemTracking(participant.character);
       const undiscovered = tile
         ? tileItems.filter(
             (itemId) => !Object.prototype.hasOwnProperty.call(lookup, itemId)
@@ -205,7 +207,7 @@ export class SearchAction extends BaseAction {
           lookup[itemId] = true;
           list.push(itemId);
         }
-        participant.character.foundItems = list;
+        participant.character.discoveredItemIds = list;
       }
       const remainingHidden = Math.max(
         0,

@@ -16,7 +16,10 @@ export interface PlayerCharacter {
   statuses: PlayerStatusState;
   position?: PlayerPosition;
   actionPlan?: PlayerActionPlan;
-  foundItems?: string[];
+  /** Item records discovered on the map by this character. */
+  discoveredItemIds?: string[];
+  /** Item types this character has revealed in each player's inventory. */
+  revealedItemTypesByPlayerId?: Record<string, string[]>;
   corpseRations?: number;
   testamentRecipientId?: string;
   testamentProcessed?: boolean;

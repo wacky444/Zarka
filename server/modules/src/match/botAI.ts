@@ -705,14 +705,14 @@ function getVisibleItems(
   character: PlayerCharacter
 ): string[] {
   const tileItems = Array.isArray(tile.itemIds) ? tile.itemIds : [];
-  const found = buildFoundLookup(character);
-  if (!found) {
+  const discovered = buildDiscoveredLookup(character);
+  if (!discovered) {
     return tileItems.slice();
   }
   const visible: string[] = [];
   for (let i = 0; i < tileItems.length; i += 1) {
     const id = tileItems[i];
-    if (Object.prototype.hasOwnProperty.call(found, id)) {
+    if (Object.prototype.hasOwnProperty.call(discovered, id)) {
       visible.push(id);
     }
   }
@@ -724,25 +724,25 @@ function getUndiscoveredItems(
   character: PlayerCharacter
 ): string[] {
   const tileItems = Array.isArray(tile.itemIds) ? tile.itemIds : [];
-  const found = buildFoundLookup(character);
-  if (!found) {
+  const discovered = buildDiscoveredLookup(character);
+  if (!discovered) {
     return tileItems.slice();
   }
   const undiscovered: string[] = [];
   for (let i = 0; i < tileItems.length; i += 1) {
     const id = tileItems[i];
-    if (!Object.prototype.hasOwnProperty.call(found, id)) {
+    if (!Object.prototype.hasOwnProperty.call(discovered, id)) {
       undiscovered.push(id);
     }
   }
   return undiscovered;
 }
 
-function buildFoundLookup(
+function buildDiscoveredLookup(
   character: PlayerCharacter
 ): Record<string, true> | null {
-  const list = Array.isArray(character.foundItems)
-    ? character.foundItems.filter(
+  const list = Array.isArray(character.discoveredItemIds)
+    ? character.discoveredItemIds.filter(
         (entry): entry is string => typeof entry === "string"
       )
     : [];

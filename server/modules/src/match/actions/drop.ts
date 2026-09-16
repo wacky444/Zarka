@@ -261,10 +261,10 @@ export class DropAction extends BaseAction {
             tile.itemIds.push(newId);
           }
 
-          if (!Array.isArray(participant.character.foundItems)) {
-            participant.character.foundItems = [];
+          if (!Array.isArray(participant.character.discoveredItemIds)) {
+            participant.character.discoveredItemIds = [];
           }
-          participant.character.foundItems.push(newId);
+          participant.character.discoveredItemIds.push(newId);
 
           processedItems.push({ itemType });
         }

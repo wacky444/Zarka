@@ -9,16 +9,16 @@ import type { MatchRecord } from "../models/types";
 import { axialDistance } from "./location";
 import { isCharacterDead } from "./playerCharacter";
 
-type FoundLookup = Record<string, true>;
+type DiscoveredItemLookup = Record<string, true>;
 
-function buildFoundItemLookup(
+function buildDiscoveredItemLookup(
   character: PlayerCharacter | undefined | null
-): FoundLookup {
-  const lookup: FoundLookup = {};
-  if (!character || !Array.isArray(character.foundItems)) {
+): DiscoveredItemLookup {
+  const lookup: DiscoveredItemLookup = {};
+  if (!character || !Array.isArray(character.discoveredItemIds)) {
     return lookup;
   }
-  for (const entry of character.foundItems) {
+  for (const entry of character.discoveredItemIds) {
     if (typeof entry !== "string" || entry.length === 0) {
       continue;
     }
@@ -27,9 +27,9 @@ function buildFoundItemLookup(
   return lookup;
 }
 
-function filterMapByFoundLookup(
+function filterMapByDiscoveredLookup(
   map: GameMap | undefined,
-  found: FoundLookup
+  discovered: DiscoveredItemLookup
 ): GameMap | undefined {
   if (!map) {
     return undefined;
@@ -39,7 +39,7 @@ function filterMapByFoundLookup(
         ...tile,
         itemIds: Array.isArray(tile.itemIds)
           ? tile.itemIds.filter((itemId) =>
-              Object.prototype.hasOwnProperty.call(found, itemId)
+              Object.prototype.hasOwnProperty.call(discovered, itemId)
             )
           : []
       }))
@@ -50,9 +50,9 @@ function filterMapByFoundLookup(
   };
 }
 
-function filterItemsByFoundLookup(
+function filterItemsByDiscoveredLookup(
   items: MatchItemRecord[] | undefined,
-  found: FoundLookup
+  discovered: DiscoveredItemLookup
 ): MatchItemRecord[] | undefined {
   if (!Array.isArray(items)) {
     return items;
@@ -60,11 +60,11 @@ function filterItemsByFoundLookup(
   if (items.length === 0) {
     return [];
   }
-  if (Object.keys(found).length === 0) {
+  if (Object.keys(discovered).length === 0) {
     return [];
   }
   const filtered = items.filter((item) =>
-    Object.prototype.hasOwnProperty.call(found, item.item_id)
+    Object.prototype.hasOwnProperty.call(discovered, item.item_id)
   );
   if (filtered.length === 0) {
     return [];
@@ -128,13 +128,13 @@ export function tailorPlayerCharactersForViewer(
       const isConfirmedTeammate =
         Array.isArray(viewer.relationships?.confirmedTeammates) &&
         viewer.relationships.confirmedTeammates.indexOf(id) !== -1;
+      const sanitized = { ...candidate };
+      delete sanitized.discoveredItemIds;
+      delete sanitized.revealedItemTypesByPlayerId;
       if (!isDead && !isConfirmedTeammate && candidate.teamId !== undefined) {
-        const sanitized = { ...candidate };
         delete sanitized.teamId;
-        filtered[id] = sanitized;
-      } else {
-        filtered[id] = candidate;
       }
+      filtered[id] = sanitized;
     }
   }
   return filtered;
@@ -144,16 +144,16 @@ export function tailorMapForCharacter(
   map: GameMap | undefined,
   character: PlayerCharacter | undefined | null
 ): GameMap | undefined {
-  const found = buildFoundItemLookup(character);
-  return filterMapByFoundLookup(map, found);
+  const discovered = buildDiscoveredItemLookup(character);
+  return filterMapByDiscoveredLookup(map, discovered);
 }
 
 export function tailorMatchItemsForCharacter(
   items: MatchItemRecord[] | undefined,
   character: PlayerCharacter | undefined | null
 ): MatchItemRecord[] | undefined {
-  const found = buildFoundItemLookup(character);
-  return filterItemsByFoundLookup(items, found);
+  const discovered = buildDiscoveredItemLookup(character);
+  return filterItemsByDiscoveredLookup(items, discovered);
 }
 
 export function tailorMatchForPlayer(
@@ -165,11 +165,13 @@ export function tailorMatchForPlayer(
     playerId && match.playerCharacters
       ? match.playerCharacters[playerId]
       : undefined;
-  const found = buildFoundItemLookup(character);
-  const map = viewAll ? match.map : filterMapByFoundLookup(match.map, found);
+  const discovered = buildDiscoveredItemLookup(character);
+  const map = viewAll
+    ? match.map
+    : filterMapByDiscoveredLookup(match.map, discovered);
   const items = viewAll
     ? match.items
-    : filterItemsByFoundLookup(match.items, found);
+    : filterItemsByDiscoveredLookup(match.items, discovered);
   const playerCharacters = tailorPlayerCharactersForViewer(
     match.playerCharacters,
     playerId,

@@ -1004,6 +1004,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     name: "Registrar",
     category: ActionCategory.Secondary,
     energyCost: 2,
+    developed: true,
     cooldown: 3,
     effects: [
       {

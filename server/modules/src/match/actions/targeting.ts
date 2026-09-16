@@ -14,6 +14,7 @@ export interface TargetCandidate {
 export interface CollectTargetsOptions {
   filter?: (candidate: TargetCandidate) => boolean;
   allowMultiple?: boolean;
+  includeSelf?: boolean;
 }
 
 function coordsEqual(a: Axial | undefined, b: Axial | undefined): boolean {
@@ -68,7 +69,7 @@ export function collectTargets(
     if (!Object.prototype.hasOwnProperty.call(roster, playerId)) {
       continue;
     }
-    if (playerId === participant.playerId) {
+    if (playerId === participant.playerId && options.includeSelf !== true) {
       continue;
     }
     const character = roster[playerId];

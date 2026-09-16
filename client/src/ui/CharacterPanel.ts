@@ -4025,35 +4025,44 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private refreshPlayerOptionsForSelectors(): void {
     const match = this.currentMatch;
-    const baseOptions = this.playerOptions.filter((option) => {
-      if (!match) return true;
-      const char = match.playerCharacters?.[option.id];
-      const isDead =
-        match.deadCharacters?.[option.id] === true ||
-        char?.statuses?.conditions?.includes("dead") ||
-        (typeof char?.stats?.health?.current === "number" &&
-          char.stats.health.current <= 0);
-      return !isDead;
-    });
+    const allowsDeadTarget = (actionId: string | null): boolean =>
+      actionId === "inspect";
     const currentUserId = this.currentUserId;
-
     const mainAllowsSelf = this.selectedActionCanTargetSelf();
     const secondaryAllowsSelf = this.selectedSecondaryActionCanTargetSelf();
     const extraSecondaryAllowsSelf =
       this.selectedExtraSecondaryActionCanTargetSelf();
+    const buildOptions = (
+      actionId: string | null,
+      allowsSelf: boolean
+    ): PlayerOption[] =>
+      this.playerOptions.filter((option) => {
+        if (match) {
+          const char = match.playerCharacters?.[option.id];
+          const isDead =
+            match.deadCharacters?.[option.id] === true ||
+            char?.statuses?.conditions?.includes("dead") ||
+            (typeof char?.stats?.health?.current === "number" &&
+              char.stats.health.current <= 0);
+          if (isDead && !allowsDeadTarget(actionId)) {
+            return false;
+          }
+        }
+        return allowsSelf || option.id !== currentUserId;
+      });
 
-    const mainOptions =
-      currentUserId && !mainAllowsSelf
-        ? baseOptions.filter((option) => option.id !== currentUserId)
-        : baseOptions;
-    const secondaryOptions =
-      currentUserId && !secondaryAllowsSelf
-        ? baseOptions.filter((option) => option.id !== currentUserId)
-        : baseOptions;
-    const extraSecondaryOptions =
-      currentUserId && !extraSecondaryAllowsSelf
-        ? baseOptions.filter((option) => option.id !== currentUserId)
-        : baseOptions;
+    const mainOptions = buildOptions(
+      this.mainActionSelection,
+      mainAllowsSelf
+    );
+    const secondaryOptions = buildOptions(
+      this.secondaryActionSelection,
+      secondaryAllowsSelf
+    );
+    const extraSecondaryOptions = buildOptions(
+      this.extraSecondaryActionSelection,
+      extraSecondaryAllowsSelf
+    );
 
     this.mainPlayerOptions = mainOptions;
     this.secondaryPlayerOptions = secondaryOptions;

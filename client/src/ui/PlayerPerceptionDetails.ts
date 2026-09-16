@@ -21,40 +21,54 @@ export function formatPlayerPerceptionDetails(
   viewer: PlayerCharacter | null | undefined,
   target: PlayerCharacter | null | undefined
 ): string {
-  if (!canPerceiveCharacterDetails(viewer, target) || !target) {
+  if (!target) {
+    return "";
+  }
+  const canPerceiveDetails = canPerceiveCharacterDetails(viewer, target);
+  const revealedTypes =
+    viewer?.revealedItemTypesByPlayerId?.[target.id] ?? [];
+  if (!canPerceiveDetails && revealedTypes.length === 0) {
     return "";
   }
 
+  const lines: string[] = [];
   const energy = target.stats?.energy;
-  const lines = [energy ? `Energy: ${energy.current}` : "Energy: Unknown"];
-  const activeTemporary =
-    (energy as { activeTemporary?: number } | undefined)?.activeTemporary ?? 0;
-  if (activeTemporary > 0) {
-    lines.push(`Extra energy (remaining): ${activeTemporary}`);
-  }
-  if (energy?.temporary && energy.temporary > 0) {
-    lines.push(`Extra energy (next turn): ${energy.temporary}`);
-  }
+  if (canPerceiveDetails) {
+    lines.push(energy ? `Energy: ${energy.current}` : "Energy: Unknown");
+    const activeTemporary =
+      (energy as { activeTemporary?: number } | undefined)?.activeTemporary ?? 0;
+    if (activeTemporary > 0) {
+      lines.push(`Extra energy (remaining): ${activeTemporary}`);
+    }
+    if (energy?.temporary && energy.temporary > 0) {
+      lines.push(`Extra energy (next turn): ${energy.temporary}`);
+    }
 
-  const conditions = target.statuses?.conditions ?? [];
-  const state =
-    conditions.length > 0
-      ? conditions
-          .map((condition) => CONDITION_LABELS[condition] ?? condition)
-          .join(", ")
-      : "Normal";
-  lines.push(`State: ${state}`);
+    const conditions = target.statuses?.conditions ?? [];
+    const state =
+      conditions.length > 0
+        ? conditions
+            .map((condition) => CONDITION_LABELS[condition] ?? condition)
+            .join(", ")
+        : "Normal";
+    lines.push(`State: ${state}`);
+  }
   const carried = target.inventory?.carriedItems ?? [];
   const quantities = new Map<string, number>();
+  const revealedLookup = new Set(revealedTypes);
   for (const stack of carried) {
-    if (Number.isFinite(stack.quantity) && stack.quantity > 0) {
+    if (
+      Number.isFinite(stack.quantity) &&
+      stack.quantity > 0 &&
+      (canPerceiveDetails || revealedLookup.has(stack.itemId))
+    ) {
       quantities.set(
         stack.itemId,
         (quantities.get(stack.itemId) ?? 0) + stack.quantity
       );
     }
   }
-  lines.push("Carried items:");
+  lines.push(canPerceiveDetails ? "Carried items:" : "Revealed carried items:");
   if (quantities.size === 0) {
     lines.push("None");
   } else {

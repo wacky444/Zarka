@@ -162,12 +162,12 @@ function removeItemFromTile(tile: HexTileSnapshot, itemId: string): void {
 }
 
 function removeFoundItem(character: PlayerCharacter, itemId: string): void {
-  if (!Array.isArray(character.foundItems)) {
+  if (!Array.isArray(character.discoveredItemIds)) {
     return;
   }
-  const filtered = character.foundItems.filter((entry) => entry !== itemId);
-  if (filtered.length !== character.foundItems.length) {
-    character.foundItems = filtered;
+  const filtered = character.discoveredItemIds.filter((entry) => entry !== itemId);
+  if (filtered.length !== character.discoveredItemIds.length) {
+    character.discoveredItemIds = filtered;
   }
 }
 
@@ -178,14 +178,14 @@ function filterVisibleItems(
   if (!Array.isArray(tileItemIds) || tileItemIds.length === 0) {
     return [];
   }
-  const found = Array.isArray(character.foundItems)
-    ? character.foundItems.filter((entry) => typeof entry === "string")
+  const discovered = Array.isArray(character.discoveredItemIds)
+    ? character.discoveredItemIds.filter((entry) => typeof entry === "string")
     : [];
-  if (found.length === 0) {
+  if (discovered.length === 0) {
     return [];
   }
   const lookup: Record<string, true> = {};
-  for (const entry of found) {
+  for (const entry of discovered) {
     if (typeof entry !== "string") {
       continue;
     }
