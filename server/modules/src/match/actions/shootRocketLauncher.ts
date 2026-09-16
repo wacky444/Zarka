@@ -129,6 +129,7 @@ export class ShootRocketLauncherAction extends BaseAction {
       targetTile.meta = {
         ...(targetTile.meta ?? {}),
         destructionTurn: (match.current_turn ?? 0) + 1,
+        rocketLauncherExplosionVisible: true,
       };
 
       this.clearPlan(participant);
@@ -150,6 +151,7 @@ export class ShootRocketLauncherAction extends BaseAction {
         actorId: participant.playerId,
         action,
         targets: targetEntries,
+        visibility: { scope: "all" },
       });
       events.push(...postEvents);
     }

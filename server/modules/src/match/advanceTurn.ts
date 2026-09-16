@@ -347,12 +347,18 @@ export function advanceTurn(
   if (match.map?.tiles) {
     for (const tile of match.map.tiles) {
       if (tile.meta?.destructionTurn === resolvedTurn) {
+        const rocketExplosionVisible =
+          tile.meta.rocketLauncherExplosionVisible === true;
         tile.meta.destroyed = true;
         tile.walkable = false;
+        delete tile.meta.rocketLauncherExplosionVisible;
         replayEvents.push({
           kind: "map",
           cell: tile.coord,
           action: "destroyed",
+          ...(rocketExplosionVisible
+            ? { visibility: { scope: "all" as const } }
+            : {}),
         });
       }
     }
