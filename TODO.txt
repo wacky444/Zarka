@@ -59,6 +59,23 @@
 
 - finished match is not on my matches list
 
+
+- y diría q cuando seleccionas una skill q necesita un objetivo, debería cambiar directamente a seleccionarlo
+
+- planteate hacer un escenario básico de tutorial y pones un set limitado de cosas para ir probando
+
+- y muchas skills de atacar tienen iconos muy distintos
+
+- faltan traducciones, detected, affected, "Energy" "Weight" "Team" el registro, y de las habilidades el "missing ..." y los "not implemented"
+
+- en la lista de targets indicar que enemigos se ven y cuales no
+
+- no sale el titulo de las acciones de abajo de la lista
+
+- lista de skills que no sea lista
+
+- indicar en el target, un warning, de fuera de rango
+
  ### Localhost
 
  The Google client ID is being loaded locally. This error:
@@ -92,23 +109,3 @@
 
  After changing client/.env, restart the Vite dev server.
 
-
-
- bot1 moved to (0, 0)
-bot2 used Buscar
-bot2 found Zarkans, Clavos, Arpón,
-Walkie talkie
-bot3 used Buscar
-bot3 found Hacha, Arpon, Clavos,
-Prismaticos, Walkie talkie
-Hugo Huerta used Atacar con hacha (+3
-extra)
-Hugo Huerta dealt 20 damage with an axe
-bot1 took 10 damage
-bot1 was eliminated
-bot3 took 10 damage
-bot3 was eliminated
-bot1 (Team Geminis) died
-bot3
-
-(Team Sagitario) died

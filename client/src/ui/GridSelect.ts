@@ -9,21 +9,21 @@ const ACTION_DESCRIPTION_TAG_COLORS: Record<string, string> = {
   "health-damage": THEME.colors.healthDamage,
   "energy-damage": THEME.colors.energyDamage,
   "energy-recover": THEME.colors.energyRecover,
-  "health-recover": THEME.colors.healthRecover,
+  "health-recover": THEME.colors.healthRecover
 };
 
 export function parseActionDescription(content: string): string {
   return content.replace(
     ACTION_DESCRIPTION_TAG_PATTERN,
     (_match, tag: string, value: string) =>
-      `[color=${ACTION_DESCRIPTION_TAG_COLORS[tag]}]${value}[/color]`,
+      `[color=${ACTION_DESCRIPTION_TAG_COLORS[tag]}]${value}[/color]`
   );
 }
 
 function stripActionDescriptionMarkup(content: string): string {
   return parseActionDescription(content).replace(
     /\[color=[^\]]+\]|\[\/color\]/g,
-    "",
+    ""
   );
 }
 
@@ -66,7 +66,7 @@ type RexSizer = Phaser.GameObjects.GameObject & {
     proportion?: number,
     align?: string,
     padding?: number | Record<string, number>,
-    expand?: boolean,
+    expand?: boolean
   ) => unknown;
   addBackground: (background: Phaser.GameObjects.GameObject) => unknown;
   layout: () => unknown;
@@ -83,11 +83,11 @@ type RexGridTable = Phaser.GameObjects.GameObject & {
   on: (
     event: string,
     callback: (...args: unknown[]) => void,
-    context?: unknown,
+    context?: unknown
   ) => unknown;
   resetAllCellsSize?: (width: number, height: number) => unknown;
   setMask?: (
-    mask: Phaser.Display.Masks.BitmapMask | Phaser.Display.Masks.GeometryMask,
+    mask: Phaser.Display.Masks.BitmapMask | Phaser.Display.Masks.GeometryMask
   ) => Phaser.GameObjects.GameObject;
   clearMask?: (destroyMask?: boolean) => Phaser.GameObjects.GameObject;
   setScrollerEnable?: (enabled: boolean) => void;
@@ -100,7 +100,7 @@ type RexRoundRectangle = Phaser.GameObjects.GameObject & {
   setStrokeStyle?: (
     lineWidth: number,
     color?: number,
-    alpha?: number,
+    alpha?: number
   ) => unknown;
   setSize?: (width: number, height: number) => unknown;
   setDisplaySize?: (width: number, height: number) => unknown;
@@ -145,7 +145,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     scene: Phaser.Scene,
     x: number,
     y: number,
-    config: GridSelectConfig,
+    config: GridSelectConfig
   ) {
     super(scene, x, y);
     scene.add.existing(this);
@@ -177,7 +177,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
             config.emptyOptionDescription ?? "Clears the current selection.",
           texture: "hex",
           frame: "grass_01.png",
-          isEmptyOption: true,
+          isEmptyOption: true
         }
       : null;
 
@@ -188,7 +188,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       .setOrigin(0, 0)
       .setInteractive(
         new Phaser.Geom.Rectangle(0, 0, config.width, this.collapsedHeight),
-        Phaser.Geom.Rectangle.Contains,
+        Phaser.Geom.Rectangle.Contains
       );
 
     this.background = scene.rexUI.add.roundRectangle(
@@ -197,7 +197,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       config.width,
       this.collapsedHeight,
       10,
-      THEME.colors.collapsedBackground,
+      THEME.colors.collapsedBackground
     ) as RexRoundRectangle;
     this.background.setOrigin?.(0, 0);
     this.background.setStrokeStyle?.(2, THEME.colors.collapsedBorder, 1);
@@ -206,21 +206,16 @@ export class GridSelect extends Phaser.GameObjects.Container {
       12,
       this.collapsedHeight / 2,
       "hex",
-      "grass_01.png",
+      "grass_01.png"
     );
     this.icon.setOrigin(0, 0.5);
     this.icon.setDisplaySize(this.iconTargetSize, this.iconTargetSize);
 
     this.label = scene.add
-      .text(
-        16,
-        this.collapsedHeight / 2,
-        this.placeholder,
-        {
-          fontSize: "17px",
-          color: this.labelActiveColor,
-        },
-      )
+      .text(16, this.collapsedHeight / 2, this.placeholder, {
+        fontSize: "17px",
+        color: this.labelActiveColor
+      })
       .setOrigin(0, 0.5);
 
     this.add(this.background);
@@ -236,7 +231,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       Phaser.Input.Events.POINTER_DOWN,
       (pointer: Phaser.Input.Pointer) => {
         pointerDownPos = { x: pointer.x, y: pointer.y };
-      },
+      }
     );
     this.hitAreaZone.on(
       Phaser.Input.Events.POINTER_UP,
@@ -246,7 +241,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
             pointerDownPos.x,
             pointerDownPos.y,
             pointer.x,
-            pointer.y,
+            pointer.y
           );
           pointerDownPos = null;
           if (dist > 10) {
@@ -261,7 +256,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
           return;
         }
         this.openModal();
-      },
+      }
     );
     this.hitAreaZone.on(Phaser.Input.Events.POINTER_OVER, () => {
       if (!this.enabled) {
@@ -292,15 +287,15 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.items = this.emptyOptionItem
       ? [
           {
-            ...this.emptyOptionItem,
+            ...this.emptyOptionItem
           },
-          ...cloned,
+          ...cloned
         ]
       : cloned;
     const currentId = this.selectedItem?.id ?? null;
     if (currentId) {
       const current = this.items.find(
-        (it) => it.id === currentId && it.disabled !== true,
+        (it) => it.id === currentId && it.disabled !== true
       );
       if (current) {
         this.applySelection(current, false);
@@ -422,7 +417,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private selectFirstAvailable(emit: boolean) {
     let first =
       this.items.find(
-        (it) => it.disabled !== true && it.isEmptyOption !== true,
+        (it) => it.disabled !== true && it.isEmptyOption !== true
       ) ?? null;
     if (!first) {
       first =
@@ -469,7 +464,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       const scale = Phaser.Math.Clamp(item.iconScale ?? 1, 0.1, 4);
       this.icon.setDisplaySize(
         this.iconTargetSize * scale,
-        this.iconTargetSize * scale,
+        this.iconTargetSize * scale
       );
       this.icon.setVisible(true);
     } else {
@@ -540,11 +535,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
         _pointer: Phaser.Input.Pointer,
         _x: number,
         _y: number,
-        event: Phaser.Types.Input.EventData,
+        event: Phaser.Types.Input.EventData
       ) => {
         pointerDownOnCover = true;
         event.stopPropagation();
-      },
+      }
     );
     cover.on(
       Phaser.Input.Events.POINTER_MOVE,
@@ -552,10 +547,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
         _pointer: Phaser.Input.Pointer,
         _x: number,
         _y: number,
-        event: Phaser.Types.Input.EventData,
+        event: Phaser.Types.Input.EventData
       ) => {
         event.stopPropagation();
-      },
+      }
     );
     cover.on(
       Phaser.Input.Events.POINTER_UP,
@@ -563,7 +558,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         _pointer: Phaser.Input.Pointer,
         _x: number,
         _y: number,
-        event: Phaser.Types.Input.EventData,
+        event: Phaser.Types.Input.EventData
       ) => {
         event.stopPropagation();
         if (!pointerDownOnCover) {
@@ -574,7 +569,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         if (!mobile) {
           this.closeModal();
         }
-      },
+      }
     );
     cover.on(
       "wheel",
@@ -583,10 +578,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
         _dx: number,
         _dy: number,
         _dz: number,
-        event: WheelEvent,
+        event: WheelEvent
       ) => {
         event.stopPropagation();
-      },
+      }
     );
     overlay.add(cover);
 
@@ -594,7 +589,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
     const modal = scene.rexUI.add.sizer({
       orientation: 1,
-      space: { item: 16, left: 24, right: 24, top: 24, bottom: 24 },
+      space: { item: 16, left: 24, right: 24, top: 24, bottom: 24 }
     }) as RexSizer;
 
     const background = scene.rexUI.add.roundRectangle(
@@ -603,7 +598,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.modalWidth,
       this.modalHeight,
       14,
-      THEME.colors.modalBackground,
+      THEME.colors.modalBackground
     );
     modal.addBackground(background);
     const backgroundGO = background as unknown as Phaser.GameObjects.GameObject;
@@ -614,10 +609,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
         _pointer: Phaser.Input.Pointer,
         _x: number,
         _y: number,
-        event: Phaser.Types.Input.EventData,
+        event: Phaser.Types.Input.EventData
       ) => {
         event.stopPropagation();
-      },
+      }
     );
     backgroundGO.on(
       Phaser.Input.Events.POINTER_UP,
@@ -625,10 +620,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
         _pointer: Phaser.Input.Pointer,
         _x: number,
         _y: number,
-        event: Phaser.Types.Input.EventData,
+        event: Phaser.Types.Input.EventData
       ) => {
         event.stopPropagation();
-      },
+      }
     );
     backgroundGO.on(
       "wheel",
@@ -637,17 +632,17 @@ export class GridSelect extends Phaser.GameObjects.Container {
         _dx: number,
         _dy: number,
         _dz: number,
-        event: WheelEvent,
+        event: WheelEvent
       ) => {
         event?.stopPropagation?.();
-      },
+      }
     );
 
     const header = scene.add
       .text(0, 0, this.modalTitle, {
         fontSize: "22px",
         color: THEME.colors.modalHeader,
-        fontStyle: "bold",
+        fontStyle: "bold"
       })
       .setOrigin(0.5, 0.5);
     modal.add(header, 0, "center", { bottom: 4 }, false);
@@ -655,7 +650,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     const subtitle = scene.add
       .text(0, 0, this.modalSubtitle, {
         fontSize: "15px",
-        color: THEME.colors.modalText,
+        color: THEME.colors.modalText
       })
       .setOrigin(0.5, 0.5);
     modal.add(subtitle, 0, "center", { bottom: 4 }, false);
@@ -666,7 +661,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       1,
       "center",
       0,
-      true,
+      true
     );
 
     modal.layout();
@@ -684,7 +679,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         (gridTable as unknown as { x?: number }).x ?? 0,
         (gridTable as unknown as { y?: number }).y ?? 0,
         (gridTable as unknown as { width?: number }).width ?? 0,
-        (gridTable as unknown as { height?: number }).height ?? 0,
+        (gridTable as unknown as { height?: number }).height ?? 0
       );
     this.gridTableMaskShape = scene.add
       .rectangle(bounds.x, bounds.y, bounds.width, bounds.height, 0xffffff, 1)
@@ -696,7 +691,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
     gridTable.setMask?.(this.gridTableMask);
 
     if (mobile) {
-      this.modalCloseButton = this.createMobileCloseButton(scene, overlay, width);
+      this.modalCloseButton = this.createMobileCloseButton(
+        scene,
+        overlay,
+        width
+      );
     }
 
     this.ensureTooltip();
@@ -725,18 +724,21 @@ export class GridSelect extends Phaser.GameObjects.Container {
       .text(0, 0, "×", {
         color: "#ffffff",
         fontSize: "28px",
-        fontStyle: "bold",
+        fontStyle: "bold"
       })
       .setOrigin(0.5);
-    background.on(Phaser.Input.Events.POINTER_UP, (
-      _pointer: Phaser.Input.Pointer,
-      _localX: number,
-      _localY: number,
-      event: Phaser.Types.Input.EventData,
-    ) => {
-      event.stopPropagation();
-      this.closeModal();
-    });
+    background.on(
+      Phaser.Input.Events.POINTER_UP,
+      (
+        _pointer: Phaser.Input.Pointer,
+        _localX: number,
+        _localY: number,
+        event: Phaser.Types.Input.EventData
+      ) => {
+        event.stopPropagation();
+        this.closeModal();
+      }
+    );
     button.add([background, label]);
     button.setDepth(10002);
     overlay.add(button);
@@ -772,7 +774,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.overlay.setActive(false);
       this.gridTable?.setScrollerEnable?.(false);
       this.gridTable?.setMouseWheelScrollerEnable?.(false);
-      const coverScene = this.modalCover?.scene as unknown as { sys?: unknown } | undefined;
+      const coverScene = this.modalCover?.scene as unknown as
+        | { sys?: unknown }
+        | undefined;
       if (this.modalCover && coverScene?.sys) {
         try {
           this.modalCover.disableInteractive();
@@ -805,32 +809,32 @@ export class GridSelect extends Phaser.GameObjects.Container {
       background: scene.rexUI.add.roundRectangle(0, 0, 10, 10, 8, 0x121c34),
       table: {
         columns: this.columns,
-        reuseCellContainer: true,
+        reuseCellContainer: false,
         mask: { padding: 2 },
         cellWidth,
-        cellHeight,
+        cellHeight
       },
       slider: {
         track: scene.rexUI.add.roundRectangle(0, 0, 4, 120, 4, 0x1f2a4a),
-        thumb: scene.rexUI.add.roundRectangle(0, 0, 8, 36, 4, 0x3b82f6),
+        thumb: scene.rexUI.add.roundRectangle(0, 0, 8, 36, 4, 0x3b82f6)
       },
       scroller: {
         threshold: 10,
         rectBoundsInteractive: true,
         slidingDeceleration: 5000,
         backDeceleration: 2000,
-        pointerOutRelease: true,
+        pointerOutRelease: true
       },
       mouseWheelScroller: {
         focus: true,
-        speed: 1,
+        speed: 1
       },
       space: {
         left: 0,
         right: 0,
         top: 0,
         bottom: 0,
-        table: 10,
+        table: 10
       },
       createCellContainerCallback: (
         cell: {
@@ -840,8 +844,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
           height: number;
           item: GridSelectItem;
         },
-        cellContainer: Phaser.GameObjects.GameObject | undefined,
-      ) => this.buildCellContainer(cell, cellContainer),
+        cellContainer: Phaser.GameObjects.GameObject | undefined
+      ) => this.buildCellContainer(cell, cellContainer)
     }) as RexGridTable;
 
     gridTable.setScrollFactor?.(0);
@@ -859,7 +863,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         this.applySelection(item, true);
         this.closeModal();
       },
-      this,
+      this
     );
 
     gridTable.on(
@@ -867,7 +871,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       (
         cellContainer: Phaser.GameObjects.GameObject,
         cellIndex: number,
-        pointer?: Phaser.Input.Pointer,
+        pointer?: Phaser.Input.Pointer
       ) => {
         if (!pointer || pointer.wasTouch) {
           this.tooltip?.hide();
@@ -909,10 +913,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
         this.scene.children.bringToTop(tooltipGO);
         tooltipInstance.show(pointer.worldX, pointer.worldY, {
           title: tooltipTitle,
-          body: tooltipBody,
+          body: tooltipBody
         });
       },
-      this,
+      this
     );
 
     gridTable.on(
@@ -920,7 +924,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       () => {
         this.tooltip?.hide();
       },
-      this,
+      this
     );
 
     return gridTable;
@@ -933,7 +937,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       height: number;
       item: GridSelectItem;
     },
-    existing: Phaser.GameObjects.GameObject | undefined,
+    existing: Phaser.GameObjects.GameObject | undefined
   ) {
     const scene = this.scene;
     const item = cell.item;
@@ -953,8 +957,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
           left: layoutSpace.padding.left,
           right: layoutSpace.padding.right,
           top: layoutSpace.padding.top,
-          bottom: layoutSpace.padding.bottom,
-        },
+          bottom: layoutSpace.padding.bottom
+        }
       }) as RexSizer;
 
       const bg = scene.rexUI.add.roundRectangle(
@@ -963,7 +967,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         cellWidth,
         cellHeight,
         12,
-        THEME.colors.cardBackground,
+        THEME.colors.cardBackground
       ) as RexRoundRectangle;
       bg.setSize?.(cellWidth, cellHeight);
       bg.setDisplaySize?.(cellWidth, cellHeight);
@@ -982,7 +986,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         const maxIconSize = this.resolveMaxIconDimension(cellHeight);
         const resolvedIconSize = Math.min(
           baseIconSize * iconScale,
-          maxIconSize,
+          maxIconSize
         );
         icon.setDisplaySize(resolvedIconSize, resolvedIconSize);
         icon.setActive(true);
@@ -992,7 +996,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         .text(0, 0, item.name, {
           fontSize: "17px",
           color: "#ffffff",
-          align: "center",
+          align: "center"
         })
         .setOrigin(0.5, 0.5);
 
@@ -1000,7 +1004,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         .text(0, 0, "", {
           fontSize: "14px",
           color: THEME.colors.energyCost,
-          align: "center",
+          align: "center"
         })
         .setOrigin(0.5, 0.5)
         .setVisible(false);
@@ -1012,9 +1016,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
         align: "center",
         wrap: {
           mode: "word",
-          width: usableTextWidth,
+          width: usableTextWidth
         },
-        maxLines: maxDescriptionLines,
+        maxLines: maxDescriptionLines
       }) as Phaser.GameObjects.Text;
       descText.setOrigin(0.5, 0.5);
 
@@ -1026,8 +1030,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
               align: "right",
               wrap: {
                 mode: "word",
-                width: 95,
-              },
+                width: 95
+              }
             })
           : scene.add.text(0, 0, "", {
               fontSize: "12px",
@@ -1035,8 +1039,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
               fontStyle: "bold",
               align: "right",
               wordWrap: {
-                width: 95,
-              },
+                width: 95
+              }
             })
       ) as Phaser.GameObjects.Text;
       cooldownText.setOrigin(1, 0);
@@ -1045,13 +1049,13 @@ export class GridSelect extends Phaser.GameObjects.Container {
       const nameTruncated = this.applySingleLineText(
         nameText,
         item.name,
-        usableTextWidth,
+        usableTextWidth
       );
       const descTruncated = this.applyDescriptionText(
         descText,
         item.description,
         usableTextWidth,
-        maxDescriptionLines,
+        maxDescriptionLines
       );
 
       const iconMarginBottom = item.isEmptyOption ? 0 : layoutSpace.iconGap;
@@ -1061,14 +1065,14 @@ export class GridSelect extends Phaser.GameObjects.Container {
         0,
         "center",
         { bottom: layoutSpace.labelGap },
-        false,
+        false
       );
       container.add(
         energyText,
         0,
         "center",
         { bottom: layoutSpace.labelGap },
-        false,
+        false
       );
       container.add(descText, 0, "center", 0, false);
       container.add(
@@ -1076,37 +1080,37 @@ export class GridSelect extends Phaser.GameObjects.Container {
         0,
         "right-top",
         { right: 12, top: 12 },
-        false,
+        false
       );
 
       (container as unknown as Phaser.GameObjects.GameObject).setData("bg", bg);
       (container as unknown as Phaser.GameObjects.GameObject).setData(
         "icon",
-        icon,
+        icon
       );
       (container as unknown as Phaser.GameObjects.GameObject).setData(
         "name",
-        nameText,
+        nameText
       );
       (container as unknown as Phaser.GameObjects.GameObject).setData(
         "desc",
-        descText,
+        descText
       );
       (container as unknown as Phaser.GameObjects.GameObject).setData(
         "energy",
-        energyText,
+        energyText
       );
       (container as unknown as Phaser.GameObjects.GameObject).setData(
         "id",
-        item.id,
+        item.id
       );
       (container as unknown as Phaser.GameObjects.GameObject).setData(
         "showTooltip",
-        nameTruncated || descTruncated,
+        nameTruncated || descTruncated
       );
       (container as unknown as Phaser.GameObjects.GameObject).setData(
         "cooldown",
-        cooldownText,
+        cooldownText
       );
 
       (
@@ -1124,7 +1128,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         cellWidth,
         cellHeight,
         textWidth: usableTextWidth,
-        isSelected: this.selectedItem?.id === item.id,
+        isSelected: this.selectedItem?.id === item.id
       });
       container.layout();
       return created;
@@ -1213,7 +1217,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
           descText,
           item.description,
           usableTextWidth,
-          maxDescriptionLines,
+          maxDescriptionLines
         )
       : false;
     containerGO.setData("id", item.id);
@@ -1236,7 +1240,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       cellWidth,
       cellHeight,
       textWidth: usableTextWidth,
-      isSelected: this.selectedItem?.id === item.id,
+      isSelected: this.selectedItem?.id === item.id
     });
 
     container.layout();
@@ -1256,7 +1260,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       cellHeight: number;
       textWidth: number;
       isSelected: boolean;
-    },
+    }
   ) {
     const disabled = config.item.disabled === true;
     const selected = config.isSelected && !disabled;
@@ -1276,7 +1280,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       disabled ? THEME.colors.textDisabled : THEME.colors.textPrimary
     );
     config.descText?.setColor(
-      disabled ? THEME.colors.textDisabled : THEME.colors.modalText,
+      disabled ? THEME.colors.textDisabled : THEME.colors.modalText
     );
     if (config.energyText) {
       const hasCost =
@@ -1287,7 +1291,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         const label = `Energy: ${config.item.energyCost}`;
         this.applySingleLineText(config.energyText, label, config.textWidth);
         config.energyText.setColor(
-          disabled ? THEME.colors.textDisabled : THEME.colors.energyCost,
+          disabled ? THEME.colors.textDisabled : THEME.colors.energyCost
         );
         config.energyText.setVisible(true);
       } else {
@@ -1347,7 +1351,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     target: Phaser.GameObjects.Text,
     content: string | null | undefined,
     maxWidth: number,
-    maxLines: number,
+    maxLines: number
   ): boolean {
     const rawTextValue = typeof content === "string" ? content : "";
     const textValue = parseActionDescription(rawTextValue);
@@ -1431,20 +1435,20 @@ export class GridSelect extends Phaser.GameObjects.Container {
       return {
         padding: { left: 10, right: 10, top: 10, bottom: 10 },
         iconGap: 2,
-        labelGap: 1,
+        labelGap: 1
       } as const;
     }
     if (cellHeight <= 180) {
       return {
         padding: { left: 12, right: 12, top: 12, bottom: 12 },
         iconGap: 4,
-        labelGap: 3,
+        labelGap: 3
       } as const;
     }
     return {
       padding: { left: 14, right: 14, top: 14, bottom: 14 },
       iconGap: 5,
-      labelGap: 4,
+      labelGap: 4
     } as const;
   }
 
@@ -1470,7 +1474,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.background.setStrokeStyle?.(2, THEME.colors.collapsedBorder, 1);
     this.icon.setAlpha(this.enabled ? 1 : 0.6);
     this.label.setColor(
-      this.enabled ? this.labelActiveColor : THEME.colors.textDisabled,
+      this.enabled ? this.labelActiveColor : THEME.colors.textDisabled
     );
     if (!this.enabled) {
       this.scene.input.setDefaultCursor("default");
@@ -1481,7 +1485,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     const style = target.style as Phaser.GameObjects.TextStyle & {
       syncFont?: (
         canvas: HTMLCanvasElement,
-        context: CanvasRenderingContext2D,
+        context: CanvasRenderingContext2D
       ) => void;
     };
     const context = target.context;
@@ -1503,7 +1507,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private ellipsize(
     content: string,
     target: Phaser.GameObjects.Text,
-    maxWidth: number,
+    maxWidth: number
   ) {
     const ellipsis = "…";
     const base = content.trimEnd();
@@ -1527,7 +1531,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private applySingleLineText(
     target: Phaser.GameObjects.Text,
     content: string,
-    maxWidth: number,
+    maxWidth: number
   ): boolean {
     const trimmed = content.trimEnd();
     const display = this.ellipsize(trimmed, target, maxWidth);
@@ -1541,7 +1545,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     target: Phaser.GameObjects.Text,
     content: string,
     maxWidth: number,
-    maxLines: number,
+    maxLines: number
   ): boolean {
     target.setWordWrapWidth(maxWidth, true);
     target.setText(content);
