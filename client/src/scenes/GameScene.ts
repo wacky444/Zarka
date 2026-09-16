@@ -1886,10 +1886,10 @@ export class GameScene extends Phaser.Scene {
     this.replayPlayButton = play;
     this.replayNextButton = next;
     this.replayLiveButton = live;
-    this.layoutReplayControls(this.scale.width);
+    this.layoutReplayControls(this.scale.width, this.scale.height);
   }
 
-  private layoutReplayControls(width: number): void {
+  private layoutReplayControls(width: number, height: number): void {
     const container = this.replayControlsContainer;
     const background = this.replayControlsBackground;
     const prev = this.replayPrevButton;
@@ -1919,7 +1919,12 @@ export class GameScene extends Phaser.Scene {
       gap * 4;
     const startX = Math.max(padding, (width - totalWidth) / 2);
     background.setSize(width, 46).setDisplaySize(width, 46);
-    container.setPosition(0, 76);
+    const menuHeight = this.menuButton?.height ?? 32;
+    const bottomOffset = menuHeight + 16;
+    container.setPosition(
+      0,
+      Math.max(8, height - bottomOffset - background.height - 8)
+    );
     prev.setPosition(startX, 5);
     turnLabel.setPosition(prev.x + prev.width + gap, 14);
     play.setPosition(turnLabel.x + turnLabel.width + gap, 5);
@@ -2034,7 +2039,7 @@ export class GameScene extends Phaser.Scene {
       this.autoAdvanceText.setPosition(10, 10);
     }
     this.topBanner?.layout(width);
-    this.layoutReplayControls(width);
+    this.layoutReplayControls(width, height);
     this.victoryOverlay?.layout(width, height);
   }
 
@@ -3851,7 +3856,20 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (!snapshot) {
-      this.clearReplaySnapshot();
+      if (!this.replayModeActive) {
+        this.clearReplaySnapshot();
+        return;
+      }
+      const fallbackMatch: MatchRecord = {
+        ...this.currentMatch,
+        current_turn: turn,
+      };
+      this.replayView = {
+        turn,
+        snapshot: {},
+        match: fallbackMatch,
+      };
+      this.updateReplayControls();
       return;
     }
     const replayMatch: MatchRecord = {
