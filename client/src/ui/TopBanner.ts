@@ -46,7 +46,20 @@ export class TopBanner {
 
     const background = scene.add
       .rectangle(0, 0, scene.scale.width, this.height, 0x200b13, 0.92)
-      .setOrigin(0, 0);
+      .setOrigin(0, 0)
+      .setInteractive({ useHandCursor: true });
+    background.on(
+      Phaser.Input.Events.POINTER_DOWN,
+      (
+        _pointer: Phaser.Input.Pointer,
+        _localX: number,
+        _localY: number,
+        event: Phaser.Types.Input.EventData,
+      ) => {
+        event.stopPropagation();
+        this.dismissCurrent();
+      },
+    );
     background.setScrollFactor(0);
 
     const portraitSize = this.height - this.margin;
@@ -85,6 +98,15 @@ export class TopBanner {
     if (!this.showing) {
       this.showNext();
     }
+  }
+
+  private dismissCurrent(): void {
+    if (!this.showing) {
+      return;
+    }
+    this.timer?.remove();
+    this.timer = null;
+    this.showNext();
   }
 
   private showNext(): void {
