@@ -15,5 +15,7 @@ export interface MoveReplayContext {
   currentMatch: MatchRecord | null;
   scene: Phaser.Scene;
   showTileDestroyedBanner?: (cell: Axial) => void;
+  waitForPlaybackResume?: () => Promise<void>;
+  shouldStopPlayback?: () => boolean;
   ignoreUI: (object: Phaser.GameObjects.GameObject) => void;
 }

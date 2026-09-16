@@ -34,6 +34,15 @@ export async function playReplayEvents(
   events: ReplayEvent[]
 ): Promise<void> {
   for (const event of events) {
+    if (context.shouldStopPlayback?.()) {
+      return;
+    }
+    if (context.waitForPlaybackResume) {
+      await context.waitForPlaybackResume();
+    }
+    if (context.shouldStopPlayback?.()) {
+      return;
+    }
     if (event.kind === "map" && event.action === "destroyed" && event.cell) {
       playRandomSound(context.scene, TILE_DESTROYED_SOUNDS);
       await animateTileDestroyedEvent(context, event.cell);

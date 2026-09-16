@@ -103,6 +103,16 @@ export class GameScene extends Phaser.Scene {
   private characterPanelDesktopWidth = 0;
   private menuButton: UIButton | null = null;
   private viewModeButton: UIButton | null = null;
+  private replayControlsContainer: Phaser.GameObjects.Container | null = null;
+  private replayControlsBackground: Phaser.GameObjects.Rectangle | null = null;
+  private replayPrevButton: UIButton | null = null;
+  private replayTurnLabel: Phaser.GameObjects.Text | null = null;
+  private replayPlayButton: UIButton | null = null;
+  private replayNextButton: UIButton | null = null;
+  private replayLiveButton: UIButton | null = null;
+  private replayPaused = false;
+  private replayModeActive = false;
+  private replayResumeWaiters: Array<() => void> = [];
   private mobileLayout = false;
   private mobileViewMode: MobileViewMode = "sidebar";
   private currentUserId: string | null = null;
@@ -150,6 +160,7 @@ export class GameScene extends Phaser.Scene {
   private logFetchRunning = false;
   private logPendingTurn: number | null = null;
   private manualReplayPlaying = false;
+  private replayPlaybackCancelled = false;
   private gridModalActive = false;
   private tileItemContainers = new Map<string, Phaser.GameObjects.Container>();
   private itemTooltip: ItemTooltipManager | null = null;
@@ -242,6 +253,18 @@ export class GameScene extends Phaser.Scene {
   };
   private readonly gridModalCloseHandler = () => {
     this.gridModalActive = false;
+  };
+  private readonly replayPrevHandler = () => {
+    this.navigateReplayTurn(-1);
+  };
+  private readonly replayPlayHandler = () => {
+    this.toggleReplayPlayback();
+  };
+  private readonly replayNextHandler = () => {
+    this.navigateReplayTurn(1);
+  };
+  private readonly replayLiveHandler = () => {
+    this.exitReplayMode();
   };
 
   constructor() {
@@ -506,6 +529,7 @@ export class GameScene extends Phaser.Scene {
     this.topBanner = new TopBanner(this, {
       camera: this.cam
     });
+    this.createReplayControls();
     this.victoryOverlay = new VictoryOverlay(this, {
       onTransitionComplete: () => this.openEndGameReport(),
     });
@@ -716,6 +740,15 @@ export class GameScene extends Phaser.Scene {
       this.autoAdvanceText = null;
       this.viewModeButton?.destroy();
       this.viewModeButton = null;
+      this.replayControlsContainer?.destroy(true);
+      this.replayControlsContainer = null;
+      this.replayControlsBackground = null;
+      this.replayPrevButton = null;
+      this.replayTurnLabel = null;
+      this.replayPlayButton = null;
+      this.replayNextButton = null;
+      this.replayLiveButton = null;
+      this.resolveReplayResumeWaiters();
       if (this.chatUnsubscribe) {
         this.chatUnsubscribe();
         this.chatUnsubscribe = null;
@@ -1831,6 +1864,121 @@ export class GameScene extends Phaser.Scene {
     return { hours, minutes };
   }
 
+  private createReplayControls(): void {
+    const container = this.add.container(0, 0).setDepth(5100).setVisible(false);
+    const background = this.add
+      .rectangle(0, 0, this.scale.width, 46, 0x111827, 0.94)
+      .setOrigin(0, 0);
+    const prev = makeButton(this, 0, 0, "Prev", this.replayPrevHandler);
+    const turnLabel = this.add.text(0, 14, "Turn 0 / 0", {
+      color: "#cbd5f5",
+      fontSize: "14px"
+    });
+    const play = makeButton(this, 0, 0, "Play", this.replayPlayHandler);
+    const next = makeButton(this, 0, 0, "Next", this.replayNextHandler);
+    const live = makeButton(this, 0, 0, "Live", this.replayLiveHandler);
+    container.add([background, prev, turnLabel, play, next, live]);
+    this.cam.ignore(container);
+    this.replayControlsContainer = container;
+    this.replayControlsBackground = background;
+    this.replayPrevButton = prev;
+    this.replayTurnLabel = turnLabel;
+    this.replayPlayButton = play;
+    this.replayNextButton = next;
+    this.replayLiveButton = live;
+    this.layoutReplayControls(this.scale.width);
+  }
+
+  private layoutReplayControls(width: number): void {
+    const container = this.replayControlsContainer;
+    const background = this.replayControlsBackground;
+    const prev = this.replayPrevButton;
+    const turnLabel = this.replayTurnLabel;
+    const play = this.replayPlayButton;
+    const next = this.replayNextButton;
+    const live = this.replayLiveButton;
+    if (
+      !container ||
+      !background ||
+      !prev ||
+      !turnLabel ||
+      !play ||
+      !next ||
+      !live
+    ) {
+      return;
+    }
+    const padding = 8;
+    const gap = 8;
+    const totalWidth =
+      prev.width +
+      turnLabel.width +
+      play.width +
+      next.width +
+      live.width +
+      gap * 4;
+    const startX = Math.max(padding, (width - totalWidth) / 2);
+    background.setSize(width, 46).setDisplaySize(width, 46);
+    container.setPosition(0, 76);
+    prev.setPosition(startX, 5);
+    turnLabel.setPosition(prev.x + prev.width + gap, 14);
+    play.setPosition(turnLabel.x + turnLabel.width + gap, 5);
+    next.setPosition(play.x + play.width + gap, 5);
+    live.setPosition(next.x + next.width + gap, 5);
+    this.updateReplayControls();
+  }
+
+  private updateReplayControls(): void {
+    const visible = this.replayModeActive && this.replayView !== null;
+    this.replayControlsContainer?.setVisible(visible);
+    if (!visible) {
+      return;
+    }
+    const turn = this.replayView?.turn ?? 0;
+    const maxTurn = this.currentMatch?.current_turn ?? turn;
+    const navigationEnabled = !this.logFetchRunning && !this.manualReplayPlaying;
+    this.setReplayButtonEnabled(
+      this.replayPrevButton,
+      navigationEnabled && turn > 0
+    );
+    this.setReplayButtonEnabled(
+      this.replayNextButton,
+      navigationEnabled && turn < maxTurn
+    );
+    const cachedReplay = this.logReplayCache.get(turn);
+    this.setReplayButtonEnabled(
+      this.replayPlayButton,
+      !this.logFetchRunning &&
+        (this.manualReplayPlaying ||
+          (cachedReplay !== undefined && cachedReplay.events.length > 0))
+    );
+    this.setReplayButtonEnabled(this.replayLiveButton, true);
+    this.replayTurnLabel?.setText(`Turn ${turn} / ${maxTurn}`);
+    this.replayPlayButton?.setText(
+      this.manualReplayPlaying
+        ? this.replayPaused
+          ? "[ Resume ]"
+          : "[ Pause ]"
+        : "[ Play ]"
+    );
+  }
+
+  private setReplayButtonEnabled(
+    button: UIButton | null,
+    enabled: boolean
+  ): void {
+    if (!button) {
+      return;
+    }
+    if (enabled) {
+      button.setAlpha(1);
+      button.setInteractive({ useHandCursor: true });
+    } else {
+      button.setAlpha(0.4);
+      button.disableInteractive();
+    }
+  }
+
   private layoutUI() {
     const width = this.uiCam ? this.uiCam.width : this.scale.width;
     const height = this.uiCam ? this.uiCam.height : this.scale.height;
@@ -1886,6 +2034,7 @@ export class GameScene extends Phaser.Scene {
       this.autoAdvanceText.setPosition(10, 10);
     }
     this.topBanner?.layout(width);
+    this.layoutReplayControls(width);
     this.victoryOverlay?.layout(width, height);
   }
 
@@ -3076,6 +3225,8 @@ export class GameScene extends Phaser.Scene {
       currentMatch: this.replayView?.match ?? this.currentMatch,
       scene: this,
       showTileDestroyedBanner: (cell) => this.showTileDestroyedBanner(cell),
+      waitForPlaybackResume: () => this.waitForReplayResume(),
+      shouldStopPlayback: () => this.replayPlaybackCancelled,
       ignoreUI: (object) => {
         if (this.uiCam) {
           this.uiCam.ignore(object);
@@ -3620,6 +3771,78 @@ export class GameScene extends Phaser.Scene {
     this.locationSelectionHoverText.setVisible(true);
   }
 
+  private enterReplayMode(): void {
+    this.replayModeActive = true;
+    this.replayPlaybackCancelled = false;
+    this.replayPaused = false;
+    if (this.mobileLayout) {
+      this.mobileViewMode = "map";
+    }
+    this.layoutUI();
+    this.updateReplayControls();
+  }
+
+  private navigateReplayTurn(delta: number): void {
+    if (!this.replayView || this.manualReplayPlaying || this.logFetchRunning) {
+      return;
+    }
+    const maxTurn = this.currentMatch?.current_turn ?? this.replayView.turn;
+    const targetTurn = Phaser.Math.Clamp(
+      this.replayView.turn + delta,
+      0,
+      maxTurn
+    );
+    if (targetTurn === this.replayView.turn) {
+      return;
+    }
+    this.handleLogTurnRequest(targetTurn);
+  }
+
+  private toggleReplayPlayback(): void {
+    if (!this.replayView || this.logFetchRunning) {
+      return;
+    }
+    if (this.manualReplayPlaying) {
+      this.replayPaused = !this.replayPaused;
+      if (!this.replayPaused) {
+        this.resolveReplayResumeWaiters();
+      }
+      this.updateReplayControls();
+      return;
+    }
+    void this.handleLogPlayRequestManual(this.replayView.turn);
+  }
+
+  private waitForReplayResume(): Promise<void> {
+    if (!this.replayPaused || this.replayPlaybackCancelled) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      this.replayResumeWaiters.push(resolve);
+    });
+  }
+
+  private resolveReplayResumeWaiters(): void {
+    const waiters = this.replayResumeWaiters.splice(0);
+    for (const resolve of waiters) {
+      resolve();
+    }
+  }
+
+  private exitReplayMode(): void {
+    this.replayModeActive = false;
+    this.replayPlaybackCancelled = true;
+    this.replayPaused = false;
+    this.resolveReplayResumeWaiters();
+    this.manualReplayPlaying = false;
+    this.characterPanel?.setLogPlaybackState(false);
+    this.clearReplaySnapshot();
+    this.updateReplayControls();
+    if (this.replayQueue.length > 0 && !this.replayPlaying) {
+      void this.flushReplayQueue();
+    }
+  }
+
   private applyReplaySnapshot(
     turn: number,
     snapshot: ReplaySnapshot | undefined,
@@ -3654,6 +3877,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.replayView = null;
+    this.updateReplayControls();
     if (this.currentMatch?.map) {
       this.renderMap(this.currentMatch.map);
       this.renderPlayerCharacters(this.currentMatch);
@@ -3670,12 +3894,7 @@ export class GameScene extends Phaser.Scene {
 
   private handleLogTabClosed() {
     this.logTabActive = false;
-    this.manualReplayPlaying = false;
-    this.characterPanel?.setLogPlaybackState(false);
-    this.clearReplaySnapshot();
-    if (this.replayQueue.length > 0 && !this.replayPlaying) {
-      void this.flushReplayQueue();
-    }
+    this.exitReplayMode();
   }
 
   private handleLogTurnRequest(turn: number) {
@@ -3711,6 +3930,7 @@ export class GameScene extends Phaser.Scene {
     this.logFetchRunning = true;
     this.logPendingTurn = null;
     panel.setLogLoading(true);
+    this.updateReplayControls();
     try {
       const res = await service.getReplay(matchId, turn, this.adminViewEnabled);
       const payload = this.parseRpcPayload<GetReplayPayload>(res);
@@ -3734,6 +3954,7 @@ export class GameScene extends Phaser.Scene {
     } finally {
       this.logFetchRunning = false;
       panel.setLogLoading(false);
+      this.updateReplayControls();
       if (this.logPendingTurn !== null) {
         const next = this.logPendingTurn;
         this.logPendingTurn = null;
@@ -3753,16 +3974,24 @@ export class GameScene extends Phaser.Scene {
     if (!replay || replay.events.length === 0) {
       return;
     }
+    this.replayPlaybackCancelled = false;
+    this.enterReplayMode();
     this.applyReplaySnapshot(turn, replay.snapshot);
     this.manualReplayPlaying = true;
+    this.replayPaused = false;
     this.characterPanel?.setLogPlaybackState(true);
+    this.updateReplayControls();
     try {
       await playReplayEvents(this.createMoveReplayContext(), replay.events);
     } catch (error) {
       console.warn("log replay failed", error);
     } finally {
       this.manualReplayPlaying = false;
+      this.replayPaused = false;
+      this.replayPlaybackCancelled = false;
+      this.resolveReplayResumeWaiters();
       this.characterPanel?.setLogPlaybackState(false);
+      this.updateReplayControls();
       if (this.replayView) {
         if (this.replayView.match.map) {
           this.renderMap(this.replayView.match.map);
