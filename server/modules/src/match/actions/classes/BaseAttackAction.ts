@@ -41,13 +41,20 @@ export abstract class BaseAttackAction extends BaseAction {
   protected getBaseDamage(
     participant: PlannedActionParticipant,
     _targetId: string,
-    _match: MatchRecord
+    _match: MatchRecord,
+    usableExtraExecutions?: number
   ): number {
     const actionId = participant.plan.actionId as ActionId;
     const definition = actionId ? ActionLibrary[actionId] : undefined;
-    const usableExtra = definition
-      ? getUsableExtraExecutions(participant.character, participant.plan, definition)
-      : 0;
+    const usableExtra =
+      usableExtraExecutions ??
+      (definition
+        ? getUsableExtraExecutions(
+            participant.character,
+            participant.plan,
+            definition
+          )
+        : 0);
 
     return this.baseDamage + usableExtra;
   }
@@ -70,10 +77,21 @@ export abstract class BaseAttackAction extends BaseAction {
         this.clearPlan(participant);
         continue;
       }
-      const targets = collectTargets(actionId, participant, match);
+      const definition = actionId ? ActionLibrary[actionId] : undefined;
+      const targets = collectTargets(actionId, participant, match, {
+        allowMultiple: definition?.tags?.indexOf("Area") !== -1,
+      });
       const targetEntries: ReplayActionTarget[] = [];
       let totalDamage = 0;
       const postEvents: ReplayPlayerEvent[] = [];
+      const usableExtra =
+        targets.length > 0 && definition
+          ? getUsableExtraExecutions(
+              participant.character,
+              participant.plan,
+              definition
+            )
+          : 0;
       for (const targetCandidate of targets) {
         const targetId = targetCandidate.id;
         const target = match.playerCharacters?.[targetId];
@@ -90,7 +108,12 @@ export abstract class BaseAttackAction extends BaseAction {
           continue;
         }
         const guarded = isTargetProtected(target);
-        const baseDamage = this.getBaseDamage(participant, targetId, match);
+        const baseDamage = this.getBaseDamage(
+          participant,
+          targetId,
+          match,
+          usableExtra
+        );
         const guardedDamage = resolveGuardedDamage(baseDamage, guarded);
         const damageReduction = getDamageReduction(target);
         const dealtAmount = Math.max(0, guardedDamage - damageReduction);
@@ -122,14 +145,6 @@ export abstract class BaseAttackAction extends BaseAction {
       if (targetEntries.length === 0) {
         continue;
       }
-      const definition = actionId ? ActionLibrary[actionId] : undefined;
-      const usableExtra = definition
-        ? getUsableExtraExecutions(
-            participant.character,
-            participant.plan,
-            definition
-          )
-        : 0;
       const customMetadata = this.getActionMetadata(participant, match);
       const actionMetadata: Record<string, unknown> = {
         ...(usableExtra > 0 ? { extraExecutions: usableExtra } : {}),
