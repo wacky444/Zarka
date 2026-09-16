@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { makeButton, type UIButton } from "./button";
 import { THEME } from "./ColorPalette";
+import { parseActionDescription } from "./GridSelect";
 
 export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
   private readonly label: Phaser.GameObjects.Text;
@@ -35,13 +36,20 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
       })
       .setOrigin(0, 0);
 
-    this.descriptionText = scene.add
-      .text(0, this.label.height + 6, "", {
+    this.descriptionText = scene.rexUI.add.BBCodeText(
+      0,
+      this.label.height + 6,
+      "",
+      {
         fontSize: "13px",
         color: "#a0b7ff",
-        wordWrap: { width: width - 32, useAdvancedWrap: true }
-      })
-      .setOrigin(0, 0);
+        wrap: {
+          mode: "word",
+          width: width - 32
+        }
+      }
+    ) as Phaser.GameObjects.Text;
+    this.descriptionText.setOrigin(0, 0);
 
     this.decButton = makeButton(scene, 0, 0, "-", () => {
       this.step(-1);
@@ -116,7 +124,7 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
       this.baseCost + this.maxReps * this.extraCostPerRep - this.discount
     );
     this.currentReps = 0;
-    this.descriptionText.setText(opts.description);
+    this.descriptionText.setText(parseActionDescription(opts.description));
     this.descriptionText.setWordWrapWidth(this.preferredWidth - 32, true);
     this.updateCostDisplay();
     this.applyEnabled();
