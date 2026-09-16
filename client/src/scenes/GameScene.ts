@@ -62,6 +62,7 @@ import { VictoryOverlay } from "../ui/VictoryOverlay";
 import { isAdminViewEnabled } from "../services/adminView";
 import { t } from "../services/i18n";
 import { THEME } from "../ui/ColorPalette";
+import { ReplayControls } from "../ui/ReplayControls";
 
 type PlayerEliminationBannerEvent = {
   playerId: string;
@@ -103,13 +104,7 @@ export class GameScene extends Phaser.Scene {
   private characterPanelDesktopWidth = 0;
   private menuButton: UIButton | null = null;
   private viewModeButton: UIButton | null = null;
-  private replayControlsContainer: Phaser.GameObjects.Container | null = null;
-  private replayControlsBackground: Phaser.GameObjects.Rectangle | null = null;
-  private replayPrevButton: UIButton | null = null;
-  private replayTurnLabel: Phaser.GameObjects.Text | null = null;
-  private replayPlayButton: UIButton | null = null;
-  private replayNextButton: UIButton | null = null;
-  private replayLiveButton: UIButton | null = null;
+  private replayControls: ReplayControls | null = null;
   private replayPaused = false;
   private replayModeActive = false;
   private replayResumeWaiters: Array<() => void> = [];
@@ -529,7 +524,12 @@ export class GameScene extends Phaser.Scene {
     this.topBanner = new TopBanner(this, {
       camera: this.cam
     });
-    this.createReplayControls();
+    this.replayControls = new ReplayControls(this, this.cam, {
+      onPrevious: this.replayPrevHandler,
+      onPlayPause: this.replayPlayHandler,
+      onNext: this.replayNextHandler,
+      onLive: this.replayLiveHandler,
+    });
     this.victoryOverlay = new VictoryOverlay(this, {
       onTransitionComplete: () => this.openEndGameReport(),
     });
@@ -740,14 +740,8 @@ export class GameScene extends Phaser.Scene {
       this.autoAdvanceText = null;
       this.viewModeButton?.destroy();
       this.viewModeButton = null;
-      this.replayControlsContainer?.destroy(true);
-      this.replayControlsContainer = null;
-      this.replayControlsBackground = null;
-      this.replayPrevButton = null;
-      this.replayTurnLabel = null;
-      this.replayPlayButton = null;
-      this.replayNextButton = null;
-      this.replayLiveButton = null;
+      this.replayControls?.destroy();
+      this.replayControls = null;
       this.resolveReplayResumeWaiters();
       if (this.chatUnsubscribe) {
         this.chatUnsubscribe();
@@ -1864,124 +1858,32 @@ export class GameScene extends Phaser.Scene {
     return { hours, minutes };
   }
 
-  private createReplayControls(): void {
-    const container = this.add.container(0, 0).setDepth(5100).setVisible(false);
-    const background = this.add
-      .rectangle(0, 0, this.scale.width, 46, 0x111827, 0.94)
-      .setOrigin(0, 0);
-    const prev = makeButton(this, 0, 0, "Prev", this.replayPrevHandler);
-    const turnLabel = this.add.text(0, 14, "Turn 0 / 0", {
-      color: "#cbd5f5",
-      fontSize: "14px"
-    });
-    const play = makeButton(this, 0, 0, "Play", this.replayPlayHandler);
-    const next = makeButton(this, 0, 0, "Next", this.replayNextHandler);
-    const live = makeButton(this, 0, 0, "Live", this.replayLiveHandler);
-    container.add([background, prev, turnLabel, play, next, live]);
-    this.cam.ignore(container);
-    this.replayControlsContainer = container;
-    this.replayControlsBackground = background;
-    this.replayPrevButton = prev;
-    this.replayTurnLabel = turnLabel;
-    this.replayPlayButton = play;
-    this.replayNextButton = next;
-    this.replayLiveButton = live;
-    this.layoutReplayControls(this.scale.width, this.scale.height);
-  }
-
-  private layoutReplayControls(width: number, height: number): void {
-    const container = this.replayControlsContainer;
-    const background = this.replayControlsBackground;
-    const prev = this.replayPrevButton;
-    const turnLabel = this.replayTurnLabel;
-    const play = this.replayPlayButton;
-    const next = this.replayNextButton;
-    const live = this.replayLiveButton;
-    if (
-      !container ||
-      !background ||
-      !prev ||
-      !turnLabel ||
-      !play ||
-      !next ||
-      !live
-    ) {
-      return;
-    }
-    const padding = 8;
-    const gap = 8;
-    const totalWidth =
-      prev.width +
-      turnLabel.width +
-      play.width +
-      next.width +
-      live.width +
-      gap * 4;
-    const startX = Math.max(padding, (width - totalWidth) / 2);
-    background.setSize(width, 46).setDisplaySize(width, 46);
-    const menuHeight = this.menuButton?.height ?? 32;
-    const bottomOffset = menuHeight + 16;
-    container.setPosition(
-      0,
-      Math.max(8, height - bottomOffset - background.height - 8)
-    );
-    prev.setPosition(startX, 5);
-    turnLabel.setPosition(prev.x + prev.width + gap, 14);
-    play.setPosition(turnLabel.x + turnLabel.width + gap, 5);
-    next.setPosition(play.x + play.width + gap, 5);
-    live.setPosition(next.x + next.width + gap, 5);
-    this.updateReplayControls();
-  }
-
   private updateReplayControls(): void {
     const visible = this.replayModeActive && this.replayView !== null;
-    this.replayControlsContainer?.setVisible(visible);
     if (!visible) {
+      this.replayControls?.setState({
+        visible: false,
+        canPrevious: false,
+        canPlayPause: false,
+        canNext: false,
+        canLive: false,
+      });
       return;
     }
     const turn = this.replayView?.turn ?? 0;
     const maxTurn = this.currentMatch?.current_turn ?? turn;
     const navigationEnabled = !this.logFetchRunning && !this.manualReplayPlaying;
-    this.setReplayButtonEnabled(
-      this.replayPrevButton,
-      navigationEnabled && turn > 0
-    );
-    this.setReplayButtonEnabled(
-      this.replayNextButton,
-      navigationEnabled && turn < maxTurn
-    );
     const cachedReplay = this.logReplayCache.get(turn);
-    this.setReplayButtonEnabled(
-      this.replayPlayButton,
-      !this.logFetchRunning &&
+    this.replayControls?.setState({
+      visible: true,
+      canPrevious: navigationEnabled && turn > 0,
+      canPlayPause:
+        !this.logFetchRunning &&
         (this.manualReplayPlaying ||
-          (cachedReplay !== undefined && cachedReplay.events.length > 0))
-    );
-    this.setReplayButtonEnabled(this.replayLiveButton, true);
-    this.replayTurnLabel?.setText(`Turn ${turn} / ${maxTurn}`);
-    this.replayPlayButton?.setText(
-      this.manualReplayPlaying
-        ? this.replayPaused
-          ? "[ Resume ]"
-          : "[ Pause ]"
-        : "[ Play ]"
-    );
-  }
-
-  private setReplayButtonEnabled(
-    button: UIButton | null,
-    enabled: boolean
-  ): void {
-    if (!button) {
-      return;
-    }
-    if (enabled) {
-      button.setAlpha(1);
-      button.setInteractive({ useHandCursor: true });
-    } else {
-      button.setAlpha(0.4);
-      button.disableInteractive();
-    }
+          (cachedReplay !== undefined && cachedReplay.events.length > 0)),
+      canNext: navigationEnabled && turn < maxTurn,
+      canLive: true,
+    });
   }
 
   private layoutUI() {
@@ -2039,7 +1941,11 @@ export class GameScene extends Phaser.Scene {
       this.autoAdvanceText.setPosition(10, 10);
     }
     this.topBanner?.layout(width);
-    this.layoutReplayControls(width, height);
+    this.replayControls?.layout(
+      width,
+      height,
+      this.menuButton?.height ?? 32
+    );
     this.victoryOverlay?.layout(width, height);
   }
 
