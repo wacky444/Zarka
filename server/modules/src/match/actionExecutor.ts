@@ -20,6 +20,7 @@ import { executeAxeAttackAction } from "./actions/axeAttack";
 import { executeBatAttackAction } from "./actions/batAttack";
 import { executeShootPistolAction } from "./actions/shootPistol";
 import { executeShootHarpoonAction } from "./actions/shootHarpoon";
+import { executeShootRocketLauncherAction } from "./actions/shootRocketLauncher";
 import { executeSleepAction } from "./actions/sleep";
 import { executeRecoverAction } from "./actions/recover";
 import { executeBreakfastAction } from "./actions/breakfast";
@@ -954,6 +955,49 @@ export function executeAction(
             createFailedActionEvent(participant, action.id, {
               reason: "missing_item",
               missingItemId: "bat",
+            }),
+          )
+        : [];
+      eventsForAction = [...energyEvents, ...actionEvents, ...failureEvents];
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.fire_rocket_launcher.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const eligible: PlannedActionParticipant[] = [];
+      const missing: PlannedActionParticipant[] = [];
+      for (const participant of participants) {
+        if (hasCarriedItem(participant.character, "rocket_launcher")) {
+          eligible.push(participant);
+        } else {
+          missing.push(participant);
+          clearPlanByKey(participant.character, participant.planKey);
+          match.playerCharacters![participant.playerId] = participant.character;
+        }
+      }
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = eligible.length
+        ? executeShootRocketLauncherAction(eligible, match)
+        : [];
+      const failureEvents = missing.length
+        ? missing.map((participant) =>
+            createFailedActionEvent(participant, action.id, {
+              reason: "missing_item",
+              missingItemId: "rocket_launcher",
             }),
           )
         : [];

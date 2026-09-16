@@ -850,6 +850,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 3,
     cooldown: 3,
+    developed: true,
     range: [0, 1],
     experience: {
       base: 1,

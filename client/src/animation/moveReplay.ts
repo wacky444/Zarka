@@ -25,6 +25,7 @@ import { animateTrapEvent } from "./replayActions/TrapAnimation";
 import { animateTileDestroyedEvent } from "./replayActions/TileDestroyedAnimation";
 import { animateShootPistolEvent } from "./replayActions/ShootPistolAnimation";
 import { animateShootHarpoonEvent } from "./replayActions/ShootHarpoonAnimation";
+import { animateRocketLauncherEvent } from "./replayActions/RocketLauncherAnimation";
 import { playRandomSound } from "./soundPlayer";
 
 const TILE_DESTROYED_SOUNDS = ["explosion_small", "explosion_medium"];
@@ -83,6 +84,8 @@ export async function playReplayEvents(
       await animateShootPistolEvent(context, event);
     } else if (actionId === ActionLibrary.shoot_harpoon.id) {
       await animateShootHarpoonEvent(context, event);
+    } else if (actionId === ActionLibrary.fire_rocket_launcher.id) {
+      await animateRocketLauncherEvent(context, event);
     } else if (actionId === ActionLibrary.punch.id) {
       await animatePunchEvent(context, event);
     } else if (actionId === ActionLibrary.pick_up.id) {

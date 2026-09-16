@@ -531,6 +531,16 @@ export class CharacterPanelLogView {
             } else {
               lines.push(`${actor} missed with a harpoon`);
             }
+          } else if (actionId === "fire_rocket_launcher") {
+            const totalDamage =
+              typeof event.action.damageDealt === "number"
+                ? event.action.damageDealt
+                : 0;
+            lines.push(
+              `${actor} fired a rocket launcher${
+                totalDamage > 0 ? ` and dealt ${totalDamage} damage` : ""
+              }`
+            );
           } else if (actionId === "search") {
             const foundItems = this.extractSearchItemNames(
               event.action.metadata
