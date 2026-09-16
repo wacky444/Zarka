@@ -157,6 +157,8 @@ export class GameScene extends Phaser.Scene {
   private manualReplayPlaying = false;
   private replayPlaybackCancelled = false;
   private gridModalActive = false;
+  private browserHistoryGuardInstalled = false;
+  private browserHistoryGuardUrl: string | null = null;
   private tileItemContainers = new Map<string, Phaser.GameObjects.Container>();
   private itemTooltip: ItemTooltipManager | null = null;
   private hoverTooltip: HoverTooltip | null = null;
@@ -249,6 +251,16 @@ export class GameScene extends Phaser.Scene {
   private readonly gridModalCloseHandler = () => {
     this.gridModalActive = false;
   };
+  private readonly escapeKeyHandler = (event: KeyboardEvent) => {
+    if (event.key !== "Escape") {
+      return;
+    }
+    event.preventDefault();
+    this.handleBackNavigation(false);
+  };
+  private readonly browserBackHandler = () => {
+    this.handleBackNavigation(true);
+  };
   private readonly replayPrevHandler = () => {
     this.navigateReplayTurn(-1);
   };
@@ -264,6 +276,62 @@ export class GameScene extends Phaser.Scene {
 
   constructor() {
     super("GameScene");
+  }
+
+  private installBrowserHistoryGuard(): void {
+    if (typeof window === "undefined" || this.browserHistoryGuardInstalled) {
+      return;
+    }
+    this.browserHistoryGuardUrl = window.location.href;
+    this.restoreBrowserHistoryGuard();
+    window.addEventListener("popstate", this.browserBackHandler);
+    this.browserHistoryGuardInstalled = true;
+  }
+
+  private removeBrowserHistoryGuard(): void {
+    if (typeof window === "undefined" || !this.browserHistoryGuardInstalled) {
+      return;
+    }
+    window.removeEventListener("popstate", this.browserBackHandler);
+    this.browserHistoryGuardInstalled = false;
+    this.browserHistoryGuardUrl = null;
+  }
+
+  private restoreBrowserHistoryGuard(): void {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.history.pushState(
+      { zarkaGameHistoryGuard: true },
+      "",
+      this.browserHistoryGuardUrl ?? window.location.href
+    );
+  }
+
+  private returnToMainMenu(): void {
+    this.removeBrowserHistoryGuard();
+    this.scene.stop("GameScene");
+    this.scene.wake("MainScene");
+  }
+
+  private handleBackNavigation(fromBrowser: boolean): void {
+    if (this.gridModalActive) {
+      this.characterPanel?.closeCurrentGridSelect();
+      this.gridModalActive = false;
+    } else if (this.mobileLayout && this.mobileViewMode === "sidebar") {
+      this.mobileViewMode = "map";
+      this.layoutUI();
+    } else {
+      if (fromBrowser && this.browserHistoryGuardInstalled) {
+        this.restoreBrowserHistoryGuard();
+      }
+      this.returnToMainMenu();
+      return;
+    }
+
+    if (fromBrowser && this.browserHistoryGuardInstalled) {
+      this.restoreBrowserHistoryGuard();
+    }
   }
 
   private createLoadingOverlay() {
@@ -496,6 +564,8 @@ export class GameScene extends Phaser.Scene {
       this.handleTestamentChange,
       this
     );
+    this.input.keyboard?.on("keydown", this.escapeKeyHandler);
+    this.installBrowserHistoryGuard();
 
     if (this.turnService) {
       const skin = await this.turnService.getUserSkin();
@@ -509,8 +579,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.menuButton = makeButton(this, 0, 0, "☰", () => {
-      this.scene.stop("GameScene");
-      this.scene.wake("MainScene");
+      this.returnToMainMenu();
     })
       .setScrollFactor(0)
       .setDepth(1100);
@@ -722,6 +791,8 @@ export class GameScene extends Phaser.Scene {
       this.itemTooltip = null;
       this.hoverTooltip?.destroy();
       this.hoverTooltip = null;
+      this.input.keyboard?.off("keydown", this.escapeKeyHandler);
+      this.removeBrowserHistoryGuard();
       if (this.turnService) {
         this.turnService.setOnTurnAdvanced();
         this.turnService.setOnMatchEnded();
