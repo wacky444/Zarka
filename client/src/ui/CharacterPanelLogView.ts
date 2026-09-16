@@ -389,9 +389,11 @@ export class CharacterPanelLogView {
           const team = meta?.teamId;
           const cover = meta?.coverTeamId;
           if (team && cover) {
-            lines.push(`You belong to Team ${team} (infiltrated in Team ${cover})`);
+            lines.push(
+              `${actor} belongs to the team ${team} (infiltrated in team ${cover})`
+            );
           } else if (team) {
-            lines.push(`You belong to Team ${team}`);
+            lines.push(`${actor} belongs to the team ${team}`);
           }
           continue;
         }
