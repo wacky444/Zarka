@@ -97,6 +97,7 @@ export class GameScene extends Phaser.Scene {
   private trapVisuals: Phaser.GameObjects.Graphics[] = [];
   private playerSprites = new Map<string, SkinContainer>();
   private playerNameLabels = new Map<string, Phaser.GameObjects.Text>();
+  private playerDizzyStars = new Map<string, Phaser.GameObjects.Container>();
   private playerNameMap: Record<string, string> = {};
   private characterPanel: CharacterPanel | null = null;
   private characterPanelDesktopWidth = 0;
@@ -1079,6 +1080,9 @@ export class GameScene extends Phaser.Scene {
         const isDead = Array.isArray(conditions)
           ? conditions.indexOf("dead") !== -1
           : false;
+        const isUnconscious = Array.isArray(conditions)
+          ? conditions.indexOf("unconscious") !== -1
+          : false;
         const playerSkin =
           this.playerSkinMap.get(playerId) ??
           (playerId === this.currentUserId && this.currentPlayerSkin
@@ -1098,7 +1102,12 @@ export class GameScene extends Phaser.Scene {
         sprite.setPosition(x, y);
         sprite.setVisible(true);
         sprite.setDepth(5 + y / 1000);
-        sprite.setAngle(isDead ? -90 : 0);
+        sprite.setAngle(isDead ? -90 : isUnconscious ? -18 : 0);
+        if (isUnconscious && !isDead) {
+          this.ensureDizzyStars(playerId, sprite);
+        } else {
+          this.removeDizzyStars(playerId);
+        }
 
         const name = this.playerNameMap[playerId] ?? playerId;
         let label = this.playerNameLabels.get(playerId);
@@ -1136,6 +1145,11 @@ export class GameScene extends Phaser.Scene {
       if (!seen.has(playerId)) {
         label.destroy();
         this.playerNameLabels.delete(playerId);
+      }
+    }
+    for (const [playerId] of this.playerDizzyStars) {
+      if (!seen.has(playerId)) {
+        this.removeDizzyStars(playerId);
       }
     }
     // Ensure tile tinting reflects the current player's position/view
@@ -1325,6 +1339,79 @@ export class GameScene extends Phaser.Scene {
   ) {
     const offset = sprite.displayHeight / 2 + 12;
     label.setPosition(sprite.x, sprite.y - offset);
+    const playerId = sprite.getData("playerId") as string | undefined;
+    if (playerId) {
+      this.positionDizzyStars(playerId, sprite);
+    }
+  }
+
+  private ensureDizzyStars(playerId: string, sprite: SkinContainer): void {
+    let effect = this.playerDizzyStars.get(playerId);
+    if (!effect || !effect.active || effect.scene !== this) {
+      const leftStar = this.add
+        .text(-8, 0, "✦", {
+          fontFamily: "Arial",
+          fontSize: "13px",
+          color: "#facc15",
+          stroke: "#000000",
+          strokeThickness: 2
+        })
+        .setOrigin(0.5, 0.5);
+      const rightStar = this.add
+        .text(8, 1, "✧", {
+          fontFamily: "Arial",
+          fontSize: "10px",
+          color: "#fde68a",
+          stroke: "#000000",
+          strokeThickness: 2
+        })
+        .setOrigin(0.5, 0.5);
+      effect = this.add.container(0, 0, [leftStar, rightStar]);
+      effect.setDepth(6.5);
+      this.uiCam.ignore(effect);
+      this.playerDizzyStars.set(playerId, effect);
+      this.tweens.add({
+        targets: leftStar,
+        angle: 25,
+        y: -3,
+        duration: 420,
+        ease: "Sine.easeInOut",
+        yoyo: true,
+        repeat: -1
+      });
+      this.tweens.add({
+        targets: rightStar,
+        angle: -30,
+        y: 4,
+        duration: 360,
+        delay: 100,
+        ease: "Sine.easeInOut",
+        yoyo: true,
+        repeat: -1
+      });
+    }
+    effect.setVisible(true);
+    this.positionDizzyStars(playerId, sprite);
+  }
+
+  private positionDizzyStars(playerId: string, sprite: SkinContainer): void {
+    const effect = this.playerDizzyStars.get(playerId);
+    if (!effect || !effect.active) {
+      return;
+    }
+    effect.setPosition(
+      sprite.x,
+      sprite.y - sprite.displayHeight / 2 - 5
+    );
+  }
+
+  private removeDizzyStars(playerId: string): void {
+    const effect = this.playerDizzyStars.get(playerId);
+    if (!effect) {
+      return;
+    }
+    effect.destroy(true);
+    this.playerDizzyStars.delete(playerId);
   }
 
   private enableDragPan() {
@@ -2926,6 +3013,12 @@ export class GameScene extends Phaser.Scene {
       getSprite: (playerId) => this.playerSprites.get(playerId),
       getLabel: (playerId) => this.playerNameLabels.get(playerId),
       positionLabel: (label, sprite) => this.positionNameLabel(label, sprite),
+      showDizzyStars: (playerId) => {
+        const sprite = this.playerSprites.get(playerId);
+        if (sprite) {
+          this.ensureDizzyStars(playerId, sprite);
+        }
+      },
       currentMatch: this.replayView?.match ?? this.currentMatch,
       scene: this,
       showTileDestroyedBanner: (cell) => this.showTileDestroyedBanner(cell),

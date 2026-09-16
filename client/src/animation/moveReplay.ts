@@ -3,6 +3,7 @@ import type { MoveReplayContext } from "./MoveReplayContext";
 import { animateFeedEvent } from "./replayActions/FeedAnimation";
 import { animateBreakfastEvent } from "./replayActions/BreakfastAnimation";
 import { animateDeathEvent } from "./replayActions/DeathAnimation";
+import { animateUnconsciousEvent } from "./replayActions/UnconsciousAnimation";
 import { animateMoveEvent } from "./replayActions/MoveAnimation";
 import { animatePickUpEvent } from "./replayActions/PickUpAnimation";
 import { animateDropEvent } from "./replayActions/DropAnimation";
@@ -83,6 +84,8 @@ export async function playReplayEvents(
       await animateSearchEvent(context, event);
     } else if (actionId === ActionLibrary.status_dead.id) {
       await animateDeathEvent(context, event);
+    } else if (actionId === ActionLibrary.status_unconscious.id) {
+      await animateUnconsciousEvent(context, event);
     } else if (actionId === ActionLibrary.failedAction.id) {
       await animateFailedActionEvent(context, event);
     } else if (actionId === ActionLibrary.detect.id) {

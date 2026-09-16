@@ -11,6 +11,7 @@ export interface MoveReplayContext {
     label: Phaser.GameObjects.Text,
     sprite: SkinContainer,
   ) => void;
+  showDizzyStars?: (playerId: string) => void;
   currentMatch: MatchRecord | null;
   scene: Phaser.Scene;
   showTileDestroyedBanner?: (cell: Axial) => void;
