@@ -13,19 +13,22 @@ export class BatAttackAction extends BaseAttackAction {
   protected override getBaseDamage(
     participant: PlannedActionParticipant,
     _targetId: string,
-    _match: MatchRecord
+    _match: MatchRecord,
+    usableExtraExecutions?: number
   ): number {
     const hasNailBat = hasCarriedItem(participant.character, "nail_bat");
     const weaponBase = hasNailBat ? 7 : 5;
     const actionId = participant.plan.actionId as ActionId;
     const definition = actionId ? ActionLibrary[actionId] : undefined;
-    const usableExtra = definition
-      ? getUsableExtraExecutions(
-          participant.character,
-          participant.plan,
-          definition
-        )
-      : 0;
+    const usableExtra =
+      usableExtraExecutions ??
+      (definition
+        ? getUsableExtraExecutions(
+            participant.character,
+            participant.plan,
+            definition
+          )
+        : 0);
 
     return weaponBase + usableExtra;
   }

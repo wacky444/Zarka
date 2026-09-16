@@ -206,6 +206,10 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.testamentSelector.setActive(enabled);
   }
 
+  closeModal(): void {
+    this.testamentSelector.hideDropdown();
+  }
+
   setVisible(visible: boolean): void {
     this.visible = visible;
     this.background.setVisible(visible);

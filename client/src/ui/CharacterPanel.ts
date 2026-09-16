@@ -5379,4 +5379,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   setLogPlaybackState(active: boolean) {
     this.logView.setPlaybackState(active);
   }
+
+  closeCurrentGridSelect(): void {
+    this.mainActionDropdown.hideModal();
+    this.playerSelector.hideDropdown();
+    this.scareSecondPlayerSelector.hideDropdown();
+    this.itemSelector.hideDropdown();
+    this.secondaryActionDropdown.hideModal();
+    this.secondaryPlayerSelector.hideDropdown();
+    this.secondaryInspectSecondPlayerSelector.hideDropdown();
+    this.secondaryItemSelector.hideDropdown();
+    this.extraSecondaryActionDropdown.hideModal();
+    this.extraSecondaryPlayerSelector.hideDropdown();
+    this.extraSecondaryItemSelector.hideDropdown();
+    this.shopView.closeModal();
+  }
 }

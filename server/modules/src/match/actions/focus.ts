@@ -8,8 +8,14 @@ import type {
   ReplayActionTarget,
   ReplayPlayerEvent,
 } from "@shared";
-import { ReplayActionEffect } from "@shared";
-import { type PlannedActionParticipant } from "./utils";
+import { ActionLibrary, ReplayActionEffect } from "@shared";
+import { getUsableExtraExecutions } from "../../utils/energy";
+import {
+  applyHealthDelta,
+  mergeCharacterState,
+  type PlannedActionParticipant,
+} from "./utils";
+import { isCharacterDead } from "../../utils/playerCharacter";
 import { BaseAction } from "./classes/BaseAction";
 
 const FOCUS_BASE_BONUS = 6;
@@ -43,7 +49,30 @@ export class FocusAction extends BaseAction {
         this.clearPlan(participant);
         continue;
       }
-      const granted = applyFocusBonus(participant.character, FOCUS_BASE_BONUS);
+      const extraExecutions = getUsableExtraExecutions(
+        participant.character,
+        participant.plan,
+        ActionLibrary.focus
+      );
+      const healthEvents: ReplayPlayerEvent[] = [];
+      let healthLost = 0;
+      for (let index = 0; index < extraExecutions; index += 1) {
+        const healthOutcome = applyHealthDelta(participant.character, -1);
+        mergeCharacterState(participant.character, healthOutcome.character);
+        healthLost += Math.max(0, -healthOutcome.result.delta);
+        if (healthOutcome.event) {
+          healthEvents.push(healthOutcome.event);
+        }
+        if (healthOutcome.result.dead) {
+          break;
+        }
+      }
+      const granted = isCharacterDead(participant.character)
+        ? 0
+        : applyFocusBonus(
+            participant.character,
+            FOCUS_BASE_BONUS + extraExecutions * 3
+          );
       this.clearPlan(participant);
       if (match.playerCharacters) {
         match.playerCharacters[participant.playerId] = participant.character;
@@ -53,6 +82,8 @@ export class FocusAction extends BaseAction {
         effects: ReplayActionEffect.Heal,
         metadata: {
           energyBonus: granted,
+          extraExecutions,
+          healthLost,
         },
       };
       if (participant.character.position?.coord) {
@@ -63,8 +94,11 @@ export class FocusAction extends BaseAction {
         effects: ReplayActionEffect.Heal,
         metadata: {
           energyBonus: granted,
+          extraExecutions,
+          healthLost,
         },
       };
+      events.push(...healthEvents);
       events.push({
         kind: "player",
         actorId: participant.playerId,
