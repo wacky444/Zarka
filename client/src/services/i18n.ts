@@ -493,6 +493,12 @@ function translateValue(value: string): string {
   if (direct) {
     return direct;
   }
+  // Preserve BBCode generated for rich action descriptions. Treating a
+  // `[color=...]...[/color]` value as a bracket label corrupts its tags.
+  if (/\[(?:color|bgcolor)=[^\]]+\]/i.test(value) ||
+      /\[\/(?:color|bgcolor)\]/i.test(value)) {
+    return value;
+  }
   const bracketMatch = value.match(/^\[\s*(.*?)\s*\]$/);
   if (bracketMatch) {
     const translated = translateValue(bracketMatch[1]);
