@@ -62,6 +62,7 @@ export function updateSecondaryActionRpc(
   let prioritizeFoodDrink = false;
   let sellInstead = false;
   let singleTarget = false;
+  let inspectAdditionalTarget = false;
   if (submission) {
     actionId = normalizeActionId(submission.actionId);
     if (actionId.length === 0) {
@@ -82,6 +83,13 @@ export function updateSecondaryActionRpc(
     prioritizeFoodDrink = submission.prioritizeFoodDrink === true;
     sellInstead = submission.sellInstead === true;
     singleTarget = submission.singleTarget === true;
+    inspectAdditionalTarget = submission.inspectAdditionalTarget === true;
+    if (inspectAdditionalTarget && candidate !== "inspect") {
+      throw makeNakamaError(
+        "inspect_additional_target_requires_inspect",
+        nkruntime.Codes.INVALID_ARGUMENT
+      );
+    }
     const locationCandidate = submission.targetLocationId as Axial | undefined;
     if (locationCandidate) {
       const rawCandidate = locationCandidate as unknown as {
@@ -154,6 +162,26 @@ export function updateSecondaryActionRpc(
         );
       }
       extraExecutions = clamped > 0 ? clamped : undefined;
+    }
+    if (inspectAdditionalTarget) {
+      if (!extraExecutions || extraExecutions < 1) {
+        throw makeNakamaError(
+          "inspect_additional_target_requires_extra_execution",
+          nkruntime.Codes.INVALID_ARGUMENT
+        );
+      }
+      if (!targetPlayerIds || targetPlayerIds.length < 2) {
+        throw makeNakamaError(
+          "inspect_additional_target_requires_two_players",
+          nkruntime.Codes.INVALID_ARGUMENT
+        );
+      }
+      if (targetPlayerIds[0] === targetPlayerIds[1]) {
+        throw makeNakamaError(
+          "inspect_additional_target_must_differ",
+          nkruntime.Codes.INVALID_ARGUMENT
+        );
+      }
     }
   }
   const clearAction = !submission;
@@ -281,6 +309,11 @@ export function updateSecondaryActionRpc(
     } else {
       delete nextPlan.singleTarget;
     }
+    if (inspectAdditionalTarget) {
+      nextPlan.inspectAdditionalTarget = true;
+    } else {
+      delete nextPlan.inspectAdditionalTarget;
+    }
     character.actionPlan[planKey] = nextPlan;
   }
   storage.writeMatch(match, read.version);
@@ -301,7 +334,10 @@ export function updateSecondaryActionRpc(
     extraExecutions: clearAction ? undefined : extraExecutions,
     prioritizeFoodDrink: clearAction ? undefined : prioritizeFoodDrink,
     sellInstead: clearAction ? undefined : sellInstead,
-    singleTarget: clearAction ? undefined : singleTarget
+    singleTarget: clearAction ? undefined : singleTarget,
+    inspectAdditionalTarget: clearAction
+      ? undefined
+      : inspectAdditionalTarget
   };
   return JSON.stringify(response);
 }

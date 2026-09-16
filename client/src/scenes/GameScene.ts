@@ -2415,7 +2415,8 @@ export class GameScene extends Phaser.Scene {
           : undefined,
       prioritizeFoodDrink: selection?.prioritizeFoodDrink === true,
       sellInstead: selection?.sellInstead === true,
-      singleTarget: selection?.singleTarget === true
+      singleTarget: selection?.singleTarget === true,
+      inspectAdditionalTarget: selection?.inspectAdditionalTarget === true
     };
     const character =
       this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
@@ -2447,7 +2448,9 @@ export class GameScene extends Phaser.Scene {
         (previousPlan?.prioritizeFoodDrink ?? false) &&
       normalizedSelection.sellInstead ===
         (previousPlan?.sellInstead ?? false) &&
-      normalizedSelection.singleTarget === (previousPlan?.singleTarget ?? false)
+      normalizedSelection.singleTarget === (previousPlan?.singleTarget ?? false) &&
+      normalizedSelection.inspectAdditionalTarget ===
+        (previousPlan?.inspectAdditionalTarget ?? false)
     ) {
       return;
     }
@@ -2467,7 +2470,8 @@ export class GameScene extends Phaser.Scene {
             normalizedSelection.extraExecutions,
             normalizedSelection.prioritizeFoodDrink,
             normalizedSelection.sellInstead,
-            normalizedSelection.singleTarget
+            normalizedSelection.singleTarget,
+            normalizedSelection.inspectAdditionalTarget
           )
         : null;
       const res = await this.turnService.updateSecondaryAction(
@@ -2541,6 +2545,11 @@ export class GameScene extends Phaser.Scene {
           nextPlan.singleTarget = true;
         } else {
           delete nextPlan.singleTarget;
+        }
+        if (payload.inspectAdditionalTarget === true) {
+          nextPlan.inspectAdditionalTarget = true;
+        } else {
+          delete nextPlan.inspectAdditionalTarget;
         }
         target.actionPlan.secondary = nextPlan;
       }
@@ -3164,7 +3173,8 @@ export class GameScene extends Phaser.Scene {
     extraExecutions?: number,
     prioritizeFoodDrink = false,
     sellInstead = false,
-    singleTarget?: boolean
+    singleTarget?: boolean,
+    inspectAdditionalTarget = false
   ): ActionSubmission {
     const typedId = actionId as ActionId;
     const definition = ActionLibrary[typedId] ?? null;
@@ -3196,6 +3206,9 @@ export class GameScene extends Phaser.Scene {
     }
     if (singleTarget !== undefined) {
       submission.singleTarget = singleTarget;
+    }
+    if (inspectAdditionalTarget) {
+      submission.inspectAdditionalTarget = true;
     }
     return submission;
   }

@@ -100,23 +100,33 @@ export class InspectAction extends BaseAction {
         participant.plan,
         definition,
       );
-      const itemLimit = ITEMS_PER_INSPECTION * (1 + extraExecutions);
+      const inspectAdditionalTarget =
+        participant.plan.inspectAdditionalTarget === true &&
+        extraExecutions > 0;
+      const itemLimit = inspectAdditionalTarget
+        ? ITEMS_PER_INSPECTION
+        : ITEMS_PER_INSPECTION * (1 + extraExecutions);
       const targets = collectTargets(actionId, participant, match, {
-        allowMultiple: false,
+        allowMultiple: inspectAdditionalTarget,
         includeSelf: true,
       });
-      const target = targets[0];
-      let newlyRevealed: string[] = [];
-      let targetItemTypes: string[] = [];
-      if (target) {
+      const revealedByTarget: Array<{
+        targetId: string;
+        newlyRevealed: string[];
+        carriedItemTypes: string[];
+      }> = [];
+      for (const target of targets) {
         const revealed = revealItems(
           participant.character,
           target.id,
           target.character,
           itemLimit,
         );
-        newlyRevealed = revealed.newlyRevealed;
-        targetItemTypes = revealed.known;
+        revealedByTarget.push({
+          targetId: target.id,
+          newlyRevealed: revealed.newlyRevealed,
+          carriedItemTypes: revealed.known,
+        });
       }
 
       this.clearPlan(participant);
@@ -126,17 +136,26 @@ export class InspectAction extends BaseAction {
 
       const metadata: Record<string, unknown> = {
         extraExecutions,
-        revealedItemTypes: newlyRevealed,
-        revealedCount: newlyRevealed.length,
       };
-      if (target) {
-        metadata.targetPlayerId = target.id;
-        metadata.carriedItemTypes = targetItemTypes;
+      const allNewlyRevealed: string[] = [];
+      for (const entry of revealedByTarget) {
+        allNewlyRevealed.push(...entry.newlyRevealed);
+      }
+      metadata.revealedItemTypes = allNewlyRevealed;
+      metadata.revealedCount = allNewlyRevealed.length;
+      metadata.inspectAdditionalTarget = inspectAdditionalTarget;
+      if (revealedByTarget.length > 0) {
+        metadata.targetPlayerIds = revealedByTarget.map((entry) => entry.targetId);
+        metadata.revealedItemsByTarget = revealedByTarget.map((entry) => ({
+          targetId: entry.targetId,
+          itemTypes: entry.newlyRevealed,
+          carriedItemTypes: entry.carriedItemTypes,
+        }));
       }
       const action: ReplayActionDone = {
         actionId,
         originLocation: participant.character.position?.coord,
-        targetLocation: target?.coord,
+        targetLocation: targets[0]?.coord,
         metadata,
       };
       const event: ReplayPlayerEvent = {
@@ -144,16 +163,14 @@ export class InspectAction extends BaseAction {
         actorId: participant.playerId,
         action,
       };
-      if (target) {
-        event.targets = [
-          {
-            targetId: target.id,
-            metadata: {
-              revealedItemTypes: newlyRevealed,
-              revealedCount: newlyRevealed.length,
-            },
+      if (revealedByTarget.length > 0) {
+        event.targets = revealedByTarget.map((entry) => ({
+          targetId: entry.targetId,
+          metadata: {
+            revealedItemTypes: entry.newlyRevealed,
+            revealedCount: entry.newlyRevealed.length,
           },
-        ];
+        }));
       }
       events.push(event);
     }

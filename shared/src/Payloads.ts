@@ -74,6 +74,7 @@ export type UpdateSecondaryActionPayload = {
   prioritizeFoodDrink?: boolean;
   sellInstead?: boolean;
   singleTarget?: boolean;
+  inspectAdditionalTarget?: boolean;
   error?: string;
 };
 

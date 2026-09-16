@@ -525,23 +525,29 @@ export class CharacterPanelLogView {
               lines.push(`${actor} found nothing`);
             }
           } else if (actionId === "inspect") {
-            const targetId =
-              Array.isArray(event.targets) && event.targets.length > 0
-                ? event.targets[0].targetId
-                : (event.action.metadata as { targetPlayerId?: unknown } | undefined)
-                    ?.targetPlayerId;
-            const targetName = this.resolvePlayerName(
-              typeof targetId === "string" ? targetId : undefined
-            );
-            const revealedItems = this.extractInspectItemNames(
-              event.action.metadata
-            );
-            if (revealedItems.length > 0) {
-              lines.push(
-                `${actor} inspected ${targetName} and found ${revealedItems.join(", ")}`
-              );
-            } else if (targetId) {
-              lines.push(`${actor} inspected ${targetName} and found nothing new`);
+            const results = this.extractInspectResults(event.action.metadata);
+            if (results.length > 0) {
+              for (const result of results) {
+                const targetName = this.resolvePlayerName(result.targetId);
+                lines.push(
+                  result.itemNames.length > 0
+                    ? `${actor} inspected ${targetName} and found ${result.itemNames.join(", ")}`
+                    : `${actor} inspected ${targetName} and found nothing new`
+                );
+              }
+            } else {
+              const targetId =
+                Array.isArray(event.targets) && event.targets.length > 0
+                  ? event.targets[0].targetId
+                  : (event.action.metadata as { targetPlayerId?: unknown } | undefined)
+                      ?.targetPlayerId;
+              if (targetId) {
+                lines.push(
+                  `${actor} inspected ${this.resolvePlayerName(
+                    typeof targetId === "string" ? targetId : undefined
+                  )} and found nothing new`
+                );
+              }
             }
           } else if (actionId === "detect") {
             if (Array.isArray(event.targets) && event.targets.length > 0) {
@@ -799,18 +805,36 @@ export class CharacterPanelLogView {
     return itemType;
   }
 
-  private extractInspectItemNames(metadata: unknown): string[] {
+  private extractInspectResults(
+    metadata: unknown
+  ): Array<{ targetId: string; itemNames: string[] }> {
     if (!metadata || typeof metadata !== "object") {
       return [];
     }
-    const itemTypes = (metadata as { revealedItemTypes?: unknown })
-      .revealedItemTypes;
-    if (!Array.isArray(itemTypes)) {
+    const entries = (metadata as { revealedItemsByTarget?: unknown })
+      .revealedItemsByTarget;
+    if (!Array.isArray(entries)) {
       return [];
     }
-    return itemTypes.filter((itemType): itemType is string =>
-      typeof itemType === "string"
-    ).map((itemType) => this.resolveItemName(itemType));
+    const results: Array<{ targetId: string; itemNames: string[] }> = [];
+    for (const entry of entries) {
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
+      const record = entry as { targetId?: unknown; itemTypes?: unknown };
+      if (typeof record.targetId !== "string") {
+        continue;
+      }
+      const itemNames = Array.isArray(record.itemTypes)
+        ? record.itemTypes
+            .filter((itemType): itemType is string =>
+              typeof itemType === "string"
+            )
+            .map((itemType) => this.resolveItemName(itemType))
+        : [];
+      results.push({ targetId: record.targetId, itemNames });
+    }
+    return results;
   }
 
   private extractPickedItemNames(metadata: unknown): string[] {

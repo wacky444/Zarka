@@ -135,6 +135,7 @@ export interface PlayerPlannedAction {
   prioritizeFoodDrink?: boolean;
   sellInstead?: boolean;
   singleTarget?: boolean;
+  inspectAdditionalTarget?: boolean;
   conditions?: Array<ActionCondition>;
   targetLocationId?: Axial;
   targetPlayerIds?: string[];

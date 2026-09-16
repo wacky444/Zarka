@@ -154,6 +154,7 @@ export interface ActionSubmission {
   prioritizeFoodDrink?: boolean;
   sellInstead?: boolean;
   singleTarget?: boolean;
+  inspectAdditionalTarget?: boolean;
   targetPlayerIds?: string[];
   targetLocationId?: Axial;
   conditions?: ActionCondition[];
