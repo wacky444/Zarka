@@ -142,18 +142,24 @@ function chooseItemType(
   actor: PlayerCharacter,
   targetId: string,
   target: PlayerCharacter,
+  canSpecifyUnknownItem: boolean,
   requestedItemTypes: string[] = []
 ): ItemId | null {
   const carriedTypes = getCarriedItemTypes(target);
   if (carriedTypes.length === 0) {
     return null;
   }
-  for (const requestedItemType of requestedItemTypes) {
-    if (carriedTypes.indexOf(requestedItemType as ItemId) !== -1) {
-      return requestedItemType as ItemId;
+  if (canSpecifyUnknownItem) {
+    for (const requestedItemType of requestedItemTypes) {
+      if (carriedTypes.indexOf(requestedItemType as ItemId) !== -1) {
+        return requestedItemType as ItemId;
+      }
     }
   }
   const knownTypes = getKnownCarriedItemTypes(actor, targetId, carriedTypes);
+  if (knownTypes.length === 0 && !canSpecifyUnknownItem) {
+    return null;
+  }
   const choices = knownTypes.length > 0 ? knownTypes : carriedTypes;
   return choices[Math.floor(Math.random() * choices.length)] ?? null;
 }
@@ -183,9 +189,10 @@ export class StealAction extends BaseAction {
           : undefined;
       const blockedByProtection =
         targetCandidate !== undefined && target === undefined;
+      const canSpecifyUnknownItem =
+        getSkillRank(participant.character, "dexterity2") > 0;
       const requestedItemTypes =
-        getSkillRank(participant.character, "dexterity2") > 0 &&
-        Array.isArray(participant.plan.targetItemIds)
+        canSpecifyUnknownItem && Array.isArray(participant.plan.targetItemIds)
           ? participant.plan.targetItemIds.filter(
               (itemType): itemType is string =>
                 typeof itemType === "string" && itemType.length > 0
@@ -207,6 +214,7 @@ export class StealAction extends BaseAction {
             participant.character,
             target.id,
             target.character,
+            canSpecifyUnknownItem,
             index === 0 ? requestedItemTypes : []
           );
           if (!itemType) {
