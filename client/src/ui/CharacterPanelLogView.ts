@@ -541,6 +541,30 @@ export class CharacterPanelLogView {
                 totalDamage > 0 ? ` and dealt ${totalDamage} damage` : ""
               }`
             );
+          } else if (actionId === "inject_virus") {
+            const infectionTick = (
+              event.action.metadata as { infectionTick?: boolean } | undefined
+            )?.infectionTick;
+            if (infectionTick) {
+              const damage =
+                typeof event.action.damageDealt === "number"
+                  ? event.action.damageDealt
+                  : 0;
+              const targetId = event.targets?.[0]?.targetId;
+              const targetName = this.resolvePlayerName(targetId);
+              lines.push(
+                damage > 0
+                  ? `${targetName} was affected by a virus and lost ${damage} health`
+                  : `${targetName} was exposed to a virus`
+              );
+            } else {
+              const targetId = event.targets?.[0]?.targetId;
+              lines.push(
+                targetId
+                  ? `${actor} injected a virus into ${this.resolvePlayerName(targetId)}`
+                  : `${actor} injected a virus`
+              );
+            }
           } else if (actionId === "search") {
             const foundItems = this.extractSearchItemNames(
               event.action.metadata

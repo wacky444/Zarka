@@ -1203,6 +1203,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 1,
     cooldown: 3,
+    developed: true,
     requirements: [
       {
         description: "Requiere tener un vial de virus.",

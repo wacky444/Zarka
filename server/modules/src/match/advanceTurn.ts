@@ -14,6 +14,7 @@ import { recordMatchReportProgress } from "./matchReport";
 import { updateCooldownsForTurn } from "./actions/cooldowns";
 import { executeAction, type TileLookup } from "./actionExecutor";
 import { applyHealthDelta } from "./actions/utils";
+import { applyVirusInfection } from "./actions/virusInfection";
 import { isCharacterDead } from "../utils/playerCharacter";
 
 function sortedActions(): ActionDefinition[] {
@@ -341,6 +342,7 @@ export function advanceTurn(
       replayEvents.push(...events);
     }
   }
+  replayEvents.push(...applyVirusInfection(match, resolvedTurn, logger));
   applyPendingZarkanPayout(match);
   // removeProtectedState(match);
 

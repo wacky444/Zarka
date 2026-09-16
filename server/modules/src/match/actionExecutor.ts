@@ -30,6 +30,7 @@ import { executeUseBandageAction } from "./actions/useBandage";
 import { executeUseChemicalWeaponAction } from "./actions/UseChemicalWeapon";
 import { executeSearchAction } from "./actions/search";
 import { executeInspectAction } from "./actions/inspect";
+import { executeInjectVirusAction } from "./actions/injectVirus";
 import {
   executeActivateCamerasAction,
   executeLookThroughWindowAction,
@@ -348,6 +349,49 @@ export function executeAction(
             createFailedActionEvent(participant, action.id, {
               reason: "missing_item",
               missingItemId: "chemical_weapon",
+            }),
+          )
+        : [];
+      eventsForAction = [...energyEvents, ...actionEvents, ...failureEvents];
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.inject_virus.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const eligible: PlannedActionParticipant[] = [];
+      const missing: PlannedActionParticipant[] = [];
+      for (const participant of participants) {
+        if (hasCarriedItem(participant.character, "virus")) {
+          eligible.push(participant);
+        } else {
+          missing.push(participant);
+          clearPlanByKey(participant.character, participant.planKey);
+          match.playerCharacters![participant.playerId] = participant.character;
+        }
+      }
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = eligible.length
+        ? executeInjectVirusAction(eligible, match)
+        : [];
+      const failureEvents = missing.length
+        ? missing.map((participant) =>
+            createFailedActionEvent(participant, action.id, {
+              reason: "missing_item",
+              missingItemId: "virus",
             }),
           )
         : [];

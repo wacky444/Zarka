@@ -112,6 +112,7 @@ export interface PlayerStatusState {
   dodgeAttempts?: number;
   intoxication?: PlayerIntoxicationStatus;
   virus?: PlayerVirusStatus;
+  vaccine?: PlayerVaccineStatus;
   fire?: PlayerFireStatus;
   cooldowns?: PlayerActionCooldown[];
 }
@@ -121,8 +122,13 @@ export interface PlayerIntoxicationStatus {
 }
 
 export interface PlayerVirusStatus {
+  containsVirus: boolean;
   contagious: boolean;
   lastTickTurn: number;
+}
+
+export interface PlayerVaccineStatus {
+  immune: boolean;
 }
 
 export interface PlayerFireStatus {
