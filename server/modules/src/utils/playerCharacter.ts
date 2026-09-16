@@ -179,6 +179,63 @@ function radialDistance(
   return Math.sqrt(dq * dq + dr * dr);
 }
 
+function findCenteredSquare(
+  tiles: SpawnTile[],
+  centerQ: number,
+  centerR: number,
+  randomTieBreakers: Record<string, number>
+): SpawnTile[] | undefined {
+  const byCoordinate: Record<string, SpawnTile> = {};
+  for (const tile of tiles) {
+    byCoordinate[`${tile.coord.q}:${tile.coord.r}`] = tile;
+  }
+
+  let best: SpawnTile[] | undefined;
+  let bestScore = Number.POSITIVE_INFINITY;
+  let bestTieBreaker = Number.POSITIVE_INFINITY;
+  for (const topLeft of tiles) {
+    const square: SpawnTile[] = [];
+    for (let qOffset = 0; qOffset <= 1; qOffset += 1) {
+      for (let rOffset = 0; rOffset <= 1; rOffset += 1) {
+        const tile = byCoordinate[
+          `${topLeft.coord.q + qOffset}:${topLeft.coord.r + rOffset}`
+        ];
+        if (!tile) {
+          square.length = 0;
+          break;
+        }
+        square.push(tile);
+      }
+      if (square.length === 0) {
+        break;
+      }
+    }
+    if (square.length !== 4) {
+      continue;
+    }
+
+    const squareCenterQ = topLeft.coord.q + 0.5;
+    const squareCenterR = topLeft.coord.r + 0.5;
+    const dq = squareCenterQ - centerQ;
+    const dr = squareCenterR - centerR;
+    const score = dq * dq + dr * dr;
+    const tieBreaker = square.reduce(
+      (total, tile) => total + randomTieBreakers[tile.id],
+      0
+    );
+    if (
+      score < bestScore ||
+      (score === bestScore && tieBreaker < bestTieBreaker)
+    ) {
+      best = square;
+      bestScore = score;
+      bestTieBreaker = tieBreaker;
+    }
+  }
+
+  return best;
+}
+
 function buildSpawnGroupSizes(playerCount: number): number[] {
   if (playerCount <= 0) {
     return [];
@@ -232,6 +289,35 @@ function buildSpawnPool(
   const randomTieBreakers: Record<string, number> = {};
   for (const tile of remaining) {
     randomTieBreakers[tile.id] = rng();
+  }
+
+  // Four players fit naturally into a centered 2x2 block. The ring-based
+  // grouping below can otherwise select two opposite anchors and produce a
+  // vertical or horizontal line instead of an even square.
+  if (playerCount === 4) {
+    const square = findCenteredSquare(
+      remaining,
+      centerQ,
+      centerR,
+      randomTieBreakers
+    );
+    if (square) {
+      const squareIds: Record<string, boolean> = {};
+      for (const tile of square) {
+        squareIds[tile.id] = true;
+      }
+      const rest = remaining
+        .filter((tile) => !squareIds[tile.id])
+        .sort((left, right) => {
+          const leftDistance = radialDistance(left, centerQ, centerR);
+          const rightDistance = radialDistance(right, centerQ, centerR);
+          if (leftDistance !== rightDistance) {
+            return leftDistance - rightDistance;
+          }
+          return randomTieBreakers[left.id] - randomTieBreakers[right.id];
+        });
+      return square.concat(rest);
+    }
   }
 
   const takeNearest = (
