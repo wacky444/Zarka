@@ -157,9 +157,6 @@ function chooseItemType(
     }
   }
   const knownTypes = getKnownCarriedItemTypes(actor, targetId, carriedTypes);
-  if (knownTypes.length === 0 && !canSpecifyUnknownItem) {
-    return null;
-  }
   const choices = knownTypes.length > 0 ? knownTypes : carriedTypes;
   return choices[Math.floor(Math.random() * choices.length)] ?? null;
 }
