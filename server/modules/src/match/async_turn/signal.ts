@@ -269,6 +269,8 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
                   : tailorPlayerCharactersForViewer(
                       msg.playerCharacters,
                       playerId,
+                      false,
+                      msg.turn,
                     ),
                 map: viewAll
                   ? msg.map

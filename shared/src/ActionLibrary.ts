@@ -1101,12 +1101,13 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 1,
     cooldown: 1,
+    developed: true,
     range: [1],
-    requirements: [{ description: "Debe encontrarse en una casa." }],
+    requirements: [{ description: "Debe encontrarse en una casa o farmacia." }],
     effects: [
       {
         description:
-          "Permite ver a los personajes visibles de una localización adyacente; no distingue desmayados."
+          "Permite ver a los personajes visibles de una localización adyacente."
       }
     ],
     texture: "Board Game Icons",
@@ -1121,13 +1122,14 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 1,
     cooldown: 3,
+    developed: true,
     range: [1, 2],
     requiredItems: ["binoculars"],
     requirements: [{ description: "Requiere tener prismáticos." }],
     effects: [
       {
         description:
-          "Revela los personajes visibles de una localización adyacente; no distingue desmayados."
+          "Revela los personajes visibles de una localización adyacente."
       }
     ],
     extraExecution: {

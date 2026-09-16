@@ -789,7 +789,24 @@ export class GameScene extends Phaser.Scene {
       : 0;
   }
 
+  private getCurrentRemoteViewCoord(): Axial | null {
+    if (this.replayView || !this.currentMatch || !this.currentUserId) {
+      return null;
+    }
+    const character = this.currentMatch.playerCharacters?.[this.currentUserId];
+    const currentTurn = this.currentMatch.current_turn ?? 0;
+    const remoteView = character?.remoteView;
+    if (!remoteView || remoteView.turn !== currentTurn) {
+      return null;
+    }
+    return remoteView.coord;
+  }
+
   private isOutOfViewRange(coord: Axial): boolean {
+    const remoteView = this.getCurrentRemoteViewCoord();
+    if (remoteView && remoteView.q === coord.q && remoteView.r === coord.r) {
+      return false;
+    }
     if (!this.playerCoordForTinting) {
       return false;
     }
@@ -3477,7 +3494,12 @@ export class GameScene extends Phaser.Scene {
       definition?.range && definition.range.length > 0
         ? [...definition.range]
         : [0];
-    if (
+    if (actionId === "use_binoculars") {
+      allowed = allowed.filter((distance) => distance <= 1);
+      if (extraExecutions > 0) {
+        allowed.push(2);
+      }
+    } else if (
       definition?.extraExecution &&
       definition.extraExecution.effectType ===
         ExtraExecutionEffect.IncreaseRange &&

@@ -348,6 +348,14 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   "Permite vender hasta 4 objetos obteniendo 1 zarkan adicional por cada uno.":
     "Allows selling up to 4 items, receiving 1 additional zarkan for each one.",
   "Permite vender objetos adicionales.": "Allows selling additional items.",
+  "Debe encontrarse en una casa o farmacia.":
+    "Must be in a house or pharmacy.",
+  "Permite ver a los personajes visibles de una localización adyacente.":
+    "Allows viewing visible characters in an adjacent location.",
+  "Revela los personajes visibles de una localización adyacente.":
+    "Reveals visible characters in an adjacent location.",
+  "Permite observar una localización a 2 de distancia.":
+    "Allows observing a location two spaces away.",
   Registrar: "Search",
   Concentrarse: "Focus",
   Entrenar: "Train",

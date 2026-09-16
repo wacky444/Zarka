@@ -23,6 +23,13 @@ export interface PlayerCharacter {
   corpseRations?: number;
   testamentRecipientId?: string;
   testamentProcessed?: boolean;
+  /** Cell observed remotely by a one-turn reconnaissance action. */
+  remoteView?: PlayerRemoteView;
+}
+
+export interface PlayerRemoteView {
+  coord: Axial;
+  turn: number;
 }
 
 export interface PlayerCharacterUnknown {

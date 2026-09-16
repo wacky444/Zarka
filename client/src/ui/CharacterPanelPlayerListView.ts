@@ -1004,7 +1004,11 @@ export class CharacterPanelPlayerListView {
     const viewer = this.currentUserId
       ? match.playerCharacters?.[this.currentUserId]
       : undefined;
-    const details = formatPlayerPerceptionDetails(viewer, character);
+    const details = formatPlayerPerceptionDetails(
+      viewer,
+      character,
+      match.current_turn
+    );
     if (details !== this.playersTabCardDetails.text) {
       this.playersTabCardDetailsPanel.t = 0;
     }

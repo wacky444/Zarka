@@ -85,7 +85,8 @@ function computeViewRange(
 export function tailorPlayerCharactersForViewer(
   playerCharacters: Record<string, PlayerCharacter> | undefined,
   viewerId: string | undefined | null,
-  viewAll = false
+  viewAll = false,
+  currentTurn?: number
 ): Record<string, PlayerCharacter> | undefined {
   if (!playerCharacters) {
     return playerCharacters;
@@ -103,6 +104,10 @@ export function tailorPlayerCharactersForViewer(
   }
   const viewerCoord = viewer.position?.coord;
   const viewRange = computeViewRange(viewer);
+  const remoteView =
+    typeof currentTurn === "number" && viewer.remoteView?.turn === currentTurn
+      ? viewer.remoteView.coord
+      : undefined;
   const filtered: Record<string, PlayerCharacter> = {};
   for (const id in playerCharacters) {
     if (!Object.prototype.hasOwnProperty.call(playerCharacters, id)) {
@@ -120,7 +125,12 @@ export function tailorPlayerCharactersForViewer(
     if (!candidateCoord) {
       continue;
     }
-    if (axialDistance(viewerCoord, candidateCoord) <= viewRange) {
+    const isInNormalView = axialDistance(viewerCoord, candidateCoord) <= viewRange;
+    const isInRemoteView =
+      !!remoteView &&
+      remoteView.q === candidateCoord.q &&
+      remoteView.r === candidateCoord.r;
+    if (isInNormalView || isInRemoteView) {
       const isDead =
         isCharacterDead(candidate) ||
         (typeof candidate.stats?.health?.current === "number" &&
@@ -131,6 +141,8 @@ export function tailorPlayerCharactersForViewer(
       const sanitized = { ...candidate };
       delete sanitized.discoveredItemIds;
       delete sanitized.revealedItemTypesByPlayerId;
+      delete sanitized.actionPlan;
+      delete sanitized.remoteView;
       if (!isDead && !isConfirmedTeammate && candidate.teamId !== undefined) {
         delete sanitized.teamId;
       }
@@ -175,7 +187,8 @@ export function tailorMatchForPlayer(
   const playerCharacters = tailorPlayerCharactersForViewer(
     match.playerCharacters,
     playerId,
-    viewAll
+    viewAll,
+    match.current_turn
   );
   const playerList: Record<string, PlayerCharacterUnknown> = {};
   const deadCharacters: Record<string, boolean> = {};

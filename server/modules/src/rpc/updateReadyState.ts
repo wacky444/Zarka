@@ -237,6 +237,7 @@ export function updateReadyStateRpc(
       match.playerCharacters,
       ctx.userId,
       viewAll,
+      match.current_turn,
     ),
     map: viewAll ? match.map : tailorMapForCharacter(match.map, viewerCharacter),
     items: viewAll

@@ -19,15 +19,21 @@ const CONDITION_LABELS: Record<PlayerConditionFlag, string> = {
 
 export function formatPlayerPerceptionDetails(
   viewer: PlayerCharacter | null | undefined,
-  target: PlayerCharacter | null | undefined
+  target: PlayerCharacter | null | undefined,
+  currentTurn?: number
 ): string {
   if (!target) {
     return "";
   }
   const canPerceiveDetails = canPerceiveCharacterDetails(viewer, target);
+  const hasRemoteView =
+    typeof currentTurn === "number" &&
+    viewer?.remoteView?.turn === currentTurn &&
+    viewer.remoteView.coord.q === target.position?.coord.q &&
+    viewer.remoteView.coord.r === target.position?.coord.r;
   const revealedTypes =
     viewer?.revealedItemTypesByPlayerId?.[target.id] ?? [];
-  if (!canPerceiveDetails && revealedTypes.length === 0) {
+  if (!canPerceiveDetails && !hasRemoteView && revealedTypes.length === 0) {
     return "";
   }
 
@@ -52,6 +58,18 @@ export function formatPlayerPerceptionDetails(
             .join(", ")
         : "Normal";
     lines.push(`State: ${state}`);
+  } else if (hasRemoteView) {
+    const conditions = target.statuses?.conditions ?? [];
+    const state =
+      conditions.length > 0
+        ? conditions
+            .map((condition) => CONDITION_LABELS[condition] ?? condition)
+            .join(", ")
+        : "Normal";
+    lines.push(`State: ${state}`);
+  }
+  if (!canPerceiveDetails && revealedTypes.length === 0) {
+    return lines.join("\n");
   }
   const carried = target.inventory?.carriedItems ?? [];
   const quantities = new Map<string, number>();
