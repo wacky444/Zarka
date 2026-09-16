@@ -186,6 +186,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
             type: "match_ended",
             match_id: match.match_id,
             winnerId,
+            winnerIds: alive,
             reason,
           }),
         );

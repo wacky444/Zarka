@@ -210,6 +210,7 @@ export function updateReadyStateRpc(
             type: "match_ended",
             match_id: matchId,
             winnerId,
+            winnerIds: alive,
             reason,
           }),
         );

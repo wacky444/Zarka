@@ -269,8 +269,10 @@ export function finalizeMatchIfEnded(
       }
 
       const previous = parsePlayerStatsFromUser(user);
-      const isWinner = !!winnerId && winnerId === playerId;
-      const isDraw = !winnerId;
+      const isWinner =
+        outcome.reason === "last_alive" &&
+        outcome.aliveCharacterIds.indexOf(playerId) !== -1;
+      const isDraw = outcome.reason === "all_dead";
 
       const nextMatchesPlayed = previous.matchesPlayed + 1;
       const nextWins = previous.wins + (isWinner ? 1 : 0);

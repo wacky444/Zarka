@@ -326,6 +326,12 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             match_id: msg.match_id ?? state.game_id,
             winnerId:
               typeof msg.winnerId === "string" ? msg.winnerId : undefined,
+            winnerIds: Array.isArray(msg.winnerIds)
+              ? msg.winnerIds.filter(
+                  (playerId: unknown): playerId is string =>
+                    typeof playerId === "string",
+                )
+              : undefined,
             reason: msg.reason === "all_dead" ? "all_dead" : "last_alive",
           });
           dispatcher.broadcastMessage(

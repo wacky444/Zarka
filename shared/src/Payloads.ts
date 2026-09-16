@@ -203,6 +203,7 @@ export type TurnAdvancedMessagePayload = {
 export type MatchEndedMessagePayload = {
   match_id: string;
   winnerId?: string;
+  winnerIds?: string[];
   reason: "last_alive" | "all_dead";
 };
 

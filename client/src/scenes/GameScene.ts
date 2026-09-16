@@ -562,12 +562,34 @@ export class GameScene extends Phaser.Scene {
       const isEnded = match.started === false || match.removed !== 0;
       if (isEnded && this.currentUserId) {
         const dead = match.deadCharacters ?? {};
-        const players = Object.keys(match.playerCharacters ?? {});
-        const alive = players.filter((id) => !dead[id]);
-        const winnerId = alive.length === 1 ? alive[0] : undefined;
+        const characters = match.playerCharacters ?? {};
+        const players = Object.keys(characters);
+        const alive = players.filter((id) => {
+          const character = characters[id];
+          const currentHealth = character?.stats?.health?.current;
+          return (
+            dead[id] !== true &&
+            !character?.statuses?.conditions?.includes("dead") &&
+            !(typeof currentHealth === "number" && currentHealth <= 0)
+          );
+        });
+        const winnerId = alive.length > 0 ? alive[0] : undefined;
+        const winningCharacter = winnerId ? characters[winnerId] : undefined;
+        const winningTeamId =
+          winningCharacter?.secretTeamId || winningCharacter?.teamId;
+        const winnerIds = winningTeamId
+          ? alive.filter((id) => {
+              const character = characters[id];
+              return (
+                (character?.secretTeamId || character?.teamId) ===
+                winningTeamId
+              );
+            })
+          : alive;
         this.triggerVictoryOverlay({
           match_id: match.match_id,
           winnerId,
+          winnerIds,
           reason: alive.length === 0 ? "all_dead" : "last_alive"
         });
       }
@@ -1615,8 +1637,14 @@ export class GameScene extends Phaser.Scene {
     ) {
       return;
     }
-    const isWinner = payload.winnerId === this.currentUserId;
-    const isDraw = !payload.winnerId || payload.reason === "all_dead";
+    const winnerIds = Array.isArray(payload.winnerIds)
+      ? payload.winnerIds
+      : payload.winnerId
+        ? [payload.winnerId]
+        : [];
+    const isWinner =
+      !!this.currentUserId && winnerIds.indexOf(this.currentUserId) !== -1;
+    const isDraw = winnerIds.length === 0 || payload.reason === "all_dead";
     const result: import("../ui/VictoryOverlay").MatchEndResultType = isWinner
       ? "win"
       : isDraw
