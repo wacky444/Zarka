@@ -567,6 +567,22 @@ export class CharacterPanelLogView {
             } else {
               lines.push(`${actor} detected nobody`);
             }
+          } else if (actionId === "steal") {
+            const stolenItems = this.extractStolenItemNames(
+              event.action.metadata
+            );
+            const targetId = (
+              event.action.metadata as { targetPlayerId?: unknown } | undefined
+            )?.targetPlayerId;
+            const targetName =
+              typeof targetId === "string"
+                ? this.resolvePlayerName(targetId)
+                : "the target";
+            lines.push(
+              stolenItems.length > 0
+                ? `${actor} stole ${stolenItems.join(", ")} from ${targetName}`
+                : `${actor} stole nothing from ${targetName}`
+            );
           } else if (actionId === "pick_up") {
             const pickedItems = this.extractPickedItemNames(
               event.action.metadata
@@ -835,6 +851,27 @@ export class CharacterPanelLogView {
       results.push({ targetId: record.targetId, itemNames });
     }
     return results;
+  }
+
+  private extractStolenItemNames(metadata: unknown): string[] {
+    if (!metadata || typeof metadata !== "object") {
+      return [];
+    }
+    const entries = (metadata as { stolenItems?: unknown }).stolenItems;
+    if (!Array.isArray(entries)) {
+      return [];
+    }
+    const result: string[] = [];
+    for (const entry of entries) {
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
+      const itemType = (entry as { itemType?: unknown }).itemType;
+      if (typeof itemType === "string") {
+        result.push(this.resolveItemName(itemType));
+      }
+    }
+    return result;
   }
 
   private extractPickedItemNames(metadata: unknown): string[] {

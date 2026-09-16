@@ -29,6 +29,7 @@ import { executeUseBandageAction } from "./actions/useBandage";
 import { executeUseChemicalWeaponAction } from "./actions/UseChemicalWeapon";
 import { executeSearchAction } from "./actions/search";
 import { executeInspectAction } from "./actions/inspect";
+import { executeStealAction } from "./actions/steal";
 import { executePickUpAction } from "./actions/pickup";
 import { executeDropAction } from "./actions/drop";
 import { applyActionCooldown } from "./actions/cooldowns";
@@ -578,6 +579,30 @@ export function executeAction(
         logger,
       );
       const actionEvents = executeInspectAction(participants, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.steal.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = executeStealAction(participants, match);
       eventsForAction = energyEvents.length
         ? [...energyEvents, ...actionEvents]
         : actionEvents;

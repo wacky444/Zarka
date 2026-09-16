@@ -298,6 +298,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private secondaryPlayerOptions: PlayerOption[] = [];
   private extraSecondaryPlayerOptions: PlayerOption[] = [];
   private itemOptions: ItemPriorityOption[] = [];
+  private stealItemOptions: ItemPriorityOption[] = [];
   private inventoryItemOptions: ItemPriorityOption[] = [];
   private currentMatch: MatchRecord | null = null;
   private currentUserId: string | null = null;
@@ -3700,8 +3701,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private refreshItemSelectorState() {
     const supports = this.selectedActionSupportsItemPriority();
-    const hasOptions = this.itemOptions.length > 0;
+    const options = this.getMainActionItemOptions();
+    const hasOptions = options.length > 0;
     const shouldShow = supports && hasOptions;
+    this.itemSelector.setOptions(options);
     this.itemSelector.setVisible(shouldShow);
     this.itemSelector.setActive(shouldShow);
     if (!shouldShow) {
@@ -4384,7 +4387,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       }
       return hadValues;
     }
-    const filtered = this.filterPriorityIds(ids);
+    const filtered = this.filterPriorityIds(
+      ids,
+      this.getMainActionItemOptions()
+    );
     if (this.isSameTargetItems(this.mainActionPriorityItems, filtered)) {
       this.itemSelector.setValue(filtered, false);
       return false;
@@ -4435,6 +4441,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     currentUserId: string | null
   ) {
     const options: ItemPriorityOption[] = [];
+    const currentCharacter =
+      match && currentUserId
+        ? match.playerCharacters?.[currentUserId] ?? null
+        : null;
     if (match && currentUserId) {
       const character = match.playerCharacters?.[currentUserId] ?? null;
       const tileId = character?.position?.tileId ?? null;
@@ -4528,9 +4538,26 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         }
       }
     }
+    const stealOptions: ItemPriorityOption[] = [];
+    if (currentCharacter?.abilities?.includes("dexterity2")) {
+      for (const definition of Object.values(ItemLibrary)) {
+        if (definition.id === "zarkans") {
+          continue;
+        }
+        const visual = resolveItemTexture(definition);
+        stealOptions.push({
+          id: definition.id,
+          label: definition.name,
+          description: definition.description,
+          texture: visual.texture,
+          frame: visual.frame
+        });
+      }
+    }
     this.inventoryItemOptions = inventoryOptions;
     this.itemOptions = options;
-    this.itemSelector.setOptions(options);
+    this.stealItemOptions = stealOptions;
+    this.itemSelector.setOptions(this.getMainActionItemOptions());
     this.secondaryItemSelector.setOptions(
       this.secondaryActionSelection === "drop"
         ? this.inventoryItemOptions
@@ -4541,7 +4568,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         ? this.inventoryItemOptions
         : options
     );
-    const normalizedMain = this.filterPriorityIds(this.mainActionPriorityItems);
+    const normalizedMain = this.filterPriorityIds(
+      this.mainActionPriorityItems,
+      this.getMainActionItemOptions()
+    );
     this.mainActionPriorityItems = normalizedMain;
     const normalizedSecondary = this.filterPriorityIds(
       this.secondaryActionPriorityItems,
@@ -4667,7 +4697,20 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private selectedActionSupportsItemPriority() {
+    if (this.mainActionSelection === "steal") {
+      return this.hasDexterity2();
+    }
     return this.lastMainActionItem?.tags?.includes("TargetItems") ?? false;
+  }
+
+  private hasDexterity2(): boolean {
+    return this.getCurrentCharacter()?.abilities?.includes("dexterity2") ?? false;
+  }
+
+  private getMainActionItemOptions(): ItemPriorityOption[] {
+    return this.mainActionSelection === "steal"
+      ? this.stealItemOptions
+      : this.itemOptions;
   }
 
   private selectedSecondaryActionSupportsLocation() {

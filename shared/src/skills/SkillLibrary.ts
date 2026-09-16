@@ -98,7 +98,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
       "Permite concretar 1 objeto al robar a un jugador sin registro previo",
     cost: 3,
     max: 1,
-    implemented: false,
+    implemented: true,
     category: "Destreza"
   },
   dexterity3: {

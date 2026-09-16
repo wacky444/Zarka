@@ -934,6 +934,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     name: "Robar",
     category: ActionCategory.Primary,
     energyCost: 3,
+    developed: true,
     cooldown: 3,
     experience: {
       base: 0,
@@ -954,7 +955,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "pouch_remove.png",
     actionOrder: 13,
     actionSubOrder: 0,
-    tags: ["Attack", "Economy", "SingleTarget"]
+    tags: ["Attack", "Economy", "SingleTarget", "TargetItems"]
   },
   fabricate: {
     id: "fabricate",
