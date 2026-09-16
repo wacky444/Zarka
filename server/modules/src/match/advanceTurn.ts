@@ -148,7 +148,7 @@ function applyZarkanIncome(
     character.economy.incomeInterval = 1;
     replayEvents.push({
       kind: "player",
-      actorId: character.id,
+      actorId: playerId,
       action: {
         actionId: "zarkan_income" as ActionId,
         metadata: {

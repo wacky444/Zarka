@@ -2,8 +2,11 @@
 
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
+import { buildMatchReport } from "../match/matchReport";
+import { getAliveCharacterIds } from "../match/checkEndGame";
 import { isAdminUser } from "../utils/admin";
 import { makeNakamaError } from "../utils/errors";
+import type { MatchReport } from "@shared";
 
 export function getMatchReportRpc(
   ctx: nkruntime.Context,
@@ -33,16 +36,40 @@ export function getMatchReportRpc(
   }
 
   const storage = new StorageService(createNakamaWrapper(nk));
-  const report = storage.getMatchReport(matchId);
-  if (!report) {
-    throw makeNakamaError("not_ready", nkruntime.Codes.NOT_FOUND);
+  const stored = storage.getMatch(matchId);
+  if (!stored) {
+    throw makeNakamaError("not_found", nkruntime.Codes.NOT_FOUND);
   }
 
-  const isParticipant = report.players.some(
-    (player) => player.player_id === ctx.userId,
-  );
+  const isParticipant =
+    Array.isArray(stored.match.players) &&
+    stored.match.players.indexOf(ctx.userId) !== -1;
   if (!isParticipant && !isAdminUser(nk, ctx.userId)) {
     throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
+  }
+
+  let report = storage.getMatchReport(matchId);
+  if (!report) {
+    if (!stored.match.removed || stored.match.removed === 0) {
+      throw makeNakamaError("not_ready", nkruntime.Codes.NOT_FOUND);
+    }
+    const aliveCharacterIds = getAliveCharacterIds(stored.match);
+    const reason: MatchReport["reason"] =
+      aliveCharacterIds.length > 0 ? "last_alive" : "all_dead";
+    const users =
+      stored.match.players.length > 0
+        ? nk.usersGetId(stored.match.players) ?? []
+        : [];
+    report = buildMatchReport(
+      stored.match,
+      storage,
+      Math.floor(Date.now() / 1000),
+      reason,
+      stored.match.current_turn,
+      [],
+      users,
+    );
+    storage.writeMatchReport(report);
   }
 
   return JSON.stringify({ ok: true, report });

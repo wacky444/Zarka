@@ -115,11 +115,18 @@ function collectEvents(
   aggregates: AggregateLookup,
 ): void {
   for (const event of replayEvents) {
-    if (event.kind !== "player") {
+    if (
+      !event ||
+      event.kind !== "player" ||
+      !event.action ||
+      typeof event.actorId !== "string"
+    ) {
       continue;
     }
     const actor = aggregates[event.actorId];
-    if (actor) {
+    const isDailyIncome =
+      (event.action.actionId as string) === "zarkan_income";
+    if (actor && !isDailyIncome) {
       actor.actions_used += 1;
       actor.damage_dealt += asNonNegativeNumber(event.action.damageDealt);
       if (event.action.actionId === "pick_up") {
@@ -141,6 +148,9 @@ function collectEvents(
       }
     }
     for (const target of event.targets ?? []) {
+      if (!target || typeof target.targetId !== "string") {
+        continue;
+      }
       const targetAggregate = aggregates[target.targetId];
       if (targetAggregate) {
         targetAggregate.damage_received += asNonNegativeNumber(

@@ -54,6 +54,23 @@ export function listMyMatchesRpc(
 
       const report = storage.getMatchReport(match.match_id);
       if (!report) {
+        finishedMatches.push({
+          match_id: match.match_id,
+          runtime_match_id: match.runtime_match_id ?? match.match_id,
+          size: match.size,
+          players,
+          current_turn: match.current_turn,
+          created_at: match.created_at,
+          creator: match.creator,
+          cols: match.cols,
+          rows: match.rows,
+          name: match.name,
+          started: false,
+          status: "finished",
+          turns: match.current_turn,
+          duration_ms: 0,
+          has_report: false,
+        });
         continue;
       }
       let player: import("@shared").MatchReportPlayer | undefined;

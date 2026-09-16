@@ -28,8 +28,8 @@ export class VictoryOverlay {
   private readonly onTransitionComplete: () => void;
   private particleGraphics: Phaser.GameObjects.Graphics[] = [];
   private pulseTween: Phaser.Tweens.Tween | null = null;
-  private transitionTimer: Phaser.Time.TimerEvent | null = null;
   private isVisible = false;
+  private reportTransitionStarted = false;
 
   constructor(scene: Phaser.Scene, options: VictoryOverlayOptions) {
     this.scene = scene;
@@ -111,7 +111,7 @@ export class VictoryOverlay {
         this.menuButton.setStyle({ backgroundColor: "#2563eb", color: "#ffffff" });
       })
       .on("pointerdown", () => {
-        // The report transition is intentionally not skippable.
+        this.continueToReport();
       });
     this.menuButton.disableInteractive();
     this.container.add(this.menuButton);
@@ -189,8 +189,9 @@ export class VictoryOverlay {
       });
     }
 
-    this.menuButton.setText("Loading report...");
-    this.menuButton.disableInteractive();
+    this.reportTransitionStarted = false;
+    this.menuButton.setText("Continue to Report");
+    this.menuButton.setInteractive({ useHandCursor: true });
     this.menuButton.setScale(0.8);
     this.menuButton.setAlpha(0);
     this.scene.tweens.add({
@@ -217,12 +218,6 @@ export class VictoryOverlay {
       delay: 700
     });
 
-    this.transitionTimer?.remove(false);
-    this.transitionTimer = this.scene.time.delayedCall(2400, () => {
-      if (this.isVisible) {
-        this.onTransitionComplete();
-      }
-    });
   }
 
   hide() {
@@ -232,8 +227,7 @@ export class VictoryOverlay {
       this.pulseTween.stop();
       this.pulseTween = null;
     }
-    this.transitionTimer?.remove(false);
-    this.transitionTimer = null;
+    this.reportTransitionStarted = false;
     this.clearParticles();
   }
 
@@ -259,10 +253,17 @@ export class VictoryOverlay {
     if (this.pulseTween) {
       this.pulseTween.stop();
     }
-    this.transitionTimer?.remove(false);
-    this.transitionTimer = null;
     this.clearParticles();
     this.container.destroy();
+  }
+
+  private continueToReport(): void {
+    if (!this.isVisible || this.reportTransitionStarted) {
+      return;
+    }
+    this.reportTransitionStarted = true;
+    this.menuButton.disableInteractive();
+    this.onTransitionComplete();
   }
 
   private createVictoryParticles() {
