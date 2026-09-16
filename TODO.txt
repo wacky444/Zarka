@@ -40,7 +40,24 @@
 
 - zooming with the mouse doest zoom to the mouse position
 
+- zarkan daily in the log
 
+- you belong to the team, with name
+
+- animation for trap placing
+
+- placin the trap didnt work
+
+- victory animation was too short and it auto goes to the report
+
+- the victory report, "informe no disponible":
+
+{"level":"debug","ts":"2026-09-16T15:37:10.968+0200","caller":"server/runtime_javascript_logger.go:106","msg":"botAI: updating character%!(EXTRA string=bot2)","rpc_id":"update_ready_state","trace_id":"7d7bf592-bf17-4720-ad0d-89a0ca85f5e8"}
+{"level":"info","ts":"2026-09-16T15:37:10.969+0200","caller":"server/runtime_javascript_logger.go:76","msg":"finalizeMatchIfEnded match 5342cdd7-c275-430b-a360-b49e45e8ac8e outcome: map[%!o(string=aliveCharacterIds):[%!o(string=70ef9f33-99a1-4808-98ea-4333820b8d9e)] %!o(string=ended):%!o(bool=true) %!o(string=reason):%!o(string=last_alive) %!o(string=winnerId):%!o(string=70ef9f33-99a1-4808-98ea-4333820b8d9e)]","rpc_id":"update_ready_state","trace_id":"7d7bf592-bf17-4720-ad0d-89a0ca85f5e8"}
+{"level":"error","ts":"2026-09-16T15:37:10.970+0200","caller":"server/runtime_javascript_logger.go:96","msg":"finalizeMatchIfEnded report write failed for match 5342cdd7-c275-430b-a360-b49e45e8ac8e: Cannot read property 'metadata' of undefined","rpc_id":"update_ready_state","trace_id":"7d7bf592-bf17-4720-ad0d-89a0ca85f5e8"}
+
+
+- finished match is not on my matches list
 
  ### Localhost
 
@@ -74,3 +91,24 @@
  ```
 
  After changing client/.env, restart the Vite dev server.
+
+
+
+ bot1 moved to (0, 0)
+bot2 used Buscar
+bot2 found Zarkans, Clavos, Arpón,
+Walkie talkie
+bot3 used Buscar
+bot3 found Hacha, Arpon, Clavos,
+Prismaticos, Walkie talkie
+Hugo Huerta used Atacar con hacha (+3
+extra)
+Hugo Huerta dealt 20 damage with an axe
+bot1 took 10 damage
+bot1 was eliminated
+bot3 took 10 damage
+bot3 was eliminated
+bot1 (Team Geminis) died
+bot3
+
+(Team Sagitario) died
