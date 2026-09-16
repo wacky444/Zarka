@@ -3462,8 +3462,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private refreshExtraSecondaryItemSelectorState() {
-    const isDrop = this.extraSecondaryActionSelection === "drop";
-    const availableOptions = isDrop
+    const isInventorySale =
+      this.extraSecondaryActionSelection === "drop" ||
+      this.extraSecondaryActionSelection === "black_market_trade";
+    const availableOptions = isInventorySale
       ? this.inventoryItemOptions
       : this.itemOptions;
     this.extraSecondaryItemSelector.setOptions(availableOptions);
@@ -3815,8 +3817,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private refreshSecondaryItemSelectorState() {
-    const isDrop = this.secondaryActionSelection === "drop";
-    const availableOptions = isDrop
+    const isInventorySale =
+      this.secondaryActionSelection === "drop" ||
+      this.secondaryActionSelection === "black_market_trade";
+    const availableOptions = isInventorySale
       ? this.inventoryItemOptions
       : this.itemOptions;
     this.secondaryItemSelector.setOptions(availableOptions);
@@ -4420,7 +4424,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       return hadValues;
     }
     const optionsList =
-      this.secondaryActionSelection === "drop"
+      this.secondaryActionSelection === "drop" ||
+      this.secondaryActionSelection === "black_market_trade"
         ? this.inventoryItemOptions
         : this.itemOptions;
     const filtered = this.filterPriorityIds(ids, optionsList);
@@ -4559,12 +4564,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.stealItemOptions = stealOptions;
     this.itemSelector.setOptions(this.getMainActionItemOptions());
     this.secondaryItemSelector.setOptions(
-      this.secondaryActionSelection === "drop"
+      this.secondaryActionSelection === "drop" ||
+      this.secondaryActionSelection === "black_market_trade"
         ? this.inventoryItemOptions
         : options
     );
     this.extraSecondaryItemSelector.setOptions(
-      this.extraSecondaryActionSelection === "drop"
+      this.extraSecondaryActionSelection === "drop" ||
+      this.extraSecondaryActionSelection === "black_market_trade"
         ? this.inventoryItemOptions
         : options
     );
@@ -4575,14 +4582,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.mainActionPriorityItems = normalizedMain;
     const normalizedSecondary = this.filterPriorityIds(
       this.secondaryActionPriorityItems,
-      this.secondaryActionSelection === "drop"
+      this.secondaryActionSelection === "drop" ||
+      this.secondaryActionSelection === "black_market_trade"
         ? this.inventoryItemOptions
         : this.itemOptions
     );
     this.secondaryActionPriorityItems = normalizedSecondary;
     const normalizedExtraSecondary = this.filterPriorityIds(
       this.extraSecondaryActionPriorityItems,
-      this.extraSecondaryActionSelection === "drop"
+      this.extraSecondaryActionSelection === "drop" ||
+      this.extraSecondaryActionSelection === "black_market_trade"
         ? this.inventoryItemOptions
         : this.itemOptions
     );
@@ -5122,7 +5131,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       return changed;
     }
     const optionsList =
-      this.extraSecondaryActionSelection === "drop"
+      this.extraSecondaryActionSelection === "drop" ||
+      this.extraSecondaryActionSelection === "black_market_trade"
         ? this.inventoryItemOptions
         : this.itemOptions;
     const filtered = this.filterPriorityIds(ids, optionsList);

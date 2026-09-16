@@ -590,6 +590,20 @@ export class CharacterPanelLogView {
             if (pickedItems.length > 0) {
               lines.push(`${actor} picked up ${pickedItems.join(", ")}`);
             }
+          } else if (actionId === "black_market_trade") {
+            const meta = event.action.metadata as
+              | { soldItems?: unknown; zarkansEarned?: unknown }
+              | undefined;
+            const soldItems = this.extractSoldItemNames(event.action.metadata);
+            const zarkans =
+              typeof meta?.zarkansEarned === "number"
+                ? meta.zarkansEarned
+                : 0;
+            lines.push(
+              soldItems.length > 0
+                ? `${actor} sold ${soldItems.join(", ")} at the black market for ${zarkans} zarkans`
+                : `${actor} sold nothing at the black market`
+            );
           } else if (actionId === "drop") {
             const meta = event.action.metadata as
               | {
@@ -903,6 +917,27 @@ export class CharacterPanelLogView {
         }
         const name = this.resolveItemName(entry);
         result.push(name);
+      }
+    }
+    return result;
+  }
+
+  private extractSoldItemNames(metadata: unknown): string[] {
+    if (!metadata || typeof metadata !== "object") {
+      return [];
+    }
+    const entries = (metadata as { soldItems?: unknown }).soldItems;
+    if (!Array.isArray(entries)) {
+      return [];
+    }
+    const result: string[] = [];
+    for (const entry of entries) {
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
+      const itemType = (entry as { itemType?: unknown }).itemType;
+      if (typeof itemType === "string") {
+        result.push(this.resolveItemName(itemType));
       }
     }
     return result;

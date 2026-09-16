@@ -524,7 +524,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Permite soltar un objeto en la localización o almacenarlo en taquilla para venta diferida."
+          "Permite soltar un objeto en la localización o almacenarlo en taquilla para venta."
       }
     ],
     extraExecution: {
@@ -987,18 +987,24 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 1,
     cooldown: 3,
+    developed: true,
     requirements: [{ description: "Debe realizarse en el mercado negro." }],
     effects: [
       {
         description:
-          "Permite vender hasta 4 objetos obteniendo 1 zarkan adicional por cada uno; el pago es inmediato."
+          "Permite vender hasta 4 objetos obteniendo 1 zarkan adicional por cada uno."
       }
     ],
+    extraExecution: {
+      cost: 1,
+      maxRepetitions: 3,
+      description: "Permite vender objetos adicionales."
+    },
     texture: "Board Game Icons",
     frame: "dollar.png",
     actionOrder: 14,
     actionSubOrder: 1,
-    tags: ["Economy", "Logistics"]
+    tags: ["Economy", "Logistics", "TargetItems"]
   },
   inspect: {
     id: "inspect",

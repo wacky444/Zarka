@@ -326,6 +326,8 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   Dar: "Give",
   "Envenenar alimento": "Poison food",
   Dejar: "Drop",
+  "Permite soltar un objeto en la localización o almacenarlo en taquilla para venta.":
+    "Allows dropping an item at the location or storing it in a locker for sale.",
   Lanzar: "Throw",
   "Usar arma química": "Use chemical weapon",
   Asustar: "Scare",
@@ -342,6 +344,10 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   Robar: "Steal",
   Fabricar: "Craft",
   "Traficar en el mercado negro": "Black market trade",
+  "Debe realizarse en el mercado negro.": "Must be performed at the black market.",
+  "Permite vender hasta 4 objetos obteniendo 1 zarkan adicional por cada uno.":
+    "Allows selling up to 4 items, receiving 1 additional zarkan for each one.",
+  "Permite vender objetos adicionales.": "Allows selling additional items.",
   Registrar: "Search",
   Concentrarse: "Focus",
   Entrenar: "Train",
