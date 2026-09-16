@@ -111,10 +111,13 @@ export function isCharacterDead(
   character: PlayerCharacter | null | undefined
 ): boolean {
   const conditions = character?.statuses?.conditions;
-  if (!Array.isArray(conditions)) {
-    return false;
+  if (Array.isArray(conditions) && conditions.indexOf("dead") !== -1) {
+    return true;
   }
-  return conditions.indexOf("dead") !== -1;
+  const currentHealth = character?.stats?.health?.current;
+  return typeof currentHealth === "number" && isFinite(currentHealth)
+    ? currentHealth <= 0
+    : false;
 }
 
 export function isCharacterIncapacitated(

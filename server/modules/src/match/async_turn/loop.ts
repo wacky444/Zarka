@@ -178,7 +178,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
     if (match.removed && match.removed !== 0) {
       try {
         const alive = getAliveCharacterIds(match);
-        const winnerId = alive.length === 1 ? alive[0] : undefined;
+        const winnerId = alive.length > 0 ? alive[0] : undefined;
         const reason = alive.length === 0 ? "all_dead" : "last_alive";
         nkWrapper.matchSignal(
           runtimeMatchId,

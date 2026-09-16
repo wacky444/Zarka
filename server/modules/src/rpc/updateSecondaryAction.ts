@@ -167,6 +167,12 @@ export function updateSecondaryActionRpc(
   if (!match.players || match.players.indexOf(ctx.userId) === -1) {
     throw makeNakamaError("not_in_match", 7);
   }
+  if (match.removed && match.removed !== 0) {
+    throw makeNakamaError(
+      "match_ended",
+      nkruntime.Codes.FAILED_PRECONDITION
+    );
+  }
   if (!match.playerCharacters) {
     throw makeNakamaError("no_character", 9);
   }

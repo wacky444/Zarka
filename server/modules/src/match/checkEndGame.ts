@@ -147,7 +147,10 @@ export function checkEndGameOutcome(match: MatchRecord): EndGameOutcome {
   let uniqueTeamCount = 0;
   for (const id of alive) {
     const character = characters[id];
-    const team = character?.teamId?.trim() || `solo_${id}`;
+    const team =
+      character?.secretTeamId?.trim() ||
+      character?.teamId?.trim() ||
+      `solo_${id}`;
     if (!uniqueAliveTeams[team]) {
       uniqueAliveTeams[team] = true;
       uniqueTeamCount += 1;

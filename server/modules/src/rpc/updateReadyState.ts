@@ -86,6 +86,9 @@ export function updateReadyStateRpc(
   ) {
     throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
   }
+  if (match.removed && match.removed !== 0) {
+    throw makeNakamaError("match_ended", nkruntime.Codes.FAILED_PRECONDITION);
+  }
   const viewerCharacter = match.playerCharacters?.[ctx.userId] ?? null;
   const viewerIsIncapadited = isCharacterIncapacitated(viewerCharacter);
   if (viewerIsIncapadited) {
@@ -199,7 +202,7 @@ export function updateReadyStateRpc(
     if (match.removed && match.removed !== 0) {
       try {
         const alive = getAliveCharacterIds(match);
-        const winnerId = alive.length === 1 ? alive[0] : undefined;
+        const winnerId = alive.length > 0 ? alive[0] : undefined;
         const reason = alive.length === 0 ? "all_dead" : "last_alive";
         nkWrapper.matchSignal(
           getRuntimeMatchId(match),

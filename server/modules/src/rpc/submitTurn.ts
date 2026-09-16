@@ -46,6 +46,9 @@ export function submitTurnRpc(
   }
 
   const match: MatchRecord = read.match;
+  if (match.removed && match.removed !== 0) {
+    throw makeNakamaError("match_ended", nkruntime.Codes.FAILED_PRECONDITION);
+  }
   if (typeof match.started !== "boolean") {
     match.started = false;
   }
