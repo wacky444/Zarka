@@ -48,6 +48,7 @@ import { CharacterPanelPlayerListView } from "./CharacterPanelPlayerListView";
 import { Subtabs } from "./Subtabs";
 import { CharacterPanelSkillsView } from "./CharacterPanelSkillsView";
 import { CharacterPanelShopView } from "./CharacterPanelShopView";
+import { t } from "../services/i18n";
 
 export type CharacterSubTabKey = "status" | "skills";
 
@@ -827,7 +828,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     });
     this.add(this.healthBar);
     this.energyLabel = scene.add
-      .text(barX, statusContentTop + 32, "Energy", {
+      .text(barX, statusContentTop + 32, t("Energy"), {
         fontSize: "14px",
         color: "#a0b7ff"
       })
@@ -2431,7 +2432,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.nameText.setText("No character");
       this.useBarValue(this.healthBar, 0);
       this.useBarValue(this.energyBar, 0);
-      this.energyLabel.setText("Energy");
+      this.energyLabel.setText(t("Energy"));
       this.applyMainActions([], null, null);
       this.setMainActionTarget(null, false);
       this.setMainActionTargetPlayer(null, false);
@@ -2492,7 +2493,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       typeof energy.temporary === "number" && energy.temporary > 0
         ? energy.temporary
         : 0;
-    let energyLabel = `Energy ${energy.current}/${energy.max}`;
+    let energyLabel = `${t("Energy")} ${energy.current}/${energy.max}`;
     const extraSegments: string[] = [];
 
     if (upcomingTemporary > 0) {
@@ -3154,7 +3155,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       const descriptionBase = this.describeAction(definition);
       let description = developed
         ? descriptionBase
-        : `${descriptionBase}\n\n(Not available in this build.)`;
+        : `${descriptionBase}\n\n(${t("Not available in this build.")})`;
       if (disabledByOtherSlot && disabledReason) {
         description = `${description}\n\n(${disabledReason}.)`;
       }
@@ -3258,7 +3259,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
             s.quantity > 0
         );
         if (!hasBat) {
-          return "Missing bat";
+          return t("Missing bat");
         }
       } else if (definition.id === "shoot_pistol") {
         const hasPistol = carried.some(
@@ -3274,13 +3275,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
             s.quantity > 0
         );
         if (!hasPistol && !hasBullet) {
-          return "Missing pistol, bullet";
+          return t("Missing pistol, bullet");
         }
         if (!hasPistol) {
-          return "Missing pistol";
+          return t("Missing pistol");
         }
         if (!hasBullet) {
-          return "Missing bullet";
+          return t("Missing bullet");
         }
       } else {
         const missingItems: string[] = [];
@@ -3292,13 +3293,15 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
               s.quantity > 0
           );
           if (!hasItem) {
-            missingItems.push(
-              ITEM_DISPLAY_NAMES[itemId] ?? itemId.replace(/_/g, " ")
-            );
+            const itemName =
+              ItemLibrary[itemId as ItemId]?.name ??
+              ITEM_DISPLAY_NAMES[itemId] ??
+              itemId.replace(/_/g, " ");
+            missingItems.push(t(itemName));
           }
         }
         if (missingItems.length > 0) {
-          return `Missing ${missingItems.join(", ")}`;
+          return `${t("Missing")} ${missingItems.join(", ")}`;
         }
       }
     }

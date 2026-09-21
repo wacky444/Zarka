@@ -6,6 +6,7 @@ import {
 } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
 import { playRandomSound } from "../soundPlayer";
+import { t } from "../../services/i18n";
 
 const FAILED_ACTION_SOUNDS = ["undesired_effect", "sci_fi_error", "cancel"];
 
@@ -75,26 +76,26 @@ function buildFailureMessage(event: ReplayPlayerEvent): string {
   const actionName = resolveActionName(attemptedId);
   if (typeof metadata.missingItemId === "string") {
     const itemName = resolveItemName(metadata.missingItemId);
-    return `${actionName} failed (missing ${itemName})`;
+    return `${actionName} failed (${t("Missing").toLowerCase()} ${itemName})`;
   }
   return `${actionName} failed`;
 }
 
 function resolveActionName(actionId: ActionId | null): string {
   if (!actionId) {
-    return "Action";
+    return t("Action");
   }
   const definition = ActionLibrary[actionId];
   if (definition?.name) {
-    return definition.name;
+    return t(definition.name);
   }
-  return actionId;
+  return t(actionId);
 }
 
 function resolveItemName(itemId: string): string {
   const entry = (ItemLibrary as Record<string, { name?: string }>)[itemId];
   if (entry?.name) {
-    return entry.name;
+    return t(entry.name);
   }
-  return itemId;
+  return t(itemId);
 }

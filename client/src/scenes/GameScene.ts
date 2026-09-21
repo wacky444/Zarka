@@ -1708,7 +1708,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePlayerEliminated(payload: PlayerEliminationBannerEvent) {
-    const teamSuffix = payload.teamName ? ` (Team ${payload.teamName})` : "";
+    const teamSuffix = payload.teamName
+      ? ` (${t("Team")} ${payload.teamName})`
+      : "";
     const bannerPayload: TopBannerPayload = {
       text: `Player ${payload.playerName}${teamSuffix} eliminated`,
       texture: payload.texture,

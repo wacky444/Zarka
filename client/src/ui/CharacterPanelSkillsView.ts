@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { t } from "../services/i18n";
 import {
   SkillLibrary,
   type PlayerCharacter,
@@ -430,7 +431,7 @@ export class CharacterPanelSkillsView {
 
     for (const item of this.cardItems) {
       if (!item.skill.implemented) {
-        item.statusBadge.setText("Not Implemented");
+        item.statusBadge.setText(t("Not Implemented"));
         item.statusBadge.setColor("#f87171");
         item.statusBadge.setVisible(true);
         item.rankText.setVisible(false);
@@ -686,7 +687,7 @@ export class CharacterPanelSkillsView {
       .text(
         cardWidth - CARD_PADDING,
         btnY + btnHeight / 2,
-        skill.implemented ? "" : "Not Implemented",
+        skill.implemented ? "" : t("Not Implemented"),
         {
           fontSize: "11px",
           color: "#f87171"

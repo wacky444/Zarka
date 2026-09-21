@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { t } from "../services/i18n";
 import { HoverTooltip } from "./HoverTooltip";
 import { THEME } from "./ColorPalette";
 
@@ -1288,7 +1289,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         Number.isFinite(config.item.energyCost);
       const shouldShow = hasCost && config.item.isEmptyOption !== true;
       if (shouldShow) {
-        const label = `Energy: ${config.item.energyCost}`;
+        const label = `${t("Energy")}: ${config.item.energyCost}`;
         this.applySingleLineText(config.energyText, label, config.textWidth);
         config.energyText.setColor(
           disabled ? THEME.colors.textDisabled : THEME.colors.energyCost

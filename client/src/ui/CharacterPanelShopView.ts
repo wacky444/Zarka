@@ -6,6 +6,7 @@ import {
   type ShopDefinition
 } from "@shared";
 import { PlayerSelector, type PlayerOption } from "./PlayerSelector";
+import { t } from "../services/i18n";
 
 export interface CharacterPanelShopViewLayout {
   margin: number;
@@ -329,7 +330,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
           .setOrigin(0, 0)
       : null;
     const status = this.scene.add
-      .text(cardWidth - CARD_PADDING, startY + 38, "Not Implemented", {
+      .text(cardWidth - CARD_PADDING, startY + 38, t("Not Implemented"), {
         fontSize: "11px",
         color: "#f87171"
       })

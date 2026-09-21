@@ -1,3 +1,4 @@
+import { t } from "../services/i18n";
 import {
   canPerceiveCharacterDetails,
   ItemLibrary,
@@ -40,7 +41,11 @@ export function formatPlayerPerceptionDetails(
   const lines: string[] = [];
   const energy = target.stats?.energy;
   if (canPerceiveDetails) {
-    lines.push(energy ? `Energy: ${energy.current}` : "Energy: Unknown");
+    lines.push(
+      energy
+        ? `${t("Energy")}: ${energy.current}`
+        : t("Energy: Unknown")
+    );
     const activeTemporary =
       (energy as { activeTemporary?: number } | undefined)?.activeTemporary ?? 0;
     if (activeTemporary > 0) {
@@ -54,19 +59,19 @@ export function formatPlayerPerceptionDetails(
     const state =
       conditions.length > 0
         ? conditions
-            .map((condition) => CONDITION_LABELS[condition] ?? condition)
+            .map((condition) => t(CONDITION_LABELS[condition] ?? condition))
             .join(", ")
-        : "Normal";
-    lines.push(`State: ${state}`);
+        : t("Normal");
+    lines.push(`${t("State")}: ${state}`);
   } else if (hasRemoteView) {
     const conditions = target.statuses?.conditions ?? [];
     const state =
       conditions.length > 0
         ? conditions
-            .map((condition) => CONDITION_LABELS[condition] ?? condition)
+            .map((condition) => t(CONDITION_LABELS[condition] ?? condition))
             .join(", ")
-        : "Normal";
-    lines.push(`State: ${state}`);
+        : t("Normal");
+    lines.push(`${t("State")}: ${state}`);
   }
   if (!canPerceiveDetails && revealedTypes.length === 0) {
     return lines.join("\n");
@@ -86,9 +91,13 @@ export function formatPlayerPerceptionDetails(
       );
     }
   }
-  lines.push(canPerceiveDetails ? "Carried items:" : "Revealed carried items:");
+  lines.push(
+    canPerceiveDetails
+      ? `${t("Carried items")}:`
+      : `${t("Revealed carried items")}:`
+  );
   if (quantities.size === 0) {
-    lines.push("None");
+    lines.push(t("None"));
   } else {
     for (const [itemId, quantity] of quantities) {
       const name = ItemLibrary[itemId as ItemId]?.name ?? itemId;

@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { t } from "../services/i18n";
 import type { MatchRecord } from "@shared";
 import type { PlayerOption } from "./PlayerSelector";
 import { formatPlayerPerceptionDetails } from "./PlayerPerceptionDetails";
@@ -788,7 +789,9 @@ export class CharacterPanelPlayerListView {
       return a.localeCompare(b);
     });
 
-    this.teamsTabListTitle.setText(`Teams (${teamNames.length})`);
+    this.teamsTabListTitle.setText(
+      `${t("Teams")} (${teamNames.length})`
+    );
 
     let teamY = 0;
     const teamRowHeight = 34;
@@ -1000,7 +1003,7 @@ export class CharacterPanelPlayerListView {
     const displayName = option?.name ?? option?.label ?? selectedId;
     this.playersTabCardName.setText(displayName);
     const teamId = character?.teamId?.trim() || UNKNOWN_TEAM_LABEL;
-    this.playersTabCardTeam.setText(`Team: ${teamId}`);
+    this.playersTabCardTeam.setText(`${t("Team")}: ${teamId}`);
     const viewer = this.currentUserId
       ? match.playerCharacters?.[this.currentUserId]
       : undefined;

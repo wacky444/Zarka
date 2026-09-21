@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { t } from "../services/i18n";
 import {
   ActionLibrary,
   ItemLibrary,
@@ -390,10 +391,14 @@ export class CharacterPanelLogView {
           const cover = meta?.coverTeamId;
           if (team && cover) {
             lines.push(
-              `${actor} belongs to the team ${team} (infiltrated in team ${cover})`
+              `${actor} ${t("belongs to the team")} ${team} (${t(
+                "infiltrated in team"
+              )} ${cover})`
             );
           } else if (team) {
-            lines.push(`${actor} belongs to the team ${team}`);
+            lines.push(
+              `${actor} ${t("belongs to the team")} ${team}`
+            );
           }
           continue;
         }
@@ -401,7 +406,7 @@ export class CharacterPanelLogView {
           const team =
             (event.action.metadata as { teamId?: string })?.teamId ||
             this.resolvePlayerTeam(event.actorId);
-          const teamSuffix = team ? ` (Team ${team})` : "";
+          const teamSuffix = team ? ` (${t("Team")} ${team})` : "";
           lines.push(`${actor}${teamSuffix} died`);
           continue;
         }
@@ -446,8 +451,8 @@ export class CharacterPanelLogView {
         }
         const definition = ActionLibrary[actionId as ActionId] ?? null;
         const actionName = definition
-          ? definition.name
-          : this.options.formatActionName(actionId);
+          ? t(definition.name)
+          : t(this.options.formatActionName(actionId));
         if (actionId === "move" && event.action.targetLocation) {
           const { q, r } = event.action.targetLocation;
           lines.push(`${actor} moved to (${q}, ${r})`);
@@ -554,8 +559,10 @@ export class CharacterPanelLogView {
               const targetName = this.resolvePlayerName(targetId);
               lines.push(
                 damage > 0
-                  ? `${targetName} was affected by a virus and lost ${damage} health`
-                  : `${targetName} was exposed to a virus`
+                  ? `${targetName} ${t(
+                      "was affected by a virus"
+                    )} and lost ${damage} health`
+                  : `${targetName} ${t("was exposed to a virus")}`
               );
             } else {
               const targetId = event.targets?.[0]?.targetId;
@@ -612,10 +619,10 @@ export class CharacterPanelLogView {
                     : distance > 0
                     ? `(distance ${distance})`
                     : "(nearby)";
-                lines.push(`Detected ${targetName} ${locationLabel}`);
+                lines.push(`${t("Detected")} ${targetName} ${locationLabel}`);
               }
             } else {
-              lines.push(`${actor} detected nobody`);
+              lines.push(`${actor} ${t("detected nobody")}`);
             }
           } else if (actionId === "steal") {
             const stolenItems = this.extractStolenItemNames(
@@ -705,11 +712,15 @@ export class CharacterPanelLogView {
                 ? metadata.energyRestored
                 : null;
             if (healed && healed > 0) {
-              lines.push(`${targetName} recovered ${healed} health`);
+              lines.push(`${targetName} ${t("recovered")} ${healed} health`);
               continue;
             }
             if (energyRestored && energyRestored > 0) {
-              lines.push(`${targetName} recovered ${energyRestored} energy`);
+              lines.push(
+                `${targetName} ${t("recovered")} ${energyRestored} ${t(
+                  "energy"
+                )}`
+              );
               continue;
             }
             if (
@@ -721,22 +732,24 @@ export class CharacterPanelLogView {
                 const team =
                   (target.metadata as { teamId?: string })?.teamId ||
                   this.resolvePlayerTeam(target.targetId);
-                const teamSuffix = team ? ` (Team ${team})` : "";
+                const teamSuffix = team ? ` (${t("Team")} ${team})` : "";
                 lines.push(`${targetName}${teamSuffix} was eliminated`);
               }
             } else if (target.eliminated) {
               const team =
                 (target.metadata as { teamId?: string })?.teamId ||
                 this.resolvePlayerTeam(target.targetId);
-              const teamSuffix = team ? ` (Team ${team})` : "";
+              const teamSuffix = team ? ` (${t("Team")} ${team})` : "";
               lines.push(`${targetName}${teamSuffix} was eliminated`);
             } else if (movedTo) {
               lines.push(`${targetName} fled to (${movedTo.q}, ${movedTo.r})`);
               if (energyLost && energyLost > 0) {
-                lines.push(`${targetName} lost ${energyLost} energy`);
+                lines.push(
+                  `${targetName} ${t("lost")} ${energyLost} ${t("energy")}`
+                );
               }
             } else {
-              lines.push(`${targetName} was affected`);
+              lines.push(`${targetName} ${t("was affected")}`);
             }
           }
         }
@@ -821,14 +834,14 @@ export class CharacterPanelLogView {
         : null;
     if (missingItemId) {
       const itemName = this.resolveItemName(missingItemId);
-      return `${actor} failed to use ${attemptedName} (missing ${itemName})`;
+      return `${actor} failed to use ${attemptedName} (${t("Missing").toLowerCase()} ${itemName})`;
     }
     return `${actor} failed to use ${attemptedName}`;
   }
 
   private resolvePlayerName(playerId: string | undefined): string {
     if (!playerId) {
-      return "Unknown";
+      return t("Unknown");
     }
     return this.usernames[playerId] ?? playerId;
   }
@@ -880,9 +893,9 @@ export class CharacterPanelLogView {
       itemType
     ];
     if (definition?.name) {
-      return definition.name;
+      return t(definition.name);
     }
-    return itemType;
+    return t(itemType);
   }
 
   private extractInspectResults(

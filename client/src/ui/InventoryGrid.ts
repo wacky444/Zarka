@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { t } from "../services/i18n";
 import { HoverTooltip } from "./HoverTooltip";
 
 export interface InventoryGridItem {
@@ -326,9 +327,11 @@ export class InventoryGrid extends Phaser.GameObjects.Container {
       Number.isFinite(perItem) ? perItem : 0
     );
     if (normalizedPerItem > 0 && normalizedTotal > normalizedPerItem) {
-      return `Weight: ${normalizedTotal} (${normalizedPerItem} ea)`;
+      return `${t("Weight")}: ${normalizedTotal} (${normalizedPerItem} ${t(
+        "ea"
+      )})`;
     }
-    return `Weight: ${normalizedTotal}`;
+    return `${t("Weight")}: ${normalizedTotal}`;
   }
 
   private ensureTooltip() {

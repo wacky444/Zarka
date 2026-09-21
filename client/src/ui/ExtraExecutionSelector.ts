@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { t } from "../services/i18n";
 import { makeButton, type UIButton } from "./button";
 import { THEME } from "./ColorPalette";
 import { parseActionDescription } from "./GridSelect";
@@ -186,7 +187,9 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
     const rawTotal = this.baseCost + this.currentReps * this.extraCostPerRep;
     const total = Math.max(0, rawTotal - this.discount);
     this.countText.setText(`${this.currentReps}`);
-    this.totalCostText.setText(`Energy: ${total} / ${this.maxTotalCost}`);
+    this.totalCostText.setText(
+      `${t("Energy")}: ${total} / ${this.maxTotalCost}`
+    );
 
     const barWidth = this.totalCostBar.width;
     const ratio =
