@@ -2842,6 +2842,21 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     return changed;
   }
 
+  /**
+   * Update readiness indicators without reapplying the character state.
+   * Readiness is broadcast to every client, but it does not change this
+   * client's skills, action plans, or inventory.
+   */
+  updateReadyStates(readyStates: Record<string, boolean> | undefined): void {
+    if (this.currentMatch) {
+      this.currentMatch.readyStates = readyStates ?? {};
+    }
+    if (this.currentUserId) {
+      this.setReadyState(readyStates?.[this.currentUserId] ?? false, false);
+    }
+    this.playersTabView.refresh();
+  }
+
   getReadyState(): boolean {
     return this.readyState;
   }

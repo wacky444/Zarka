@@ -2896,6 +2896,7 @@ export class GameScene extends Phaser.Scene {
     this.pendingReadyState = undefined;
     const previous =
       this.currentMatch?.readyStates?.[this.currentUserId] ?? false;
+    const previousTurn = this.currentMatch?.current_turn;
     try {
       const res = await this.turnService.updateReadyState(
         matchId,
@@ -2955,7 +2956,20 @@ export class GameScene extends Phaser.Scene {
         ready;
       this.characterPanel?.setReadyState(appliedReady, false);
       if (this.currentMatch) {
-        this.updateCharacterPanel(this.currentMatch);
+        const turnAdvanced =
+          payload.advanced === true ||
+          (typeof payload.turn === "number" &&
+            payload.turn !== previousTurn);
+        if (turnAdvanced) {
+          // An advanced turn changes character state. Reapply the complete
+          // panel only in that case; a plain ready toggle must not rebuild
+          // the skills view or reset its scroll position.
+          this.updateCharacterPanel(this.currentMatch);
+        } else {
+          this.characterPanel?.updateReadyStates(
+            this.currentMatch.readyStates
+          );
+        }
         this.refreshAutoAdvanceTimer();
       }
     } catch (error) {
@@ -3078,7 +3092,9 @@ export class GameScene extends Phaser.Scene {
         this.renderTraps(match.traps);
       }
     }
-    this.updateCharacterPanel(match);
+    // Ready-state broadcasts affect the readiness indicators only. Avoid a
+    // full character-panel update because it rebuilds the skills state.
+    this.characterPanel?.updateReadyStates(match.readyStates);
   }
 
   private handleTurnAdvancedUpdate(payload: TurnAdvancedMessagePayload) {
