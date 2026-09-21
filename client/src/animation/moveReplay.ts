@@ -27,6 +27,7 @@ import { animateShootPistolEvent } from "./replayActions/ShootPistolAnimation";
 import { animateShootHarpoonEvent } from "./replayActions/ShootHarpoonAnimation";
 import { animateRocketLauncherEvent } from "./replayActions/RocketLauncherAnimation";
 import { animateFireDamageEvent } from "./replayActions/FireDamageAnimation";
+import { animateBomberEvent } from "./replayActions/BomberAnimation";
 import { playRandomSound } from "./soundPlayer";
 
 const TILE_DESTROYED_SOUNDS = ["explosion_small", "explosion_medium"];
@@ -89,6 +90,8 @@ export async function playReplayEvents(
       await animateRocketLauncherEvent(context, event);
     } else if (actionId === ActionLibrary.fire_damage.id) {
       await animateFireDamageEvent(context, event);
+    } else if (actionId === ActionLibrary.buy_bomber.id) {
+      await animateBomberEvent(context, event);
     } else if (actionId === ActionLibrary.punch.id) {
       await animatePunchEvent(context, event);
     } else if (actionId === ActionLibrary.pick_up.id) {

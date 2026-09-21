@@ -495,6 +495,22 @@ export class CharacterPanelLogView {
           lines.push(`${actor} ${t("hired a pyromaniac")}`);
           continue;
         }
+        if (actionId === "buy_bomber") {
+          const metadata = event.action.metadata as
+            | { targetLocation?: unknown; targetCount?: unknown }
+            | undefined;
+          const location = readAxialMetadata(metadata?.targetLocation);
+          const count =
+            typeof metadata?.targetCount === "number"
+              ? metadata.targetCount
+              : 0;
+          lines.push(
+            location
+              ? `${actor} ${t("hired a bomber")} at (${location.q}, ${location.r}) and hit ${count} characters`
+              : `${actor} ${t("hired a bomber")} and hit ${count} characters`
+          );
+          continue;
+        }
         if (actionId === "buy_spy_drone") {
           const metadata = event.action.metadata as
             | { observedCount?: unknown; observedPlayerIds?: unknown; observedLocation?: unknown }

@@ -151,7 +151,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "Bomber",
     description: "Deals five unavoidable damage to every player in a location.",
     cost: 30,
-    implemented: false,
+    implemented: true,
     category: "Mercenaries"
   },
   hitman: {

@@ -61,7 +61,11 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
   private currentCharacter: PlayerCharacter | null = null;
   private visible = false;
   private droneLocations = new Map<string, Axial>();
-  private locationSelectionShopId: "spy_drone" | "pyromaniac" | null = null;
+  private locationSelectionShopId:
+    | "spy_drone"
+    | "pyromaniac"
+    | "bomber"
+    | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -316,6 +320,16 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.droneLocationSelector.setEnabled(true);
   }
 
+  beginBomberPurchase(): void {
+    if (!this.currentCharacter || this.currentCharacter.statuses?.conditions?.includes("dead")) {
+      return;
+    }
+    this.locationSelectionShopId = "bomber";
+    this.droneLocationSelector.setVisible(true);
+    this.droneLocationSelector.setActive(true);
+    this.droneLocationSelector.setEnabled(true);
+  }
+
   finishShopPurchase(): void {
     this.finishDetectivePurchase();
     this.locationSelectionShopId = null;
@@ -525,6 +539,8 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
       this.beginSpyDronePurchase();
     } else if (shopId === "pyromaniac") {
       this.beginPyromaniacPurchase();
+    } else if (shopId === "bomber") {
+      this.beginBomberPurchase();
     } else if (shopId === "security_camera_app") {
       this.emit("shop-purchase", { shopId });
     }

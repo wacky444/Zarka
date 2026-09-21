@@ -3010,7 +3010,8 @@ export class GameScene extends Phaser.Scene {
       !this.currentUserId ||
       (payload.shopId === "detective" && !payload.targetPlayerId) ||
       ((payload.shopId === "spy_drone" ||
-        payload.shopId === "pyromaniac") &&
+        payload.shopId === "pyromaniac" ||
+        payload.shopId === "bomber") &&
         !payload.targetLocation)
     ) {
       return;
@@ -3058,6 +3059,12 @@ export class GameScene extends Phaser.Scene {
             events
           });
           this.characterPanel?.appendLogReplay(turn, turn, events);
+          if (
+            result.event.kind === "player" &&
+            result.event.action.actionId === "buy_bomber"
+          ) {
+            this.enqueueReplay([result.event]);
+          }
         }
       }
       this.characterPanel?.finishShopPurchase();
@@ -3069,6 +3076,8 @@ export class GameScene extends Phaser.Scene {
         this.characterPanel?.beginSpyDronePurchase();
       } else if (payload.shopId === "pyromaniac") {
         this.characterPanel?.beginPyromaniacPurchase();
+      } else if (payload.shopId === "bomber") {
+        this.characterPanel?.beginBomberPurchase();
       }
     } finally {
       this.isBuyingShopItem = false;

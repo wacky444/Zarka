@@ -5466,6 +5466,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.shopView.beginPyromaniacPurchase();
   }
 
+  beginBomberPurchase(): void {
+    this.shopView.beginBomberPurchase();
+  }
+
   closeCurrentGridSelect(): void {
     this.mainActionDropdown.hideModal();
     this.playerSelector.hideDropdown();

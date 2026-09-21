@@ -218,6 +218,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Intoxicates every character in a location.": "Intoxica a todos los personajes de una ubicación.",
   "Creates a three-turn fire in a location.": "Crea un incendio de tres turnos en una ubicación.",
   "hired a pyromaniac": "contrató un pirómano",
+  "hired a bomber": "contrató un bombardero",
   "Deals five unavoidable damage to every player in a location.": "Inflige cinco puntos de daño inevitable a todos los jugadores de una ubicación.",
   "A mercenary that attacks the assigned target team.": "Un mercenario que ataca al equipo objetivo asignado.",
   "A prestigious hitman with a chainsaw and bulletproof vest.": "Un sicario prestigioso con una motosierra y un chaleco antibalas.",

@@ -1430,6 +1430,21 @@ export const ActionLibrary: ActionLibraryDefinition = {
     actionSubOrder: 8,
     notes: ["Daño causado al ejecutar una acción en un incendio."],
     tags: ["Attack", "Area"]
+  },
+  buy_bomber: {
+    id: "buy_bomber",
+    name: "Contratar bombardero",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "fire.png",
+    actionOrder: 99,
+    actionSubOrder: 9,
+    notes: ["Evento público al contratar un bombardero."],
+    tags: ["Economy", "Attack", "Area"]
   }
 };
 

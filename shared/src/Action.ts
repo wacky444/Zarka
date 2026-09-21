@@ -78,7 +78,8 @@ export type ActionId =
   | "buy_security_camera_app"
   | "buy_spy_drone"
   | "buy_pyromaniac"
-  | "fire_damage";
+  | "fire_damage"
+  | "buy_bomber";
 
 export type ActionTag =
   | "Attack"

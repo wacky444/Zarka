@@ -12,6 +12,7 @@ import type { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
+import { applyHealthDelta } from "../match/actions/utils";
 import { isCharacterDead } from "../utils/playerCharacter";
 import { tailorPlayerCharactersForViewer } from "../utils/matchView";
 
@@ -89,6 +90,7 @@ export function buyShopItemRpc(
     "security_camera_app",
     "spy_drone",
     "pyromaniac",
+    "bomber",
   ];
   if (supportedShopIds.indexOf(shopId as ShopId) === -1) {
     throw makeNakamaError(
@@ -119,7 +121,9 @@ export function buyShopItemRpc(
     }
   }
   if (
-    (resolvedShopId === "spy_drone" || resolvedShopId === "pyromaniac") &&
+    (resolvedShopId === "spy_drone" ||
+      resolvedShopId === "pyromaniac" ||
+      resolvedShopId === "bomber") &&
     !targetLocation
   ) {
     throw makeNakamaError(
@@ -147,7 +151,7 @@ export function buyShopItemRpc(
     );
   }
 
-  const actor = match.playerCharacters?.[ctx.userId];
+  let actor = match.playerCharacters?.[ctx.userId];
   if (!actor) {
     throw makeNakamaError("character_not_found", nkruntime.Codes.NOT_FOUND);
   }
@@ -189,6 +193,8 @@ export function buyShopItemRpc(
   actor.economy.zarkans = balance - cost;
   const characters = match.playerCharacters ?? {};
   let observedPlayerIds: string[] = [];
+  const targetDamages: Record<string, number> = {};
+  const postPurchaseEvents: ReplayPlayerEvent[] = [];
   let targetTeamId: string | undefined;
   let reward = 0;
   let opposingTeam = false;
@@ -255,7 +261,9 @@ export function buyShopItemRpc(
       location: LocalizationType.Security,
     };
   } else if (
-    (resolvedShopId === "spy_drone" || resolvedShopId === "pyromaniac") &&
+    (resolvedShopId === "spy_drone" ||
+      resolvedShopId === "pyromaniac" ||
+      resolvedShopId === "bomber") &&
     targetLocation
   ) {
     let targetTile:
@@ -292,7 +300,7 @@ export function buyShopItemRpc(
         observedPlayerIds,
         observedLocation: targetLocation,
       };
-    } else {
+    } else if (resolvedShopId === "pyromaniac") {
       const fireStartTurn = Math.max(0, Math.floor(match.current_turn ?? 0)) + 1;
       const existingEndTurn =
         typeof targetTile.meta?.fireEndTurn === "number"
@@ -307,9 +315,37 @@ export function buyShopItemRpc(
         ...metadata,
         fireTurns: 3,
       };
+    } else {
+      observedPlayerIds = Object.keys(characters).filter((playerId) => {
+        const candidate = characters[playerId];
+        return (
+          !!candidate &&
+          !isCharacterDead(candidate) &&
+          isSameCoord(candidate.position?.coord, targetLocation)
+        );
+      });
+      for (const playerId of observedPlayerIds) {
+        const candidate = characters[playerId];
+        if (!candidate) {
+          continue;
+        }
+        const outcome = applyHealthDelta(candidate, -5, true, undefined, true);
+        characters[playerId] = outcome.character;
+        targetDamages[playerId] = Math.max(0, -outcome.result.delta);
+        if (outcome.event) {
+          postPurchaseEvents.push(outcome.event);
+        }
+      }
+      metadata = {
+        ...metadata,
+        damage: 5,
+        targetCount: observedPlayerIds.length,
+        targetLocation,
+      };
     }
   }
 
+  actor = match.playerCharacters[ctx.userId] ?? actor;
   match.playerCharacters[ctx.userId] = actor;
   const actionId =
     resolvedShopId === "detective"
@@ -318,20 +354,33 @@ export function buyShopItemRpc(
         ? "buy_security_camera_app"
         : resolvedShopId === "spy_drone"
           ? "buy_spy_drone"
-          : "buy_pyromaniac";
+          : resolvedShopId === "pyromaniac"
+            ? "buy_pyromaniac"
+            : "buy_bomber";
   const event: ReplayPlayerEvent = {
     kind: "player",
     actorId: ctx.userId,
     action: {
       actionId,
       metadata,
+      ...(resolvedShopId === "bomber" && targetLocation
+        ? { targetLocation }
+        : {}),
     },
     targets:
       observedPlayerIds.length > 0
-        ? observedPlayerIds.map((playerId) => ({ targetId: playerId }))
+        ? observedPlayerIds.map((playerId) => ({
+            targetId: playerId,
+            ...(targetDamages[playerId] !== undefined
+              ? {
+                  damageTaken: targetDamages[playerId],
+                  eliminated: isCharacterDead(match.playerCharacters[playerId]),
+                }
+              : {}),
+          }))
         : undefined,
     visibility:
-      resolvedShopId === "pyromaniac"
+      resolvedShopId === "pyromaniac" || resolvedShopId === "bomber"
         ? { scope: "all" }
         : { scope: "limited", playerIds: [ctx.userId] },
   };
@@ -342,7 +391,11 @@ export function buyShopItemRpc(
   storage.appendReplayTurn({
     match_id: matchId,
     turn,
-    events: [...(existingReplay?.events ?? []), event],
+    events: [
+      ...(existingReplay?.events ?? []),
+      event,
+      ...postPurchaseEvents,
+    ],
     ...(existingReplay?.snapshot ? { snapshot: existingReplay.snapshot } : {}),
     created_at: existingReplay?.created_at ?? Math.floor(Date.now() / 1000),
   });
