@@ -88,6 +88,7 @@ export function buyShopItemRpc(
     "detective",
     "security_camera_app",
     "spy_drone",
+    "pyromaniac",
   ];
   if (supportedShopIds.indexOf(shopId as ShopId) === -1) {
     throw makeNakamaError(
@@ -117,7 +118,10 @@ export function buyShopItemRpc(
       );
     }
   }
-  if (resolvedShopId === "spy_drone" && !targetLocation) {
+  if (
+    (resolvedShopId === "spy_drone" || resolvedShopId === "pyromaniac") &&
+    !targetLocation
+  ) {
     throw makeNakamaError(
       "target_location required",
       nkruntime.Codes.INVALID_ARGUMENT,
@@ -250,7 +254,10 @@ export function buyShopItemRpc(
       observedPlayerIds,
       location: LocalizationType.Security,
     };
-  } else if (resolvedShopId === "spy_drone" && targetLocation) {
+  } else if (
+    (resolvedShopId === "spy_drone" || resolvedShopId === "pyromaniac") &&
+    targetLocation
+  ) {
     let targetTile:
       | NonNullable<MatchRecord["map"]>["tiles"][number]
       | undefined;
@@ -266,24 +273,41 @@ export function buyShopItemRpc(
         nkruntime.Codes.FAILED_PRECONDITION,
       );
     }
-    observedPlayerIds = Object.keys(characters).filter((playerId) => {
-      const candidate = characters[playerId];
-      return (
-        !!candidate &&
-        !isCharacterDead(candidate) &&
-        isSameCoord(candidate.position?.coord, targetLocation)
-      );
-    });
-    actor.remoteView = {
-      coord: { q: targetLocation.q, r: targetLocation.r },
-      turn: match.current_turn,
-    };
-    metadata = {
-      ...metadata,
-      observedCount: observedPlayerIds.length,
-      observedPlayerIds,
-      observedLocation: targetLocation,
-    };
+    if (resolvedShopId === "spy_drone") {
+      observedPlayerIds = Object.keys(characters).filter((playerId) => {
+        const candidate = characters[playerId];
+        return (
+          !!candidate &&
+          !isCharacterDead(candidate) &&
+          isSameCoord(candidate.position?.coord, targetLocation)
+        );
+      });
+      actor.remoteView = {
+        coord: { q: targetLocation.q, r: targetLocation.r },
+        turn: match.current_turn,
+      };
+      metadata = {
+        ...metadata,
+        observedCount: observedPlayerIds.length,
+        observedPlayerIds,
+        observedLocation: targetLocation,
+      };
+    } else {
+      const fireStartTurn = Math.max(0, Math.floor(match.current_turn ?? 0)) + 1;
+      const existingEndTurn =
+        typeof targetTile.meta?.fireEndTurn === "number"
+          ? targetTile.meta.fireEndTurn
+          : 0;
+      targetTile.meta = {
+        ...(targetTile.meta ?? {}),
+        fireStartTurn,
+        fireEndTurn: Math.max(existingEndTurn, fireStartTurn + 2),
+      };
+      metadata = {
+        ...metadata,
+        fireTurns: 3,
+      };
+    }
   }
 
   match.playerCharacters[ctx.userId] = actor;
@@ -292,7 +316,9 @@ export function buyShopItemRpc(
       ? "buy_detective"
       : resolvedShopId === "security_camera_app"
         ? "buy_security_camera_app"
-        : "buy_spy_drone";
+        : resolvedShopId === "spy_drone"
+          ? "buy_spy_drone"
+          : "buy_pyromaniac";
   const event: ReplayPlayerEvent = {
     kind: "player",
     actorId: ctx.userId,
@@ -304,7 +330,10 @@ export function buyShopItemRpc(
       observedPlayerIds.length > 0
         ? observedPlayerIds.map((playerId) => ({ targetId: playerId }))
         : undefined,
-    visibility: { scope: "limited", playerIds: [ctx.userId] },
+    visibility:
+      resolvedShopId === "pyromaniac"
+        ? { scope: "all" }
+        : { scope: "limited", playerIds: [ctx.userId] },
   };
 
   storage.writeMatch(match, read.version);

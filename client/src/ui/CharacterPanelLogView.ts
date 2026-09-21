@@ -491,6 +491,10 @@ export class CharacterPanelLogView {
           );
           continue;
         }
+        if (actionId === "buy_pyromaniac") {
+          lines.push(`${actor} ${t("hired a pyromaniac")}`);
+          continue;
+        }
         if (actionId === "buy_spy_drone") {
           const metadata = event.action.metadata as
             | { observedCount?: unknown; observedPlayerIds?: unknown; observedLocation?: unknown }

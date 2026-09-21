@@ -143,7 +143,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "Pyromaniac",
     description: "Creates a three-turn fire in a location.",
     cost: 20,
-    implemented: false,
+    implemented: true,
     category: "Mercenaries"
   },
   bomber: {

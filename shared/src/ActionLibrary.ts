@@ -1400,6 +1400,36 @@ export const ActionLibrary: ActionLibraryDefinition = {
     actionSubOrder: 6,
     notes: ["Evento privado al contratar un dron espía."],
     tags: ["Economy", "Recon"]
+  },
+  buy_pyromaniac: {
+    id: "buy_pyromaniac",
+    name: "Contratar pirómano",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "fire.png",
+    actionOrder: 99,
+    actionSubOrder: 7,
+    notes: ["Evento público al contratar un pirómano."],
+    tags: ["Economy", "Attack", "Area"]
+  },
+  fire_damage: {
+    id: "fire_damage",
+    name: "Daño por incendio",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "fire.png",
+    actionOrder: 99,
+    actionSubOrder: 8,
+    notes: ["Daño causado al ejecutar una acción en un incendio."],
+    tags: ["Attack", "Area"]
   }
 };
 

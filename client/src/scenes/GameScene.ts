@@ -3009,7 +3009,9 @@ export class GameScene extends Phaser.Scene {
       !this.turnService ||
       !this.currentUserId ||
       (payload.shopId === "detective" && !payload.targetPlayerId) ||
-      (payload.shopId === "spy_drone" && !payload.targetLocation)
+      ((payload.shopId === "spy_drone" ||
+        payload.shopId === "pyromaniac") &&
+        !payload.targetLocation)
     ) {
       return;
     }
@@ -3065,6 +3067,8 @@ export class GameScene extends Phaser.Scene {
         this.characterPanel?.beginDetectivePurchase();
       } else if (payload.shopId === "spy_drone") {
         this.characterPanel?.beginSpyDronePurchase();
+      } else if (payload.shopId === "pyromaniac") {
+        this.characterPanel?.beginPyromaniacPurchase();
       }
     } finally {
       this.isBuyingShopItem = false;
