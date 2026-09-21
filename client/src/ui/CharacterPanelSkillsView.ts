@@ -356,6 +356,7 @@ export class CharacterPanelSkillsView {
     this.scrollPanel.setVisible?.(false);
     this.categoryTabs.setVisible(false);
     parent.add(this.scrollPanel);
+    this.categoryTabs.bringToTop();
     parent.bringToTop(this.revertBtnBg);
     parent.bringToTop(this.revertBtnText);
     parent.bringToTop(this.confirmBtnBg);
@@ -391,6 +392,7 @@ export class CharacterPanelSkillsView {
     this.scrollPanel.setVisible?.(visible);
     this.scrollPanel.setMouseWheelScrollerEnable?.(visible);
     this.scrollPanel.setScrollerEnable?.(visible);
+    this.categoryTabs.bringToTop();
   }
 
   setScrollerEnable(enabled: boolean): void {
@@ -586,6 +588,7 @@ export class CharacterPanelSkillsView {
     this.scrollPanel.setSize?.(listWidth, listHeight);
     this.scrollPanel.setMinSize?.(listWidth, listHeight);
     this.scrollPanel.layout?.();
+    this.categoryTabs.bringToTop();
   }
 
   destroy(): void {
@@ -680,15 +683,6 @@ export class CharacterPanelSkillsView {
         color: "#facc15"
       })
       .setOrigin(1, 0);
-
-    const categoryText = skill.category
-      ? this.scene.add
-          .text(CARD_PADDING, startY + 28, `[${skill.category}]`, {
-            fontSize: "12px",
-            color: "#8ea4d2"
-          })
-          .setOrigin(0, 0)
-      : null;
 
     const btnWidth = 72;
     const btnHeight = 20;
@@ -812,10 +806,6 @@ export class CharacterPanelSkillsView {
     this.scrollContent.add(cardBg);
     this.scrollContent.add(nameText);
     this.scrollContent.add(costText);
-    if (categoryText) {
-      this.scrollContent.add(categoryText);
-      this.cardElements.push(categoryText);
-    }
     this.scrollContent.add(rankText);
     this.scrollContent.add(statusBadge);
     this.scrollContent.add(decrementBtnBg);
