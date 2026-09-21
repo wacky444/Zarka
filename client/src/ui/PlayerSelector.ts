@@ -6,6 +6,7 @@ export type PlayerOption = {
   label: string;
   name?: string;
   description?: string;
+  warning?: string;
   texture?: string;
   frame?: string;
   iconScale?: number;
@@ -207,6 +208,7 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
       id: option.id,
       name: option.label,
       description: option.description,
+      missingRequirement: option.warning,
       texture: option.texture ?? "char",
       frame: option.frame,
       iconScale: option.iconScale,

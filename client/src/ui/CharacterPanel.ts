@@ -4253,8 +4253,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const buildOptions = (
       actionId: string | null,
       allowsSelf: boolean
-    ): PlayerOption[] =>
-      this.playerOptions.filter((option) => {
+    ): PlayerOption[] => {
+      const options = this.playerOptions.filter((option) => {
         if (match) {
           const char = match.playerCharacters?.[option.id];
           const isDead =
@@ -4268,6 +4268,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         }
         return allowsSelf || option.id !== currentUserId;
       });
+      options.sort((a, b) => {
+        const aVisible = match?.playerCharacters?.[a.id] !== undefined;
+        const bVisible = match?.playerCharacters?.[b.id] !== undefined;
+        return Number(!aVisible) - Number(!bVisible);
+      });
+      return options.map((option) => {
+        const isVisible = match?.playerCharacters?.[option.id] !== undefined;
+        return isVisible ? option : { ...option, warning: "Not visible" };
+      });
+    };
 
     const mainOptions = buildOptions(
       this.mainActionSelection,
