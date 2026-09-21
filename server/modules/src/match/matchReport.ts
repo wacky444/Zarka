@@ -124,9 +124,12 @@ function collectEvents(
       continue;
     }
     const actor = aggregates[event.actorId];
-    const isDailyIncome =
-      (event.action.actionId as string) === "zarkan_income";
-    if (actor && !isDailyIncome) {
+    const actionId = event.action.actionId as string;
+    const isNonActionEvent =
+      actionId === "zarkan_income" ||
+      actionId === "buy_detective" ||
+      actionId === "detective_reward";
+    if (actor && !isNonActionEvent) {
       actor.actions_used += 1;
       actor.damage_dealt += asNonNegativeNumber(event.action.damageDealt);
       if (event.action.actionId === "pick_up") {

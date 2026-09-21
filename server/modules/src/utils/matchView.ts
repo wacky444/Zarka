@@ -136,6 +136,7 @@ export function tailorPlayerCharactersForViewer(
       remoteView.r === candidateCoord.r;
     const isInCameraView =
       !!cameraView && cameraView.indexOf(id) !== -1;
+    const revealedTeamId = viewer.revealedTeamIdsByPlayerId?.[id];
     if (isInNormalView || isInRemoteView || isInCameraView) {
       const isDead =
         isCharacterDead(candidate) ||
@@ -147,10 +148,17 @@ export function tailorPlayerCharactersForViewer(
       const sanitized = { ...candidate };
       delete sanitized.discoveredItemIds;
       delete sanitized.revealedItemTypesByPlayerId;
+      delete sanitized.revealedTeamIdsByPlayerId;
       delete sanitized.actionPlan;
       delete sanitized.remoteView;
       delete sanitized.cameraView;
-      if (!isDead && !isConfirmedTeammate && candidate.teamId !== undefined) {
+      if (typeof revealedTeamId === "string" && revealedTeamId.length > 0) {
+        sanitized.teamId = revealedTeamId;
+      } else if (
+        !isDead &&
+        !isConfirmedTeammate &&
+        candidate.teamId !== undefined
+      ) {
         delete sanitized.teamId;
       }
       filtered[id] = sanitized;
@@ -197,6 +205,10 @@ export function tailorMatchForPlayer(
     viewAll,
     match.current_turn
   );
+  const revealedTeamsByPlayerId =
+    !viewAll && character?.revealedTeamIdsByPlayerId
+      ? { ...character.revealedTeamIdsByPlayerId }
+      : undefined;
   const playerList: Record<string, PlayerCharacterUnknown> = {};
   const deadCharacters: Record<string, boolean> = {};
   for (const id in match.playerCharacters) {
@@ -247,6 +259,7 @@ export function tailorMatchForPlayer(
     deadCharacters,
     teams: match.teams ? [...match.teams] : Object.keys(teamCounts),
     teamCounts,
+    ...(revealedTeamsByPlayerId ? { revealedTeamsByPlayerId } : {}),
     map,
     items
   };

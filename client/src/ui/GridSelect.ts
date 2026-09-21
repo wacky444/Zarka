@@ -58,6 +58,9 @@ interface GridSelectConfig {
   emptyOptionLabel?: string;
   emptyOptionDescription?: string;
   autoSelectFirst?: boolean;
+  /** Keep the modal open after choosing an item until Confirm is pressed. */
+  confirmSelection?: boolean;
+  confirmLabel?: string;
   iconTextGap?: number;
 }
 
@@ -127,6 +130,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private readonly hitAreaZone: Phaser.GameObjects.Zone;
   private readonly emptyOptionItem: GridSelectItem | null;
   private readonly autoSelectFirst: boolean;
+  private readonly confirmSelection: boolean;
+  private readonly confirmLabel: string;
+  private confirmButton: Phaser.GameObjects.Container | null = null;
   private items: GridSelectItem[] = [];
   private selectedItem: GridSelectItem | null = null;
   private overlay: Phaser.GameObjects.Container | null = null;
@@ -167,6 +173,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.iconTargetSize = Math.min(this.collapsedHeight - 12, 48);
     this.cellHeight = Math.max(96, config.cellHeight ?? 240);
     this.autoSelectFirst = config.autoSelectFirst !== false;
+    this.confirmSelection = config.confirmSelection === true;
+    this.confirmLabel = config.confirmLabel ?? "Confirm";
     this.labelActiveColor = "#e2e8f0";
     this.currentWidth = config.width;
     const includeEmptyOption = config.includeEmptyOption === true;
@@ -412,6 +420,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.icon.setVisible(false);
     this.label.setText(this.placeholder);
     this.updateLabelPosition();
+    this.updateConfirmButton();
     this.applyEnabledState();
   }
 
@@ -438,6 +447,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     }
     this.selectedItem = item;
     this.updateCollapsedView(item);
+    this.updateConfirmButton();
     if (emit) {
       this.emit("change", item.isEmptyOption ? null : item.id, item);
     }
@@ -499,6 +509,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.overlay.setVisible(true);
       this.overlay.setActive(true);
       this.overlay.setDepth(10000);
+      this.updateConfirmButton();
       this.modalCover?.setVisible(true);
       this.modalCover?.setInteractive();
       this.gridTable?.setItems(this.items);
@@ -664,6 +675,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
       0,
       true
     );
+    if (this.confirmSelection) {
+      this.confirmButton = this.createConfirmButton(scene);
+      modal.add(this.confirmButton, 0, "center", { top: 10 }, false);
+    }
 
     modal.layout();
     modal.setPosition(width / 2, height / 2);
@@ -702,12 +717,68 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.ensureTooltip();
     this.overlay = overlay;
     this.gridTable = gridTable;
+    this.updateConfirmButton();
     scene.time.delayedCall(0, () => {
       if (this.gridTable) {
         this.gridTable.refresh?.();
         this.gridTable.layout?.();
       }
     });
+  }
+
+  private createConfirmButton(
+    scene: Phaser.Scene
+  ): Phaser.GameObjects.Container {
+    const button = scene.add.container(0, 0);
+    const background = scene.add
+      .rectangle(0, 0, 150, 42, 0x2563eb, 1)
+      .setOrigin(0.5)
+      .setStrokeStyle(2, 0x60a5fa, 1)
+      .setInteractive({ useHandCursor: true });
+    const label = scene.add
+      .text(0, 0, this.confirmLabel, {
+        fontSize: "16px",
+        color: "#ffffff",
+        fontStyle: "bold"
+      })
+      .setOrigin(0.5);
+    background.on(
+      Phaser.Input.Events.POINTER_UP,
+      (
+        _pointer: Phaser.Input.Pointer,
+        _localX: number,
+        _localY: number,
+        event: Phaser.Types.Input.EventData
+      ) => {
+        event.stopPropagation();
+        const selected = this.selectedItem;
+        if (!selected || selected.disabled) {
+          return;
+        }
+        this.emit("change", selected.isEmptyOption ? null : selected.id, selected);
+        this.closeModal();
+      }
+    );
+    button.add([background, label]);
+    button.setSize(150, 42);
+    button.setData("background", background);
+    return button;
+  }
+
+  private updateConfirmButton(): void {
+    if (!this.confirmButton) {
+      return;
+    }
+    const background = this.confirmButton.getData(
+      "background"
+    ) as Phaser.GameObjects.Rectangle | undefined;
+    const enabled = Boolean(this.selectedItem && !this.selectedItem.disabled);
+    background?.setAlpha(enabled ? 1 : 0.45);
+    if (enabled) {
+      background?.setInteractive({ useHandCursor: true });
+    } else {
+      background?.disableInteractive();
+    }
   }
 
   private createMobileCloseButton(
@@ -765,6 +836,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
       this.overlay.destroy(true);
       this.overlay = null;
+      this.confirmButton = null;
       this.modalCover = null;
       this.modalCloseButton = null;
       this.gridTable = null;
@@ -805,7 +877,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
     const gridTable = scene.rexUI.add.gridTable({
       width: this.modalWidth - 48,
-      height: this.modalHeight - 140,
+      height: this.modalHeight - (this.confirmSelection ? 190 : 140),
       scrollMode: 0,
       background: scene.rexUI.add.roundRectangle(0, 0, 10, 10, 8, 0x121c34),
       table: {
@@ -861,8 +933,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
           this.tooltip?.hide();
           return;
         }
-        this.applySelection(item, true);
-        this.closeModal();
+        this.applySelection(item, !this.confirmSelection);
+        if (!this.confirmSelection) {
+          this.closeModal();
+        }
       },
       this
     );

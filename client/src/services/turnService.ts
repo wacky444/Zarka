@@ -16,7 +16,9 @@ import {
   type Skin,
   type SkillId,
   type UpgradeSkillRequest,
-  type UpdateTestamentRequest
+  type UpdateTestamentRequest,
+  type BuyShopItemRequest,
+  type ShopId
 } from "@shared";
 
 export type Move = { n: number; ts: number };
@@ -257,6 +259,19 @@ export class TurnService {
       match_id,
       recipient_id
     } satisfies UpdateTestamentRequest);
+    return res;
+  }
+
+  async buyShopItem(
+    match_id: string,
+    shop_id: ShopId,
+    target_player_id: string
+  ) {
+    const res = await this.client.rpc(this.session, "buy_shop_item", {
+      match_id,
+      shop_id,
+      target_player_id
+    } satisfies BuyShopItemRequest);
     return res;
   }
 

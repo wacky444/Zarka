@@ -40,7 +40,9 @@ import {
   DEFAULT_SKIN,
   type SkillId,
   type UpgradeSkillPayload,
-  type UpdateTestamentPayload
+  type UpdateTestamentPayload,
+  type BuyShopItemPayload,
+  type ShopId
 } from "@shared";
 import { buildBoardIconUrl, deriveBoardIconKey } from "../ui/actionIcons";
 import {
@@ -564,6 +566,7 @@ export class GameScene extends Phaser.Scene {
       this.handleTestamentChange,
       this
     );
+    this.characterPanel.on("shop-purchase", this.handleShopPurchase, this);
     this.input.keyboard?.on("keydown", this.escapeKeyHandler);
     this.installBrowserHistoryGuard();
 
@@ -775,6 +778,7 @@ export class GameScene extends Phaser.Scene {
         this.handleChatTabOpened,
         this
       );
+      this.characterPanel?.off("shop-purchase", this.handleShopPurchase, this);
       this.gridModalActive = false;
       this.cancelMainActionLocationPick();
       this.itemTooltip?.hide();
@@ -2991,8 +2995,70 @@ export class GameScene extends Phaser.Scene {
   }
 
   private isUpgradingSkill = false;
+  private isBuyingShopItem = false;
   private isUpdatingTestament = false;
   private pendingTestamentRecipient: string | null | undefined;
+
+  private async handleShopPurchase(payload: {
+    shopId: ShopId;
+    targetPlayerId: string;
+  }) {
+    if (
+      this.isBuyingShopItem ||
+      payload.shopId !== "detective" ||
+      !this.turnService ||
+      !this.currentUserId
+    ) {
+      return;
+    }
+    const currentUserId = this.currentUserId;
+    const matchId =
+      (this.registry.get("currentMatchId") as string | null) ??
+      this.currentMatch?.match_id;
+    if (!matchId || !currentUserId) {
+      return;
+    }
+    this.isBuyingShopItem = true;
+    try {
+      const response = await this.turnService.buyShopItem(
+        matchId,
+        payload.shopId,
+        payload.targetPlayerId
+      );
+      const result = this.parseRpcPayload<BuyShopItemPayload>(response);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      if (this.currentMatch && result.character) {
+        this.currentMatch.playerCharacters =
+          this.currentMatch.playerCharacters ?? {};
+        this.currentMatch.playerCharacters[currentUserId] = result.character;
+        if (result.target_player_id && result.target_team_id) {
+          this.currentMatch.revealedTeamsByPlayerId = {
+            ...(this.currentMatch.revealedTeamsByPlayerId ?? {}),
+            [result.target_player_id]: result.target_team_id
+          };
+        }
+        this.updateCharacterPanel(this.currentMatch);
+        const turn = this.currentMatch.current_turn ?? 0;
+        if (result.event) {
+          const cached = this.logReplayCache.get(turn);
+          const events = [...(cached?.events ?? []), result.event];
+          this.logReplayCache.set(turn, {
+            ...(cached ?? {}),
+            events
+          });
+          this.characterPanel?.appendLogReplay(turn, turn, events);
+        }
+      }
+      this.characterPanel?.finishDetectivePurchase();
+    } catch (error) {
+      console.warn("buy_shop_item failed", error);
+      this.characterPanel?.beginDetectivePurchase();
+    } finally {
+      this.isBuyingShopItem = false;
+    }
+  }
 
   private async handleTestamentChange(recipientId: string | null) {
     this.pendingTestamentRecipient = recipientId;

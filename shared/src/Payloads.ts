@@ -14,6 +14,7 @@ import type { MatchChatMessage } from "./chat";
 import type { Skin, UserAccount } from "./UserAccount";
 import type { MatchReport } from "./matchReport";
 import type { SkillId } from "./skills/Skill";
+import type { ShopId } from "./Shop";
 
 export const OPCODE_SETTINGS_UPDATE = 100;
 export const OPCODE_MATCH_REMOVED = 101;
@@ -263,6 +264,24 @@ export type UpdateTestamentPayload = {
 export type UpdateTestamentRequest = {
   match_id: string;
   recipient_id?: string | null;
+};
+
+export type BuyShopItemRequest = {
+  match_id: string;
+  shop_id: ShopId;
+  target_player_id?: string;
+};
+
+export type BuyShopItemPayload = {
+  ok?: boolean;
+  match_id?: string;
+  user_id?: string;
+  shop_id?: ShopId;
+  target_player_id?: string;
+  target_team_id?: string;
+  character?: PlayerCharacter;
+  event?: ReplayEvent;
+  error?: string;
 };
 
 export type UpgradeSkillRequest = {

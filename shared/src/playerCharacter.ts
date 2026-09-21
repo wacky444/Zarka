@@ -20,6 +20,8 @@ export interface PlayerCharacter {
   discoveredItemIds?: string[];
   /** Item types this character has revealed in each player's inventory. */
   revealedItemTypesByPlayerId?: Record<string, string[]>;
+  /** Team identities revealed to this character by Detective purchases. */
+  revealedTeamIdsByPlayerId?: Record<string, string>;
   corpseRations?: number;
   testamentRecipientId?: string;
   testamentProcessed?: boolean;

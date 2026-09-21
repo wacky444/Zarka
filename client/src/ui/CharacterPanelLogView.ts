@@ -137,6 +137,22 @@ export class CharacterPanelLogView {
     this.refreshDisplay();
   }
 
+  appendReplay(
+    turn: number,
+    maxTurn: number,
+    events: ReplayEvent[]
+  ): void {
+    const resolvedTurn = Math.max(0, Math.floor(turn));
+    if (
+      this.selectedTurn !== null &&
+      this.selectedTurn !== resolvedTurn &&
+      this.displayedTurn !== resolvedTurn
+    ) {
+      return;
+    }
+    this.setReplay(resolvedTurn, maxTurn, events);
+  }
+
   setError(message: string): void {
     this.loading = false;
     this.displayedTurn = null;
@@ -422,6 +438,37 @@ export class CharacterPanelLogView {
                   .zarkansReceived ?? 0)
               : 0;
           lines.push(`${actor} received ${amount} daily zarkans`);
+          continue;
+        }
+        if (actionId === "buy_detective") {
+          const metadata = event.action.metadata as
+            | { targetPlayerId?: unknown; targetTeamId?: unknown }
+            | undefined;
+          const targetId =
+            typeof metadata?.targetPlayerId === "string"
+              ? metadata.targetPlayerId
+              : event.targets?.[0]?.targetId;
+          const targetTeam =
+            typeof metadata?.targetTeamId === "string"
+              ? metadata.targetTeamId
+              : event.targets?.[0]?.metadata?.teamId;
+          lines.push(
+            targetId && typeof targetTeam === "string"
+              ? `${actor} hired a detective and discovered ${this.resolvePlayerName(
+                  targetId
+                )} belongs to team ${targetTeam}`
+              : `${actor} hired a detective`
+          );
+          continue;
+        }
+        if (actionId === "detective_reward") {
+          const amount =
+            typeof (event.action.metadata as { zarkansReceived?: unknown })
+              ?.zarkansReceived === "number"
+              ? ((event.action.metadata as { zarkansReceived: number })
+                  .zarkansReceived ?? 0)
+              : 0;
+          lines.push(`${actor} received ${amount} zarkans from a detective`);
           continue;
         }
         if (actionId === "activate_cameras") {

@@ -110,7 +110,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "Detective",
     description: "Reports the investigated player's team immediately.",
     cost: 6,
-    implemented: false,
+    implemented: true,
     category: "Mercenaries"
   },
   tracking_app: {

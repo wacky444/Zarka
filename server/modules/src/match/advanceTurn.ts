@@ -161,7 +161,10 @@ function applyZarkanIncome(
   }
 }
 
-function applyPendingZarkanPayout(match: MatchRecord): void {
+function applyPendingZarkanPayout(
+  match: MatchRecord,
+  replayEvents: ReplayEvent[],
+): void {
   if (!match.playerCharacters) {
     return;
   }
@@ -188,6 +191,18 @@ function applyPendingZarkanPayout(match: MatchRecord): void {
           : 0;
       character.economy.zarkans = current + pending;
       character.economy.pendingZarkans = 0;
+      replayEvents.push({
+        kind: "player",
+        actorId: playerId,
+        action: {
+          actionId: "detective_reward",
+          metadata: {
+            zarkansReceived: pending,
+            source: "detective",
+          },
+        },
+        visibility: { scope: "limited", playerIds: [playerId] },
+      });
     }
   }
 }
@@ -297,6 +312,7 @@ export function advanceTurn(
   const replayEvents: ReplayEvent[] = [];
   activateTemporaryEnergy(match);
   applyZarkanIncome(match, replayEvents);
+  applyPendingZarkanPayout(match, replayEvents);
   clearDodgeAttempts(match);
   removeStateFromAllCharacters(match, "protected");
   removeStateFromAllCharacters(match, "unconscious");
@@ -343,7 +359,6 @@ export function advanceTurn(
     }
   }
   replayEvents.push(...applyVirusInfection(match, resolvedTurn, logger));
-  applyPendingZarkanPayout(match);
   // removeProtectedState(match);
 
   if (match.map?.tiles) {

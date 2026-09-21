@@ -17,7 +17,8 @@ import {
   getActionEnergyDiscount,
   getSkillEffectTotal,
   LocalizationType,
-  type HexTileSnapshot
+  type HexTileSnapshot,
+  type ShopId
 } from "@shared";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
 import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
@@ -367,6 +368,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   };
   private readonly handleTestamentChange = (recipientId: string | null) => {
     this.emit("testament-change", recipientId);
+  };
+  private readonly handleShopPurchase = (payload: {
+    shopId: ShopId;
+    targetPlayerId: string;
+  }) => {
+    this.emit("shop-purchase", payload);
   };
   private readyPointerIsDown = false;
   private readonly handleReadyPointerDown = (
@@ -1405,6 +1412,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       panelHeight: this.panelHeight
     });
     this.shopView.on("testament-change", this.handleTestamentChange, this);
+    this.shopView.on("shop-purchase", this.handleShopPurchase, this);
     this.shopView.on("modal-open", this.handleActionModalOpen, this);
     this.shopView.on("modal-close", this.handleActionModalClose, this);
     this.shopElements = this.shopView.getElements();
@@ -1882,6 +1890,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.characterSubtabs?.destroy();
     this.skillsView?.destroy();
     this.shopView?.off("testament-change", this.handleTestamentChange, this);
+    this.shopView?.off("shop-purchase", this.handleShopPurchase, this);
     this.shopView?.off("modal-open", this.handleActionModalOpen, this);
     this.shopView?.off("modal-close", this.handleActionModalClose, this);
     this.shopView?.destroy();
@@ -2391,6 +2400,17 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const userMap = usernames ? { ...usernames } : {};
     this.lastUserMap = userMap;
     this.logView.setUsernames(userMap);
+    const teamMap: Record<string, string> = {
+      ...(match?.revealedTeamsByPlayerId ?? {})
+    };
+    for (const [playerId, character] of Object.entries(
+      match?.playerCharacters ?? {}
+    )) {
+      if (typeof character?.teamId === "string" && character.teamId.length > 0) {
+        teamMap[playerId] = character.teamId;
+      }
+    }
+    this.logView.setTeams(teamMap);
     this.currentMatch = match ?? null;
     this.currentUserId = currentUserId ?? null;
     this.updatePlayerOptions(match ?? null, userMap, currentUserId);
@@ -5409,6 +5429,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.logView.setReplay(turn, maxTurn, events);
   }
 
+  appendLogReplay(turn: number, maxTurn: number, events: ReplayEvent[]) {
+    this.logView.appendReplay(turn, maxTurn, events);
+  }
+
   setLogError(message: string) {
     this.logView.setError(message);
   }
@@ -5419,6 +5443,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   setLogPlaybackState(active: boolean) {
     this.logView.setPlaybackState(active);
+  }
+
+  beginDetectivePurchase(): void {
+    this.shopView.beginDetectivePurchase();
+  }
+
+  finishDetectivePurchase(): void {
+    this.shopView.finishDetectivePurchase();
   }
 
   closeCurrentGridSelect(): void {

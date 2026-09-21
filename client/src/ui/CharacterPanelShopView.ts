@@ -3,7 +3,8 @@ import {
   ShopLibrary,
   type MatchRecord,
   type PlayerCharacter,
-  type ShopDefinition
+  type ShopDefinition,
+  type ShopId
 } from "@shared";
 import { PlayerSelector, type PlayerOption } from "./PlayerSelector";
 import { t } from "../services/i18n";
@@ -38,7 +39,7 @@ type ShopCardItem = {
 };
 
 const HEADER_HEIGHT = 44;
-const SELECTOR_TO_LIST_GAP = 81;
+const SELECTOR_TO_LIST_GAP = 155;
 const CARD_PADDING = 12;
 const CARD_SPACING = 8;
 
@@ -48,6 +49,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
   private readonly headerBox: Phaser.GameObjects.Rectangle;
   private readonly balanceText: Phaser.GameObjects.Text;
   private readonly testamentSelector: PlayerSelector;
+  private readonly detectiveSelector: PlayerSelector;
   private readonly scrollContent: Phaser.GameObjects.Container;
   private readonly scrollPanel: ScrollablePanelInstance;
   private readonly scrollMaskShape: Phaser.GameObjects.Rectangle;
@@ -109,6 +111,28 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.testamentSelector.setActive(false);
     parent.add(this.testamentSelector);
 
+    this.detectiveSelector = new PlayerSelector(
+      scene,
+      layout.margin + 12,
+      selectorY + 72,
+      width - 24,
+      { confirmSelection: true, confirmLabel: t("Confirm") }
+    );
+    this.detectiveSelector.setLabel(t("Detective target"));
+    this.detectiveSelector.on("change", (targetPlayerId: string | null) => {
+      if (targetPlayerId) {
+        this.emit("shop-purchase", {
+          shopId: "detective" as ShopId,
+          targetPlayerId
+        });
+      }
+    });
+    this.detectiveSelector.on("modal-open", () => this.emit("modal-open"));
+    this.detectiveSelector.on("modal-close", () => this.emit("modal-close"));
+    this.detectiveSelector.setVisible(false);
+    this.detectiveSelector.setActive(false);
+    parent.add(this.detectiveSelector);
+
     const listTop = selectorY + SELECTOR_TO_LIST_GAP;
     const listWidth = width - 24;
     const listHeight = Math.max(100, height - (listTop - layout.contentTop) - 8);
@@ -162,6 +186,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
       this.headerBox,
       this.balanceText,
       this.testamentSelector,
+      this.detectiveSelector,
       this.scrollPanel
     );
   }
@@ -196,6 +221,8 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
       this.currentCharacter?.testamentRecipientId ?? null,
       false
     );
+    this.detectiveSelector.setOptions(options);
+    this.detectiveSelector.setValue(null, false);
     const zarkans = this.currentCharacter?.economy?.zarkans ?? 0;
     this.balanceText.setText(`Zarkans: ${Math.max(0, Math.floor(zarkans))}`);
     const enabled = Boolean(
@@ -205,10 +232,33 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     );
     this.testamentSelector.setEnabled(enabled);
     this.testamentSelector.setActive(enabled);
+    this.detectiveSelector.setEnabled(enabled);
+    this.detectiveSelector.setActive(false);
+  }
+
+  beginDetectivePurchase(): void {
+    const canPurchase = Boolean(
+      this.currentCharacter &&
+        !this.currentCharacter.statuses?.conditions?.includes("dead")
+    );
+    if (!canPurchase) {
+      return;
+    }
+    this.detectiveSelector.setVisible(true);
+    this.detectiveSelector.setActive(true);
+    this.detectiveSelector.setEnabled(true);
+  }
+
+  finishDetectivePurchase(): void {
+    this.detectiveSelector.hideDropdown();
+    this.detectiveSelector.setValue(null, false);
+    this.detectiveSelector.setVisible(false);
+    this.detectiveSelector.setActive(false);
   }
 
   closeModal(): void {
     this.testamentSelector.hideDropdown();
+    this.detectiveSelector.hideDropdown();
   }
 
   setVisible(visible: boolean): void {
@@ -217,6 +267,10 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.headerBox.setVisible(visible);
     this.balanceText.setVisible(visible);
     this.testamentSelector.setVisible(visible);
+    if (!visible) {
+      this.finishDetectivePurchase();
+    }
+    this.detectiveSelector.setVisible(visible && this.detectiveSelector.active);
     this.scrollPanel.setVisible?.(visible);
     this.setScrollerEnable(visible);
   }
@@ -243,6 +297,8 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     const selectorY = headerY + HEADER_HEIGHT + 10;
     this.testamentSelector.setPosition(options.margin + 12, selectorY);
     this.testamentSelector.setSelectorWidth(width - 24);
+    this.detectiveSelector.setPosition(options.margin + 12, selectorY + 72);
+    this.detectiveSelector.setSelectorWidth(width - 24);
 
     const listTop = selectorY + SELECTOR_TO_LIST_GAP;
     const listWidth = width - 24;
@@ -264,6 +320,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.scrollMask.destroy();
     this.scrollMaskShape.destroy();
     this.testamentSelector.destroy();
+    this.detectiveSelector.destroy();
     for (const child of [...this.scrollContent.list]) {
       child.destroy();
     }
@@ -301,7 +358,13 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
         lineSpacing: 3
       })
       .setOrigin(0, 0);
-    const cardHeight = Math.max(82, 54 + description.height + CARD_PADDING);
+    const cardHeight = Math.max(
+      110,
+      54 +
+        description.height +
+        CARD_PADDING +
+        (definition.implemented ? 32 : 0)
+    );
     const card = this.scene.add
       .rectangle(0, startY, cardWidth, cardHeight, 0x202b4a, 0.95)
       .setOrigin(0, 0)
@@ -334,14 +397,54 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
         fontSize: "11px",
         color: "#f87171"
       })
-      .setOrigin(1, 0.5);
+      .setOrigin(1, 0.5)
+      .setVisible(!definition.implemented);
+    const buyBackground = definition.implemented
+      ? this.scene.add
+          .rectangle(
+            cardWidth - CARD_PADDING - 76,
+            startY + cardHeight - 26,
+            76,
+            22,
+            0x16a34a,
+            1
+          )
+          .setOrigin(0, 0)
+          .setStrokeStyle(1, 0x4ade80, 1)
+          .setInteractive({ useHandCursor: true })
+      : null;
+    const buyText = definition.implemented
+      ? this.scene.add
+          .text(
+            cardWidth - CARD_PADDING - 38,
+            startY + cardHeight - 15,
+            t("Buy"),
+            {
+              fontSize: "12px",
+              color: "#ffffff",
+              fontStyle: "bold"
+            }
+          )
+          .setOrigin(0.5)
+      : null;
+    buyBackground?.on(Phaser.Input.Events.POINTER_UP, () => {
+      this.beginShopPurchase(definition.id);
+    });
     this.scrollContent.add(card);
     this.scrollContent.add(name);
     this.scrollContent.add(cost);
     if (category) this.scrollContent.add(category);
     this.scrollContent.add(status);
     this.scrollContent.add(description);
+    if (buyBackground) this.scrollContent.add(buyBackground);
+    if (buyText) this.scrollContent.add(buyText);
     this.cards.push({ definition, statusBadge: status });
     return cardHeight;
+  }
+
+  private beginShopPurchase(shopId: ShopId): void {
+    if (shopId === "detective") {
+      this.beginDetectivePurchase();
+    }
   }
 }

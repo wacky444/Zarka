@@ -1002,7 +1002,10 @@ export class CharacterPanelPlayerListView {
     const option = this.playerOptions.find((entry) => entry.id === selectedId);
     const displayName = option?.name ?? option?.label ?? selectedId;
     this.playersTabCardName.setText(displayName);
-    const teamId = character?.teamId?.trim() || UNKNOWN_TEAM_LABEL;
+    const teamId =
+      match.revealedTeamsByPlayerId?.[selectedId]?.trim() ||
+      character?.teamId?.trim() ||
+      UNKNOWN_TEAM_LABEL;
     this.playersTabCardTeam.setText(`${t("Team")}: ${teamId}`);
     const viewer = this.currentUserId
       ? match.playerCharacters?.[this.currentUserId]

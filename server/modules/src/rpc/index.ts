@@ -18,6 +18,7 @@ export { getUserAccountRpc } from "./getUserAccount";
 export { updateSkinRpc } from "./updateSkin";
 export { upgradeSkillRpc } from "./upgradeSkill";
 export { updateTestamentRpc } from "./updateTestament";
+export { buyShopItemRpc } from "./buyShopItem";
 export { setAdminViewRpc } from "./setAdminView";
 export {
   facebookDataDeletionRpc,

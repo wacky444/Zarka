@@ -1340,6 +1340,36 @@ export const ActionLibrary: ActionLibraryDefinition = {
       "Informe personal de asignación de equipo en el turno 0."
     ],
     tags: ["Status"]
+  },
+  buy_detective: {
+    id: "buy_detective",
+    name: "Contratar detective",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "magnifying_glass.png",
+    actionOrder: 99,
+    actionSubOrder: 3,
+    notes: ["Evento privado al contratar un detective."],
+    tags: ["Economy", "Recon"]
+  },
+  detective_reward: {
+    id: "detective_reward",
+    name: "Recompensa del detective",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "coin.png",
+    actionOrder: 99,
+    actionSubOrder: 4,
+    notes: ["Evento privado al recibir la recompensa de un detective."],
+    tags: ["Economy"]
   }
 };
 

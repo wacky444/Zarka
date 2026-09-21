@@ -54,6 +54,8 @@ export interface MatchRecord {
   traps?: TrapRecord[];
   teams?: string[];
   teamCounts?: Record<string, number>;
+  /** Team identities revealed to the viewing player by Detective purchases. */
+  revealedTeamsByPlayerId?: Record<string, string>;
   lastAutoAdvanceAt?: number;
   reportProgress?: MatchReportProgress;
 }

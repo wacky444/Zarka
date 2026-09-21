@@ -30,7 +30,13 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
   private preferredWidth: number;
   private syncing = false;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, width: number) {
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    width: number,
+    options?: { confirmSelection?: boolean; confirmLabel?: string }
+  ) {
     super(scene, x, y);
     this.preferredWidth = width;
     scene.add.existing(this);
@@ -53,6 +59,8 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
       columns: 3,
       cellHeight: 120,
       autoSelectFirst: false,
+      confirmSelection: options?.confirmSelection,
+      confirmLabel: options?.confirmLabel
     });
     this.grid.setPosition(0, this.label.height + 6);
     this.grid.on("change", this.handleSelection);
