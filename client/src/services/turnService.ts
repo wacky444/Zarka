@@ -18,7 +18,8 @@ import {
   type UpgradeSkillRequest,
   type UpdateTestamentRequest,
   type BuyShopItemRequest,
-  type ShopId
+  type ShopId,
+  type Axial
 } from "@shared";
 
 export type Move = { n: number; ts: number };
@@ -265,12 +266,14 @@ export class TurnService {
   async buyShopItem(
     match_id: string,
     shop_id: ShopId,
-    target_player_id: string
+    target_player_id?: string,
+    target_location?: Axial
   ) {
     const res = await this.client.rpc(this.session, "buy_shop_item", {
       match_id,
       shop_id,
-      target_player_id
+      ...(target_player_id ? { target_player_id } : {}),
+      ...(target_location ? { target_location } : {})
     } satisfies BuyShopItemRequest);
     return res;
   }

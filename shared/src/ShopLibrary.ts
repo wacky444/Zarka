@@ -94,7 +94,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "Security room camera app",
     description: "Reports the characters visible in the security room that turn.",
     cost: 2,
-    implemented: false,
+    implemented: true,
     category: "Applications"
   },
   spy_drone: {
@@ -102,7 +102,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "Spy drone",
     description: "Reports the players visible in a chosen location that turn.",
     cost: 6,
-    implemented: false,
+    implemented: true,
     category: "Mercenaries"
   },
   detective: {

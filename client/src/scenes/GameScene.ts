@@ -3001,13 +3001,15 @@ export class GameScene extends Phaser.Scene {
 
   private async handleShopPurchase(payload: {
     shopId: ShopId;
-    targetPlayerId: string;
+    targetPlayerId?: string;
+    targetLocation?: Axial;
   }) {
     if (
       this.isBuyingShopItem ||
-      payload.shopId !== "detective" ||
       !this.turnService ||
-      !this.currentUserId
+      !this.currentUserId ||
+      (payload.shopId === "detective" && !payload.targetPlayerId) ||
+      (payload.shopId === "spy_drone" && !payload.targetLocation)
     ) {
       return;
     }
@@ -3023,16 +3025,21 @@ export class GameScene extends Phaser.Scene {
       const response = await this.turnService.buyShopItem(
         matchId,
         payload.shopId,
-        payload.targetPlayerId
+        payload.targetPlayerId,
+        payload.targetLocation
       );
       const result = this.parseRpcPayload<BuyShopItemPayload>(response);
       if (result.error) {
         throw new Error(result.error);
       }
       if (this.currentMatch && result.character) {
-        this.currentMatch.playerCharacters =
-          this.currentMatch.playerCharacters ?? {};
-        this.currentMatch.playerCharacters[currentUserId] = result.character;
+        if (result.playerCharacters) {
+          this.currentMatch.playerCharacters = result.playerCharacters;
+        } else {
+          this.currentMatch.playerCharacters =
+            this.currentMatch.playerCharacters ?? {};
+          this.currentMatch.playerCharacters[currentUserId] = result.character;
+        }
         if (result.target_player_id && result.target_team_id) {
           this.currentMatch.revealedTeamsByPlayerId = {
             ...(this.currentMatch.revealedTeamsByPlayerId ?? {}),
@@ -3051,10 +3058,14 @@ export class GameScene extends Phaser.Scene {
           this.characterPanel?.appendLogReplay(turn, turn, events);
         }
       }
-      this.characterPanel?.finishDetectivePurchase();
+      this.characterPanel?.finishShopPurchase();
     } catch (error) {
       console.warn("buy_shop_item failed", error);
-      this.characterPanel?.beginDetectivePurchase();
+      if (payload.shopId === "detective") {
+        this.characterPanel?.beginDetectivePurchase();
+      } else if (payload.shopId === "spy_drone") {
+        this.characterPanel?.beginSpyDronePurchase();
+      }
     } finally {
       this.isBuyingShopItem = false;
     }

@@ -1370,6 +1370,36 @@ export const ActionLibrary: ActionLibraryDefinition = {
     actionSubOrder: 4,
     notes: ["Evento privado al recibir la recompensa de un detective."],
     tags: ["Economy"]
+  },
+  buy_security_camera_app: {
+    id: "buy_security_camera_app",
+    name: "Comprar aplicación de cámaras",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "camera.png",
+    actionOrder: 99,
+    actionSubOrder: 5,
+    notes: ["Evento privado al contratar la aplicación de cámaras."],
+    tags: ["Economy", "Recon"]
+  },
+  buy_spy_drone: {
+    id: "buy_spy_drone",
+    name: "Contratar dron espía",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "drone.png",
+    actionOrder: 99,
+    actionSubOrder: 6,
+    notes: ["Evento privado al contratar un dron espía."],
+    tags: ["Economy", "Recon"]
   }
 };
 

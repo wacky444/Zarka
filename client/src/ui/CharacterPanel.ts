@@ -371,7 +371,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   };
   private readonly handleShopPurchase = (payload: {
     shopId: ShopId;
-    targetPlayerId: string;
+    targetPlayerId?: string;
+    targetLocation?: Axial;
   }) => {
     this.emit("shop-purchase", payload);
   };
@@ -5451,6 +5452,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   finishDetectivePurchase(): void {
     this.shopView.finishDetectivePurchase();
+  }
+
+  finishShopPurchase(): void {
+    this.shopView.finishShopPurchase();
+  }
+
+  beginSpyDronePurchase(): void {
+    this.shopView.beginSpyDronePurchase();
   }
 
   closeCurrentGridSelect(): void {

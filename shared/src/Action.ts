@@ -74,7 +74,9 @@ export type ActionId =
   | "failedAction"
   | "team_assigned"
   | "buy_detective"
-  | "detective_reward";
+  | "detective_reward"
+  | "buy_security_camera_app"
+  | "buy_spy_drone";
 
 export type ActionTag =
   | "Attack"

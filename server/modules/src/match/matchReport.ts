@@ -128,7 +128,9 @@ function collectEvents(
     const isNonActionEvent =
       actionId === "zarkan_income" ||
       actionId === "buy_detective" ||
-      actionId === "detective_reward";
+      actionId === "detective_reward" ||
+      actionId === "buy_security_camera_app" ||
+      actionId === "buy_spy_drone";
     if (actor && !isNonActionEvent) {
       actor.actions_used += 1;
       actor.damage_dealt += asNonNegativeNumber(event.action.damageDealt);

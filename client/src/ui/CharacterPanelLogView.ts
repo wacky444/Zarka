@@ -471,6 +471,51 @@ export class CharacterPanelLogView {
           lines.push(`${actor} received ${amount} zarkans from a detective`);
           continue;
         }
+        if (actionId === "buy_security_camera_app") {
+          const metadata = event.action.metadata as
+            | { observedCount?: unknown; observedPlayerIds?: unknown }
+            | undefined;
+          const count =
+            typeof metadata?.observedCount === "number"
+              ? metadata.observedCount
+              : 0;
+          const observedNames = Array.isArray(metadata?.observedPlayerIds)
+            ? metadata.observedPlayerIds
+                .filter((id): id is string => typeof id === "string")
+                .map((id) => this.resolvePlayerName(id))
+            : [];
+          lines.push(
+            observedNames.length > 0
+              ? `${actor} used the security camera app and saw ${observedNames.join(", ")}`
+              : `${actor} used the security camera app and saw ${count} characters`
+          );
+          continue;
+        }
+        if (actionId === "buy_spy_drone") {
+          const metadata = event.action.metadata as
+            | { observedCount?: unknown; observedPlayerIds?: unknown; observedLocation?: unknown }
+            | undefined;
+          const location = readAxialMetadata(metadata?.observedLocation);
+          const count =
+            typeof metadata?.observedCount === "number"
+              ? metadata.observedCount
+              : 0;
+          const observedNames = Array.isArray(metadata?.observedPlayerIds)
+            ? metadata.observedPlayerIds
+                .filter((id): id is string => typeof id === "string")
+                .map((id) => this.resolvePlayerName(id))
+            : [];
+          const observedText =
+            observedNames.length > 0
+              ? observedNames.join(", ")
+              : `${count} characters`;
+          lines.push(
+            location
+              ? `${actor} used a spy drone at (${location.q}, ${location.r}) and saw ${observedText}`
+              : `${actor} used a spy drone and saw ${observedText}`
+          );
+          continue;
+        }
         if (actionId === "activate_cameras") {
           lines.push(`${actor} activated the cameras`);
           continue;

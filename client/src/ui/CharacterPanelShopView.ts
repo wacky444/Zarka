@@ -1,12 +1,14 @@
 import Phaser from "phaser";
 import {
   ShopLibrary,
+  type Axial,
   type MatchRecord,
   type PlayerCharacter,
   type ShopDefinition,
   type ShopId
 } from "@shared";
 import { PlayerSelector, type PlayerOption } from "./PlayerSelector";
+import { GridSelect, type GridSelectItem } from "./GridSelect";
 import { t } from "../services/i18n";
 
 export interface CharacterPanelShopViewLayout {
@@ -50,6 +52,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
   private readonly balanceText: Phaser.GameObjects.Text;
   private readonly testamentSelector: PlayerSelector;
   private readonly detectiveSelector: PlayerSelector;
+  private readonly droneLocationSelector: GridSelect;
   private readonly scrollContent: Phaser.GameObjects.Container;
   private readonly scrollPanel: ScrollablePanelInstance;
   private readonly scrollMaskShape: Phaser.GameObjects.Rectangle;
@@ -57,6 +60,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
   private readonly cards: ShopCardItem[] = [];
   private currentCharacter: PlayerCharacter | null = null;
   private visible = false;
+  private droneLocations = new Map<string, Axial>();
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -133,6 +137,37 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.detectiveSelector.setActive(false);
     parent.add(this.detectiveSelector);
 
+    this.droneLocationSelector = new GridSelect(scene, 0, 0, {
+      width: width - 24,
+      title: t("Select drone location"),
+      subtitle: t("Choose the location for the spy drone"),
+      placeholder: t("Select target"),
+      columns: 2,
+      cellHeight: 96,
+      autoSelectFirst: false,
+      confirmSelection: true,
+      confirmLabel: t("Confirm")
+    });
+    this.droneLocationSelector.on(
+      "change",
+      (locationId: string | null) => {
+        const location = locationId
+          ? this.droneLocations.get(locationId)
+          : undefined;
+        if (location) {
+          this.emit("shop-purchase", {
+            shopId: "spy_drone" as ShopId,
+            targetLocation: location
+          });
+        }
+      }
+    );
+    this.droneLocationSelector.on("modal-open", () => this.emit("modal-open"));
+    this.droneLocationSelector.on("modal-close", () => this.emit("modal-close"));
+    this.droneLocationSelector.setVisible(false);
+    this.droneLocationSelector.setActive(false);
+    parent.add(this.droneLocationSelector);
+
     const listTop = selectorY + SELECTOR_TO_LIST_GAP;
     const listWidth = width - 24;
     const listHeight = Math.max(100, height - (listTop - layout.contentTop) - 8);
@@ -187,6 +222,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
       this.balanceText,
       this.testamentSelector,
       this.detectiveSelector,
+      this.droneLocationSelector,
       this.scrollPanel
     );
   }
@@ -223,6 +259,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     );
     this.detectiveSelector.setOptions(options);
     this.detectiveSelector.setValue(null, false);
+    this.updateDroneLocationOptions(match);
     const zarkans = this.currentCharacter?.economy?.zarkans ?? 0;
     this.balanceText.setText(`Zarkans: ${Math.max(0, Math.floor(zarkans))}`);
     const enabled = Boolean(
@@ -234,6 +271,8 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.testamentSelector.setActive(enabled);
     this.detectiveSelector.setEnabled(enabled);
     this.detectiveSelector.setActive(false);
+    this.droneLocationSelector.setEnabled(enabled);
+    this.droneLocationSelector.setActive(false);
   }
 
   beginDetectivePurchase(): void {
@@ -256,9 +295,27 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.detectiveSelector.setActive(false);
   }
 
+  beginSpyDronePurchase(): void {
+    if (!this.currentCharacter || this.currentCharacter.statuses?.conditions?.includes("dead")) {
+      return;
+    }
+    this.droneLocationSelector.setVisible(true);
+    this.droneLocationSelector.setActive(true);
+    this.droneLocationSelector.setEnabled(true);
+  }
+
+  finishShopPurchase(): void {
+    this.finishDetectivePurchase();
+    this.droneLocationSelector.hideModal();
+    this.droneLocationSelector.setValue(null, false);
+    this.droneLocationSelector.setVisible(false);
+    this.droneLocationSelector.setActive(false);
+  }
+
   closeModal(): void {
     this.testamentSelector.hideDropdown();
     this.detectiveSelector.hideDropdown();
+    this.droneLocationSelector.hideModal();
   }
 
   setVisible(visible: boolean): void {
@@ -268,9 +325,12 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.balanceText.setVisible(visible);
     this.testamentSelector.setVisible(visible);
     if (!visible) {
-      this.finishDetectivePurchase();
+      this.finishShopPurchase();
     }
     this.detectiveSelector.setVisible(visible && this.detectiveSelector.active);
+    this.droneLocationSelector.setVisible(
+      visible && this.droneLocationSelector.active
+    );
     this.scrollPanel.setVisible?.(visible);
     this.setScrollerEnable(visible);
   }
@@ -299,6 +359,8 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.testamentSelector.setSelectorWidth(width - 24);
     this.detectiveSelector.setPosition(options.margin + 12, selectorY + 72);
     this.detectiveSelector.setSelectorWidth(width - 24);
+    this.droneLocationSelector.setPosition(options.margin + 12, selectorY + 72);
+    this.droneLocationSelector.setDisplayWidth(width - 24);
 
     const listTop = selectorY + SELECTOR_TO_LIST_GAP;
     const listWidth = width - 24;
@@ -321,6 +383,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.scrollMaskShape.destroy();
     this.testamentSelector.destroy();
     this.detectiveSelector.destroy();
+    this.droneLocationSelector.destroy();
     for (const child of [...this.scrollContent.list]) {
       child.destroy();
     }
@@ -445,6 +508,37 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
   private beginShopPurchase(shopId: ShopId): void {
     if (shopId === "detective") {
       this.beginDetectivePurchase();
+    } else if (shopId === "spy_drone") {
+      this.beginSpyDronePurchase();
+    } else if (shopId === "security_camera_app") {
+      this.emit("shop-purchase", { shopId });
     }
+  }
+
+  private updateDroneLocationOptions(match: MatchRecord | null): void {
+    this.droneLocations = new Map<string, Axial>();
+    const items: GridSelectItem[] = [];
+    for (const tile of match?.map?.tiles ?? []) {
+      if (!tile?.coord || tile.meta?.destroyed) {
+        continue;
+      }
+      const id = `${tile.coord.q}:${tile.coord.r}`;
+      if (this.droneLocations.has(id)) {
+        continue;
+      }
+      this.droneLocations.set(id, {
+        q: tile.coord.q,
+        r: tile.coord.r
+      });
+      items.push({
+        id,
+        name: `${t("Location")} (${tile.coord.q}, ${tile.coord.r})`,
+        description: tile.localizationType,
+        texture: "hex",
+        frame: "grass_01.png"
+      });
+    }
+    this.droneLocationSelector.setItems(items);
+    this.droneLocationSelector.setValue(null, false);
   }
 }

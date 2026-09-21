@@ -2,14 +2,18 @@
 
 import {
   ShopLibrary,
+  LocalizationType,
+  type Axial,
   type BuyShopItemPayload,
   type ReplayPlayerEvent,
+  type ShopId,
 } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { isCharacterDead } from "../utils/playerCharacter";
+import { tailorPlayerCharactersForViewer } from "../utils/matchView";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -21,6 +25,25 @@ function effectiveTeamId(character: {
 }): string | null {
   const teamId = character.secretTeamId?.trim() || character.teamId?.trim();
   return teamId && teamId.length > 0 ? teamId : null;
+}
+
+function parseAxial(value: unknown): Axial | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  if (
+    typeof value.q !== "number" ||
+    !isFinite(value.q) ||
+    typeof value.r !== "number" ||
+    !isFinite(value.r)
+  ) {
+    return null;
+  }
+  return { q: value.q, r: value.r };
+}
+
+function isSameCoord(a: Axial | undefined, b: Axial | undefined): boolean {
+  return !!a && !!b && a.q === b.q && a.r === b.r;
 }
 
 export function buyShopItemRpc(
@@ -54,27 +77,49 @@ export function buyShopItemRpc(
     typeof parsed.target_player_id === "string"
       ? parsed.target_player_id.trim()
       : "";
+  const targetLocation = parseAxial(parsed.target_location);
   if (!matchId || !shopId) {
     throw makeNakamaError(
       "match_id and shop_id required",
       nkruntime.Codes.INVALID_ARGUMENT,
     );
   }
-  if (shopId !== "detective" || !ShopLibrary.detective.implemented) {
+  const supportedShopIds: ShopId[] = [
+    "detective",
+    "security_camera_app",
+    "spy_drone",
+  ];
+  if (supportedShopIds.indexOf(shopId as ShopId) === -1) {
     throw makeNakamaError(
       "shop_item_not_implemented",
       nkruntime.Codes.FAILED_PRECONDITION,
     );
   }
-  if (!targetPlayerId) {
+  const resolvedShopId = shopId as ShopId;
+  const definition = ShopLibrary[resolvedShopId];
+  if (!definition?.implemented) {
     throw makeNakamaError(
-      "target_player_id required",
-      nkruntime.Codes.INVALID_ARGUMENT,
+      "shop_item_not_implemented",
+      nkruntime.Codes.FAILED_PRECONDITION,
     );
   }
-  if (targetPlayerId === ctx.userId) {
+  if (resolvedShopId === "detective") {
+    if (!targetPlayerId) {
+      throw makeNakamaError(
+        "target_player_id required",
+        nkruntime.Codes.INVALID_ARGUMENT,
+      );
+    }
+    if (targetPlayerId === ctx.userId) {
+      throw makeNakamaError(
+        "invalid_detective_target",
+        nkruntime.Codes.INVALID_ARGUMENT,
+      );
+    }
+  }
+  if (resolvedShopId === "spy_drone" && !targetLocation) {
     throw makeNakamaError(
-      "invalid_detective_target",
+      "target_location required",
       nkruntime.Codes.INVALID_ARGUMENT,
     );
   }
@@ -99,18 +144,28 @@ export function buyShopItemRpc(
   }
 
   const actor = match.playerCharacters?.[ctx.userId];
-  const target = match.playerCharacters?.[targetPlayerId];
-  if (!actor || !target) {
+  if (!actor) {
     throw makeNakamaError("character_not_found", nkruntime.Codes.NOT_FOUND);
   }
-  if (isCharacterDead(actor) || isCharacterDead(target)) {
+  if (isCharacterDead(actor)) {
     throw makeNakamaError(
-      "invalid_detective_target",
+      "character_dead",
       nkruntime.Codes.FAILED_PRECONDITION,
     );
   }
 
-  const cost = ShopLibrary.detective.cost;
+  const target = targetPlayerId
+    ? match.playerCharacters?.[targetPlayerId]
+    : undefined;
+  if (resolvedShopId === "detective") {
+    if (!target || isCharacterDead(target)) {
+      throw makeNakamaError(
+        "invalid_detective_target",
+        nkruntime.Codes.FAILED_PRECONDITION,
+      );
+    }
+  }
+
   if (!actor.economy) {
     actor.economy = { zarkans: 0, pendingZarkans: 0, incomeInterval: 1 };
   }
@@ -119,6 +174,7 @@ export function buyShopItemRpc(
     isFinite(actor.economy.zarkans)
       ? Math.max(0, Math.floor(actor.economy.zarkans))
       : 0;
+  const cost = definition.cost;
   if (balance < cost) {
     throw makeNakamaError(
       "insufficient_zarkans",
@@ -126,58 +182,128 @@ export function buyShopItemRpc(
     );
   }
 
-  const actorTeamId = effectiveTeamId(actor);
-  const targetTeamId = effectiveTeamId(target);
-  if (!targetTeamId) {
-    throw makeNakamaError(
-      "target_team_not_available",
-      nkruntime.Codes.FAILED_PRECONDITION,
-    );
-  }
-
   actor.economy.zarkans = balance - cost;
-  actor.revealedTeamIdsByPlayerId = {
-    ...(actor.revealedTeamIdsByPlayerId ?? {}),
-    [targetPlayerId]: targetTeamId,
-  };
+  const characters = match.playerCharacters ?? {};
+  let observedPlayerIds: string[] = [];
+  let targetTeamId: string | undefined;
+  let reward = 0;
+  let opposingTeam = false;
+  let metadata: Record<string, unknown> = { shopId, cost };
 
-  const opposingTeam = actorTeamId !== null && actorTeamId !== targetTeamId;
-  const reward = opposingTeam ? 10 : 0;
-  if (reward > 0) {
-    target.economy = target.economy ?? {
-      zarkans: 0,
-      pendingZarkans: 0,
-      incomeInterval: 1,
+  if (resolvedShopId === "detective" && target && targetPlayerId) {
+    const actorTeamId = effectiveTeamId(actor);
+    targetTeamId = effectiveTeamId(target) ?? undefined;
+    if (!targetTeamId) {
+      throw makeNakamaError(
+        "target_team_not_available",
+        nkruntime.Codes.FAILED_PRECONDITION,
+      );
+    }
+    actor.revealedTeamIdsByPlayerId = {
+      ...(actor.revealedTeamIdsByPlayerId ?? {}),
+      [targetPlayerId]: targetTeamId,
     };
-    target.economy.pendingZarkans =
-      (isFinite(target.economy.pendingZarkans)
-        ? target.economy.pendingZarkans
-        : 0) + reward;
+    opposingTeam = actorTeamId !== null && actorTeamId !== targetTeamId;
+    reward = opposingTeam ? 10 : 0;
+    if (reward > 0) {
+      target.economy = target.economy ?? {
+        zarkans: 0,
+        pendingZarkans: 0,
+        incomeInterval: 1,
+      };
+      target.economy.pendingZarkans =
+        (isFinite(target.economy.pendingZarkans)
+          ? target.economy.pendingZarkans
+          : 0) + reward;
+    }
+    metadata = {
+      ...metadata,
+      targetPlayerId,
+      targetTeamId,
+      opposingTeam,
+      reward,
+    };
+    observedPlayerIds = [targetPlayerId];
+  } else if (resolvedShopId === "security_camera_app") {
+    const securityTileIds: Record<string, true> = {};
+    for (const tile of match.map?.tiles ?? []) {
+      if (tile.localizationType === LocalizationType.Security) {
+        securityTileIds[tile.id] = true;
+      }
+    }
+    observedPlayerIds = Object.keys(characters).filter((playerId) => {
+      const candidate = characters[playerId];
+      return (
+        !!candidate &&
+        !isCharacterDead(candidate) &&
+        !!candidate.position?.tileId &&
+        securityTileIds[candidate.position.tileId] === true
+      );
+    });
+    actor.cameraView = {
+      playerIds: observedPlayerIds,
+      turn: match.current_turn,
+    };
+    metadata = {
+      ...metadata,
+      observedCount: observedPlayerIds.length,
+      observedPlayerIds,
+      location: LocalizationType.Security,
+    };
+  } else if (resolvedShopId === "spy_drone" && targetLocation) {
+    let targetTile:
+      | NonNullable<MatchRecord["map"]>["tiles"][number]
+      | undefined;
+    for (const tile of match.map?.tiles ?? []) {
+      if (isSameCoord(tile.coord, targetLocation)) {
+        targetTile = tile;
+        break;
+      }
+    }
+    if (!targetTile || targetTile.meta?.destroyed) {
+      throw makeNakamaError(
+        "invalid_target_location",
+        nkruntime.Codes.FAILED_PRECONDITION,
+      );
+    }
+    observedPlayerIds = Object.keys(characters).filter((playerId) => {
+      const candidate = characters[playerId];
+      return (
+        !!candidate &&
+        !isCharacterDead(candidate) &&
+        isSameCoord(candidate.position?.coord, targetLocation)
+      );
+    });
+    actor.remoteView = {
+      coord: { q: targetLocation.q, r: targetLocation.r },
+      turn: match.current_turn,
+    };
+    metadata = {
+      ...metadata,
+      observedCount: observedPlayerIds.length,
+      observedPlayerIds,
+      observedLocation: targetLocation,
+    };
   }
 
+  match.playerCharacters[ctx.userId] = actor;
+  const actionId =
+    resolvedShopId === "detective"
+      ? "buy_detective"
+      : resolvedShopId === "security_camera_app"
+        ? "buy_security_camera_app"
+        : "buy_spy_drone";
   const event: ReplayPlayerEvent = {
     kind: "player",
     actorId: ctx.userId,
     action: {
-      actionId: "buy_detective",
-      metadata: {
-        shopId,
-        cost,
-        targetPlayerId,
-        targetTeamId,
-        opposingTeam,
-        reward,
-      },
+      actionId,
+      metadata,
     },
-    targets: [
-      {
-        targetId: targetPlayerId,
-        metadata: {
-          teamId: targetTeamId,
-          reward,
-        },
-      },
-    ],
+    targets:
+      observedPlayerIds.length > 0
+        ? observedPlayerIds.map((playerId) => ({ targetId: playerId }))
+        : undefined,
     visibility: { scope: "limited", playerIds: [ctx.userId] },
   };
 
@@ -196,10 +322,17 @@ export function buyShopItemRpc(
     ok: true,
     match_id: matchId,
     user_id: ctx.userId,
-    shop_id: "detective",
-    target_player_id: targetPlayerId,
-    target_team_id: targetTeamId,
+    shop_id: resolvedShopId,
+    ...(targetPlayerId ? { target_player_id: targetPlayerId } : {}),
+    ...(targetTeamId ? { target_team_id: targetTeamId } : {}),
+    ...(targetLocation ? { target_location: targetLocation } : {}),
     character: actor,
+    playerCharacters: tailorPlayerCharactersForViewer(
+      match.playerCharacters,
+      ctx.userId,
+      false,
+      match.current_turn,
+    ),
     event,
   };
   return JSON.stringify(response);

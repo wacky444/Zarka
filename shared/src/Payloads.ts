@@ -270,6 +270,7 @@ export type BuyShopItemRequest = {
   match_id: string;
   shop_id: ShopId;
   target_player_id?: string;
+  target_location?: Axial;
 };
 
 export type BuyShopItemPayload = {
@@ -279,7 +280,9 @@ export type BuyShopItemPayload = {
   shop_id?: ShopId;
   target_player_id?: string;
   target_team_id?: string;
+  target_location?: Axial;
   character?: PlayerCharacter;
+  playerCharacters?: Record<string, PlayerCharacter>;
   event?: ReplayEvent;
   error?: string;
 };
