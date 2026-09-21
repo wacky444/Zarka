@@ -8,7 +8,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 2,
     max: 10,
     implemented: true,
-    category: "Vitalidad",
+    category: "defense",
     effect: {
       type: "max_health_increase",
       value: 1
@@ -21,7 +21,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 1,
     max: 4,
     implemented: true,
-    category: "Fuerza",
+    category: "offensive",
     effect: {
       type: "action_energy_discount",
       affectedAction: "punch",
@@ -36,7 +36,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 3,
     max: 4,
     implemented: true,
-    category: "Fuerza",
+    category: "offensive",
     effect: {
       type: "action_energy_discount",
       affectedAction: ["knife_attack", "bat_attack", "axe_attack"],
@@ -51,7 +51,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 2,
     max: 2,
     implemented: true,
-    category: "Fuerza",
+    category: "offensive",
     effect: {
       type: "action_energy_discount",
       affectedAction: ["shoot_pistol", "shoot_harpoon"],
@@ -66,7 +66,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 2,
     max: 2,
     implemented: false,
-    category: "Fuerza",
+    category: "offensive",
     effect: {
       type: "action_energy_discount",
       affectedAction: ["place_c4", "place_trap", "detonate_c4"],
@@ -80,7 +80,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 2,
     max: 1,
     implemented: false,
-    category: "Fuerza"
+    category: "offensive"
   },
   dexterity1: {
     id: "dexterity1",
@@ -89,7 +89,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 2,
     max: 2,
     implemented: false,
-    category: "Destreza"
+    category: "utility"
   },
   dexterity2: {
     id: "dexterity2",
@@ -99,7 +99,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 3,
     max: 1,
     implemented: true,
-    category: "Destreza"
+    category: "utility"
   },
   dexterity3: {
     id: "dexterity3",
@@ -109,7 +109,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 10,
     max: 1,
     implemented: false,
-    category: "Destreza"
+    category: "utility"
   },
   dexterity4: {
     id: "dexterity4",
@@ -118,7 +118,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 10,
     max: 1,
     implemented: false,
-    category: "Destreza"
+    category: "utility"
   },
   resilience1: {
     id: "resilience1",
@@ -127,7 +127,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 2,
     max: 3,
     implemented: true,
-    category: "Resistencia",
+    category: "defense",
     effect: {
       type: "max_load_increase",
       value: 5
@@ -141,7 +141,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 4,
     max: 2,
     implemented: true,
-    category: "Resistencia",
+    category: "defense",
     effect: {
       type: "damage_taken_reduction",
       value: 1
@@ -155,7 +155,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 4,
     max: 1,
     implemented: true,
-    category: "Resistencia",
+    category: "defense",
     effect: {
       type: "set_knockout_threshold",
       value: 3
@@ -169,7 +169,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 10,
     max: 1,
     implemented: true,
-    category: "Resistencia",
+    category: "defense",
     effect: {
       type: "lethal_damage_protection",
       value: 1
@@ -183,7 +183,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 1,
     max: 3,
     implemented: true,
-    category: "Agilidad",
+    category: "defense",
     effect: {
       type: "dodge_success_chance_increase",
       value: 0.25
@@ -196,7 +196,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 1,
     max: 3,
     implemented: true,
-    category: "Agilidad",
+    category: "utility",
     effect: {
       type: "speed_increase",
       value: 1
@@ -209,7 +209,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 1,
     max: 3,
     implemented: true,
-    category: "Agilidad",
+    category: "utility",
     effect: {
       type: "action_energy_discount",
       affectedAction: "move",
@@ -223,7 +223,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 5,
     max: 1,
     implemented: true,
-    category: "Agilidad",
+    category: "utility",
     effect: {
       type: "extra_secondary_action",
       value: 1
@@ -237,7 +237,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 3,
     max: 1,
     implemented: false,
-    category: "Simpatía"
+    category: "npc"
   },
   charisma2: {
     id: "charisma2",
@@ -247,7 +247,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 2,
     max: 1,
     implemented: false,
-    category: "Simpatía"
+    category: "npc"
   },
   charisma3: {
     id: "charisma3",
@@ -257,7 +257,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 10,
     max: 1,
     implemented: false,
-    category: "Simpatía"
+    category: "npc"
   },
   charisma4: {
     id: "charisma4",
@@ -267,7 +267,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 15,
     max: 1,
     implemented: false,
-    category: "Simpatía"
+    category: "npc"
   },
   perception1: {
     id: "perception1",
@@ -276,7 +276,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 3,
     max: 3,
     implemented: true,
-    category: "Percepción",
+    category: "utility",
     effect: {
       type: "action_energy_discount",
       affectedAction: "detect",
@@ -290,7 +290,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 2,
     max: 1,
     implemented: false,
-    category: "Percepción"
+    category: "utility"
   },
   perception3: {
     id: "perception3",
@@ -299,7 +299,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 2,
     max: 2,
     implemented: true,
-    category: "Percepción",
+    category: "utility",
     effect: {
       type: "search_discovery_increase",
       value: 1
@@ -313,7 +313,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 5,
     max: 1,
     implemented: false,
-    category: "Percepción"
+    category: "utility"
   },
   perception5: {
     id: "perception5",
@@ -322,7 +322,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 3,
     max: 1,
     implemented: true,
-    category: "Percepción",
+    category: "utility",
     effect: {
       type: "search_food_drink_priority",
       value: 1
@@ -336,7 +336,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 10,
     max: 1,
     implemented: true,
-    category: "Percepción",
+    category: "utility",
     effect: {
       type: "perceive_character_details",
       value: 1
@@ -349,7 +349,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 2,
     max: 1,
     implemented: true,
-    category: "Habilidades especiales",
+    category: "utility",
     effect: {
       type: "pickup_scope_increase",
       value: 1
@@ -363,7 +363,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 4,
     max: 1,
     implemented: true,
-    category: "Habilidades especiales",
+    category: "utility",
     effect: {
       type: "corpse_consumption",
       value: 1
@@ -376,7 +376,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 2,
     max: 1,
     implemented: false,
-    category: "Habilidades especiales"
+    category: "utility"
   },
   pensioner: {
     id: "pensioner",
@@ -385,7 +385,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 3,
     max: 1,
     implemented: true,
-    category: "Habilidades especiales",
+    category: "utility",
     effect: {
       type: "daily_zarkan_income",
       value: 1
@@ -398,7 +398,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 4,
     max: 1,
     implemented: false,
-    category: "Habilidades especiales"
+    category: "defense"
   },
   brave: {
     id: "brave",
@@ -407,7 +407,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 6,
     max: 1,
     implemented: false,
-    category: "Habilidades especiales"
+    category: "defense"
   },
   vengeful: {
     id: "vengeful",
@@ -417,7 +417,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 5,
     max: 1,
     implemented: false,
-    category: "Habilidades especiales"
+    category: "offensive"
   },
   charming: {
     id: "charming",
@@ -427,7 +427,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 5,
     max: 1,
     implemented: false,
-    category: "Habilidades especiales"
+    category: "npc"
   },
   coward: {
     id: "coward",
@@ -437,7 +437,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     cost: 8,
     max: 1,
     implemented: false,
-    category: "Habilidades especiales"
+    category: "defense"
   }
 };
 

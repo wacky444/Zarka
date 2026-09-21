@@ -3,9 +3,11 @@ import { t } from "../services/i18n";
 import {
   SkillLibrary,
   type PlayerCharacter,
+  type SkillCategory,
   type SkillDefinition,
   type SkillId
 } from "@shared";
+import { Subtabs } from "./Subtabs";
 
 export interface CharacterPanelSkillsViewLayout {
   margin: number;
@@ -59,6 +61,9 @@ export class CharacterPanelSkillsView {
   private readonly confirmBtnText: Phaser.GameObjects.Text;
   private readonly scrollContent: Phaser.GameObjects.Container;
   private readonly scrollPanel: ScrollablePanelInstance;
+  private readonly categoryTabs: Subtabs<SkillCategory>;
+  private activeCategory: SkillCategory = "offensive";
+  private skillCardWidth = 0;
   private scrollMask: Phaser.Display.Masks.GeometryMask | null = null;
   private scrollMaskShape: Phaser.GameObjects.Rectangle | null = null;
   private readonly elements: Phaser.GameObjects.GameObject[] = [];
@@ -261,9 +266,30 @@ export class CharacterPanelSkillsView {
       }
     );
 
-    const listTop = headerY + HEADER_HEIGHT + 8;
+    const categoryTabsTop = headerY + HEADER_HEIGHT + 6;
+    this.categoryTabs = new Subtabs<SkillCategory>({
+      scene,
+      parent,
+      x: layout.margin + 12,
+      y: categoryTabsTop,
+      width: headerWidth,
+      tabs: [
+        { key: "offensive", label: t("Offensive") },
+        { key: "defense", label: t("Defense") },
+        { key: "utility", label: t("Utility") },
+        { key: "npc", label: t("NPC") }
+      ],
+      defaultKey: this.activeCategory,
+      onChange: (key) => {
+        this.activeCategory = key;
+        this.rebuildSkillList();
+      }
+    });
+
+    const listTop = categoryTabsTop + 36;
     const listWidth = width - 24;
     const listHeight = Math.max(100, height - (listTop - startY) - 8);
+    this.skillCardWidth = listWidth - 8;
 
     const matrix = parent.getWorldTransformMatrix();
     const worldX = matrix.tx + layout.margin + 12;
@@ -328,13 +354,14 @@ export class CharacterPanelSkillsView {
       this.scrollPanel.setMask?.(this.scrollMask);
     }
     this.scrollPanel.setVisible?.(false);
+    this.categoryTabs.setVisible(false);
     parent.add(this.scrollPanel);
     parent.bringToTop(this.revertBtnBg);
     parent.bringToTop(this.revertBtnText);
     parent.bringToTop(this.confirmBtnBg);
     parent.bringToTop(this.confirmBtnText);
 
-    this.buildSkillList(listWidth - 8);
+    this.buildSkillList(this.skillCardWidth);
 
     this.elements = [
       this.background,
@@ -355,6 +382,7 @@ export class CharacterPanelSkillsView {
   setVisible(visible: boolean): void {
     this.background.setVisible(visible);
     this.headerBox.setVisible(visible);
+    this.categoryTabs.setVisible(visible);
     this.unspentPointsLabel.setVisible(visible);
     this.revertBtnBg.setVisible(visible);
     this.revertBtnText.setVisible(visible);
@@ -533,9 +561,17 @@ export class CharacterPanelSkillsView {
       confirmBtnY + btnHeight / 2
     );
 
-    const listTop = headerY + HEADER_HEIGHT + 8;
+    const categoryTabsTop = headerY + HEADER_HEIGHT + 6;
+    const listTop = categoryTabsTop + 36;
     const listWidth = width - 24;
     const listHeight = Math.max(100, height - (listTop - startY) - 8);
+
+    this.categoryTabs.layout(
+      options.margin + 12,
+      categoryTabsTop,
+      headerWidth,
+      28
+    );
 
     const matrix = this.parent.getWorldTransformMatrix();
     const worldX = matrix.tx + options.margin + 12;
@@ -553,6 +589,7 @@ export class CharacterPanelSkillsView {
   }
 
   destroy(): void {
+    this.categoryTabs.destroy();
     this.scrollPanel.clearMask?.();
     this.scrollMask?.destroy();
     this.scrollMaskShape?.destroy();
@@ -580,7 +617,9 @@ export class CharacterPanelSkillsView {
   }
 
   private buildSkillList(cardWidth: number): void {
-    const skills = Object.values(SkillLibrary);
+    const skills = Object.values(SkillLibrary).filter(
+      (skill) => skill.category === this.activeCategory
+    );
     let currentY = 0;
 
     for (const skill of skills) {
@@ -590,6 +629,17 @@ export class CharacterPanelSkillsView {
 
     this.scrollContent.setSize(cardWidth, currentY);
     this.scrollPanel.layout?.();
+  }
+
+  private rebuildSkillList(): void {
+    for (const element of this.cardElements) {
+      element.destroy();
+    }
+    this.cardElements.length = 0;
+    this.cardItems.length = 0;
+    this.scrollContent.removeAll(false);
+    this.buildSkillList(this.skillCardWidth);
+    this.refreshView();
   }
 
   private createSkillCard(

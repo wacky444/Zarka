@@ -39,6 +39,8 @@ export type SkillId =
   | "charming"
   | "coward";
 
+export type SkillCategory = "offensive" | "defense" | "utility" | "npc";
+
 export type SkillEffectType =
   | "action_energy_discount"
   | "max_health_increase"
@@ -70,7 +72,7 @@ export interface SkillDefinition {
   cost: number;
   max: number;
   implemented: boolean;
-  category?: string;
+  category: SkillCategory;
   notes?: string[];
   effect?: SkillEffect;
 }
