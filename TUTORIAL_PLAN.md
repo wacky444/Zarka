@@ -34,13 +34,7 @@ The exact movement graph should be confirmed against the map generator, but the 
 - A cell containing the initial objects.
 - A cell marked for destruction in the final lesson.
 
-The final layout must allow the player to move away after being scared, move back, and force the bot onto the doomed cell without requiring an unavailable or unexplained mechanic. The current action library does not expose a general `push` action, so the final “push the bot” step needs one of these explicit implementations:
-
-1. Add a real push/knockback action and teach it as part of the tutorial.
-2. Reuse Scare with deterministic destination selection and label the lesson as moving/forcing the bot rather than pushing.
-3. Add a tutorial-only scripted displacement event, clearly presented as a scenario interaction rather than a normal action.
-
-Option 1 is the most reusable. Option 2 avoids new combat functionality but may not match the intended wording.
+The final layout must allow the player to move away after being Scared, move back, and use Scare to move the bot onto the doomed cell. Scare should use a deterministic destination for this lesson so the player can understand and control the result. No separate push or knockback action is required.
 
 ## Guided sequence
 
@@ -205,7 +199,7 @@ This should be a scripted, deterministic Scare destination so the result is unde
 1. Mark one cell as scheduled for destruction on the next turn.
 2. Show the destruction warning/skull and explain the remaining time.
 3. Require the player to move back toward the bot.
-4. Require the player to move or force the bot onto the doomed cell.
+4. Require the player to use Scare and select the doomed cell as the bot’s destination.
 5. Advance the turn so the cell is destroyed.
 6. Apply the normal environmental damage and death handling.
 7. Finish through the normal victory overlay and report flow.
@@ -345,7 +339,7 @@ These additions would improve the tutorial without expanding the first scenario 
 - Only the intended actions and skills are usable at each step.
 - The player must inspect current and nearby cell information before progressing.
 - The player can select the HP and axe-related skills.
-- Search, Pick Up, Feed, Shop Detective, Axe attack, Scare, movement, and destruction are demonstrated in order.
+- Search, Pick Up, Feed, Shop Detective, Axe attack, Scare-based movement, and destruction are demonstrated in order.
 - The bot sends a chat message, and the related step remains incomplete until the player opens Chat.
 - Detective reveals that the bot lied, privately and deterministically.
 - Scare resolves before the planned Axe attack and visibly changes the outcome.
