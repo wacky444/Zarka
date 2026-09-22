@@ -5,6 +5,7 @@ import { AsyncTurnState, MatchRecord } from "../../models/types";
 import { createNakamaWrapper } from "../../services/nakamaWrapper";
 import { StorageService } from "../../services/storageService";
 import { resolveTurnForMatch } from "../turnResolution";
+import { isBotId } from "../botAI";
 import { validateTime } from "../../utils/validation";
 import {
   isCharacterDead,
@@ -25,10 +26,6 @@ function timeToMinutes(value: string): number | null {
   return hours * 60 + minutes;
 }
 
-function isBotPlayerId(playerId: string): boolean {
-  return /^bot\d+$/i.test(playerId);
-}
-
 function areOnlyBotsAlive(match: MatchRecord): boolean {
   const characters = match.playerCharacters;
   let aliveBots = 0;
@@ -40,7 +37,7 @@ function areOnlyBotsAlive(match: MatchRecord): boolean {
     if (isCharacterDead(character)) {
       continue;
     }
-    if (!isBotPlayerId(playerId)) {
+    if (!isBotId(playerId)) {
       return false;
     }
     aliveBots += 1;

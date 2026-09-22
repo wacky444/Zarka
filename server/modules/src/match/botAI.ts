@@ -212,7 +212,7 @@ function coordKey(coord: Axial | undefined): string {
   return `${coord.q}:${coord.r}`;
 }
 
-function isBotId(playerId: string): boolean {
+export function isBotId(playerId: string): boolean {
   return /^bot\d+$/i.test(playerId);
 }
 
