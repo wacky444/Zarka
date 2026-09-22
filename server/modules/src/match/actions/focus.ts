@@ -35,6 +35,24 @@ function applyFocusBonus(character: PlayerCharacter, bonus: number): number {
   return bonus;
 }
 
+function recoverFocusEnergy(character: PlayerCharacter, amount: number): number {
+  if (amount <= 0 || !character.stats?.energy) {
+    return 0;
+  }
+  const energy = character.stats.energy;
+  const current =
+    typeof energy.current === "number" && isFinite(energy.current)
+      ? energy.current
+      : 0;
+  const max =
+    typeof energy.max === "number" && isFinite(energy.max)
+      ? energy.max
+      : current;
+  const next = Math.min(max, current + amount);
+  energy.current = next;
+  return next - current;
+}
+
 export class FocusAction extends BaseAction {
   protected override readonly shouldShuffleParticipants = false;
 
@@ -67,12 +85,12 @@ export class FocusAction extends BaseAction {
           break;
         }
       }
+      const energyRestored = isCharacterDead(participant.character)
+        ? 0
+        : recoverFocusEnergy(participant.character, healthLost * 3);
       const granted = isCharacterDead(participant.character)
         ? 0
-        : applyFocusBonus(
-            participant.character,
-            FOCUS_BASE_BONUS + extraExecutions * 3
-          );
+        : applyFocusBonus(participant.character, FOCUS_BASE_BONUS);
       this.clearPlan(participant);
       if (match.playerCharacters) {
         match.playerCharacters[participant.playerId] = participant.character;
@@ -82,6 +100,7 @@ export class FocusAction extends BaseAction {
         effects: ReplayActionEffect.Heal,
         metadata: {
           energyBonus: granted,
+          energyRestored,
           extraExecutions,
           healthLost,
         },
@@ -94,6 +113,7 @@ export class FocusAction extends BaseAction {
         effects: ReplayActionEffect.Heal,
         metadata: {
           energyBonus: granted,
+          energyRestored,
           extraExecutions,
           healthLost,
         },

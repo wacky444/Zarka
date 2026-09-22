@@ -1048,7 +1048,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       cost: 1,
       maxRepetitions: 3,
       description:
-        "Por cada punto de vida sacrificado se recuperan [energy-recover]3[/energy-recover] puntos de esfuerzo, hasta [energy-recover]9[/energy-recover] puntos totales."
+        "Por cada punto de vida sacrificado se recuperan [energy-recover]3[/energy-recover] puntos de esfuerzo actual, hasta [energy-recover]9[/energy-recover] puntos totales. El esfuerzo gratuito del próximo turno siempre es de 6 puntos."
     },
     notes: [
       "Concentrarse no provoca pérdida de vida adicional si se está intoxicado."
