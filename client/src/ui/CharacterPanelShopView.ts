@@ -301,8 +301,10 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.testamentSelector.setActive(enabled);
     this.detectiveSelector.setEnabled(enabled);
     this.detectiveSelector.setActive(false);
+    this.detectiveSelector.setVisible(false);
     this.droneLocationSelector.setEnabled(enabled);
     this.droneLocationSelector.setActive(false);
+    this.droneLocationSelector.setVisible(false);
   }
 
   beginDetectivePurchase(): void {
