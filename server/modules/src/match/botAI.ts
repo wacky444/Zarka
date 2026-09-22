@@ -2,6 +2,7 @@ import {
   ActionLibrary,
   CellLibrary,
   neighbors,
+  axialDistance,
   getActionEnergyDiscount,
   type ActionDefinition,
   type ActionId,
@@ -18,6 +19,7 @@ import {
   updateCharacterCooldowns
 } from "./actions/cooldowns";
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
+import { hasCarriedItem } from "./actions/utils";
 
 export enum BotPersonality {
   Safe = "Safe",
@@ -86,7 +88,14 @@ const SUPPORTED_ACTION_IDS: ActionId[] = [
   ActionLibrary.sleep.id,
   ActionLibrary.recover.id,
   ActionLibrary.scare.id,
-  ActionLibrary.punch.id
+  ActionLibrary.punch.id,
+  ActionLibrary.knife_attack.id,
+  ActionLibrary.axe_attack.id,
+  ActionLibrary.bat_attack.id,
+  ActionLibrary.shoot_pistol.id,
+  ActionLibrary.shoot_harpoon.id,
+  ActionLibrary.fire_rocket_launcher.id,
+  ActionLibrary.use_chemical_weapon.id
 ];
 
 function getSupportedDevelopedActions(): ActionDefinition[] {
@@ -111,6 +120,7 @@ interface BotActionCandidate {
   definition: ActionDefinition;
   plan: PlayerPlannedAction;
   weight: number;
+  attackScore?: number;
 }
 
 interface BotActionContext {
@@ -170,7 +180,7 @@ export function processBotActions(match: MatchRecord, logger: any): void {
       continue;
     }
 
-    const choice = pickWeighted(candidates, rng);
+    const choice = chooseBotAction(candidates, rng);
     if (!choice) {
       clearBotPlans(character);
       match.playerCharacters[playerId] = character;
@@ -355,6 +365,14 @@ function createCandidateForAction(
       return createScareCandidate(definition, context);
     case "punch":
       return createPunchCandidate(definition, context);
+    case "knife_attack":
+    case "axe_attack":
+    case "bat_attack":
+    case "shoot_pistol":
+    case "shoot_harpoon":
+    case "fire_rocket_launcher":
+    case "use_chemical_weapon":
+      return createWeaponAttackCandidate(definition, context);
     default:
       return null;
   }
@@ -611,7 +629,7 @@ function createScareCandidate(
   };
   const weight =
     computeBaseWeight(definition, context.personality) * (1 + targets.length);
-  return { definition, plan, weight };
+  return { definition, plan, weight, attackScore: 3 };
 }
 
 function createPunchCandidate(
@@ -633,7 +651,117 @@ function createPunchCandidate(
   const weight =
     computeBaseWeight(definition, context.personality) *
     (1 + targets.length / 2);
-  return { definition, plan, weight };
+  return { definition, plan, weight, attackScore: 2 };
+}
+
+function createWeaponAttackCandidate(
+  definition: ActionDefinition,
+  context: BotActionContext
+): BotActionCandidate | null {
+  if (!hasAttackWeapon(context.character, definition.id)) {
+    return null;
+  }
+
+  const targets = getAttackTargets(context, definition);
+  if (targets.length === 0) {
+    return null;
+  }
+
+  if (definition.id === "fire_rocket_launcher") {
+    const rocketTargets = targets.filter((target) => {
+      const coord = target.character.position?.coord;
+      return !!coord && !hasTeammateAtCoord(context, coord);
+    });
+    const target = selectTarget(rocketTargets, context);
+    const targetCoord = target?.character.position?.coord;
+    if (!target || !targetCoord) {
+      return null;
+    }
+    return {
+      definition,
+      plan: {
+        actionId: definition.id,
+        targetLocationId: targetCoord
+      },
+      weight:
+        computeBaseWeight(definition, context.personality) *
+        (1 + rocketTargets.length),
+      attackScore: 20
+    };
+  }
+
+  const target = selectTarget(targets, context);
+  if (!target) {
+    return null;
+  }
+  return {
+    definition,
+    plan: {
+      actionId: definition.id,
+      targetPlayerIds: [target.id],
+      ...(definition.id === "use_chemical_weapon"
+        ? { singleTarget: true }
+        : {})
+    },
+    weight:
+      computeBaseWeight(definition, context.personality) *
+      (1 + targets.length / 2),
+    attackScore: getAttackScore(definition.id, context.character)
+  };
+}
+
+function hasAttackWeapon(character: PlayerCharacter, actionId: ActionId): boolean {
+  switch (actionId) {
+    case "knife_attack":
+      return hasCarriedItem(character, "knife");
+    case "axe_attack":
+      return hasCarriedItem(character, "axe");
+    case "bat_attack":
+      return (
+        hasCarriedItem(character, "bat") ||
+        hasCarriedItem(character, "nail_bat")
+      );
+    case "shoot_pistol":
+      return (
+        hasCarriedItem(character, "pistol") &&
+        hasCarriedItem(character, "bullet")
+      );
+    case "shoot_harpoon":
+      return (
+        hasCarriedItem(character, "harpoon") &&
+        hasCarriedItem(character, "arrow")
+      );
+    case "fire_rocket_launcher":
+      return hasCarriedItem(character, "rocket_launcher");
+    case "use_chemical_weapon":
+      return hasCarriedItem(character, "chemical_weapon");
+    default:
+      return false;
+  }
+}
+
+function getAttackScore(
+  actionId: ActionId,
+  character: PlayerCharacter
+): number {
+  switch (actionId) {
+    case "knife_attack":
+      return 4;
+    case "axe_attack":
+      return 8;
+    case "bat_attack":
+      return hasCarriedItem(character, "nail_bat") ? 7 : 5;
+    case "shoot_pistol":
+      return 10;
+    case "shoot_harpoon":
+      return 7;
+    case "use_chemical_weapon":
+      return 11;
+    case "fire_rocket_launcher":
+      return 20;
+    default:
+      return 0;
+  }
 }
 
 function computeBaseWeight(
@@ -659,6 +787,31 @@ function pickRandom<T>(items: T[], rng: () => number): T | undefined {
   }
   const index = Math.floor(rng() * items.length);
   return items[index];
+}
+
+function chooseBotAction(
+  candidates: BotActionCandidate[],
+  rng: () => number
+): BotActionCandidate | null {
+  const initialChoice = pickWeighted(candidates, rng);
+  if (!initialChoice || !isAttackCandidate(initialChoice)) {
+    return initialChoice;
+  }
+  const attacks = candidates.filter(isAttackCandidate);
+  if (attacks.length === 0) {
+    return initialChoice;
+  }
+  const bestScore = Math.max(
+    ...attacks.map((candidate) => candidate.attackScore ?? 0)
+  );
+  const bestAttacks = attacks.filter(
+    (candidate) => (candidate.attackScore ?? 0) === bestScore
+  );
+  return pickRandom(bestAttacks, rng) ?? initialChoice;
+}
+
+function isAttackCandidate(candidate: BotActionCandidate): boolean {
+  return (candidate.definition.tags?.indexOf("Attack") ?? -1) !== -1;
 }
 
 function pickWeighted<T extends { weight: number }>(
@@ -884,6 +1037,72 @@ function getSameTileTargets(
     results.push({ id, character: contender });
   }
   return results;
+}
+
+function getAttackTargets(
+  context: BotActionContext,
+  definition: ActionDefinition
+): TargetOption[] {
+  const origin = context.character.position?.coord;
+  if (!origin) {
+    return [];
+  }
+  const allowedDistances =
+    definition.range && definition.range.length > 0 ? definition.range : [0];
+  const actorTeamId = getEffectiveTeamId(context.character);
+  const roster = context.match.playerCharacters ?? {};
+  const results: TargetOption[] = [];
+  for (const id in roster) {
+    if (!Object.prototype.hasOwnProperty.call(roster, id)) {
+      continue;
+    }
+    const contender = roster[id];
+    const coord = contender?.position?.coord;
+    if (!contender || id === context.playerId || !coord) {
+      continue;
+    }
+    if (allowedDistances.indexOf(axialDistance(origin, coord)) === -1) {
+      continue;
+    }
+    if (
+      actorTeamId &&
+      getEffectiveTeamId(contender) === actorTeamId
+    ) {
+      continue;
+    }
+    if (isCharacterIncapacitated(contender)) {
+      continue;
+    }
+    results.push({ id, character: contender });
+  }
+  return results;
+}
+
+function hasTeammateAtCoord(context: BotActionContext, coord: Axial): boolean {
+  const actorTeamId = getEffectiveTeamId(context.character);
+  if (!actorTeamId) {
+    return false;
+  }
+  const roster = context.match.playerCharacters ?? {};
+  for (const id in roster) {
+    if (!Object.prototype.hasOwnProperty.call(roster, id)) {
+      continue;
+    }
+    if (id === context.playerId) {
+      continue;
+    }
+    const contender = roster[id];
+    const contenderCoord = contender?.position?.coord;
+    if (
+      contenderCoord &&
+      contenderCoord.q === coord.q &&
+      contenderCoord.r === coord.r &&
+      getEffectiveTeamId(contender) === actorTeamId
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function selectTarget(
