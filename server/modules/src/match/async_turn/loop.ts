@@ -1,16 +1,19 @@
 /// <reference path="../../../node_modules/nakama-runtime/index.d.ts" />
 
 import { DEFAULT_REPLAY_VIEW_DISTANCE } from "@shared";
-import { AsyncTurnState } from "../../models/types";
+import { AsyncTurnState, MatchRecord } from "../../models/types";
 import { createNakamaWrapper } from "../../services/nakamaWrapper";
 import { StorageService } from "../../services/storageService";
 import { resolveTurnForMatch } from "../turnResolution";
 import { validateTime } from "../../utils/validation";
-import { isCharacterIncapacitated } from "../../utils/playerCharacter";
+import {
+  isCharacterDead,
+  isCharacterIncapacitated,
+} from "../../utils/playerCharacter";
 import { getAliveCharacterIds } from "../checkEndGame";
 import { createReplaySnapshot } from "../replay/snapshot";
 
-const AUTO_CHECK_INTERVAL_MS = 60 * 1000;
+const AUTO_CHECK_INTERVAL_MS = 5 * 1000;
 
 function timeToMinutes(value: string): number | null {
   const parts = value.split(":");
@@ -19,6 +22,29 @@ function timeToMinutes(value: string): number | null {
   const minutes = parseInt(parts[1], 10);
   if (!isFinite(hours) || !isFinite(minutes)) return null;
   return hours * 60 + minutes;
+}
+
+function isBotPlayerId(playerId: string): boolean {
+  return /^bot\d+$/i.test(playerId);
+}
+
+function areOnlyBotsAlive(match: MatchRecord): boolean {
+  const characters = match.playerCharacters;
+  let aliveBots = 0;
+  for (const playerId in characters) {
+    if (!Object.prototype.hasOwnProperty.call(characters, playerId)) {
+      continue;
+    }
+    const character = characters[playerId];
+    if (isCharacterDead(character)) {
+      continue;
+    }
+    if (!isBotPlayerId(playerId)) {
+      return false;
+    }
+    aliveBots += 1;
+  }
+  return aliveBots > 0;
 }
 
 function hasAutoAdvancedToday(
@@ -48,30 +74,6 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
     }
     state.lastAutoCheckAt = nowMs;
 
-    if (!state.autoSkip) {
-      return { state };
-    }
-
-    const configuredRoundTime =
-      typeof state.roundTime === "string"
-        ? validateTime(state.roundTime)
-        : undefined;
-    if (!configuredRoundTime) {
-      return { state };
-    }
-
-    const nowLocal = new Date(nowMs);
-    const currentMinutes = nowLocal.getHours() * 60 + nowLocal.getMinutes();
-    const targetMinutes = timeToMinutes(configuredRoundTime);
-    logger.debug(
-      "Auto-checking turn advancement, currentMinutes/targetMinutes: %d/%d",
-      currentMinutes,
-      targetMinutes,
-    );
-    if (targetMinutes === null || currentMinutes < targetMinutes) {
-      return { state };
-    }
-
     const nkWrapper = createNakamaWrapper(nk);
     const storage = new StorageService(nkWrapper);
     const gameId = state.game_id || runtimeMatchId;
@@ -81,17 +83,47 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
     }
 
     const match = stored.match;
-    if (match.started !== true || match.autoSkip === false) {
+    if (match.started !== true) {
       return { state };
     }
 
-    const matchRoundTime =
-      typeof match.roundTime === "string"
-        ? (validateTime(match.roundTime) ?? configuredRoundTime)
-        : configuredRoundTime;
-    const matchTargetMinutes = timeToMinutes(matchRoundTime);
-    if (matchTargetMinutes === null || currentMinutes < matchTargetMinutes) {
-      return { state };
+    const botOnlyAlive = areOnlyBotsAlive(match);
+    if (!botOnlyAlive) {
+      if (!state.autoSkip || match.autoSkip === false) {
+        return { state };
+      }
+      const configuredRoundTime =
+        typeof state.roundTime === "string"
+          ? validateTime(state.roundTime)
+          : undefined;
+      if (!configuredRoundTime) {
+        return { state };
+      }
+      const nowLocal = new Date(nowMs);
+      const currentMinutes = nowLocal.getHours() * 60 + nowLocal.getMinutes();
+      const targetMinutes = timeToMinutes(configuredRoundTime);
+      logger.debug(
+        "Auto-checking turn advancement, currentMinutes/targetMinutes: %d/%d",
+        currentMinutes,
+        targetMinutes,
+      );
+      if (targetMinutes === null || currentMinutes < targetMinutes) {
+        return { state };
+      }
+
+      const matchRoundTime =
+        typeof match.roundTime === "string"
+          ? (validateTime(match.roundTime) ?? configuredRoundTime)
+          : configuredRoundTime;
+      const matchTargetMinutes = timeToMinutes(matchRoundTime);
+      if (matchTargetMinutes === null || currentMinutes < matchTargetMinutes) {
+        return { state };
+      }
+    } else {
+      logger.debug(
+        "Advancing bot-only match %s on the five-second timer",
+        runtimeMatchId,
+      );
     }
 
     const players = Array.isArray(match.players) ? match.players : [];
@@ -99,27 +131,29 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       return { state };
     }
 
-    // Avoid double advancing if all players are already ready
-    const allReady = players.every((playerId) => {
-      const readyStates = match.readyStates ?? {};
-      const character = match.playerCharacters?.[playerId] ?? null;
-      return (
-        isCharacterIncapacitated(character) || readyStates[playerId] === true
-      );
-    });
-    if (allReady) {
-      return { state };
-    }
+    if (!botOnlyAlive) {
+      // Avoid double advancing if all players are already ready
+      const allReady = players.every((playerId) => {
+        const readyStates = match.readyStates ?? {};
+        const character = match.playerCharacters?.[playerId] ?? null;
+        return (
+          isCharacterIncapacitated(character) || readyStates[playerId] === true
+        );
+      });
+      if (allReady) {
+        return { state };
+      }
 
-    if (hasAutoAdvancedToday(match.lastAutoAdvanceAt, nowMs)) {
-      return { state };
+      if (hasAutoAdvancedToday(match.lastAutoAdvanceAt, nowMs)) {
+        return { state };
+      }
     }
 
     const outcome = resolveTurnForMatch(match, logger, nk);
     if (!outcome.advanced || !outcome.resolvedTurn) {
       return { state };
     }
-    logger.debug("9Auto-checking turn advancement for match %s", runtimeMatchId);
+    logger.debug("Auto-advancing turn for match %s", runtimeMatchId);
     const timestampSeconds = Math.floor(nowMs / 1000);
     match.lastAutoAdvanceAt = timestampSeconds;
 
