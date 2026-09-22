@@ -23,9 +23,9 @@ import type {
 const MAIN_LAYOUT = {
   contentWidth: 380,
   horizontalPadding: 32,
-  titleY: 0,
-  statusY: 48,
-  controlsY: 112,
+  titleY: -24,
+  statusY: 24,
+  controlsY: 90,
   buttonGap: 58,
   minTop: 24
 };
@@ -564,6 +564,15 @@ export class MainScene extends Phaser.Scene {
   }
 
   private createMainButtons() {
+    const tutorialButton = makeButton(
+      this,
+      0,
+      0,
+      "Tutorial",
+      () => undefined,
+      ["main"]
+    ).setOrigin(0.5);
+
     const createMatchButton = makeButton(
       this,
       0,
@@ -678,6 +687,7 @@ export class MainScene extends Phaser.Scene {
     ).setOrigin(0.5);
 
     this.mainButtons = [
+      tutorialButton,
       createMatchButton,
       listMatchesButton,
       myMatchesButton,
