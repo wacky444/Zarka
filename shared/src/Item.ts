@@ -85,6 +85,7 @@ export interface ItemDefinition {
   sprite: string;
   weapon: boolean;
   consumable: boolean;
+  canBeStolen?: boolean;
   weight: number;
   description: string;
   sellValue?: number;

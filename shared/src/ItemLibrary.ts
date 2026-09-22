@@ -83,6 +83,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     sprite: "Items/vest.png",
     weapon: false,
     consumable: false,
+    canBeStolen: false,
     weight: 5,
     description:
       "Reduce en 1 el daño recibido y en 3 si procede de balas o flechas mientras permanezca en el inventario. No protege frente a fuego, veneno, virus, motosierra ni arma química.",
@@ -481,6 +482,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     sprite: "Items/zarkan.png",
     weapon: false,
     consumable: false,
+    canBeStolen: false,
     weight: 0,
     description:
       "Moneda oficial de Zarka utilizada para contratar mercenarios, comprar objetos o realizar transferencias. No puede ser robada.",

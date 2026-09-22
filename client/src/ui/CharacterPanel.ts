@@ -4608,10 +4608,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const stealOptions: ItemPriorityOption[] = [];
     if (currentCharacter?.abilities?.includes("dexterity2")) {
       for (const definition of Object.values(ItemLibrary)) {
-        if (
-          definition.id === "zarkans" ||
-          definition.id === "bulletproof_vest"
-        ) {
+        if (definition.canBeStolen === false) {
           continue;
         }
         const visual = resolveItemTexture(definition);

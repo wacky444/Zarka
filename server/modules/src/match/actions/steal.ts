@@ -109,8 +109,7 @@ function getCarriedItemTypes(character: PlayerCharacter): ItemId[] {
   for (const stack of ensureCarriedItems(character)) {
     if (
       typeof stack.itemId === "string" &&
-      stack.itemId !== "zarkans" &&
-      stack.itemId !== "bulletproof_vest" &&
+      ItemLibrary[stack.itemId as ItemId]?.canBeStolen !== false &&
       stack.itemId.length > 0 &&
       typeof stack.quantity === "number" &&
       stack.quantity > 0
