@@ -437,7 +437,9 @@ export class CharacterPanelLogView {
               ? ((event.action.metadata as { zarkansReceived: number })
                   .zarkansReceived ?? 0)
               : 0;
-          lines.push(`${actor} received ${amount} daily zarkans`);
+          lines.push(
+            `${actor} ${t("received")} ${amount} ${t("daily zarkans")}`
+          );
           continue;
         }
         if (actionId === "buy_detective") {
@@ -454,10 +456,12 @@ export class CharacterPanelLogView {
               : event.targets?.[0]?.metadata?.teamId;
           lines.push(
             targetId && typeof targetTeam === "string"
-              ? `${actor} hired a detective and discovered ${this.resolvePlayerName(
-                  targetId
-                )} belongs to team ${targetTeam}`
-              : `${actor} hired a detective`
+              ? `${actor} ${t("hired a detective")} ${t(
+                  "and discovered"
+                )} ${this.resolvePlayerName(targetId)} ${t(
+                  "belongs to the team"
+                )} ${targetTeam}`
+              : `${actor} ${t("hired a detective")}`
           );
           continue;
         }
@@ -468,7 +472,11 @@ export class CharacterPanelLogView {
               ? ((event.action.metadata as { zarkansReceived: number })
                   .zarkansReceived ?? 0)
               : 0;
-          lines.push(`${actor} received ${amount} zarkans from a detective`);
+          lines.push(
+            `${actor} ${t("received")} ${amount} zarkans ${t(
+              "from a detective"
+            )}`
+          );
           continue;
         }
         if (actionId === "buy_security_camera_app") {
@@ -486,8 +494,12 @@ export class CharacterPanelLogView {
             : [];
           lines.push(
             observedNames.length > 0
-              ? `${actor} used the security camera app and saw ${observedNames.join(", ")}`
-              : `${actor} used the security camera app and saw ${count} characters`
+              ? `${actor} ${t(
+                  "used the security camera app and saw"
+                )} ${observedNames.join(", ")}`
+              : `${actor} ${t(
+                  "used the security camera app and saw"
+                )} ${count} ${t("characters")}`
           );
           continue;
         }
@@ -537,7 +549,7 @@ export class CharacterPanelLogView {
           continue;
         }
         if (actionId === "activate_cameras") {
-          lines.push(`${actor} activated the cameras`);
+          lines.push(`${actor} ${t("activated the cameras")}`);
           continue;
         }
         if (actionId === "failedAction") {
@@ -577,7 +589,7 @@ export class CharacterPanelLogView {
               : 0;
           const extraLabel =
             extraExecutions > 0 ? ` (+${extraExecutions} extra)` : "";
-          lines.push(`${actor} used ${actionName}${extraLabel}`);
+          lines.push(`${actor} ${t("used")} ${actionName}${extraLabel}`);
           if (
             actionId === "axe_attack" ||
             actionId === "knife_attack" ||
@@ -854,7 +866,9 @@ export class CharacterPanelLogView {
               const teamSuffix = team ? ` (${t("Team")} ${team})` : "";
               lines.push(`${targetName}${teamSuffix} was eliminated`);
             } else if (movedTo) {
-              lines.push(`${targetName} fled to (${movedTo.q}, ${movedTo.r})`);
+              lines.push(
+                `${targetName} ${t("fled to")} (${movedTo.q}, ${movedTo.r})`
+              );
               if (energyLost && energyLost > 0) {
                 lines.push(
                   `${targetName} ${t("lost")} ${energyLost} ${t("energy")}`
