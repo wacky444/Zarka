@@ -345,6 +345,66 @@ These additions would improve the tutorial without expanding the first scenario 
 11. **Tutorial analytics**
     - Record only aggregate step completion/failure data if analytics are needed. Avoid storing chat contents or unnecessary player behavior.
 
+## Deterministic tutorial test mode
+
+The tutorial should double as a repeatable integration test. The test runner should use the same server-side match, action, turn-resolution, chat, shop, destruction, victory, and profile-storage code as a real tutorial session. It may remove waiting time and UI animation delays, but it must not bypass the mechanics being tested.
+
+### Test runner behavior
+
+Provide a test-only entry point or environment-controlled runner that:
+
+1. Creates an isolated test account and starts the preset tutorial.
+2. Verifies the initial 2x2 map, player/bot identities, positions, inventory, skills, zarkans, and enabled actions.
+3. Drives each tutorial step using the normal RPC/action payloads.
+4. Runs bot turns immediately instead of waiting for real-time tutorial pacing.
+5. Advances the deterministic turn schedule without sleeping between lessons.
+6. Verifies the expected state and replay/log events after every step.
+7. Completes the tutorial and verifies the profile completion flag.
+8. Verifies that normal Create Match and Join Match requests fail before completion and succeed after completion.
+9. Cleans up the test account, match, and stored test data.
+
+The runner should use a dedicated test user and match namespace or a cleanup-safe fixture. It must never grant tutorial completion to a real player account.
+
+### Assertions by lesson
+
+- Map inspection emits the expected current-cell and nearby-cell observations.
+- Skills apply the expected health and axe-effort effects.
+- Search reveals the expected items and Pick Up adds the bandage, axe, and food.
+- Feed resolves once and the bot enters the expected cell.
+- Exactly one bot chat message is produced, and opening Chat clears the unread state.
+- Detective costs the expected zarkans and privately reveals the bot’s opposing team.
+- The bot’s Scare resolves before the player’s Axe attack.
+- The final Scare consumes one extra execution and the additional 3 effort, then moves the bot to the selected destruction cell.
+- Destruction kills the bot and produces the normal victory/report state.
+- Repeating completion or replaying a victory notification does not duplicate profile updates or rewards.
+
+### Log and error capture
+
+The test runner should collect server logs, client/browser console errors, and structured tutorial-step traces. Each trace entry should include:
+
+- Tutorial session ID.
+- Step ID.
+- Turn number.
+- Actor ID.
+- Action or RPC ID.
+- Result and failure reason, if any.
+
+The run fails on unexpected errors, rejected actions, malformed replay events, duplicate chat messages, step-order violations, or state mismatches. Expected negative responses, such as the pre-completion rejection of normal match creation, should be asserted explicitly and excluded from the unexpected-error count.
+
+A compact test report should include the first failing step, the relevant state snapshot, recent logs, and the session ID so the failure can be reproduced.
+
+### UI coverage split
+
+A server/integration runner cannot prove that a player actually panned the map or opened the Chat tab. Keep those checks in a small browser smoke test that drives the real Phaser UI and asserts:
+
+- The Tutorial button starts the flow.
+- The Chat tab shows an unread indicator and clears it when opened.
+- The cell information controls can be opened.
+- Disabled Create Match and Join Match controls remain visibly unavailable before completion.
+- The victory recap enables normal match controls after completion.
+
+The fast integration test and the slower browser smoke test should share the same preset fixture and expected step IDs.
+
 ## Acceptance criteria
 
 - Selecting Tutorial starts the preset scenario and never creates a normal user match.
