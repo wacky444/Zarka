@@ -840,11 +840,16 @@ interface TargetOption {
   character: PlayerCharacter;
 }
 
+function getEffectiveTeamId(character: PlayerCharacter): string | undefined {
+  return character.secretTeamId?.trim() || character.teamId?.trim();
+}
+
 function getSameTileTargets(
   context: BotActionContext,
   options: { excludeProtected: boolean }
 ): TargetOption[] {
   const originTileId = context.character.position?.tileId;
+  const actorTeamId = getEffectiveTeamId(context.character);
   if (!originTileId) {
     return [];
   }
@@ -859,6 +864,12 @@ function getSameTileTargets(
       continue;
     }
     if (contender.position?.tileId !== originTileId) {
+      continue;
+    }
+    if (
+      actorTeamId &&
+      getEffectiveTeamId(contender) === actorTeamId
+    ) {
       continue;
     }
     if (isCharacterIncapacitated(contender)) {
@@ -881,11 +892,6 @@ function selectTarget(
 ): TargetOption | undefined {
   if (targets.length === 0) {
     return undefined;
-  }
-  // Prefer human players when available so bots harass real opponents.
-  const humanTargets = targets.filter((entry) => !isBotId(entry.id));
-  if (humanTargets.length > 0) {
-    return pickRandom(humanTargets, context.rng);
   }
   return pickRandom(targets, context.rng);
 }
