@@ -41,7 +41,7 @@ type ShopCardItem = {
 };
 
 const HEADER_HEIGHT = 44;
-const SELECTOR_TO_LIST_GAP = 155;
+const SELECTOR_TO_LIST_GAP = 172;
 const CARD_PADDING = 12;
 const CARD_SPACING = 8;
 
@@ -316,6 +316,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.detectiveSelector.setVisible(true);
     this.detectiveSelector.setActive(true);
     this.detectiveSelector.setEnabled(true);
+    this.detectiveSelector.showDropdown();
   }
 
   finishDetectivePurchase(): void {

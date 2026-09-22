@@ -402,6 +402,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
     return this;
   }
 
+  showModal() {
+    this.openModal();
+    return this;
+  }
+
   hideModal() {
     this.closeModal();
     return this;

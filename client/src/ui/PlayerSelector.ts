@@ -161,6 +161,13 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
     this.refreshSize();
   }
 
+  showDropdown(): void {
+    if (this.disposed) {
+      return;
+    }
+    this.grid.showModal();
+  }
+
   hideDropdown(): void {
     if (this.disposed) {
       return;
