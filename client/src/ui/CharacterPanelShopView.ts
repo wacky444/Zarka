@@ -215,6 +215,31 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     }) as ScrollablePanelInstance;
     this.scrollPanel.setOrigin?.(0, 0);
     this.scrollPanel.setScrollFactor?.(0);
+    const rawScrollPanel = this.scrollPanel as unknown as {
+      childrenMap?: {
+        scrollableBlock?: {
+          setScrollFactor?: (x: number, y?: number) => void;
+          scrollFactorX?: number;
+          scrollFactorY?: number;
+        };
+        child?: {
+          setScrollFactor?: (x: number, y?: number) => void;
+          scrollFactorX?: number;
+          scrollFactorY?: number;
+        };
+      };
+    };
+    if (rawScrollPanel.childrenMap?.scrollableBlock) {
+      rawScrollPanel.childrenMap.scrollableBlock.setScrollFactor?.(0);
+      rawScrollPanel.childrenMap.scrollableBlock.scrollFactorX = 0;
+      rawScrollPanel.childrenMap.scrollableBlock.scrollFactorY = 0;
+    }
+    if (rawScrollPanel.childrenMap?.child) {
+      rawScrollPanel.childrenMap.child.setScrollFactor?.(0);
+      rawScrollPanel.childrenMap.child.scrollFactorX = 0;
+      rawScrollPanel.childrenMap.child.scrollFactorY = 0;
+    }
+    this.scrollContent.setScrollFactor(0);
     this.scrollPanel.setMask?.(this.scrollMask);
     this.scrollPanel.setVisible?.(false);
     parent.add(this.scrollPanel);
@@ -458,7 +483,8 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     const card = this.scene.add
       .rectangle(0, startY, cardWidth, cardHeight, 0x202b4a, 0.95)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, 0x2f3a5d, 0.9);
+      .setStrokeStyle(1, 0x2f3a5d, 0.9)
+      .setInteractive({ useHandCursor: false });
     const name = this.scene.add
       .text(CARD_PADDING, startY + 8, definition.name, {
         fontSize: "15px",
@@ -517,6 +543,15 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
           )
           .setOrigin(0.5)
       : null;
+    const forwardWheel = (
+      _pointer: Phaser.Input.Pointer,
+      _dx: number,
+      dy: number
+    ) => {
+      this.scrollPanel.addChildOY?.(-dy * 0.35, true);
+    };
+    card.on(Phaser.Input.Events.POINTER_WHEEL, forwardWheel);
+    buyBackground?.on(Phaser.Input.Events.POINTER_WHEEL, forwardWheel);
     buyBackground?.on(Phaser.Input.Events.POINTER_UP, () => {
       this.beginShopPurchase(definition.id);
     });
@@ -526,8 +561,14 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     if (category) this.scrollContent.add(category);
     this.scrollContent.add(status);
     this.scrollContent.add(description);
-    if (buyBackground) this.scrollContent.add(buyBackground);
-    if (buyText) this.scrollContent.add(buyText);
+    if (buyBackground) {
+      this.scrollContent.add(buyBackground);
+      this.scrollContent.bringToTop(buyBackground);
+    }
+    if (buyText) {
+      this.scrollContent.add(buyText);
+      this.scrollContent.bringToTop(buyText);
+    }
     this.cards.push({ definition, statusBadge: status });
     return cardHeight;
   }
