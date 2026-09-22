@@ -361,6 +361,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Missing pistol": "Falta la pistola",
   "Missing bullet": "Falta la bala",
   "Missing pistol, bullet": "Faltan la pistola y la bala",
+  "Missing bandage": "Falta la venda",
   "Not visible": "No visible",
   "Not available in this build.": "No disponible en esta versión.",
   "[ ] Ready":  "[ ] Listo",

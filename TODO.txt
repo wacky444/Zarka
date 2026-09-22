@@ -37,6 +37,25 @@
 
 - y muchas skills de atacar tienen iconos muy distintos
 
+- autoreplay after turn
+
+- only 6 items visible in current cell
+
+- green name in target selector for confirmed teammates
+
+- not getting the logs of player eliminateds
+
+- in the choose item to grab, mark the already selecteds
+
+- adding extra power to pistol should show another target selector to choose another player or same
+
+- extra power on shoot looks like it increases damage, doesnt do two actions, the second bullet didnt g o off after first target dead
+
+- there isnt a effect on the ground on pyro, also didnt get a confirm when bought
+
+- no steal animation
+
+
  ### Localhost
 
  The Google client ID is being loaded locally. This error:

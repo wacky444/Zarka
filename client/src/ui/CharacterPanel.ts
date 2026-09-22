@@ -3322,6 +3322,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         if (!hasBullet) {
           return t("Missing bullet");
         }
+      } else if (definition.id === "use_bandage") {
+        const hasBandage = carried.some(
+          (s) =>
+            s.itemId === "bandage" &&
+            typeof s.quantity === "number" &&
+            s.quantity > 0
+        );
+        if (!hasBandage) {
+          return t("Missing bandage");
+        }
       } else {
         const missingItems: string[] = [];
         for (const itemId of definition.requiredItems) {
