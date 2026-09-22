@@ -96,6 +96,7 @@ export class GameScene extends Phaser.Scene {
     tile: HexTile;
     image: Phaser.GameObjects.Image;
     skullImage?: Phaser.GameObjects.Image;
+    skullShiverTween?: Phaser.Tweens.Tween;
   }> = [];
   private trapVisuals: Phaser.GameObjects.Graphics[] = [];
   private playerSprites = new Map<string, SkinContainer>();
@@ -978,6 +979,7 @@ export class GameScene extends Phaser.Scene {
 
   private clearMapTileSprites(): void {
     for (const entry of this.mapTileSprites) {
+      entry.skullShiverTween?.remove();
       entry.image.destroy();
       entry.skullImage?.destroy();
     }
@@ -1074,10 +1076,23 @@ export class GameScene extends Phaser.Scene {
         currentTurn < destructionTurn;
 
       let skullImage: Phaser.GameObjects.Image | undefined;
+      let skullShiverTween: Phaser.Tweens.Tween | undefined;
       if (isWarning && this.textures.exists("board_icon_skull")) {
         skullImage = this.add.image(x + 35, y - 30, "board_icon_skull");
         skullImage.setDisplaySize(28, 28);
         skullImage.setDepth(10);
+        if (destructionTurn - currentTurn === 1) {
+          skullShiverTween = this.tweens.add({
+            targets: skullImage,
+            x: x + 38,
+            y: y - 28,
+            angle: 6,
+            duration: 90,
+            ease: "Sine.easeInOut",
+            yoyo: true,
+            repeat: -1
+          });
+        }
         sprites.push(skullImage);
       }
 
@@ -1130,7 +1145,12 @@ export class GameScene extends Phaser.Scene {
         }
       );
       sprites.push(img);
-      this.mapTileSprites.push({ tile, image: img, skullImage });
+      this.mapTileSprites.push({
+        tile,
+        image: img,
+        skullImage,
+        skullShiverTween
+      });
       this.tilePositions[tile.id] = { x, y };
     }
 
