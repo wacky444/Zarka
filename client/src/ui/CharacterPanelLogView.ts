@@ -130,7 +130,7 @@ export class CharacterPanelLogView {
         this.elements.eventsText.setVisible(true);
       }
     } else {
-      this.showStatus("No events recorded.");
+      this.showStatus(t("No events recorded."));
     }
     this.updateTurnLabel();
     this.updateButtons();
@@ -157,7 +157,7 @@ export class CharacterPanelLogView {
     this.loading = false;
     this.displayedTurn = null;
     this.eventStrings = [];
-    this.showStatus(message || "Replay not available.");
+    this.showStatus(message || t("Replay not available."));
     this.updateTurnLabel();
     this.updateButtons();
   }
@@ -165,7 +165,7 @@ export class CharacterPanelLogView {
   setLoading(active: boolean): void {
     this.loading = active;
     if (active) {
-      this.showStatus("Loading...");
+      this.showStatus(t("Loading..."));
     }
     this.updateButtons();
     this.refreshDisplay();
@@ -358,7 +358,9 @@ export class CharacterPanelLogView {
 
   private updateTurnLabel(): void {
     const current = this.selectedTurn ?? 0;
-    this.elements.turnLabel.setText(`Turn ${current} / ${this.maxTurn}`);
+    this.elements.turnLabel.setText(
+      `${t("Turn")} ${current} / ${this.maxTurn}`
+    );
   }
 
   private showStatus(message: string): void {
@@ -423,11 +425,11 @@ export class CharacterPanelLogView {
             (event.action.metadata as { teamId?: string })?.teamId ||
             this.resolvePlayerTeam(event.actorId);
           const teamSuffix = team ? ` (${t("Team")} ${team})` : "";
-          lines.push(`${actor}${teamSuffix} died`);
+          lines.push(`${actor}${teamSuffix} ${t("died")}`);
           continue;
         }
         if (actionId === "status_unconscious") {
-          lines.push(`${actor} fell unconscious`);
+          lines.push(`${actor} ${t("fell unconscious")}`);
           continue;
         }
         if ((actionId as string) === "zarkan_income") {
@@ -518,8 +520,12 @@ export class CharacterPanelLogView {
               : 0;
           lines.push(
             location
-              ? `${actor} ${t("hired a bomber")} at (${location.q}, ${location.r}) and hit ${count} characters`
-              : `${actor} ${t("hired a bomber")} and hit ${count} characters`
+              ? `${actor} ${t("hired a bomber")} ${t("at")} (${location.q}, ${location.r}) ${t(
+                  "and hit"
+                )} ${count} ${t("characters")}`
+              : `${actor} ${t("hired a bomber")} ${t("and hit")} ${count} ${t(
+                  "characters"
+                )}`
           );
           continue;
         }
@@ -540,11 +546,13 @@ export class CharacterPanelLogView {
           const observedText =
             observedNames.length > 0
               ? observedNames.join(", ")
-              : `${count} characters`;
+              : `${count} ${t("characters")}`;
           lines.push(
             location
-              ? `${actor} used a spy drone at (${location.q}, ${location.r}) and saw ${observedText}`
-              : `${actor} used a spy drone and saw ${observedText}`
+              ? `${actor} ${t("used a spy drone at")} (${location.q}, ${location.r}) ${t(
+                  "and saw"
+                )} ${observedText}`
+              : `${actor} ${t("used a spy drone and saw")} ${observedText}`
           );
           continue;
         }
@@ -568,7 +576,9 @@ export class CharacterPanelLogView {
           if (target && amount > 0) {
             const recipient = this.resolvePlayerName(target.targetId);
             lines.push(
-              `${recipient} received ${amount} zarkans as testamento`
+              `${recipient} ${t("received")} ${amount} zarkans ${t(
+                "as testament"
+              )}`
             );
           }
           continue;
@@ -579,7 +589,7 @@ export class CharacterPanelLogView {
           : t(this.options.formatActionName(actionId));
         if (actionId === "move" && event.action.targetLocation) {
           const { q, r } = event.action.targetLocation;
-          lines.push(`${actor} moved to (${q}, ${r})`);
+          lines.push(`${actor} ${t("moved to")} (${q}, ${r})`);
         } else {
           const extraExecutions =
             typeof (event.action.metadata as { extraExecutions?: unknown })
@@ -588,7 +598,7 @@ export class CharacterPanelLogView {
                   .extraExecutions ?? 0)
               : 0;
           const extraLabel =
-            extraExecutions > 0 ? ` (+${extraExecutions} extra)` : "";
+            extraExecutions > 0 ? ` (+${extraExecutions} ${t("extra")})` : "";
           lines.push(`${actor} ${t("used")} ${actionName}${extraLabel}`);
           if (
             actionId === "axe_attack" ||
@@ -604,18 +614,22 @@ export class CharacterPanelLogView {
             )?.weaponUsed;
             const weaponLabel =
               actionId === "axe_attack"
-                ? "an axe"
+                ? t("an axe")
                 : actionId === "knife_attack"
-                ? "a knife"
+                ? t("a knife")
                 : weaponUsed === "nail_bat"
-                ? "a nail bat"
-                : "a bat";
+                ? t("a nail bat")
+                : t("a bat");
             if (totalDamage > 0) {
               lines.push(
-                `${actor} dealt ${totalDamage} damage with ${weaponLabel}`
+                `${actor} ${t("dealt")} ${totalDamage} ${t("damage")} ${t(
+                  "with"
+                )} ${weaponLabel}`
               );
             } else {
-              lines.push(`${actor} failed to connect with ${weaponLabel}`);
+              lines.push(
+                `${actor} ${t("failed to connect with")} ${weaponLabel}`
+              );
             }
           } else if (actionId === "use_chemical_weapon") {
             const totalDamage =
@@ -624,10 +638,14 @@ export class CharacterPanelLogView {
                 : 0;
             if (totalDamage > 0) {
               lines.push(
-                `${actor} dealt ${totalDamage} damage with a chemical weapon`
+                `${actor} ${t("dealt")} ${totalDamage} ${t("damage")} ${t(
+                  "with a chemical weapon"
+                )}`
               );
             } else {
-              lines.push(`${actor} hit nobody with the chemical weapon`);
+              lines.push(
+                `${actor} ${t("hit nobody with the chemical weapon")}`
+              );
             }
           } else if (actionId === "shoot_pistol") {
             const totalDamage =
@@ -639,14 +657,16 @@ export class CharacterPanelLogView {
             )?.weaponUsed;
             const weaponLabel =
               weaponUsed === "suppressed_pistol"
-                ? "a silenced pistol"
-                : "a pistol";
+                ? t("a silenced pistol")
+                : t("a pistol");
             if (totalDamage > 0) {
               lines.push(
-                `${actor} dealt ${totalDamage} damage with ${weaponLabel}`
+                `${actor} ${t("dealt")} ${totalDamage} ${t("damage")} ${t(
+                  "with"
+                )} ${weaponLabel}`
               );
             } else {
-              lines.push(`${actor} missed with ${weaponLabel}`);
+              lines.push(`${actor} ${t("missed with")} ${weaponLabel}`);
             }
           } else if (actionId === "shoot_harpoon") {
             const totalDamage =
@@ -655,10 +675,12 @@ export class CharacterPanelLogView {
                 : 0;
             if (totalDamage > 0) {
               lines.push(
-                `${actor} dealt ${totalDamage} damage with a harpoon`
+                `${actor} ${t("dealt")} ${totalDamage} ${t("damage")} ${t(
+                  "with a harpoon"
+                )}`
               );
             } else {
-              lines.push(`${actor} missed with a harpoon`);
+              lines.push(`${actor} ${t("missed with")} ${t("a harpoon")}`);
             }
           } else if (actionId === "fire_rocket_launcher") {
             const totalDamage =
@@ -666,8 +688,10 @@ export class CharacterPanelLogView {
                 ? event.action.damageDealt
                 : 0;
             lines.push(
-              `${actor} fired a rocket launcher${
-                totalDamage > 0 ? ` and dealt ${totalDamage} damage` : ""
+              `${actor} ${t("fired a rocket launcher")}${
+                totalDamage > 0
+                  ? ` ${t("and dealt")} ${totalDamage} ${t("damage")}`
+                  : ""
               }`
             );
           } else if (actionId === "inject_virus") {
@@ -685,15 +709,17 @@ export class CharacterPanelLogView {
                 damage > 0
                   ? `${targetName} ${t(
                       "was affected by a virus"
-                    )} and lost ${damage} health`
+                    )} ${t("and lost")} ${damage} ${t("health")}`
                   : `${targetName} ${t("was exposed to a virus")}`
               );
             } else {
               const targetId = event.targets?.[0]?.targetId;
               lines.push(
                 targetId
-                  ? `${actor} injected a virus into ${this.resolvePlayerName(targetId)}`
-                  : `${actor} injected a virus`
+                  ? `${actor} ${t("injected a virus into")} ${this.resolvePlayerName(
+                      targetId
+                    )}`
+                  : `${actor} ${t("injected a virus")}`
               );
             }
           } else if (actionId === "search") {
@@ -701,9 +727,9 @@ export class CharacterPanelLogView {
               event.action.metadata
             );
             if (foundItems.length > 0) {
-              lines.push(`${actor} found ${foundItems.join(", ")}`);
+              lines.push(`${actor} ${t("found")} ${foundItems.join(", ")}`);
             } else if (this.didSearchFindNothing(event.action.metadata)) {
-              lines.push(`${actor} found nothing`);
+              lines.push(`${actor} ${t("found nothing")}`);
             }
           } else if (actionId === "inspect") {
             const results = this.extractInspectResults(event.action.metadata);
@@ -712,8 +738,12 @@ export class CharacterPanelLogView {
                 const targetName = this.resolvePlayerName(result.targetId);
                 lines.push(
                   result.itemNames.length > 0
-                    ? `${actor} inspected ${targetName} and found ${result.itemNames.join(", ")}`
-                    : `${actor} inspected ${targetName} and found nothing new`
+                    ? `${actor} ${t("inspected")} ${targetName} ${t(
+                        "and found"
+                      )} ${result.itemNames.join(", ")}`
+                    : `${actor} ${t("inspected")} ${targetName} ${t(
+                        "and found nothing new"
+                      )}`
                 );
               }
             } else {
@@ -724,9 +754,9 @@ export class CharacterPanelLogView {
                       ?.targetPlayerId;
               if (targetId) {
                 lines.push(
-                  `${actor} inspected ${this.resolvePlayerName(
+                  `${actor} ${t("inspected")} ${this.resolvePlayerName(
                     typeof targetId === "string" ? targetId : undefined
-                  )} and found nothing new`
+                  )} ${t("and found nothing new")}`
                 );
               }
             }
@@ -739,10 +769,10 @@ export class CharacterPanelLogView {
                     ?.distance ?? -1;
                 const locationLabel =
                   distance === 0
-                    ? "(same location)"
+                    ? `(${t("same location")})`
                     : distance > 0
-                    ? `(distance ${distance})`
-                    : "(nearby)";
+                    ? `(${t("distance")} ${distance})`
+                    : `(${t("nearby")})`;
                 lines.push(`${t("Detected")} ${targetName} ${locationLabel}`);
               }
             } else {
@@ -758,18 +788,22 @@ export class CharacterPanelLogView {
             const targetName =
               typeof targetId === "string"
                 ? this.resolvePlayerName(targetId)
-                : "the target";
+                : t("the target");
             lines.push(
               stolenItems.length > 0
-                ? `${actor} stole ${stolenItems.join(", ")} from ${targetName}`
-                : `${actor} stole nothing from ${targetName}`
+                ? `${actor} ${t("stole")} ${stolenItems.join(", ")} ${t(
+                    "from"
+                  )} ${targetName}`
+                : `${actor} ${t("stole nothing from")} ${targetName}`
             );
           } else if (actionId === "pick_up") {
             const pickedItems = this.extractPickedItemNames(
               event.action.metadata
             );
             if (pickedItems.length > 0) {
-              lines.push(`${actor} picked up ${pickedItems.join(", ")}`);
+              lines.push(
+                `${actor} ${t("picked up")} ${pickedItems.join(", ")}`
+              );
             }
           } else if (actionId === "black_market_trade") {
             const meta = event.action.metadata as
@@ -782,8 +816,10 @@ export class CharacterPanelLogView {
                 : 0;
             lines.push(
               soldItems.length > 0
-                ? `${actor} sold ${soldItems.join(", ")} at the black market for ${zarkans} zarkans`
-                : `${actor} sold nothing at the black market`
+                ? `${actor} ${t("sold")} ${soldItems.join(", ")} ${t(
+                    "at the black market for"
+                  )} ${zarkans} zarkans`
+                : `${actor} ${t("sold nothing at the black market")}`
             );
           } else if (actionId === "drop") {
             const meta = event.action.metadata as
@@ -803,10 +839,14 @@ export class CharacterPanelLogView {
                     ? meta.zarkansEarned
                     : 0;
                 lines.push(
-                  `${actor} sold ${droppedItems.join(", ")} for ${zarkans} zarkans`
+                  `${actor} ${t("sold")} ${droppedItems.join(", ")} ${t(
+                    "for"
+                  )} ${zarkans} zarkans`
                 );
               } else {
-                lines.push(`${actor} dropped ${droppedItems.join(", ")}`);
+                lines.push(
+                  `${actor} ${t("dropped")} ${droppedItems.join(", ")}`
+                );
               }
             }
           }
@@ -836,7 +876,9 @@ export class CharacterPanelLogView {
                 ? metadata.energyRestored
                 : null;
             if (healed && healed > 0) {
-              lines.push(`${targetName} ${t("recovered")} ${healed} health`);
+              lines.push(
+                `${targetName} ${t("recovered")} ${healed} ${t("health")}`
+              );
               continue;
             }
             if (energyRestored && energyRestored > 0) {
@@ -851,20 +893,28 @@ export class CharacterPanelLogView {
               typeof target.damageTaken === "number" &&
               target.damageTaken >= 0
             ) {
-              lines.push(`${targetName} took ${target.damageTaken} damage`);
+              lines.push(
+                `${targetName} ${t("took")} ${target.damageTaken} ${t(
+                  "damage"
+                )}`
+              );
               if (target.eliminated) {
                 const team =
                   (target.metadata as { teamId?: string })?.teamId ||
                   this.resolvePlayerTeam(target.targetId);
                 const teamSuffix = team ? ` (${t("Team")} ${team})` : "";
-                lines.push(`${targetName}${teamSuffix} was eliminated`);
+                lines.push(
+                  `${targetName}${teamSuffix} ${t("was eliminated")}`
+                );
               }
             } else if (target.eliminated) {
               const team =
                 (target.metadata as { teamId?: string })?.teamId ||
                 this.resolvePlayerTeam(target.targetId);
               const teamSuffix = team ? ` (${t("Team")} ${team})` : "";
-              lines.push(`${targetName}${teamSuffix} was eliminated`);
+              lines.push(
+                `${targetName}${teamSuffix} ${t("was eliminated")}`
+              );
             } else if (movedTo) {
               lines.push(
                 `${targetName} ${t("fled to")} (${movedTo.q}, ${movedTo.r})`
@@ -889,7 +939,7 @@ export class CharacterPanelLogView {
         } else if (event.action === "flame") {
           description = "erupted in flames";
         }
-        lines.push(`Cell (${q}, ${r}) ${description}`);
+        lines.push(`${t("Cell")} (${q}, ${r}) ${t(description)}`);
       }
     }
     return lines;
@@ -938,7 +988,7 @@ export class CharacterPanelLogView {
 
   private buildFailedActionLine(actor: string, metadata: unknown): string {
     if (!metadata || typeof metadata !== "object") {
-      return `${actor} failed to use an action`;
+      return `${actor} ${t("failed to use")} ${t("an action")}`;
     }
     const container = metadata as {
       attemptedActionId?: unknown;
@@ -950,19 +1000,21 @@ export class CharacterPanelLogView {
         : null;
     const definition = attemptedId ? ActionLibrary[attemptedId] ?? null : null;
     const attemptedName = definition
-      ? definition.name
+      ? t(definition.name)
       : attemptedId
-      ? this.options.formatActionName(attemptedId)
-      : "an action";
+      ? t(this.options.formatActionName(attemptedId))
+      : t("an action");
     const missingItemId =
       typeof container.missingItemId === "string"
         ? container.missingItemId
         : null;
     if (missingItemId) {
       const itemName = this.resolveItemName(missingItemId);
-      return `${actor} failed to use ${attemptedName} (${t("Missing").toLowerCase()} ${itemName})`;
+      return `${actor} ${t("failed to use")} ${attemptedName} (${t(
+        "Missing"
+      ).toLowerCase()} ${itemName})`;
     }
-    return `${actor} failed to use ${attemptedName}`;
+    return `${actor} ${t("failed to use")} ${attemptedName}`;
   }
 
   private resolvePlayerName(playerId: string | undefined): string {
