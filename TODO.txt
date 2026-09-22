@@ -2,21 +2,9 @@
 
 - icons for, inventory, character, status, skills, players, teams, log/replay, map, chat, arrow right, left
 
-- google login, configured but in github says google not configured and in localhost says client:88 [GSI_LOGGER]: The given origin is not allowed for the given client ID.
-
 - when a player joined without doing f5, in the player list it shows a guid
 
-- player list cant be scrolled with finger -> bug
-
 - end game animation, screen, stats, achievements (who killed the most, or pacifist)
-
-- debounce on extra power, laggy
-
-- selects in mobile should be full screen
-
-- loading bar when loading into a match, now its a blue screen
-
-- traps
 
 - crafting
 
@@ -28,23 +16,7 @@
 
 - stealing
 
-- description color, for energy and health values
-
-- ask luna if its worth it to migrate to phaser 4
-
 - move status_dead out of actionLibrary
-
-- animation for detroyed cell, maybe zoom to the cell then exposion sprite?
-
-- when changing to older logs the map should load with the info from that turn, and maybe a text at the top that says REPLAY
-
-- zooming with the mouse doest zoom to the mouse position
-
-- zarkan daily in the log
-
-- you belong to the team, with name
-
-- animation for trap placing
 
 - placin the trap didnt work
 
@@ -59,22 +31,11 @@
 
 - finished match is not on my matches list
 
-
 - y diría q cuando seleccionas una skill q necesita un objetivo, debería cambiar directamente a seleccionarlo
 
 - planteate hacer un escenario básico de tutorial y pones un set limitado de cosas para ir probando
 
 - y muchas skills de atacar tienen iconos muy distintos
-
-- faltan traducciones, detected, affected, "Energy" "Weight" "Team" el registro, y de las habilidades el "missing ..." y los "not implemented"
-
-- en la lista de targets indicar que enemigos se ven y cuales no
-
-- no sale el titulo de las acciones de abajo de la lista
-
-- lista de skills que no sea lista
-
-- indicar en el target, un warning, de fuera de rango
 
  ### Localhost
 
