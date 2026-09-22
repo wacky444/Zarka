@@ -426,3 +426,141 @@ The fast integration test and the slower browser smoke test should share the sam
 - English and Spanish tutorial text is localized.
 - Desktop and touch controls both complete the same steps.
 - Existing normal match creation and gameplay remain unchanged.
+
+## Implementation steps for a smaller-capability LLM
+
+Use these steps in order. Complete and verify one step before starting the next. Do not ask the implementation model to build the entire tutorial in one change.
+
+### Phase 1: Read the existing code
+
+1. Read the relevant files completely before editing:
+   - `client/src/scenes/MainScene.ts`
+   - `client/src/scenes/GameScene.ts`
+   - `client/src/ui/CharacterPanel.ts`
+   - `client/src/ui/CharacterPanelChatView.ts`
+   - `client/src/ui/CharacterPanelShopView.ts`
+   - `server/modules/src/match/async_turn.ts`
+   - `server/modules/src/match/async_turn/*`
+   - `server/modules/src/match/actionExecutor.ts`
+   - `server/modules/src/match/advanceTurn.ts`
+   - `server/modules/src/rpc/createMatch.ts`
+   - `server/modules/src/rpc/joinMatch.ts`
+   - `server/modules/src/rpc/submitTurn.ts`
+   - `server/modules/src/services/storageService.ts`
+   - `shared/src/ActionLibrary.ts`
+   - `shared/src/skills/SkillLibrary.ts`
+2. Search for existing match settings, chat events, profile storage, replay events, and tutorial-related code before creating new helpers.
+3. Write a short mini-spec with the exact tutorial metadata name, completion-profile key, step IDs, and preset coordinates. Do not code until these names are fixed.
+
+**Verification:** No code changes. Confirm that the model can identify where match state, profile data, chat, and turn resolution are authoritative.
+
+### Phase 2: Add shared tutorial identifiers
+
+1. Add only shared types/constants for:
+   - Tutorial match metadata.
+   - Tutorial step IDs.
+   - Tutorial completion profile key.
+2. Keep the new types small and serializable.
+3. Do not change normal actions or normal match behavior yet.
+
+**Verification:** Run server and client TypeScript checks. Review the diff for unrelated changes.
+
+### Phase 3: Add the preset scenario
+
+1. Create one server-side factory for the fixed tutorial map and initial match state.
+2. Set the 2x2 layout, player position, bot position, item placement, teams, health, effort, and zarkans in one place.
+3. Mark the match explicitly as a tutorial match.
+4. Use a fixed bot ID and deterministic scripted behavior.
+5. Do not add the UI flow yet.
+
+**Verification:** Add or run a focused server test that creates the fixture twice and compares the relevant state fields. Confirm both runs are identical.
+
+### Phase 4: Add the authoritative step state machine
+
+1. Add a small tutorial state object to the tutorial match state.
+2. Implement one transition function that accepts an observed game event and returns the next step.
+3. Implement only the first step initially: map pan/current-cell/nearby-cell information.
+4. Reject invalid step transitions without changing the match.
+5. Add the remaining steps one at a time in the order in this document.
+6. Keep step completion server-authoritative. The client may request an event, but it must not submit an arbitrary completed step.
+
+**Verification:** Test valid and invalid transitions for one step before adding the next step. Confirm a duplicate event does not advance twice.
+
+### Phase 5: Add deterministic bot behavior
+
+1. Create a tutorial-only bot planner or scripted action table.
+2. Give the bot exactly one expected behavior for each step.
+3. Script the chat message at the `bot_chat` step.
+4. Script Scare ordering before the player’s Axe attack.
+5. Script the final Scare with exactly one extra execution and the selected destruction destination.
+6. Do not modify general bot AI behavior for this feature.
+
+**Verification:** Run the tutorial fixture without the client and compare action order, target IDs, destinations, and chat event count against the plan.
+
+### Phase 6: Add profile completion and match gating
+
+1. Add one profile/account storage field for tutorial completion.
+2. Read it when the main menu is initialized.
+3. Disable normal Create Match and Join Match controls when it is false.
+4. Leave Tutorial enabled when it is false.
+5. Add server-side rejection for normal create/join requests when it is false.
+6. Allow tutorial match creation regardless of the flag.
+7. Set the flag only after the authoritative tutorial victory and make the update idempotent.
+
+**Verification:** Test the full gate in this order:
+
+1. Incomplete profile cannot create a normal match.
+2. Incomplete profile cannot join a normal match.
+3. Incomplete profile can start Tutorial.
+4. Completed profile can create and join normally.
+5. Repeating completion does not duplicate stored data.
+
+### Phase 7: Add the tutorial UI one lesson at a time
+
+1. Add a small tutorial instruction view with the current instruction and optional hint.
+2. Add only the first lesson’s completion listener.
+3. Add the Chat unread/open requirement using the existing Chat tab events.
+4. Add step-specific highlighting and disabling only after the underlying step works.
+5. Add the Shop Detective lesson.
+6. Add the Axe/Scare ordering lesson.
+7. Add the final Scare destination and destruction lesson.
+8. Reuse existing selectors, tabs, logs, banners, and overlays instead of creating duplicate controls.
+
+**Verification:** After each lesson, run the client TypeScript check and manually verify that the next instruction is not shown early.
+
+### Phase 8: Add fast integration tests
+
+1. Create one test script for the server fixture.
+2. Drive the normal action/RPC payloads in the documented order.
+3. Remove sleeps and animation waits in the test runner only.
+4. Assert state and event output after every step.
+5. Capture server logs and fail on unexpected errors.
+6. Add the pre-completion and post-completion profile-gate assertions.
+7. Add cleanup in a `finally` block so failed runs do not leave tutorial matches behind.
+
+**Verification:** Run the same test at least three times. All runs must produce the same step sequence, action order, chat count, winner, and completion flag.
+
+### Phase 9: Add browser smoke coverage
+
+1. Start the tutorial through the real Tutorial button.
+2. Verify the 2x2 map is visible.
+3. Pan the map and open current/nearby cell information.
+4. Open Chat when the bot message is unread.
+5. Verify Create Match and Join Match are disabled before completion.
+6. Complete the tutorial through the real controls.
+7. Verify the victory recap and that normal match controls become enabled afterward.
+
+**Verification:** Run desktop and touch-oriented smoke paths. Keep this suite small; detailed state validation belongs in the fast integration test.
+
+### Phase 10: Final review
+
+1. Review the complete diff for unrelated behavior changes.
+2. Run:
+   - `cd server/modules && npx tsc --noEmit`
+   - `cd client && npx tsc --noEmit`
+   - `cd client && npm run lint`
+   - `git diff --check`
+3. Run the deterministic tutorial test repeatedly.
+4. Check reconnect, reload, duplicate victory, and abandoned-tutorial behavior.
+5. Only then connect the existing Tutorial button to the feature.
+6. Do not remove or weaken normal match validation to make the tutorial test pass.
