@@ -13,7 +13,8 @@ import {
 import { getAliveCharacterIds } from "../checkEndGame";
 import { createReplaySnapshot } from "../replay/snapshot";
 
-const AUTO_CHECK_INTERVAL_MS = 5 * 1000;
+const AUTO_CHECK_INTERVAL_MS = 60 * 1000;
+const BOT_AUTO_CHECK_INTERVAL_MS = 5 * 1000;
 
 function timeToMinutes(value: string): number | null {
   const parts = value.split(":");
@@ -69,10 +70,16 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
     }
     const nowMs = Date.now();
     const lastCheck = state.lastAutoCheckAt ?? 0;
-    if (nowMs - lastCheck < AUTO_CHECK_INTERVAL_MS) {
+    const lastBotCheck = state.lastBotAutoAdvanceAt ?? 0;
+    const normalCheckDue = nowMs - lastCheck >= AUTO_CHECK_INTERVAL_MS;
+    const botCheckDue =
+      nowMs - lastBotCheck >= BOT_AUTO_CHECK_INTERVAL_MS;
+    if (!normalCheckDue && !botCheckDue) {
       return { state };
     }
-    state.lastAutoCheckAt = nowMs;
+    if (normalCheckDue) {
+      state.lastAutoCheckAt = nowMs;
+    }
 
     const nkWrapper = createNakamaWrapper(nk);
     const storage = new StorageService(nkWrapper);
@@ -88,8 +95,17 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
     }
 
     const botOnlyAlive = areOnlyBotsAlive(match);
-    if (!botOnlyAlive) {
-      if (!state.autoSkip || match.autoSkip === false) {
+    if (botOnlyAlive) {
+      if (!botCheckDue) {
+        return { state };
+      }
+      state.lastBotAutoAdvanceAt = nowMs;
+      logger.debug(
+        "Advancing bot-only match %s on the five-second timer",
+        runtimeMatchId,
+      );
+    } else {
+      if (!normalCheckDue || !state.autoSkip || match.autoSkip === false) {
         return { state };
       }
       const configuredRoundTime =
@@ -119,11 +135,6 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       if (matchTargetMinutes === null || currentMinutes < matchTargetMinutes) {
         return { state };
       }
-    } else {
-      logger.debug(
-        "Advancing bot-only match %s on the five-second timer",
-        runtimeMatchId,
-      );
     }
 
     const players = Array.isArray(match.players) ? match.players : [];

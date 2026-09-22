@@ -30,4 +30,5 @@ export interface AsyncTurnState extends nkruntime.MatchState {
   map?: GameMap;
   lastAutoAdvanceAt?: number;
   lastAutoCheckAt?: number;
+  lastBotAutoAdvanceAt?: number;
 }
