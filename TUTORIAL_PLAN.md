@@ -6,6 +6,14 @@ Add a guided, deterministic tutorial that teaches the core Zarka loop through a 
 
 The existing **Tutorial** menu button will eventually start this flow. This document only specifies the feature; it does not implement the button action.
 
+The tutorial is the onboarding gate for new profiles. Until the tutorial is completed:
+
+- **Create Match** is disabled.
+- **Join Match** and other normal match-entry options are disabled.
+- The player may enter or restart the tutorial.
+
+After the final victory and recap, save a tutorial-completed flag in the player profile. The profile flag should be loaded when the main menu opens so the normal match options become available on later sessions. The server must enforce this gate for match creation and joining; disabling client buttons alone is not sufficient.
+
 ## Tutorial scenario
 
 - One human player and one scripted bot.
@@ -34,7 +42,7 @@ The exact movement graph should be confirmed against the map generator, but the 
 - A cell containing the initial objects.
 - A cell marked for destruction in the final lesson.
 
-The final layout must allow the player to move away after being Scared, move back, and use Scare to move the bot onto the doomed cell. Scare should use a deterministic destination for this lesson so the player can understand and control the result. No separate push or knockback action is required.
+The final layout must allow the player to move away after being Scared, move back, and use Scare to move the bot onto the doomed cell. The final Scare must use one extra power/extra execution, consuming the existing additional 3 effort, so the player can select the bot’s destination instead of relying on a random adjacent destination. Scare should use a deterministic destination for this lesson so the player can understand and control the result. No separate push or knockback action is required.
 
 ## Guided sequence
 
@@ -169,7 +177,7 @@ The bot’s chat claim must be false. The Detective result should be private to 
 
 **Purpose:** Teach turn planning and action ordering.
 
-The player must have the axe and enough effort to select `axe_attack`. The bot must have Scare available and be configured to scare the player during the same turn.
+The player must have the axe and enough effort to select `axe_attack`. The bot must have Scare available and be configured to scare the player during the same turn. The final player Scare must consume exactly one extra power/extra execution, including the existing additional 3-effort cost, and use the selected-destination mode. The tutorial should not use the two-target Scare upgrade in this step.
 
 Require the player to:
 
@@ -199,8 +207,10 @@ This should be a scripted, deterministic Scare destination so the result is unde
 1. Mark one cell as scheduled for destruction on the next turn.
 2. Show the destruction warning/skull and explain the remaining time.
 3. Require the player to move back toward the bot.
-4. Require the player to use Scare and select the doomed cell as the bot’s destination.
-5. Advance the turn so the cell is destroyed.
+4. Require the player to select Scare.
+5. Require the player to spend exactly one extra power/extra execution, including the additional 3-effort cost. Explain that this changes Scare from random movement to a selectable destination for one target.
+6. Require the player to select the doomed cell as the bot’s destination.
+7. Advance the turn so the cell is destroyed.
 6. Apply the normal environmental damage and death handling.
 7. Finish through the normal victory overlay and report flow.
 
@@ -261,6 +271,9 @@ The server should own the authoritative step and validate tutorial-specific requ
 
 - Add explicit tutorial metadata to the match rather than detecting the tutorial from a match name.
 - Keep the tutorial match isolated from normal match creation, reports, and match-history limits.
+- Store tutorial completion in the player profile, using a server-authoritative profile field or account storage record.
+- Enforce the incomplete-tutorial gate on both normal match creation and normal match joining. Tutorial matches must remain exempt.
+- Make completion idempotent so reconnects or repeated victory notifications cannot corrupt the profile state.
 - Use a stable tutorial bot identity and deterministic scripted plans.
 - Ensure the bot cannot accidentally die, consume required items, or choose a different action before the intended lesson.
 - Keep unconscious/dead state and finalization authoritative through the normal match systems.
@@ -335,6 +348,9 @@ These additions would improve the tutorial without expanding the first scenario 
 ## Acceptance criteria
 
 - Selecting Tutorial starts the preset scenario and never creates a normal user match.
+- Create Match and Join Match remain unavailable to profiles without the saved completion flag.
+- Completing the tutorial saves the completion flag in the profile, and the normal match options become available after reload or reconnect.
+- The server rejects normal match creation and joining while the completion flag is absent, regardless of client state.
 - The map is exactly the configured 2x2 layout with deterministic objects and positions.
 - Only the intended actions and skills are usable at each step.
 - The player must inspect current and nearby cell information before progressing.
@@ -343,6 +359,7 @@ These additions would improve the tutorial without expanding the first scenario 
 - The bot sends a chat message, and the related step remains incomplete until the player opens Chat.
 - Detective reveals that the bot lied, privately and deterministically.
 - Scare resolves before the planned Axe attack and visibly changes the outcome.
+- The final Scare requires one extra power/extra execution and its additional 3-effort cost, allowing the player to select the doomed destination.
 - The final destruction sequence ends the bot and uses the normal victory flow.
 - Reload/reconnect behavior does not duplicate messages or skip authoritative steps.
 - Tutorial state cannot mutate a normal match.
