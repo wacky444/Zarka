@@ -1,6 +1,8 @@
 import type { ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
+import { playRandomSound } from "../soundPlayer";
 
+const UNCONSCIOUS_SOUNDS = ["wobble"];
 const WOBBLE_ANGLE = 12;
 const UNCONSCIOUS_TILT = -18;
 const WOBBLE_DURATION = 150;
@@ -18,6 +20,7 @@ export async function animateUnconsciousEvent(
     return;
   }
 
+  playRandomSound(context.scene, UNCONSCIOUS_SOUNDS);
   context.showDizzyStars?.(event.actorId);
   const label = context.getLabel(event.actorId) ?? null;
   sprite.setAngle(0);

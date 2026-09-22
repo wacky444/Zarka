@@ -64,6 +64,13 @@ export const SOUND_ASSET_FILES: Record<string, string> = {
   cancel: "cancel.wav",
   explosion_small: "explosion_small.wav",
   explosion_medium: "explosion_medium.wav",
+  explosion_large: "explosion_large.wav",
+  wobble: "wobble.wav",
+  snap: "snap.wav",
+  bone_snap: "bone_snap.wav",
+  lock_quick: "lock_quick.wav",
+  fire_lighting: "fire_lighting.wav",
+  shot_muffled: "shot_muffled.wav",
 };
 
 export const ACTION_SOUNDS: Record<string, string[]> = {
@@ -71,7 +78,7 @@ export const ACTION_SOUNDS: Record<string, string[]> = {
   axe_attack: ["sword_slice", "swipe", "crunch_quick"],
   bat_attack: ["harsh_thud", "cardboard_hit", "metal_blunt_tap"],
   knife_attack: ["sword_light", "cork_stabbed", "sword_sharpen"],
-  shoot_pistol: ["explosion_small", "air_burst"],
+  shoot_pistol: ["shot_muffled", "explosion_small", "air_burst"],
   shoot_harpoon: ["whoosh_1", "swipe", "cork_stabbed"],
   move: [
     "foley_footstep_concrete_1",
@@ -92,6 +99,11 @@ export const ACTION_SOUNDS: Record<string, string[]> = {
   detect: ["sci_fi_hover", "sci_fi_select", "pop_1"],
   use_chemical_weapon: ["squelching_1", "squelching_2", "water_splashing"],
   status_dead: ["lose", "8_bit_defeated", "hurt"],
+  status_unconscious: ["wobble"],
+  place_trap: ["lock_quick", "snap"],
+  fire_damage: ["fire_lighting", "hurt"],
+  fire_rocket_launcher: ["explosion_large", "explosion_medium", "explosion_small"],
+  buy_bomber: ["explosion_large", "explosion_medium", "explosion_small"],
   failedAction: ["undesired_effect", "sci_fi_error", "cancel"],
   tile_destroyed: ["explosion_small", "explosion_medium"],
 };

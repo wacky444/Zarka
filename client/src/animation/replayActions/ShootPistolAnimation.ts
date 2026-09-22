@@ -3,8 +3,8 @@ import type { MoveReplayContext } from "../MoveReplayContext";
 import { hasEffect, showGuardOverlay } from "./GuardOverlay";
 import { playRandomSound } from "../soundPlayer";
 
-const PISTOL_SOUNDS = ["explosion_small", "air_burst"];
-const SUPPRESSED_PISTOL_SOUNDS = ["air_burst", "whoosh_1"];
+const PISTOL_SOUNDS = ["shot_muffled", "explosion_small", "air_burst"];
+const SUPPRESSED_PISTOL_SOUNDS = ["shot_muffled", "air_burst"];
 
 export async function animateShootPistolEvent(
   context: MoveReplayContext,

@@ -1,6 +1,9 @@
 import type { Axial, ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
+import { playRandomSound } from "../soundPlayer";
 
+const TRAP_PLACE_SOUNDS = ["lock_quick", "snap"];
+const TRAP_TRIGGER_SOUNDS = ["snap", "bone_snap"];
 const PLACEMENT_DURATION = 520;
 
 function isPlacedTrapEvent(event: ReplayPlayerEvent): boolean {
@@ -12,6 +15,7 @@ function animateTrapPlacement(
   origin: Axial,
   destination: Axial,
 ): Promise<void> {
+  playRandomSound(context.scene, TRAP_PLACE_SOUNDS);
   const from = context.axialToWorld(origin);
   const to = context.axialToWorld(destination);
   const midpoint = {
@@ -78,8 +82,12 @@ export async function animateTrapEvent(
     return;
   }
 
+  const targets = event.targets ?? [];
+  if (targets.length > 0) {
+    playRandomSound(context.scene, TRAP_TRIGGER_SOUNDS);
+  }
   const animations: Array<Promise<void>> = [];
-  for (const target of event.targets ?? []) {
+  for (const target of targets) {
     const sprite = context.getSprite(target.targetId);
     if (!sprite) {
       continue;

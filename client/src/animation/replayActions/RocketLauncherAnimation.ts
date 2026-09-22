@@ -2,7 +2,7 @@ import type { ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
 import { playRandomSound } from "../soundPlayer";
 
-const ROCKET_SOUNDS = ["explosion_medium", "explosion_small"];
+const ROCKET_SOUNDS = ["explosion_large", "explosion_medium", "explosion_small"];
 const EXPLOSION_DURATION = 520;
 
 export async function animateRocketLauncherEvent(

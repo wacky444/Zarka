@@ -3,7 +3,7 @@ import type { MoveReplayContext } from "../MoveReplayContext";
 import type { SkinContainer } from "../../ui/PlayerSkinRenderer";
 import { playRandomSound } from "../soundPlayer";
 
-const FIRE_SOUNDS = ["hurt"];
+const FIRE_SOUNDS = ["fire_lighting", "hurt"];
 const FIRE_COLOR = 0xf97316;
 const FIRE_TEXT_COLOR = "#fb923c";
 

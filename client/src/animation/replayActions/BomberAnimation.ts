@@ -3,7 +3,7 @@ import type { MoveReplayContext } from "../MoveReplayContext";
 import type { SkinContainer } from "../../ui/PlayerSkinRenderer";
 import { playRandomSound } from "../soundPlayer";
 
-const BOMBER_SOUNDS = ["explosion_medium", "explosion_small"];
+const BOMBER_SOUNDS = ["explosion_large", "explosion_medium", "explosion_small"];
 const BLAST_COLOR = 0xfacc15;
 const DAMAGE_TEXT_COLOR = "#f87171";
 
