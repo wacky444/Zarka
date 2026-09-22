@@ -618,7 +618,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       cost: 3,
       maxRepetitions: 1,
       description:
-        "Permite elegir la dirección o asustar a un segundo personaje."
+        "Permite elegir la dirección para un personaje o asustar a un segundo personaje, pero no ambas cosas."
     },
     texture: "Board Game Icons",
     frame: "character_lift.png",

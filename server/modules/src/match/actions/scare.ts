@@ -8,8 +8,7 @@ import type {
   Axial,
   HexTileSnapshot,
 } from "@shared";
-import { neighbors } from "@shared";
-import { ActionLibrary } from "@shared";
+import { ActionLibrary, getSkillEffectTotal, neighbors } from "@shared";
 import {
   isTargetProtected,
   resolvePlanDestination,
@@ -76,7 +75,7 @@ export class ScareAction extends BaseAction {
         participant.character,
         participant.plan,
         ActionLibrary.scare,
-        false
+        true
       );
       const selection = collectTargets(actionId, participant, match, {
         allowMultiple: extraExecutions > 0,
@@ -88,7 +87,10 @@ export class ScareAction extends BaseAction {
       const requestedTargets = participant.plan.targetPlayerIds ?? [];
       const pushingTwoPlayers =
         extraExecutions > 0 && requestedTargets.length > 1;
-      const chosenDestination = resolvePlanDestination(match, participant.plan);
+      const chosenDestination =
+        extraExecutions > 0 && !pushingTwoPlayers
+          ? resolvePlanDestination(match, participant.plan)
+          : undefined;
       this.clearPlan(participant);
       if (!origin || selection.length === 0) {
         continue;
@@ -98,6 +100,23 @@ export class ScareAction extends BaseAction {
       for (const targetSelection of targets) {
         const target = match.playerCharacters?.[targetSelection.id];
         if (!target) {
+          continue;
+        }
+        if (getSkillEffectTotal(target, "scare_immunity") > 0) {
+          const action: ReplayActionDone = {
+            actionId,
+            originLocation: origin,
+          };
+          const targetEvent: ReplayActionTarget = {
+            targetId: targetSelection.id,
+            metadata: { immuneToScare: true },
+          };
+          events.push({
+            kind: "player",
+            actorId: participant.playerId,
+            action,
+            targets: [targetEvent],
+          });
           continue;
         }
         const destination = pushingTwoPlayers

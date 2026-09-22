@@ -341,7 +341,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.emitMainActionChange();
   };
   private readonly handleLocationPickRequest = () => {
-    if (!this.mainActionSelection || !this.selectedActionSupportsLocation()) {
+    if (
+      !this.mainActionSelection ||
+      !this.selectedMainActionSupportsLocation()
+    ) {
       return;
     }
     this.emit("main-action-location-request");
@@ -3670,7 +3673,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private refreshLocationSelectorState() {
     this.lastMainActionItem = this.mainActionDropdown.getSelectedItem() ?? null;
-    const supports = this.selectedActionSupportsLocation();
+    const supports = this.selectedMainActionSupportsLocation();
     this.locationSelector.setVisible(supports);
     this.locationSelector.setActive(supports);
     if (!supports) {
@@ -3722,7 +3725,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const shouldShow =
       this.mainActionSelection === "scare" &&
       this.mainExtraExecutions > 0 &&
-      this.mainPlayerOptions.length > 1;
+      this.mainPlayerOptions.length > 1 &&
+      this.mainActionTarget === null;
     this.scareSecondPlayerSelector.setVisible(shouldShow);
     this.scareSecondPlayerSelector.setActive(shouldShow);
     if (!shouldShow) {
@@ -4131,6 +4135,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (normalized && this.mainActionTarget !== null) {
       this.setMainActionTarget(null, false);
     }
+    this.refreshLocationSelectorState();
     if (emit) {
       this.emitMainActionChange();
     }
@@ -4763,6 +4768,15 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     return this.lastMainActionItem?.tags?.includes("Ranged") ?? false;
   }
 
+  private selectedMainActionSupportsLocation(): boolean {
+    const isScare = this.mainActionSelection === "scare";
+    return (
+      this.selectedActionSupportsLocation() &&
+      (!isScare || this.mainExtraExecutions > 0) &&
+      (!isScare || this.scareSecondTargetPlayerId === null)
+    );
+  }
+
   private selectedActionSupportsSingleTarget() {
     return this.lastMainActionItem?.tags?.includes("SingleTarget") ?? false;
   }
@@ -4857,7 +4871,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private emitMainActionChange() {
-    const supportsLocation = this.selectedActionSupportsLocation();
+    const supportsLocation = this.selectedMainActionSupportsLocation();
     const supportsPlayer = this.selectedActionSupportsSingleTarget();
     const supportsItems = this.selectedActionSupportsItemPriority();
     const supportsExtra = this.selectedActionSupportsExtraExecution();
@@ -5082,7 +5096,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   setMainActionTarget(target: Axial | null, emit = false): boolean {
-    const supports = this.selectedActionSupportsLocation();
+    const supports = this.selectedMainActionSupportsLocation();
     if (!supports) {
       const changed = this.mainActionTarget !== null;
       if (changed) {

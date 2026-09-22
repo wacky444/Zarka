@@ -349,6 +349,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Detected: "Detectado",
   Affected: "Afectado",
   "was affected": "fue afectado",
+  "is immune to scare": "es inmune a Asustar",
   recovered: "recuperó",
   lost: "perdió",
   "detected nobody": "no detectó a nadie",

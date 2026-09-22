@@ -406,8 +406,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
     description: "No puede ser asustado si no da su consentimiento",
     cost: 6,
     max: 1,
-    implemented: false,
-    category: "defense"
+    implemented: true,
+    category: "defense",
+    effect: {
+      type: "scare_immunity",
+      value: 1
+    }
   },
   vengeful: {
     id: "vengeful",

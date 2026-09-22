@@ -865,6 +865,7 @@ export class CharacterPanelLogView {
                   movedFrom?: unknown;
                   energyLost?: unknown;
                   energyRestored?: unknown;
+                  immuneToScare?: unknown;
                 };
             const movedTo = readAxialMetadata(metadata?.movedTo);
             const energyLost =
@@ -875,6 +876,10 @@ export class CharacterPanelLogView {
               typeof metadata?.energyRestored === "number"
                 ? metadata.energyRestored
                 : null;
+            if (metadata?.immuneToScare === true) {
+              lines.push(`${targetName} ${t("is immune to scare")}`);
+              continue;
+            }
             if (healed && healed > 0) {
               lines.push(
                 `${targetName} ${t("recovered")} ${healed} ${t("health")}`
