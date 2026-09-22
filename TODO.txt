@@ -55,6 +55,7 @@
 
 - no steal animation
 
+- ending screen says bot2 won, not team?
 
  ### Localhost
 
