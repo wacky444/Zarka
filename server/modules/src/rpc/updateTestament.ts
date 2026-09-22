@@ -6,6 +6,7 @@ import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { isCharacterDead } from "../utils/playerCharacter";
+import { isBotId } from "../match/botAI";
 
 export function updateTestamentRpc(
   ctx: nkruntime.Context,
@@ -69,7 +70,9 @@ export function updateTestamentRpc(
         nkruntime.Codes.INVALID_ARGUMENT,
       );
     }
-    if (match.players.indexOf(recipientId) === -1) {
+    const isMatchParticipant =
+      match.players.indexOf(recipientId) !== -1 || isBotId(recipientId);
+    if (!isMatchParticipant) {
       throw makeNakamaError(
         "invalid_testament_recipient",
         nkruntime.Codes.INVALID_ARGUMENT,
