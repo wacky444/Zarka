@@ -226,6 +226,36 @@ export function hasCarriedItem(
   );
 }
 
+export type DamageSource =
+  | "physical"
+  | "bullet"
+  | "arrow"
+  | "explosive"
+  | "fire"
+  | "poison"
+  | "virus"
+  | "chainsaw"
+  | "chemical";
+
+export function getInventoryDamageReduction(
+  character: PlayerCharacter,
+  source: DamageSource
+): number {
+  if (!hasCarriedItem(character, "bulletproof_vest")) {
+    return 0;
+  }
+  if (
+    source === "fire" ||
+    source === "poison" ||
+    source === "virus" ||
+    source === "chainsaw" ||
+    source === "chemical"
+  ) {
+    return 0;
+  }
+  return source === "bullet" || source === "arrow" ? 3 : 1;
+}
+
 export function consumeCarriedItem(
   character: PlayerCharacter,
   itemId: string,

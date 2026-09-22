@@ -85,9 +85,9 @@ export const ItemLibrary: ItemLibraryDefinition = {
     consumable: false,
     weight: 5,
     description:
-      "Reduce en 1 el daño recibido y en 3 si procede de balas o flechas. No protege frente a fuego, veneno, virus, motosierra ni arma química.",
+      "Reduce en 1 el daño recibido y en 3 si procede de balas o flechas mientras permanezca en el inventario. No protege frente a fuego, veneno, virus, motosierra ni arma química.",
     sellValue: 20,
-    notes: ["No se puede robar mientras está equipado."],
+    notes: ["No se puede robar."],
     tags: ["Protective", "Wearable"],
   },
   bandolier: {

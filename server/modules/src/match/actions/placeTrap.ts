@@ -17,6 +17,7 @@ import {
 import {
   applyHealthDelta,
   consumeCarriedItem,
+  getInventoryDamageReduction,
   resolvePlanDestination,
   type PlannedActionParticipant,
 } from "./utils";
@@ -300,9 +301,13 @@ export function triggerTrapsForTransition(
     if (isCharacterDead(character)) {
       break;
     }
+    const damage = Math.max(
+      0,
+      trap.damage - getInventoryDamageReduction(character, "physical"),
+    );
     const outcome = applyHealthDelta(
       character,
-      -Math.max(0, trap.damage),
+      -damage,
       false,
       logger,
     );

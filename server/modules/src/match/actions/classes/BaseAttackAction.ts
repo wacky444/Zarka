@@ -15,6 +15,8 @@ import {
   buildGuardedEffectMask,
   isTargetProtected,
   resolveGuardedDamage,
+  getInventoryDamageReduction,
+  type DamageSource,
   type PlannedActionParticipant,
 } from "../utils";
 import { ActionLibrary, getDamageReduction, getDodgeSuccessChance } from "@shared";
@@ -66,6 +68,14 @@ export abstract class BaseAttackAction extends BaseAction {
     return undefined;
   }
 
+  protected getDamageSource(
+    participant: PlannedActionParticipant
+  ): DamageSource {
+    return participant.plan.actionId === "chainsaw_attack"
+      ? "chainsaw"
+      : "physical";
+  }
+
   protected processRoster(
     roster: PlannedActionParticipant[],
     match: MatchRecord
@@ -115,7 +125,12 @@ export abstract class BaseAttackAction extends BaseAction {
           usableExtra
         );
         const guardedDamage = resolveGuardedDamage(baseDamage, guarded);
-        const damageReduction = getDamageReduction(target);
+        const damageReduction =
+          getDamageReduction(target) +
+          getInventoryDamageReduction(
+            target,
+            this.getDamageSource(participant)
+          );
         const dealtAmount = Math.max(0, guardedDamage - damageReduction);
         const {
           result: healthChange,

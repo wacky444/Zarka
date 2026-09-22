@@ -424,6 +424,9 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   Medicamento: "Medicine",
   Antídoto: "Antidote",
   "Chaleco antibalas": "Bulletproof vest",
+  "Reduce en 1 el daño recibido y en 3 si procede de balas o flechas mientras permanezca en el inventario. No protege frente a fuego, veneno, virus, motosierra ni arma química.":
+    "Reduces damage received by 1, or by 3 when it comes from bullets or arrows, while kept in the inventory. Does not protect against fire, poison, virus, chainsaws, or chemical weapons.",
+  "No se puede robar.": "Cannot be stolen.",
   Bandolera: "Bandolier",
   Madera: "Wood",
   Pincho: "Spike",

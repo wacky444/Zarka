@@ -19,6 +19,7 @@ import {
   buildGuardedEffectMask,
   consumeCarriedItem,
   hasCarriedItem,
+  getInventoryDamageReduction,
   isTargetProtected,
   mergeCharacterState,
   resolveGuardedDamage,
@@ -102,7 +103,9 @@ export class ShootHarpoonAction extends BaseAction {
         const perShotDamage = distance === 0 ? 7 : 6;
         const baseDamage = perShotDamage * (1 + extraExecutions);
         const guardedDamage = resolveGuardedDamage(baseDamage, guarded);
-        const damageReduction = getDamageReduction(target);
+        const damageReduction =
+          getDamageReduction(target) +
+          getInventoryDamageReduction(target, "arrow");
         const dealtAmount = Math.max(0, guardedDamage - damageReduction);
 
         const {

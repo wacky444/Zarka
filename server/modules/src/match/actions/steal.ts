@@ -110,6 +110,7 @@ function getCarriedItemTypes(character: PlayerCharacter): ItemId[] {
     if (
       typeof stack.itemId === "string" &&
       stack.itemId !== "zarkans" &&
+      stack.itemId !== "bulletproof_vest" &&
       stack.itemId.length > 0 &&
       typeof stack.quantity === "number" &&
       stack.quantity > 0

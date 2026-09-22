@@ -15,6 +15,7 @@ import {
   applyHealthDelta,
   buildGuardedEffectMask,
   consumeCarriedItem,
+  getInventoryDamageReduction,
   isTargetProtected,
   mergeCharacterState,
   resolveGuardedDamage,
@@ -66,7 +67,9 @@ export class ChemicalWeaponAction extends BaseAction {
 
         const guarded = isTargetProtected(target);
         const guardedDamage = resolveGuardedDamage(baseDamage, guarded);
-        const damageReduction = getDamageReduction(target);
+        const damageReduction =
+          getDamageReduction(target) +
+          getInventoryDamageReduction(target, "chemical");
         const dealtAmount = Math.max(0, guardedDamage - damageReduction);
 
         const {

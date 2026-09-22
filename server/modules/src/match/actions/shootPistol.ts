@@ -19,6 +19,7 @@ import {
   buildGuardedEffectMask,
   consumeCarriedItem,
   hasCarriedItem,
+  getInventoryDamageReduction,
   isTargetProtected,
   mergeCharacterState,
   resolveGuardedDamage,
@@ -106,7 +107,9 @@ export class ShootPistolAction extends BaseAction {
         const guarded = isTargetProtected(target);
         const baseDamage = 10 * (1 + extraExecutions);
         const guardedDamage = resolveGuardedDamage(baseDamage, guarded);
-        const damageReduction = getDamageReduction(target);
+        const damageReduction =
+          getDamageReduction(target) +
+          getInventoryDamageReduction(target, "bullet");
         const dealtAmount = Math.max(0, guardedDamage - damageReduction);
 
         const {

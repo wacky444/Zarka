@@ -5,7 +5,11 @@ import type {
   ReplayEvent,
 } from "@shared";
 import type { MatchRecord } from "../models/types";
-import { applyHealthDelta, type PlannedActionKey } from "./actions/utils";
+import {
+  applyHealthDelta,
+  getInventoryDamageReduction,
+  type PlannedActionKey,
+} from "./actions/utils";
 import { isCharacterDead } from "../utils/playerCharacter";
 
 export function applyFireDamageBeforeAction(
@@ -61,7 +65,11 @@ export function applyFireDamageBeforeAction(
       if (!plan || plan.actionId !== actionId) {
         continue;
       }
-      const outcome = applyHealthDelta(character, -2, true, logger);
+      const damage = Math.max(
+        0,
+        2 - getInventoryDamageReduction(character, "fire"),
+      );
+      const outcome = applyHealthDelta(character, -damage, true, logger);
       character = outcome.character;
       characters[playerId] = character;
       const damageTaken = Math.max(0, -outcome.result.delta);

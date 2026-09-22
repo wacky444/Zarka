@@ -20,6 +20,7 @@ import {
   consumeCarriedItem,
   isTargetProtected,
   mergeCharacterState,
+  getInventoryDamageReduction,
   resolveGuardedDamage,
   type PlannedActionParticipant,
 } from "./utils";
@@ -94,7 +95,9 @@ export class ShootRocketLauncherAction extends BaseAction {
 
         const guarded = isTargetProtected(character);
         const guardedDamage = resolveGuardedDamage(ROCKET_DAMAGE, guarded);
-        const damageReduction = getDamageReduction(character);
+        const damageReduction =
+          getDamageReduction(character) +
+          getInventoryDamageReduction(character, "explosive");
         const dealtAmount = Math.max(0, guardedDamage - damageReduction);
         const outcome = applyHealthDelta(character, -dealtAmount);
         mergeCharacterState(character, outcome.character);

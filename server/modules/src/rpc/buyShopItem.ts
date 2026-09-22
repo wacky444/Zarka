@@ -12,7 +12,10 @@ import type { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
-import { applyHealthDelta } from "../match/actions/utils";
+import {
+  applyHealthDelta,
+  getInventoryDamageReduction,
+} from "../match/actions/utils";
 import { isCharacterDead } from "../utils/playerCharacter";
 import { tailorPlayerCharactersForViewer } from "../utils/matchView";
 
@@ -329,7 +332,17 @@ export function buyShopItemRpc(
         if (!candidate) {
           continue;
         }
-        const outcome = applyHealthDelta(candidate, -5, true, undefined, true);
+        const damage = Math.max(
+          0,
+          5 - getInventoryDamageReduction(candidate, "explosive"),
+        );
+        const outcome = applyHealthDelta(
+          candidate,
+          -damage,
+          true,
+          undefined,
+          true,
+        );
         characters[playerId] = outcome.character;
         targetDamages[playerId] = Math.max(0, -outcome.result.delta);
         if (outcome.event) {
