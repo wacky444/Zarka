@@ -6,13 +6,14 @@ Add a guided, deterministic tutorial that teaches the core Zarka loop through a 
 
 The existing **Tutorial** menu button will eventually start this flow. This document only specifies the feature; it does not implement the button action.
 
-The tutorial is the onboarding gate for new profiles. Until the tutorial is completed:
+The tutorial is the onboarding gate for profiles. Until the tutorial is completed:
 
 - **Create Match** is disabled.
-- **Join Match** and other normal match-entry options are disabled.
+- **List Matches** is disabled.
+- **My Matches** is disabled.
 - The player may enter or restart the tutorial.
 
-After the final victory and recap, save a tutorial-completed flag in the player profile. The profile flag should be loaded when the main menu opens so the normal match options become available on later sessions. The server must enforce this gate for match creation and joining; disabling client buttons alone is not sufficient.
+After the authoritative final victory, save a tutorial-completed flag in the player profile before showing the recap. A missing completion flag means the profile must complete the tutorial; existing profiles are not grandfathered in. The profile flag should be loaded when the main menu opens so the normal match options become available on later sessions. The server must enforce this gate for normal match creation and joining; disabling client buttons alone is not sufficient.
 
 ## Tutorial scenario
 
@@ -21,7 +22,7 @@ After the final victory and recap, save a tutorial-completed flag in the player 
 - Fixed starting positions, item placement, health, effort, zarkans, and turn schedule.
 - Only the actions and skills needed for the current lesson are enabled.
 - The bot is deterministic. It performs the expected action for the current step and does not make strategic decisions that could invalidate the lesson.
-- The tutorial advances through explicit steps. A step is completed by an authoritative game event, not merely by a client button click.
+- The tutorial advances through explicit steps. Gameplay steps complete from authoritative game events. Presentation steps, such as opening Chat or cell information, are tracked by the client tutorial controller and do not require server validation.
 - The bot uses the existing match chat channel to send instructional messages. Chat messages should appear as unread until the player opens the Chat tab.
 - The tutorial ends with the bot dying on the scheduled destruction cell and the player receiving the normal victory flow.
 
@@ -62,11 +63,11 @@ The final layout must allow the player to move away after being Scared, move bac
 - Current-cell information was opened.
 - Nearby-cell information was opened.
 
-**Bot message:**
+**Tutorial instruction (not a chat message):**
 
 > Look around first. Knowing your current cell and nearby cells is essential before choosing an action.
 
-The message should be sent before the player is expected to open Chat, so the unread indicator teaches the player where communication appears.
+Do not send a bot chat message during this step. The first bot chat message should be sent in Step 4, when the bot enters the player’s cell and makes its false team claim.
 
 ### Step 2: Choose skills
 
@@ -77,9 +78,9 @@ Enable only the relevant implemented skills:
 - `vitality` for more maximum health.
 - `strength2` for reduced effort on knife, bat, and axe attacks.
 
-The user-facing explanation should say “more HP” and “make axe attacks cheaper.” If the intended lesson is reduced incoming axe damage rather than cheaper axe attacks, use `resilience2` instead and update the wording accordingly; the current skill library defines `strength2` as an effort discount, not damage reduction.
+The user-facing explanation should say “more HP” and “make axe attacks cost less energy.” `strength2` is the intended axe lesson; it reduces the effort cost of axe attacks rather than reducing damage.
 
-Require the player to purchase/select both skills, or explicitly choose one of the two if the tutorial is intended to demonstrate choice rather than a fixed build. The recommended first version requires both so later steps are deterministic.
+Require the player to select both skills so later steps are deterministic.
 
 **Completion events:**
 
@@ -129,7 +130,7 @@ The item order should be controlled so the player learns that searching reveals 
 
 **Purpose:** Teach feeding, shared cells, team claims, and the danger of trusting another player.
 
-1. Require the player to use Food on the bot or otherwise complete the existing Feed interaction.
+1. Require the player to use Food on themselves through the existing Feed interaction.
 2. Script the bot to move into the player’s current cell on the next relevant turn.
 3. Have the bot send a chat message claiming:
 
@@ -177,7 +178,7 @@ The bot’s chat claim must be false. The Detective result should be private to 
 
 **Purpose:** Teach turn planning and action ordering.
 
-The player must have the axe and enough effort to select `axe_attack`. The bot must have Scare available and be configured to scare the player during the same turn. The final player Scare must consume exactly one extra power/extra execution, including the existing additional 3-effort cost, and use the selected-destination mode. The tutorial should not use the two-target Scare upgrade in this step.
+The player must have the axe and enough effort to select `axe_attack`. The bot must have Scare available and be configured to scare the player during the same turn. The tutorial fixture must make the bot’s Scare resolve before the player’s Axe attack. The selected-destination Scare upgrade is not used in this step; it is taught in Step 7.
 
 Require the player to:
 
@@ -211,8 +212,8 @@ This should be a scripted, deterministic Scare destination so the result is unde
 5. Require the player to spend exactly one extra power/extra execution, including the additional 3-effort cost. Explain that this changes Scare from random movement to a selectable destination for one target.
 6. Require the player to select the doomed cell as the bot’s destination.
 7. Advance the turn so the cell is destroyed.
-6. Apply the normal environmental damage and death handling.
-7. Finish through the normal victory overlay and report flow.
+8. Apply the normal environmental damage and death handling.
+9. Finish through the normal victory overlay and report flow.
 
 The bot should be unable to escape during this final lesson. The player must see the warning before the final action, rather than learning about destruction only after it happens.
 
@@ -228,11 +229,11 @@ After the bot dies:
 - Explain that the player won by combining information, preparation, positioning, and timing.
 - Offer a concise recap of the lessons.
 - Provide a return-to-menu control.
-- Do not add the tutorial match to the normal match-history list unless tutorial history is explicitly desired.
+- Run the normal victory and report pipeline for the tutorial match. Mark the match as tutorial data so the report remains identifiable if ordinary multiplayer match lists filter tutorial records.
 
 ## Step controller design
 
-Represent the tutorial as a finite state machine rather than a collection of client-only booleans. Suggested steps:
+Represent the tutorial as a finite state machine rather than a collection of unrelated client-only booleans. Gameplay state remains authoritative in the match; the client tutorial controller tracks presentation milestones such as opening a panel or reading a message. Suggested steps:
 
 ```text
 map_pan
@@ -250,7 +251,7 @@ plan_axe_attack
 resolve_bot_scare
 return_to_bot
 observe_destruction_warning
-force_bot_to_doomed_cell
+scare_bot_to_doomed_cell
 resolve_destruction
 victory_recap
 ```
@@ -265,20 +266,22 @@ Each step should define:
 - Whether the player may replay or undo the step.
 - The next step transition.
 
-The server should own the authoritative step and validate tutorial-specific requirements. The client may show guidance and highlight controls, but it must not be able to mark a lesson complete by sending an arbitrary step number.
+The server should own normal gameplay state and action validation. The client tutorial controller may track presentation milestones, show guidance, and highlight controls without sending those milestones to the server for validation. The client must not be able to bypass normal server validation by marking gameplay actions complete locally.
 
 ## Match and bot requirements
 
 - Add explicit tutorial metadata to the match rather than detecting the tutorial from a match name.
 - Keep the tutorial match isolated from normal match creation, reports, and match-history limits.
 - Store tutorial completion in the player profile, using a server-authoritative profile field or account storage record.
-- Enforce the incomplete-tutorial gate on both normal match creation and normal match joining. Tutorial matches must remain exempt.
+- Treat a missing completion flag as incomplete; profiles must finish the tutorial before normal matchmaking.
+- Enforce the incomplete-tutorial gate on normal match creation and normal match joining. Tutorial matches must remain exempt.
+- Keep List Matches and My Matches disabled in the client while the profile is incomplete.
 - Make completion idempotent so reconnects or repeated victory notifications cannot corrupt the profile state.
-- Use a stable tutorial bot identity and deterministic scripted plans.
+- Use a stable logical tutorial bot name with a tutorial-session-specific runtime identity so concurrent tutorials cannot collide, and use deterministic scripted plans.
 - Ensure the bot cannot accidentally die, consume required items, or choose a different action before the intended lesson.
 - Keep unconscious/dead state and finalization authoritative through the normal match systems.
-- Reset or discard tutorial state when the player leaves, reloads, or restarts the tutorial.
-- If resume is supported, persist the tutorial step and scenario state together.
+- Discard the active tutorial session when the player deliberately leaves or restarts it.
+- On reconnect or browser reload during an active session, restore the tutorial match and let the client tutorial controller reconstruct its presentation step from the current gameplay state.
 - Disable unrelated shop entries, actions, skills, and selectors instead of merely hiding their descriptions.
 - Keep normal desktop and multiplayer behavior unchanged.
 
@@ -360,7 +363,7 @@ Provide a test-only entry point or environment-controlled runner that:
 5. Advances the deterministic turn schedule without sleeping between lessons.
 6. Verifies the expected state and replay/log events after every step.
 7. Completes the tutorial and verifies the profile completion flag.
-8. Verifies that normal Create Match and Join Match requests fail before completion and succeed after completion.
+8. Verifies that normal Create Match and Join Match requests fail before completion and succeed after completion; the browser test verifies List Matches and My Matches are disabled.
 9. Cleans up the test account, match, and stored test data.
 
 The runner should use a dedicated test user and match namespace or a cleanup-safe fixture. It must never grant tutorial completion to a real player account.
@@ -371,7 +374,7 @@ The runner should use a dedicated test user and match namespace or a cleanup-saf
 - Skills apply the expected health and axe-effort effects.
 - Search reveals the expected items and Pick Up adds the bandage, axe, and food.
 - Feed resolves once and the bot enters the expected cell.
-- Exactly one bot chat message is produced, and opening Chat clears the unread state.
+- Exactly one bot chat message is produced.
 - Detective costs the expected zarkans and privately reveals the bot’s opposing team.
 - The bot’s Scare resolves before the player’s Axe attack.
 - The final Scare consumes one extra execution and the additional 3 effort, then moves the bot to the selected destruction cell.
@@ -380,7 +383,7 @@ The runner should use a dedicated test user and match namespace or a cleanup-saf
 
 ### Log and error capture
 
-The test runner should collect server logs, client/browser console errors, and structured tutorial-step traces. Each trace entry should include:
+The combined test harness should collect server logs, browser console errors from the UI smoke test, and structured tutorial-step traces. The fast server test and browser smoke test may produce separate artifacts that are merged by the test report. Each trace entry should include:
 
 - Tutorial session ID.
 - Step ID.
@@ -395,12 +398,12 @@ A compact test report should include the first failing step, the relevant state 
 
 ### UI coverage split
 
-A server/integration runner cannot prove that a player actually panned the map or opened the Chat tab. Keep those checks in a small browser smoke test that drives the real Phaser UI and asserts:
+A server/integration runner cannot prove that a player actually panned the map or opened the Chat tab. Keep those presentation checks in a small browser smoke test that drives the real Phaser UI. The server integration test should validate gameplay events only; it does not need to validate client presentation milestones. The browser smoke test should assert:
 
 - The Tutorial button starts the flow.
 - The Chat tab shows an unread indicator and clears it when opened.
 - The cell information controls can be opened.
-- Disabled Create Match and Join Match controls remain visibly unavailable before completion.
+- Disabled Create Match, List Matches, and My Matches controls remain visibly unavailable before completion.
 - The victory recap enables normal match controls after completion.
 
 The fast integration test and the slower browser smoke test should share the same preset fixture and expected step IDs.
@@ -408,7 +411,7 @@ The fast integration test and the slower browser smoke test should share the sam
 ## Acceptance criteria
 
 - Selecting Tutorial starts the preset scenario and never creates a normal user match.
-- Create Match and Join Match remain unavailable to profiles without the saved completion flag.
+- Create Match, List Matches, and My Matches remain unavailable to profiles without the saved completion flag.
 - Completing the tutorial saves the completion flag in the profile, and the normal match options become available after reload or reconnect.
 - The server rejects normal match creation and joining while the completion flag is absent, regardless of client state.
 - The map is exactly the configured 2x2 layout with deterministic objects and positions.
@@ -421,7 +424,7 @@ The fast integration test and the slower browser smoke test should share the sam
 - Scare resolves before the planned Axe attack and visibly changes the outcome.
 - The final Scare requires one extra power/extra execution and its additional 3-effort cost, allowing the player to select the doomed destination.
 - The final destruction sequence ends the bot and uses the normal victory flow.
-- Reload/reconnect behavior does not duplicate messages or skip authoritative steps.
+- Reload/reconnect behavior does not duplicate messages or skip gameplay steps; presentation instructions may be shown again when the client reconstructs its local state.
 - Tutorial state cannot mutate a normal match.
 - English and Spanish tutorial text is localized.
 - Desktop and touch controls both complete the same steps.
@@ -475,16 +478,16 @@ Use these steps in order. Complete and verify one step before starting the next.
 
 **Verification:** Add or run a focused server test that creates the fixture twice and compares the relevant state fields. Confirm both runs are identical.
 
-### Phase 4: Add the authoritative step state machine
+### Phase 4: Add tutorial progress controllers
 
-1. Add a small tutorial state object to the tutorial match state.
-2. Implement one transition function that accepts an observed game event and returns the next step.
-3. Implement only the first step initially: map pan/current-cell/nearby-cell information.
-4. Reject invalid step transitions without changing the match.
+1. Add a small client tutorial controller with the ordered step IDs from this document.
+2. Let gameplay steps advance from normal authoritative match events received by the client.
+3. Let presentation steps advance from local UI events, such as panning the map or opening Chat.
+4. Keep normal server action validation unchanged; do not add a server RPC for presentation acknowledgements.
 5. Add the remaining steps one at a time in the order in this document.
-6. Keep step completion server-authoritative. The client may request an event, but it must not submit an arbitrary completed step.
+6. Make local progress transitions idempotent so repeated UI events do not skip steps.
 
-**Verification:** Test valid and invalid transitions for one step before adding the next step. Confirm a duplicate event does not advance twice.
+**Verification:** Test that invalid gameplay actions are still rejected by the normal server rules, while repeated presentation events do not advance the client controller more than once.
 
 ### Phase 5: Add deterministic bot behavior
 
@@ -501,7 +504,7 @@ Use these steps in order. Complete and verify one step before starting the next.
 
 1. Add one profile/account storage field for tutorial completion.
 2. Read it when the main menu is initialized.
-3. Disable normal Create Match and Join Match controls when it is false.
+3. Disable normal Create Match, List Matches, and My Matches controls when it is false.
 4. Leave Tutorial enabled when it is false.
 5. Add server-side rejection for normal create/join requests when it is false.
 6. Allow tutorial match creation regardless of the flag.
@@ -531,24 +534,24 @@ Use these steps in order. Complete and verify one step before starting the next.
 ### Phase 8: Add fast integration tests
 
 1. Create one test script for the server fixture.
-2. Drive the normal action/RPC payloads in the documented order.
+2. Drive the normal action/RPC payloads for gameplay steps in the documented order.
 3. Remove sleeps and animation waits in the test runner only.
-4. Assert state and event output after every step.
+4. Assert state and event output after every gameplay step. Leave map panning, panel opening, and unread-state checks to the browser smoke test.
 5. Capture server logs and fail on unexpected errors.
 6. Add the pre-completion and post-completion profile-gate assertions.
 7. Add cleanup in a `finally` block so failed runs do not leave tutorial matches behind.
 
-**Verification:** Run the same test at least three times. All runs must produce the same step sequence, action order, chat count, winner, and completion flag.
+**Verification:** Run the same test at least three times. All runs must produce the same gameplay step sequence, action order, chat count, winner, report, and completion flag.
 
 ### Phase 9: Add browser smoke coverage
 
 1. Start the tutorial through the real Tutorial button.
 2. Verify the 2x2 map is visible.
 3. Pan the map and open current/nearby cell information.
-4. Open Chat when the bot message is unread.
-5. Verify Create Match and Join Match are disabled before completion.
+4. Open Chat when the bot message is unread and verify the unread state clears.
+5. Verify Create Match, List Matches, and My Matches are disabled before completion.
 6. Complete the tutorial through the real controls.
-7. Verify the victory recap and that normal match controls become enabled afterward.
+7. Verify the victory recap, normal report flow, and that normal match controls become enabled afterward.
 
 **Verification:** Run desktop and touch-oriented smoke paths. Keep this suite small; detailed state validation belongs in the fast integration test.
 
