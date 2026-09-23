@@ -7,6 +7,7 @@ import {
   type SecondaryActionSelection,
   type ChatMessageViewModel
 } from "../ui/CharacterPanel";
+import { GameBoardRenderer } from "./GameBoardRenderer";
 import type { TurnService } from "../services/turnService";
 import { MatchChatService } from "../services/chatService";
 import {
@@ -35,10 +36,8 @@ import {
   type ReplaySnapshot,
   type GetReplayPayload,
   type MatchChatMessage,
-  getHexTileOffsets,
+  axialDistance,
   ItemLibrary,
-  DEFAULT_SKIN,
-  type ItemId,
   type SkillId,
   type UpgradeSkillPayload,
   type UpdateTestamentPayload,
@@ -50,12 +49,8 @@ import {
   playReplayEvents,
   type MoveReplayContext
 } from "../animation/moveReplay";
-import {
-  createFireTileAnimation,
-  type FireTileAnimation
-} from "../animation/FireTileAnimation";
-import { collectItemSpriteInfos, resolveItemTexture } from "../ui/itemIcons";
-import { ItemTooltipManager, composeItemDescription } from "../ui/ItemTooltip";
+import { collectItemSpriteInfos } from "../ui/itemIcons";
+import { ItemTooltipManager } from "../ui/ItemTooltip";
 import { CellContentsPanel } from "../ui/CellContentsPanel";
 import { HoverTooltip } from "../ui/HoverTooltip";
 import { TopBanner, type TopBannerPayload } from "../ui/TopBanner";
@@ -64,7 +59,6 @@ import {
   applyStoredVolume
 } from "../animation/soundPlayer";
 import { assetPath } from "../utils/assetPath";
-import { createSkinContainer, SkinContainer } from "../ui/PlayerSkinRenderer";
 import { AccountService } from "../services/AccountService";
 import { VictoryOverlay } from "../ui/VictoryOverlay";
 import { isAdminViewEnabled } from "../services/adminView";
@@ -90,24 +84,10 @@ type CachedReplay = {
 const MOBILE_LAYOUT_BREAKPOINT = 760;
 
 export class GameScene extends Phaser.Scene {
-  private static readonly TILE_WIDTH = 128;
-  private static readonly TILE_HEIGHT = 118;
-
   private cam!: Phaser.Cameras.Scene2D.Camera;
   private uiCam!: Phaser.Cameras.Scene2D.Camera;
   private currentMatch: MatchRecord | null = null;
-  private tilePositions: Record<string, { x: number; y: number }> = {};
-  private mapTileSprites: Array<{
-    tile: HexTile;
-    image: Phaser.GameObjects.Image;
-    skullImage?: Phaser.GameObjects.Image;
-    skullShiverTween?: Phaser.Tweens.Tween;
-  }> = [];
-  private trapVisuals: Phaser.GameObjects.Graphics[] = [];
-  private fireTileAnimations = new Map<string, FireTileAnimation>();
-  private playerSprites = new Map<string, SkinContainer>();
-  private playerNameLabels = new Map<string, Phaser.GameObjects.Text>();
-  private playerDizzyStars = new Map<string, Phaser.GameObjects.Container>();
+  private boardRenderer: GameBoardRenderer | null = null;
   private playerNameMap: Record<string, string> = {};
   private characterPanel: CharacterPanel | null = null;
   private characterPanelDesktopWidth = 0;
@@ -152,7 +132,6 @@ export class GameScene extends Phaser.Scene {
   private locationSelectionPointerId: number | null = null;
   private locationSelectionActionId: ActionId | null = null;
   private locationSelectionHoveredTileId: string | null = null;
-  private locationSelectionHoverText: Phaser.GameObjects.Text | null = null;
   private replayQueue: ReplayEvent[][] = [];
   private replayPlaying = false;
   private logReplayCache = new Map<number, CachedReplay>();
@@ -169,7 +148,6 @@ export class GameScene extends Phaser.Scene {
   private gridModalActive = false;
   private browserHistoryGuardInstalled = false;
   private browserHistoryGuardUrl: string | null = null;
-  private tileItemContainers = new Map<string, Phaser.GameObjects.Container>();
   private itemTooltip: ItemTooltipManager | null = null;
   private cellContentsPanel: CellContentsPanel | null = null;
   private hoverTooltip: HoverTooltip | null = null;
@@ -186,8 +164,6 @@ export class GameScene extends Phaser.Scene {
   private currentPlayerSkin: import("@shared").Skin | null = null;
   private playerSkinMap = new Map<string, import("@shared").Skin>();
   private accountService: AccountService | null = null;
-  private playerViewRange: number = 0;
-  private playerCoordForTinting: Axial | null = null;
   private victoryOverlay: VictoryOverlay | null = null;
   private reportTransitionStarted = false;
   private loadingOverlay: Phaser.GameObjects.Container | null = null;
@@ -530,6 +506,41 @@ export class GameScene extends Phaser.Scene {
       ) as AccountService | null;
     }
 
+    this.boardRenderer = new GameBoardRenderer(
+      this,
+      this.cam,
+      this.uiCam,
+      this.itemTooltip,
+      this.cellContentsPanel,
+      this.hoverTooltip,
+      {
+        getCurrentMatch: () => this.currentMatch,
+        getReplayView: () => this.replayView,
+        getCurrentUserId: () => this.currentUserId,
+        getPlayerSkin: (playerId) =>
+          this.playerSkinMap.get(playerId) ??
+          (playerId === this.currentUserId
+            ? (this.currentPlayerSkin ?? undefined)
+            : undefined),
+        getPlayerName: (playerId) => this.playerNameMap[playerId] ?? playerId,
+        getLocationSelection: () => ({
+          active: this.locationSelectionActive &&
+            this.locationSelectionActionId !== null,
+          actionId: this.locationSelectionActionId,
+          hoveredTileId: this.locationSelectionHoveredTileId,
+          pointerId: this.locationSelectionPointerId,
+          extraExecutions:
+            this.characterPanel?.getMainActionSelection().extraExecutions ?? 0,
+        }),
+        isPinchGestureInProgress: () => this.pinchGestureInProgress,
+        isLocationInRange: (actionId, coord, extraExecutions) =>
+          this.isLocationInRange(actionId, coord, extraExecutions),
+        onTileHover: (tileId) => this.setLocationSelectionHoveredTile(tileId),
+        onTilePick: (tile) => this.completeMainActionLocationPick(tile),
+        onPlayerCardClick: (playerId) => this.openPlayerCard(playerId),
+      },
+    );
+
     this.characterPanel = new CharacterPanel(this, 0, 0);
     this.characterPanelDesktopWidth = this.characterPanel.getPanelWidth();
     this.cam.ignore(this.characterPanel);
@@ -807,14 +818,8 @@ export class GameScene extends Phaser.Scene {
       this.cellContentsPanel?.destroy();
       this.cellContentsPanel = null;
       this.stopAutoAdvanceTimer();
-      for (const container of this.tileItemContainers.values()) {
-        container.destroy(true);
-      }
-      this.tileItemContainers.clear();
-      this.mapTileSprites = [];
-      this.clearTrapVisuals();
-      this.locationSelectionHoverText?.destroy();
-      this.locationSelectionHoverText = null;
+      this.boardRenderer?.destroy();
+      this.boardRenderer = null;
       this.itemTooltip?.destroy();
       this.itemTooltip = null;
       this.hoverTooltip?.destroy();
@@ -903,816 +908,24 @@ export class GameScene extends Phaser.Scene {
     return generated.map;
   }
 
-  private getCurrentPlayerViewRange(): number {
-    const match = this.replayView?.match ?? this.currentMatch;
-    if (!match || !this.currentUserId) {
-      return 0;
-    }
-    const character = match.playerCharacters?.[this.currentUserId];
-    const viewRange = character?.stats?.baseViewRange;
-    return typeof viewRange === "number" && isFinite(viewRange)
-      ? Math.max(0, Math.floor(viewRange))
-      : 0;
+  private renderMap(map: GameMap): void {
+    this.boardRenderer?.renderMap(map);
   }
 
-  private getCurrentRemoteViewCoord(): Axial | null {
-    if (this.replayView || !this.currentMatch || !this.currentUserId) {
-      return null;
-    }
-    const character = this.currentMatch.playerCharacters?.[this.currentUserId];
-    const currentTurn = this.currentMatch.current_turn ?? 0;
-    const remoteView = character?.remoteView;
-    if (!remoteView || remoteView.turn !== currentTurn) {
-      return null;
-    }
-    return remoteView.coord;
+  private renderPlayerCharacters(match: MatchRecord): void {
+    this.boardRenderer?.renderPlayerCharacters(match);
   }
 
-  private isOutOfViewRange(coord: Axial): boolean {
-    const remoteView = this.getCurrentRemoteViewCoord();
-    if (remoteView && remoteView.q === coord.q && remoteView.r === coord.r) {
-      return false;
-    }
-    if (!this.playerCoordForTinting) {
-      return false;
-    }
-    const distance = this.axialDistance(this.playerCoordForTinting, coord);
-    return distance > this.playerViewRange;
-  }
-
-  private updateTileTintState(
-    image: Phaser.GameObjects.Image,
-    tile: HexTile,
-    options: {
-      isLocationSelectionActive?: boolean;
-      isInActionRange?: boolean;
-      isHovered?: boolean;
-    } = {}
-  ): void {
-    const currentTurn =
-      this.replayView?.turn ?? this.currentMatch?.current_turn ?? 0;
-    const destructionTurn =
-      typeof tile.meta?.destructionTurn === "number"
-        ? tile.meta.destructionTurn
-        : undefined;
-    const isDestroyed =
-      tile.meta?.destroyed === true ||
-      (typeof destructionTurn === "number" && currentTurn >= destructionTurn);
-
-    if (isDestroyed) {
-      image.setTint(0x333333);
-      image.setAlpha(0.6);
-      image.setScale(1);
-      return;
-    }
-
-    const isOutOfRange = this.isOutOfViewRange(tile.coord);
-    const dimTint = 0x666666; // Darker gray for out-of-view tiles
-    const { isLocationSelectionActive, isInActionRange, isHovered } = options;
-
-    // Base: apply dim tint if out of view range
-    if (isOutOfRange) {
-      image.setTint(dimTint);
-      image.setAlpha(1);
-    } else {
-      image.clearTint();
-      image.setAlpha(1);
-    }
-
-    // If location selection is active, apply selection tints on top of dimness
-    if (isLocationSelectionActive) {
-      if (isInActionRange) {
-        image.setTint(isOutOfRange ? dimTint | 0x7dd3fc : 0x7dd3fc);
-      } else {
-        image.setTint(isOutOfRange ? dimTint | 0x334155 : 0x334155);
-        image.setAlpha(0.8);
-      }
-    }
-
-    // Hover state overrides selection tints
-    if (isHovered) {
-      const hoverTint = isInActionRange ? 0xfacc15 : 0xfb7185;
-      image.setTint(hoverTint);
-      image.setAlpha(1);
-      image.setScale(1.03);
-    } else {
-      image.setScale(1);
-    }
-  }
-
-  private clearMapTileSprites(): void {
-    for (const entry of this.mapTileSprites) {
-      entry.skullShiverTween?.remove();
-      entry.image.destroy();
-      entry.skullImage?.destroy();
-    }
-    this.mapTileSprites = [];
-    this.clearFireTileAnimations();
-    this.clearTrapVisuals();
-  }
-
-  private clearFireTileAnimations(): void {
-    for (const animation of this.fireTileAnimations.values()) {
-      for (const tween of animation.tweens) {
-        tween.remove();
-      }
-      animation.container.destroy(true);
-    }
-    this.fireTileAnimations.clear();
-  }
-
-  private renderFireTileAnimations(map: GameMap): void {
-    this.clearFireTileAnimations();
-    const currentTurn =
-      this.replayView?.turn ?? this.currentMatch?.current_turn ?? 0;
-    const nextTurn = currentTurn + 1;
-
-    for (const snapshot of map.tiles) {
-      const fireStartTurn =
-        typeof snapshot.meta?.fireStartTurn === "number"
-          ? snapshot.meta.fireStartTurn
-          : undefined;
-      const fireEndTurn =
-        typeof snapshot.meta?.fireEndTurn === "number"
-          ? snapshot.meta.fireEndTurn
-          : undefined;
-      const destructionTurn =
-        typeof snapshot.meta?.destructionTurn === "number"
-          ? snapshot.meta.destructionTurn
-          : undefined;
-      const isDestroyed =
-        snapshot.meta?.destroyed === true ||
-        (typeof destructionTurn === "number" && currentTurn >= destructionTurn);
-      if (
-        isDestroyed ||
-        fireStartTurn === undefined ||
-        fireEndTurn === undefined ||
-        nextTurn < fireStartTurn ||
-        nextTurn > fireEndTurn
-      ) {
-        continue;
-      }
-
-      const world = this.getTileWorldPosition(snapshot.id, snapshot.coord);
-      const animation = createFireTileAnimation(
-        this,
-        world.x,
-        world.y,
-        GameScene.TILE_WIDTH,
-        GameScene.TILE_HEIGHT,
-        2 + world.y / 1000,
-      );
-      this.uiCam.ignore(animation.container);
-      this.fireTileAnimations.set(snapshot.id, animation);
-    }
-  }
-
-  private clearTrapVisuals(): void {
-    for (const visual of this.trapVisuals) {
-      visual.destroy();
-    }
-    this.trapVisuals = [];
+  private renderItems(map: GameMap): void {
+    this.boardRenderer?.renderItems(map);
   }
 
   private renderTraps(traps: TrapRecord[] | undefined): void {
-    this.clearTrapVisuals();
-    for (const trap of traps ?? []) {
-      const from = this.getTileWorldPosition(trap.from.tileId, trap.from.coord);
-      const to = this.getTileWorldPosition(trap.to.tileId, trap.to.coord);
-      const midpoint = {
-        x: (from.x + to.x) / 2,
-        y: (from.y + to.y) / 2,
-      };
-      const visual = this.add.graphics();
-      visual.lineStyle(7, 0xd65858, 0.9);
-      visual.beginPath();
-      visual.moveTo(from.x, from.y);
-      visual.lineTo(to.x, to.y);
-      visual.strokePath();
-      visual.fillStyle(0xf97373, 1);
-      visual.fillCircle(midpoint.x, midpoint.y, 7);
-      visual.lineStyle(2, 0xffcccc, 1);
-      visual.strokeCircle(midpoint.x, midpoint.y, 7);
-      visual.setDepth(4);
-      this.uiCam.ignore(visual);
-      this.trapVisuals.push(visual);
-    }
+    this.boardRenderer?.renderTraps(traps);
   }
 
-  private renderMap(map: GameMap) {
-    this.clearMapTileSprites();
-    const tileW = GameScene.TILE_WIDTH;
-    const tileH = GameScene.TILE_HEIGHT;
-    const dx = tileW;
-    const dy = tileH;
-    const texture = this.textures.get("hex");
-    const sprites: Phaser.GameObjects.Image[] = [];
-    this.tilePositions = {};
-
-    const playerCoord = this.getCurrentPlayerCoord();
-    const viewRange = this.getCurrentPlayerViewRange();
-    this.playerCoordForTinting = playerCoord;
-    this.playerViewRange = viewRange;
-
-    const currentTurn =
-      this.replayView?.turn ?? this.currentMatch?.current_turn ?? 0;
-
-    for (const snapshot of map.tiles) {
-      let tile: HexTile;
-      try {
-        tile = HexTile.fromSnapshot(snapshot, CellLibrary);
-      } catch (error) {
-        console.warn("Invalid tile snapshot", error);
-        continue;
-      }
-      const frame = tile.frame ?? tile.cellType.sprite;
-      if (!texture.has(frame)) {
-        continue;
-      }
-      const col = tile.coord.q;
-      const row = tile.coord.r;
-      const rowOffset = row % 2 !== 0 ? dx / 2 : 0; // Hexagons are offset every other row
-      const x = col * dx + tileW + rowOffset;
-      const y = row * dy + tileH;
-      const img = this.add.image(x, y, "hex", frame);
-      img.setData("tile", tile);
-
-      const destructionTurn =
-        typeof tile.meta?.destructionTurn === "number"
-          ? tile.meta.destructionTurn
-          : undefined;
-      const warningTurn =
-        typeof tile.meta?.warningTurn === "number"
-          ? tile.meta.warningTurn
-          : undefined;
-      const isDestroyed =
-        tile.meta?.destroyed === true ||
-        (typeof destructionTurn === "number" && currentTurn >= destructionTurn);
-      const isWarning =
-        !isDestroyed &&
-        typeof warningTurn === "number" &&
-        typeof destructionTurn === "number" &&
-        currentTurn >= warningTurn &&
-        currentTurn < destructionTurn;
-
-      let skullImage: Phaser.GameObjects.Image | undefined;
-      let skullShiverTween: Phaser.Tweens.Tween | undefined;
-      if (isWarning && this.textures.exists("board_icon_skull")) {
-        skullImage = this.add.image(x + 35, y - 30, "board_icon_skull");
-        skullImage.setDisplaySize(28, 28);
-        skullImage.setDepth(10);
-        if (destructionTurn - currentTurn === 1) {
-          skullShiverTween = this.tweens.add({
-            targets: skullImage,
-            x: x + 38,
-            y: y - 28,
-            angle: 6,
-            duration: 90,
-            ease: "Sine.easeInOut",
-            yoyo: true,
-            repeat: -1
-          });
-        }
-        sprites.push(skullImage);
-      }
-
-      // Apply base tint (view range dimming)
-      this.updateTileTintState(img, tile);
-
-      img.setInteractive({ useHandCursor: false });
-      img.on(
-        Phaser.Input.Events.POINTER_OVER,
-        (pointer: Phaser.Input.Pointer) => {
-          this.setLocationSelectionHoveredTile(tile.id);
-          if (isWarning && typeof destructionTurn === "number") {
-            const turnsLeft = destructionTurn - currentTurn;
-            this.hoverTooltip?.show(pointer.x, pointer.y, {
-              title: "Incoming Destruction",
-              body: `Destroyed in ${turnsLeft} ${turnsLeft === 1 ? "turn" : "turns"}`
-            });
-          }
-        }
-      );
-      img.on(Phaser.Input.Events.POINTER_OUT, () => {
-        this.hoverTooltip?.hide();
-        if (this.locationSelectionHoveredTileId === tile.id) {
-          this.setLocationSelectionHoveredTile(null);
-        }
-      });
-      img.on(
-        Phaser.Input.Events.POINTER_UP,
-        (pointer: Phaser.Input.Pointer) => {
-          if (!this.locationSelectionActive || this.pinchGestureInProgress) {
-            return;
-          }
-          if (pointer.button !== 0) {
-            return;
-          }
-          if (
-            this.locationSelectionPointerId === null ||
-            pointer.id !== this.locationSelectionPointerId
-          ) {
-            return;
-          }
-          if (pointer.getDistance() > 15) {
-            return;
-          }
-          const tileData = img.getData("tile") as HexTile | undefined;
-          if (!tileData) {
-            return;
-          }
-          this.completeMainActionLocationPick(tileData);
-        }
-      );
-      sprites.push(img);
-      this.mapTileSprites.push({
-        tile,
-        image: img,
-        skullImage,
-        skullShiverTween
-      });
-      this.tilePositions[tile.id] = { x, y };
-    }
-
-    this.uiCam.ignore(sprites);
-    this.renderFireTileAnimations(map);
-
-    const gridWidth = map.cols * dx + tileW * 2 + dx / 2;
-    const gridHeight = map.rows * dy + tileH * 2 + dy / 2;
-    this.cam.setBounds(
-      -gridWidth / 2,
-      -gridHeight / 2,
-      gridWidth * 2,
-      gridHeight * 2
-    );
-    this.cam.centerOn(gridWidth / 2, gridHeight / 2);
-    this.registry.set("currentMatchMap", map);
-    this.renderItems(map);
-    this.renderTraps(
-      this.replayView?.snapshot.traps ?? this.currentMatch?.traps,
-    );
-  }
-
-  private getTileWorldPosition(
-    tileId: string,
-    coord: { q: number; r: number }
-  ): { x: number; y: number } {
-    const existing = this.tilePositions[tileId];
-    if (existing) {
-      return existing;
-    }
-    return this.axialToWorld(coord);
-  }
-
-  private axialToWorld(coord: { q: number; r: number }): {
-    x: number;
-    y: number;
-  } {
-    const tileW = GameScene.TILE_WIDTH;
-    const tileH = GameScene.TILE_HEIGHT;
-    const dx = tileW;
-    const dy = tileH;
-    const col = coord.q;
-    const row = coord.r;
-    const rowOffset = row % 2 !== 0 ? dx / 2 : 0;
-    const x = col * dx + tileW + rowOffset;
-    const y = row * dy + tileH;
-    return { x, y };
-  }
-
-  private renderPlayerCharacters(match: MatchRecord) {
-    if (!this.textures.exists("char")) {
-      return;
-    }
-
-    const characters = match.playerCharacters ?? {};
-    const tileGroups = new Map<
-      string,
-      { world: { x: number; y: number }; members: string[] }
-    >();
-    for (const [playerId, character] of Object.entries(characters)) {
-      if (!character || !character.position) {
-        continue;
-      }
-      const { tileId, coord } = character.position;
-      const world = this.getTileWorldPosition(tileId, coord);
-      const key = tileId ?? `${coord.q}:${coord.r}`;
-      const group = tileGroups.get(key);
-      if (group) {
-        group.members.push(playerId);
-      } else {
-        tileGroups.set(key, { world, members: [playerId] });
-      }
-    }
-
-    const seen = new Set<string>();
-    for (const { world, members } of tileGroups.values()) {
-      const sorted = [...members].sort();
-      const offsets = getHexTileOffsets(
-        sorted.length,
-        GameScene.TILE_WIDTH / 4
-      );
-      for (let index = 0; index < sorted.length; index += 1) {
-        const playerId = sorted[index];
-        const offset = offsets[index] ?? { x: 0, y: 0 };
-        const x = world.x + offset.x;
-        const y = world.y + offset.y;
-        const character = characters[playerId];
-        const conditions = character?.statuses?.conditions;
-        const isDead = Array.isArray(conditions)
-          ? conditions.indexOf("dead") !== -1
-          : false;
-        const isUnconscious = Array.isArray(conditions)
-          ? conditions.indexOf("unconscious") !== -1
-          : false;
-        const playerSkin =
-          this.playerSkinMap.get(playerId) ??
-          (playerId === this.currentUserId && this.currentPlayerSkin
-            ? this.currentPlayerSkin
-            : DEFAULT_SKIN);
-        let sprite = this.playerSprites.get(playerId);
-        if (!sprite || !sprite.active || sprite.scene !== this) {
-          sprite = createSkinContainer(this, x, y, playerSkin, 2);
-          sprite.setData("playerId", playerId);
-          sprite.setInteractive({ useHandCursor: true });
-          this.attachPlayerCardClickHandler(sprite, playerId);
-          this.uiCam.ignore(sprite);
-          this.playerSprites.set(playerId, sprite);
-        } else {
-          sprite.updateSkin(playerSkin, this.textures);
-        }
-        sprite.setPosition(x, y);
-        sprite.setVisible(true);
-        sprite.setDepth(5 + y / 1000);
-        sprite.setAngle(isDead ? -90 : isUnconscious ? -18 : 0);
-        if (isUnconscious && !isDead) {
-          this.ensureDizzyStars(playerId, sprite);
-        } else {
-          this.removeDizzyStars(playerId);
-        }
-
-        const name = this.playerNameMap[playerId] ?? playerId;
-        let label = this.playerNameLabels.get(playerId);
-        if (!label || !label.active || label.scene !== this) {
-          label = this.add.text(x, y, name, {
-            fontFamily: "Arial",
-            fontSize: "10px",
-            color: "#ffffff",
-            stroke: "#000000",
-            strokeThickness: 4,
-            resolution: 3
-          });
-          label.setOrigin(0.5, 0.5);
-          label.setDepth(6);
-          label.setInteractive({ useHandCursor: true });
-          this.attachPlayerCardClickHandler(label, playerId);
-          this.uiCam.ignore(label);
-          this.playerNameLabels.set(playerId, label);
-        }
-        label.setText(name);
-        label.setPosition(x, y);
-        label.setVisible(true);
-        this.positionNameLabel(label, sprite);
-        seen.add(playerId);
-      }
-    }
-
-    for (const [playerId, sprite] of this.playerSprites) {
-      if (!seen.has(playerId)) {
-        sprite.destroy();
-        this.playerSprites.delete(playerId);
-      }
-    }
-    for (const [playerId, label] of this.playerNameLabels) {
-      if (!seen.has(playerId)) {
-        label.destroy();
-        this.playerNameLabels.delete(playerId);
-      }
-    }
-    for (const [playerId] of this.playerDizzyStars) {
-      if (!seen.has(playerId)) {
-        this.removeDizzyStars(playerId);
-      }
-    }
-    // Ensure tile tinting reflects the current player's position/view
-    this.refreshAllTileTints();
-  }
-
-  private renderItems(map: GameMap) {
-    this.cellContentsPanel?.close();
-    this.itemTooltip?.hide();
-    for (const container of this.tileItemContainers.values()) {
-      container.destroy(true);
-    }
-    this.tileItemContainers.clear();
-
-    if (!Array.isArray(map.tiles) || map.tiles.length === 0) {
-      return;
-    }
-
-    const maxIcons = 6;
-    const iconsPerRow = 3;
-    const spacing = 28;
-    const verticalOffset = GameScene.TILE_HEIGHT * 0.35;
-    const matchItemsRaw =
-      this.replayView?.snapshot.items ?? this.currentMatch?.items;
-    const matchItems = Array.isArray(matchItemsRaw) ? matchItemsRaw : [];
-    const itemTypeById = new Map<string, ItemId>();
-    for (const entry of matchItems) {
-      if (!entry || typeof entry.item_id !== "string") {
-        continue;
-      }
-      if (typeof entry.item_type !== "string") {
-        continue;
-      }
-      itemTypeById.set(entry.item_id, entry.item_type);
-    }
-
-    for (const snapshot of map.tiles) {
-      const itemIds = Array.isArray(snapshot.itemIds) ? snapshot.itemIds : [];
-      if (itemIds.length === 0) {
-        continue;
-      }
-      const aggregated = new Map<ItemId, number>();
-      for (const id of itemIds) {
-        if (typeof id !== "string") {
-          continue;
-        }
-        const type = itemTypeById.get(id);
-        if (!type) {
-          continue;
-        }
-        const previous = aggregated.get(type) ?? 0;
-        aggregated.set(type, previous + 1);
-      }
-      if (aggregated.size === 0) {
-        continue;
-      }
-      const entries = Array.from(aggregated.entries());
-      entries.sort((a, b) => {
-        if (b[1] === a[1]) {
-          const defA = ItemLibrary[a[0] as keyof typeof ItemLibrary];
-          const defB = ItemLibrary[b[0] as keyof typeof ItemLibrary];
-          const nameA = defA?.name ?? a[0];
-          const nameB = defB?.name ?? b[0];
-          return nameA.localeCompare(nameB);
-        }
-        return b[1] - a[1];
-      });
-      const hasMoreItemTypes = entries.length > maxIcons;
-      const visibleEntries = entries.slice(
-        0,
-        hasMoreItemTypes ? maxIcons - 1 : maxIcons
-      );
-      const displayCount =
-        visibleEntries.length + (hasMoreItemTypes ? 1 : 0);
-      const world = this.getTileWorldPosition(snapshot.id, snapshot.coord);
-      const container = this.add.container(world.x, world.y + verticalOffset);
-      container.setDepth(4 + world.y / 1000);
-
-      const rows = Math.ceil(displayCount / iconsPerRow);
-      for (let row = 0; row < rows; row += 1) {
-        const rowStart = row * iconsPerRow;
-        const rowCount = Math.min(iconsPerRow, displayCount - rowStart);
-        const y = (row - (rows - 1) / 2) * spacing;
-        for (let col = 0; col < rowCount; col += 1) {
-          const index = rowStart + col;
-          const x = (col - (rowCount - 1) / 2) * spacing;
-          if (hasMoreItemTypes && index === visibleEntries.length) {
-            const hiddenCount = entries
-              .slice(visibleEntries.length)
-              .reduce((total, entry) => total + entry[1], 0);
-            const hiddenCountLabel =
-              hiddenCount > 99 ? "+99+" : `+${hiddenCount}`;
-            const moreBackground = this.add
-              .circle(0, 0, 13, 0x1d4ed8, 0.98)
-              .setStrokeStyle(2, 0xbfdbfe, 1)
-              .setInteractive({ useHandCursor: true });
-            const moreLabel = this.add
-              .text(0, 0, hiddenCountLabel, {
-                fontFamily: "Arial",
-                fontSize: hiddenCountLabel.length > 3 ? "8px" : "11px",
-                fontStyle: "bold",
-                color: "#ffffff",
-                stroke: "#0f172a",
-                strokeThickness: 2,
-                resolution: 3
-              })
-              .setOrigin(0.5);
-            moreBackground.on(
-              Phaser.Input.Events.POINTER_UP,
-              (
-                pointer: Phaser.Input.Pointer,
-                _localX: number,
-                _localY: number,
-                event?: Phaser.Types.Input.EventData
-              ) => {
-                event?.stopPropagation();
-                if (pointer.button !== 0 || pointer.getDistance() > 15) {
-                  return;
-                }
-                this.cellContentsPanel?.show(
-                  snapshot.coord,
-                  entries.map(([itemId, quantity]) => ({ itemId, quantity }))
-                );
-              }
-            );
-            moreBackground.on(Phaser.Input.Events.POINTER_OVER, () => {
-              this.input.setDefaultCursor("pointer");
-            });
-            moreBackground.on(Phaser.Input.Events.POINTER_OUT, () => {
-              this.resetDefaultCursor();
-            });
-            const moreButton = this.add.container(x, y, [
-              moreBackground,
-              moreLabel
-            ]);
-            container.add(moreButton);
-            continue;
-          }
-          const [itemType, quantity] = visibleEntries[index];
-          const definition =
-            ItemLibrary[itemType as keyof typeof ItemLibrary] ?? null;
-          if (!definition) {
-            continue;
-          }
-          const textureInfo = resolveItemTexture(definition);
-          if (!this.textures.exists(textureInfo.texture)) {
-            continue;
-          }
-          const tooltipBody = composeItemDescription(
-            definition.description,
-            definition.notes
-          );
-          const showTooltip = (pointer: Phaser.Input.Pointer) => {
-            if (pointer.button !== 0 && !pointer.wasTouch) {
-              return;
-            }
-            if (this.locationSelectionActive || this.pinchGestureInProgress) {
-              return;
-            }
-            if (pointer.getDistance() > 15) {
-              return;
-            }
-            const tooltipManager = this.itemTooltip;
-            tooltipManager?.show(
-              pointer.x,
-              pointer.y,
-              definition.name,
-              tooltipBody
-            );
-          };
-          const sprite = this.add.image(
-            x,
-            y,
-            textureInfo.texture,
-            textureInfo.frame
-          );
-          sprite.setScale(1);
-          sprite.setInteractive({ useHandCursor: true });
-          sprite.on(Phaser.Input.Events.POINTER_UP, showTooltip);
-          sprite.on(Phaser.Input.Events.POINTER_OVER, () => {
-            if (!this.locationSelectionActive) {
-              this.input.setDefaultCursor("pointer");
-            }
-          });
-          sprite.on(
-            Phaser.Input.Events.POINTER_OUT,
-            (pointer?: Phaser.Input.Pointer) => {
-              this.resetDefaultCursor();
-              if (!pointer?.wasTouch) {
-                this.itemTooltip?.hide();
-              }
-            }
-          );
-          container.add(sprite);
-          const capped =
-            quantity > 999 ? "999+" : quantity > 99 ? "99+" : `${quantity}`;
-          const label = this.add.text(x, y + 6, capped, {
-            fontFamily: "Arial",
-            fontSize: "12px",
-            color: "#ffffff",
-            stroke: "#000000",
-            strokeThickness: 3,
-            resolution: 3
-          });
-          label.setOrigin(0.5, 0);
-          label.setInteractive({ useHandCursor: true });
-          label.on(Phaser.Input.Events.POINTER_UP, showTooltip);
-          label.on(Phaser.Input.Events.POINTER_OVER, () => {
-            if (!this.locationSelectionActive) {
-              this.input.setDefaultCursor("pointer");
-            }
-          });
-          label.on(
-            Phaser.Input.Events.POINTER_OUT,
-            (pointer?: Phaser.Input.Pointer) => {
-              this.resetDefaultCursor();
-              if (!pointer?.wasTouch) {
-                this.itemTooltip?.hide();
-              }
-            }
-          );
-          container.add(label);
-        }
-      }
-
-      if (container.list.length === 0) {
-        container.destroy(true);
-        continue;
-      }
-
-      if (this.uiCam) {
-        this.uiCam.ignore(container);
-      }
-      this.tileItemContainers.set(snapshot.id, container);
-    }
-  }
-
-  private resetDefaultCursor() {
-    const cursor = this.locationSelectionActive ? "crosshair" : "default";
-    this.input.setDefaultCursor(cursor);
-  }
-
-  private positionNameLabel(
-    label: Phaser.GameObjects.Text,
-    sprite: SkinContainer
-  ) {
-    const offset = sprite.displayHeight / 2 + 12;
-    label.setPosition(sprite.x, sprite.y - offset);
-    const playerId = sprite.getData("playerId") as string | undefined;
-    if (playerId) {
-      this.positionDizzyStars(playerId, sprite);
-    }
-  }
-
-  private ensureDizzyStars(playerId: string, sprite: SkinContainer): void {
-    let effect = this.playerDizzyStars.get(playerId);
-    if (!effect || !effect.active || effect.scene !== this) {
-      const leftStar = this.add
-        .text(-8, 0, "✦", {
-          fontFamily: "Arial",
-          fontSize: "13px",
-          color: "#facc15",
-          stroke: "#000000",
-          strokeThickness: 2
-        })
-        .setOrigin(0.5, 0.5);
-      const rightStar = this.add
-        .text(8, 1, "✧", {
-          fontFamily: "Arial",
-          fontSize: "10px",
-          color: "#fde68a",
-          stroke: "#000000",
-          strokeThickness: 2
-        })
-        .setOrigin(0.5, 0.5);
-      effect = this.add.container(0, 0, [leftStar, rightStar]);
-      effect.setDepth(6.5);
-      this.uiCam.ignore(effect);
-      this.playerDizzyStars.set(playerId, effect);
-      this.tweens.add({
-        targets: leftStar,
-        angle: 25,
-        y: -3,
-        duration: 420,
-        ease: "Sine.easeInOut",
-        yoyo: true,
-        repeat: -1
-      });
-      this.tweens.add({
-        targets: rightStar,
-        angle: -30,
-        y: 4,
-        duration: 360,
-        delay: 100,
-        ease: "Sine.easeInOut",
-        yoyo: true,
-        repeat: -1
-      });
-    }
-    effect.setVisible(true);
-    this.positionDizzyStars(playerId, sprite);
-  }
-
-  private positionDizzyStars(playerId: string, sprite: SkinContainer): void {
-    const effect = this.playerDizzyStars.get(playerId);
-    if (!effect || !effect.active) {
-      return;
-    }
-    effect.setPosition(
-      sprite.x,
-      sprite.y - sprite.displayHeight / 2 - 5
-    );
-  }
-
-  private removeDizzyStars(playerId: string): void {
-    const effect = this.playerDizzyStars.get(playerId);
-    if (!effect) {
-      return;
-    }
-    effect.destroy(true);
-    this.playerDizzyStars.delete(playerId);
+  private renderFireTileAnimations(map: GameMap): void {
+    this.boardRenderer?.renderFireTileAnimations(map);
   }
 
   private enableDragPan() {
@@ -1945,7 +1158,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private animateEndGameCamera(winnerId?: string) {
-    const winner = winnerId ? this.playerSprites.get(winnerId) : undefined;
+    const winner = winnerId
+      ? this.boardRenderer?.getPlayerSprite(winnerId)
+      : undefined;
     const targetZoom = Math.max(this.cam.zoom, 1.25);
     const config: Phaser.Types.Tweens.TweenBuilderConfig = {
       targets: this.cam,
@@ -3504,14 +2719,17 @@ export class GameScene extends Phaser.Scene {
   private createMoveReplayContext(): MoveReplayContext {
     return {
       tweens: this.tweens,
-      axialToWorld: (coord) => this.axialToWorld(coord),
-      getSprite: (playerId) => this.playerSprites.get(playerId),
-      getLabel: (playerId) => this.playerNameLabels.get(playerId),
-      positionLabel: (label, sprite) => this.positionNameLabel(label, sprite),
+      axialToWorld: (coord) => this.boardRenderer!.axialToWorld(coord),
+      getSprite: (playerId) =>
+        this.boardRenderer?.getPlayerSprite(playerId),
+      getLabel: (playerId) =>
+        this.boardRenderer?.getPlayerLabel(playerId),
+      positionLabel: (label, sprite) =>
+        this.boardRenderer?.positionLabel(label, sprite),
       showDizzyStars: (playerId) => {
-        const sprite = this.playerSprites.get(playerId);
+        const sprite = this.boardRenderer?.getPlayerSprite(playerId);
         if (sprite) {
-          this.ensureDizzyStars(playerId, sprite);
+          this.boardRenderer?.ensureDizzyStars(playerId, sprite);
         }
       },
       currentMatch: this.replayView?.match ?? this.currentMatch,
@@ -3887,21 +3105,6 @@ export class GameScene extends Phaser.Scene {
     this.logTabActive = key === "log";
   }
 
-  private attachPlayerCardClickHandler(
-    gameObject: Phaser.GameObjects.GameObject,
-    playerId: string
-  ): void {
-    gameObject.on(
-      Phaser.Input.Events.POINTER_UP,
-      (pointer: Phaser.Input.Pointer) => {
-        if (pointer.button !== 0 || this.locationSelectionActive) {
-          return;
-        }
-        this.openPlayerCard(playerId);
-      }
-    );
-  }
-
   private openPlayerCard(playerId: string): void {
     if (!this.characterPanel) {
       return;
@@ -3910,29 +3113,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private getCurrentPlayerCoord(): Axial | null {
-    const match = this.replayView?.match ?? this.currentMatch;
-    if (!match || !this.currentUserId) {
-      return null;
-    }
-    return (
-      match.playerCharacters?.[this.currentUserId]?.position?.coord ?? null
-    );
-  }
-
-  private axialDistance(a: Axial, b: Axial): number {
-    const aCube = this.offsetToCube(a);
-    const bCube = this.offsetToCube(b);
-    const dx = Math.abs(aCube.x - bCube.x);
-    const dy = Math.abs(aCube.y - bCube.y);
-    const dz = Math.abs(aCube.z - bCube.z);
-    return Math.max(dx, dy, dz);
-  }
-
-  private offsetToCube(coord: Axial): { x: number; y: number; z: number } {
-    const x = coord.q - (coord.r - (coord.r & 1)) / 2;
-    const z = coord.r;
-    const y = -x - z;
-    return { x, y, z };
+    return this.boardRenderer?.getCurrentPlayerCoord() ?? null;
   }
 
   showTileDestroyedBanner(cell: Axial): void {
@@ -3956,9 +3137,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private refreshTileVisuals(): void {
-    for (const entry of this.mapTileSprites) {
-      this.updateTileTintState(entry.image, entry.tile);
-    }
+    this.boardRenderer?.refreshTileVisuals();
   }
 
   private isLocationInRange(
@@ -4009,7 +3188,7 @@ export class GameScene extends Phaser.Scene {
     if (!origin) {
       return false;
     }
-    const distance = this.axialDistance(origin, target);
+    const distance = axialDistance(origin, target);
     return allowed.indexOf(distance) !== -1;
   }
 
@@ -4021,95 +3200,12 @@ export class GameScene extends Phaser.Scene {
     this.refreshLocationSelectionVisuals();
   }
 
-  private refreshLocationSelectionVisuals() {
-    const active =
-      this.locationSelectionActive && !!this.locationSelectionActionId;
-    const actionId = this.locationSelectionActionId;
-    const hovered = this.locationSelectionHoveredTileId;
-    const selection = this.characterPanel?.getMainActionSelection();
-    const extraExecutions = selection?.extraExecutions ?? 0;
-    for (const entry of this.mapTileSprites) {
-      const { tile, image } = entry;
-      const isHovered = hovered === tile.id;
-      const isInRange =
-        active && actionId
-          ? this.isLocationInRange(actionId, tile.coord, extraExecutions)
-          : false;
-      this.updateTileTintState(image, tile, {
-        isLocationSelectionActive: active,
-        isInActionRange: isInRange,
-        isHovered
-      });
-    }
-    this.updateLocationSelectionHoverText();
+  private refreshLocationSelectionVisuals(): void {
+    this.boardRenderer?.refreshLocationSelectionVisuals();
   }
 
   private refreshAllTileTints(): void {
-    // Update stored player coord/range then refresh all tile tints
-    this.playerCoordForTinting = this.getCurrentPlayerCoord();
-    this.playerViewRange = this.getCurrentPlayerViewRange();
-    const active =
-      this.locationSelectionActive && !!this.locationSelectionActionId;
-    const actionId = this.locationSelectionActionId;
-    const hovered = this.locationSelectionHoveredTileId;
-    const selection = this.characterPanel?.getMainActionSelection();
-    const extraExecutions = selection?.extraExecutions ?? 0;
-
-    for (const entry of this.mapTileSprites) {
-      const { tile, image } = entry;
-      const isHovered = hovered === tile.id;
-      const isInRange =
-        active && actionId
-          ? this.isLocationInRange(actionId, tile.coord, extraExecutions)
-          : false;
-      this.updateTileTintState(image, tile, {
-        isLocationSelectionActive: active,
-        isInActionRange: isInRange,
-        isHovered
-      });
-    }
-  }
-
-  private updateLocationSelectionHoverText() {
-    if (!this.locationSelectionHoveredTileId) {
-      if (this.locationSelectionHoverText) {
-        this.locationSelectionHoverText.setVisible(false);
-      }
-      return;
-    }
-    const entry = this.mapTileSprites.find(
-      (candidate) => candidate.tile.id === this.locationSelectionHoveredTileId
-    );
-    if (!entry) {
-      if (this.locationSelectionHoverText) {
-        this.locationSelectionHoverText.setVisible(false);
-      }
-      return;
-    }
-    if (!this.locationSelectionHoverText) {
-      this.locationSelectionHoverText = this.add
-        .text(0, 0, "", {
-          fontFamily: "Arial",
-          fontSize: "14px",
-          color: "#ffffff",
-          backgroundColor: "#0f172a",
-          padding: { x: 6, y: 4 }
-        })
-        .setDepth(1000);
-      this.uiCam.ignore(this.locationSelectionHoverText);
-    }
-    const { tile, image } = entry;
-    this.locationSelectionHoverText.setText(
-      `${tile.cellType.localizationType}\n(${tile.coord.q}, ${tile.coord.r})`
-    );
-    this.locationSelectionHoverText.setPosition(
-      image.x - this.locationSelectionHoverText.width / 2,
-      image.y -
-        image.displayHeight / 2 -
-        this.locationSelectionHoverText.height -
-        8
-    );
-    this.locationSelectionHoverText.setVisible(true);
+    this.boardRenderer?.refreshAllTileTints();
   }
 
   private enterReplayMode(): void {
