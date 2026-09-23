@@ -49,6 +49,9 @@ function effectiveTeamId(character: PlayerCharacter, playerId: string): string {
 }
 
 function readSkin(user: nkruntime.User | undefined): Skin | undefined {
+  if (!user) {
+    return undefined;
+  }
   const metadata = (user as unknown as { metadata?: unknown }).metadata;
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
     return undefined;
