@@ -8,6 +8,7 @@ import { THEME } from "./ColorPalette";
 type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   layout?: () => void;
   setPosition?: (x: number, y: number) => Phaser.GameObjects.GameObject;
+  setOrigin?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
   setSize?: (width: number, height: number) => Phaser.GameObjects.GameObject;
   setScrollFactor?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
   setScrollerEnable?: (enabled: boolean) => void;
@@ -286,6 +287,7 @@ export class CellContentsPanel {
       mouseWheelScroller: { focus: 2, speed: 0.45 },
       space: { left: 0, right: 8, top: 0, bottom: 0, panel: 6 }
     }) as ScrollablePanelInstance;
+    scrollPanel.setOrigin?.(0, 0);
     scrollPanel.setScrollFactor?.(0);
     scrollPanel.layout?.();
     overlay.add(scrollPanel);
