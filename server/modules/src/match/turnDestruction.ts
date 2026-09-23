@@ -17,8 +17,6 @@ export function applyScheduledDestruction(
       if (tile.meta?.destructionTurn !== resolvedTurn) {
         continue;
       }
-      const rocketExplosionVisible =
-        tile.meta.rocketLauncherExplosionVisible === true;
       tile.meta.destroyed = true;
       tile.walkable = false;
       delete tile.meta.rocketLauncherExplosionVisible;
@@ -26,9 +24,7 @@ export function applyScheduledDestruction(
         kind: "map",
         cell: tile.coord,
         action: "destroyed",
-        ...(rocketExplosionVisible
-          ? { visibility: { scope: "all" as const } }
-          : {}),
+        visibility: { scope: "all" },
       });
     }
   }

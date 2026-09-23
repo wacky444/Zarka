@@ -31,9 +31,16 @@ function filterPlayerEvent(
 
 function filterMapEvent(
   event: ReplayMapEvent,
+  playerId: string,
   viewer: Axial | null,
   viewDistance: number
 ): boolean {
+  if (event.visibility?.scope === "all") {
+    return true;
+  }
+  if (event.visibility?.scope === "limited") {
+    return event.visibility.playerIds.indexOf(playerId) !== -1;
+  }
   if (!viewer) {
     return false;
   }
@@ -70,7 +77,7 @@ export function tailorReplayEvents(
         result.push(event);
       }
     } else if (event.kind === "map") {
-      if (filterMapEvent(event, viewerCoord, allowedDistance)) {
+      if (filterMapEvent(event, playerId, viewerCoord, allowedDistance)) {
         result.push(event);
       }
     }

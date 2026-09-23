@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { ReplayEvent } from "@shared";
 import { tailorReplayEvents } from "../src/match/replay/tailorReplay";
 
-test("elimination notices are public and omit private death metadata", () => {
+test("public elimination and destruction notices survive replay tailoring", () => {
   const events: ReplayEvent[] = [
     {
       kind: "player",
@@ -27,6 +27,17 @@ test("elimination notices are public and omit private death metadata", () => {
       action: { actionId: "knife_attack" },
       targets: [{ targetId: "victim", damageTaken: 1 }],
     },
+    {
+      kind: "map",
+      cell: { q: 100, r: -100 },
+      action: "destroyed",
+      visibility: { scope: "all" },
+    },
+    {
+      kind: "map",
+      cell: { q: 100, r: -100 },
+      action: "destroyed",
+    },
   ];
 
   assert.deepEqual(tailorReplayEvents(events, "observer", undefined, 0), [
@@ -34,6 +45,12 @@ test("elimination notices are public and omit private death metadata", () => {
       kind: "player",
       actorId: "victim",
       action: { actionId: "status_dead" },
+      visibility: { scope: "all" },
+    },
+    {
+      kind: "map",
+      cell: { q: 100, r: -100 },
+      action: "destroyed",
       visibility: { scope: "all" },
     },
   ]);
