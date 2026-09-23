@@ -800,7 +800,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     extraExecution: {
       cost: 2,
       maxRepetitions: 1,
-      description: "Permite disparar una segunda bala."
+      description:
+        "Permite realizar un segundo disparo, con objetivo y destino independientes."
     },
     texture: "Board Game Icons",
     frame: "dice_sword.png",

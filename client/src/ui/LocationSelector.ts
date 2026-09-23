@@ -59,6 +59,14 @@ export class LocationSelector extends Phaser.GameObjects.Container {
     this.updateButtons();
   }
 
+  setLabel(label: string): void {
+    if (this.disposed) {
+      return;
+    }
+    this.label.setText(label);
+    this.layoutChildren();
+  }
+
   setValue(value: Axial | null): void {
     if (this.disposed) {
       return;

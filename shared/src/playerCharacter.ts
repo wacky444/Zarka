@@ -160,7 +160,9 @@ export interface PlayerPlannedAction {
   inspectAdditionalTarget?: boolean;
   conditions?: Array<ActionCondition>;
   targetLocationId?: Axial;
+  secondTargetLocationId?: Axial;
   targetPlayerIds?: string[];
+  secondTargetPlayerId?: string;
   targetItemIds?: string[];
 }
 

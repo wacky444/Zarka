@@ -10,13 +10,21 @@ export async function animateShootPistolEvent(
   context: MoveReplayContext,
   event: ReplayPlayerEvent
 ): Promise<void> {
-  const isSuppressed =
-    (event.action.metadata as { weaponUsed?: string } | undefined)
-      ?.weaponUsed === "suppressed_pistol";
-  playRandomSound(
-    context.scene,
-    isSuppressed ? SUPPRESSED_PISTOL_SOUNDS : PISTOL_SOUNDS
-  );
+  const metadata = event.action.metadata as
+    | { weaponUsed?: unknown; bulletsConsumed?: unknown }
+    | undefined;
+  const isSuppressed = metadata?.weaponUsed === "suppressed_pistol";
+  const bulletsConsumed =
+    typeof metadata?.bulletsConsumed === "number" &&
+    Number.isFinite(metadata.bulletsConsumed)
+      ? Math.max(1, Math.floor(metadata.bulletsConsumed))
+      : Math.max(1, event.targets?.length ?? 0);
+  for (let shot = 0; shot < bulletsConsumed; shot += 1) {
+    playRandomSound(
+      context.scene,
+      isSuppressed ? SUPPRESSED_PISTOL_SOUNDS : PISTOL_SOUNDS
+    );
+  }
 
   const attackerSprite = context.getSprite(event.actorId) ?? null;
   if (attackerSprite) {
@@ -30,14 +38,7 @@ export async function animateShootPistolEvent(
     });
   }
 
-  const targets = event.targets ?? [];
-  if (targets.length === 0) {
-    return;
-  }
-
-  const animations: Array<Promise<void>> = [];
-  const guardedIds: string[] = [];
-  for (const target of targets) {
+  for (const target of event.targets ?? []) {
     if (!target?.targetId) {
       continue;
     }
@@ -46,9 +47,6 @@ export async function animateShootPistolEvent(
       continue;
     }
     const label = context.getLabel(target.targetId) ?? null;
-    if (hasEffect(target.effects, ReplayActionEffect.Guard)) {
-      guardedIds.push(target.targetId);
-    }
     const isDodged = hasEffect(target.effects, ReplayActionEffect.Dodged);
     const baseOffset = isDodged ? 32 : 24;
     let offsetX = 0;
@@ -63,61 +61,60 @@ export async function animateShootPistolEvent(
         offsetY = isDodged ? dx * (scale * 0.7) : dy * scale;
       }
     }
-    animations.push(
-      new Promise<void>((resolve) => {
-        const startX = sprite.x;
-        const startY = sprite.y;
-        const tintInfo = {
-          topLeft: sprite.tintTopLeft,
-          topRight: sprite.tintTopRight,
-          bottomLeft: sprite.tintBottomLeft,
-          bottomRight: sprite.tintBottomRight,
-          tinted: sprite.isTinted,
-        };
-        if (!isDodged) {
-          sprite.setTint(0xf87171);
-        }
-        context.tweens.add({
-          targets: sprite,
-          x: startX + offsetX,
-          y: startY + offsetY,
-          duration: isDodged ? 200 : 140,
-          ease: "Sine.easeOut",
-          yoyo: true,
-          onUpdate: () => {
-            if (label) {
-              context.positionLabel(label, sprite);
-            }
-          },
-          onComplete: () => {
-            sprite.setPosition(startX, startY);
-            if (tintInfo.tinted) {
-              sprite.setTint(
-                tintInfo.topLeft,
-                tintInfo.topRight,
-                tintInfo.bottomLeft,
-                tintInfo.bottomRight
-              );
-            } else {
-              sprite.clearTint();
-            }
-            if (label) {
-              context.positionLabel(label, sprite);
-            }
-            resolve();
-          },
-        });
-      })
-    );
-  }
-  if (animations.length === 0) {
-    return;
-  }
-  const guardPromise =
-    guardedIds.length > 0 ? showGuardOverlay(context, guardedIds, 420) : null;
-  if (guardPromise) {
-    await Promise.all([...animations, guardPromise]);
-  } else {
-    await Promise.all(animations);
+    const animation = new Promise<void>((resolve) => {
+      const startX = sprite.x;
+      const startY = sprite.y;
+      const tintInfo = {
+        topLeft: sprite.tintTopLeft,
+        topRight: sprite.tintTopRight,
+        bottomLeft: sprite.tintBottomLeft,
+        bottomRight: sprite.tintBottomRight,
+        tinted: sprite.isTinted,
+      };
+      if (!isDodged) {
+        sprite.setTint(0xf87171);
+      }
+      context.tweens.add({
+        targets: sprite,
+        x: startX + offsetX,
+        y: startY + offsetY,
+        duration: isDodged ? 200 : 140,
+        ease: "Sine.easeOut",
+        yoyo: true,
+        onUpdate: () => {
+          if (label) {
+            context.positionLabel(label, sprite);
+          }
+        },
+        onComplete: () => {
+          sprite.setPosition(startX, startY);
+          if (tintInfo.tinted) {
+            sprite.setTint(
+              tintInfo.topLeft,
+              tintInfo.topRight,
+              tintInfo.bottomLeft,
+              tintInfo.bottomRight
+            );
+          } else {
+            sprite.clearTint();
+          }
+          if (label) {
+            context.positionLabel(label, sprite);
+          }
+          resolve();
+        },
+      });
+    });
+    const guardAnimation = hasEffect(
+      target.effects,
+      ReplayActionEffect.Guard
+    )
+      ? showGuardOverlay(context, [target.targetId], 420)
+      : null;
+    if (guardAnimation) {
+      await Promise.all([animation, guardAnimation]);
+    } else {
+      await animation;
+    }
   }
 }

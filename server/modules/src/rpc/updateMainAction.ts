@@ -13,6 +13,22 @@ import {
 } from "../match/actions/cooldowns";
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
 
+function parseTargetLocation(value: unknown): Axial | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (typeof value !== "object") {
+    throw makeNakamaError("invalid_target_location", 3);
+  }
+  const raw = value as { q?: unknown; r?: unknown };
+  const q = typeof raw.q === "number" ? raw.q : Number(raw.q);
+  const r = typeof raw.r === "number" ? raw.r : Number(raw.r);
+  if (!isFinite(q) || !isFinite(r)) {
+    throw makeNakamaError("invalid_target_location", 3);
+  }
+  return { q, r };
+}
+
 export function updateMainActionRpc(
   ctx: nkruntime.Context,
   _logger: nkruntime.Logger,
@@ -45,7 +61,9 @@ export function updateMainActionRpc(
   let actionId = "";
   let normalizedActionId: ActionId | null = null;
   let targetLocation: Axial | undefined;
+  let secondTargetLocation: Axial | undefined;
   let targetPlayerIds: string[] | undefined;
+  let secondTargetPlayerId: string | undefined;
   let targetItemIds: string[] | undefined;
   let extraExecutions: number | undefined;
   if (submission) {
@@ -62,24 +80,14 @@ export function updateMainActionRpc(
       throw makeNakamaError("action_not_available", 9);
     }
     normalizedActionId = candidate;
-    const locationCandidate = submission.targetLocationId as Axial | undefined;
-    if (locationCandidate) {
-      const rawCandidate = locationCandidate as unknown as {
-        q?: unknown;
-        r?: unknown;
-      };
-      const qNum =
-        typeof rawCandidate.q === "number"
-          ? rawCandidate.q
-          : Number(rawCandidate.q);
-      const rNum =
-        typeof rawCandidate.r === "number"
-          ? rawCandidate.r
-          : Number(rawCandidate.r);
-      if (isNaN(qNum) || isNaN(rNum)) {
-        throw makeNakamaError("invalid_target_location", 3);
-      }
-      targetLocation = { q: qNum, r: rNum };
+    targetLocation = parseTargetLocation(submission.targetLocationId);
+    secondTargetLocation = parseTargetLocation(
+      submission.secondTargetLocationId
+    );
+    const rawTargetPlayerId = submission.secondTargetPlayerId;
+    if (typeof rawTargetPlayerId === "string") {
+      const trimmed = rawTargetPlayerId.trim();
+      secondTargetPlayerId = trimmed.length > 0 ? trimmed : undefined;
     }
     const rawTargetPlayers = submission.targetPlayerIds;
     if (Array.isArray(rawTargetPlayers)) {
@@ -124,6 +132,10 @@ export function updateMainActionRpc(
         throw makeNakamaError("extra_execution_not_supported", 3);
       }
       extraExecutions = clamped > 0 ? clamped : undefined;
+    }
+    if (normalizedActionId !== "shoot_pistol" || !extraExecutions) {
+      secondTargetLocation = undefined;
+      secondTargetPlayerId = undefined;
     }
   }
   const clearAction = !submission;
@@ -189,6 +201,16 @@ export function updateMainActionRpc(
     } else if (nextPlan.targetLocationId) {
       delete nextPlan.targetLocationId;
     }
+    if (secondTargetLocation) {
+      nextPlan.secondTargetLocationId = secondTargetLocation;
+    } else if (nextPlan.secondTargetLocationId) {
+      delete nextPlan.secondTargetLocationId;
+    }
+    if (secondTargetPlayerId) {
+      nextPlan.secondTargetPlayerId = secondTargetPlayerId;
+    } else if (nextPlan.secondTargetPlayerId) {
+      delete nextPlan.secondTargetPlayerId;
+    }
     if (targetPlayerIds && targetPlayerIds.length > 0) {
       nextPlan.targetPlayerIds = targetPlayerIds;
     } else if (nextPlan.targetPlayerIds) {
@@ -217,6 +239,8 @@ export function updateMainActionRpc(
     user_id: ctx.userId,
     action_id: clearAction ? undefined : actionId,
     targetLocationId: clearAction ? undefined : targetLocation,
+    secondTargetLocationId: clearAction ? undefined : secondTargetLocation,
+    secondTargetPlayerId: clearAction ? undefined : secondTargetPlayerId,
     targetPlayerIds:
       clearAction || !targetPlayerIds || targetPlayerIds.length === 0
         ? undefined

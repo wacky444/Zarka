@@ -143,6 +143,7 @@ export class GameScene extends Phaser.Scene {
   private readyUpdateRunning = false;
   private pendingReadyState: boolean | undefined;
   private locationSelectionActive = false;
+  private locationSelectionTarget: "primary" | "second" = "primary";
   private locationSelectionPointerId: number | null = null;
   private locationSelectionActionId: ActionId | null = null;
   private locationSelectionHoveredTileId: string | null = null;
@@ -547,6 +548,11 @@ export class GameScene extends Phaser.Scene {
       this.beginMainActionLocationPick,
       this
     );
+    this.characterPanel.on(
+      "main-action-second-location-request",
+      this.beginSecondMainActionLocationPick,
+      this
+    );
     this.characterPanel.on("ready-change", this.handleReadyStateChange, this);
     this.characterPanel.on("tab-change", this.handleTabChange, this);
     this.characterPanel.on("log-tab-opened", this.handleLogTabOpened, this);
@@ -751,6 +757,11 @@ export class GameScene extends Phaser.Scene {
       this.characterPanel?.off(
         "main-action-location-request",
         this.beginMainActionLocationPick,
+        this
+      );
+      this.characterPanel?.off(
+        "main-action-second-location-request",
+        this.beginSecondMainActionLocationPick,
         this
       );
       this.characterPanel?.off(
@@ -2503,7 +2514,13 @@ export class GameScene extends Phaser.Scene {
     const normalizedSelection: MainActionSelection = {
       actionId: selection?.actionId ?? null,
       targetLocation: this.normalizeAxial(selection?.targetLocation),
+      secondTargetLocation: this.normalizeAxial(
+        selection?.secondTargetLocation
+      ),
       targetPlayerIds: normalizedPlayers,
+      secondTargetPlayerId: this.normalizePlayerId(
+        selection?.secondTargetPlayerId
+      ),
       targetItemIds: normalizedItems,
       extraExecutions:
         typeof selection?.extraExecutions === "number"
@@ -2515,6 +2532,12 @@ export class GameScene extends Phaser.Scene {
     const previousPlan = character?.actionPlan?.main ?? null;
     const previousActionId = previousPlan?.actionId ?? null;
     const previousTarget = this.normalizeAxial(previousPlan?.targetLocationId);
+    const previousSecondTarget = this.normalizeAxial(
+      previousPlan?.secondTargetLocationId
+    );
+    const previousSecondTargetPlayerId = this.normalizePlayerId(
+      previousPlan?.secondTargetPlayerId
+    );
     const previousPlayers = this.normalizeTargetPlayers(
       previousPlan?.targetPlayerIds ?? undefined
     );
@@ -2524,6 +2547,12 @@ export class GameScene extends Phaser.Scene {
     if (
       normalizedSelection.actionId === previousActionId &&
       this.isSameAxial(normalizedSelection.targetLocation, previousTarget) &&
+      this.isSameAxial(
+        normalizedSelection.secondTargetLocation,
+        previousSecondTarget
+      ) &&
+      normalizedSelection.secondTargetPlayerId ===
+        previousSecondTargetPlayerId &&
       this.isSameTargetPlayers(
         normalizedSelection.targetPlayerIds,
         previousPlayers
@@ -2548,7 +2577,9 @@ export class GameScene extends Phaser.Scene {
         ? this.buildMainActionSubmission(
             normalizedSelection.actionId,
             normalizedSelection.targetLocation,
+            normalizedSelection.secondTargetLocation ?? null,
             normalizedSelection.targetPlayerIds,
+            normalizedSelection.secondTargetPlayerId ?? undefined,
             normalizedSelection.targetItemIds,
             normalizedSelection.extraExecutions
           )
@@ -2588,6 +2619,16 @@ export class GameScene extends Phaser.Scene {
           nextPlan.targetLocationId = payload.targetLocationId;
         } else if (nextPlan.targetLocationId) {
           delete nextPlan.targetLocationId;
+        }
+        if (payload.secondTargetLocationId) {
+          nextPlan.secondTargetLocationId = payload.secondTargetLocationId;
+        } else {
+          delete nextPlan.secondTargetLocationId;
+        }
+        if (payload.secondTargetPlayerId) {
+          nextPlan.secondTargetPlayerId = payload.secondTargetPlayerId;
+        } else {
+          delete nextPlan.secondTargetPlayerId;
         }
         if (payload.targetPlayerIds && payload.targetPlayerIds.length > 0) {
           nextPlan.targetPlayerIds = [...payload.targetPlayerIds];
@@ -3408,18 +3449,38 @@ export class GameScene extends Phaser.Scene {
   }
 
   private beginMainActionLocationPick() {
+    this.beginMainActionLocationPickFor("primary");
+  }
+
+  private beginSecondMainActionLocationPick() {
+    this.beginMainActionLocationPickFor("second");
+  }
+
+  private beginMainActionLocationPickFor(
+    target: "primary" | "second"
+  ): void {
     if (this.replayView || this.locationSelectionActive) {
       return;
     }
     const selection = this.characterPanel?.getMainActionSelection();
-    if (!selection || !selection.actionId) {
+    if (
+      !selection?.actionId ||
+      (target === "second" &&
+        (selection.actionId !== "shoot_pistol" ||
+          (selection.extraExecutions ?? 0) <= 0))
+    ) {
       return;
     }
     this.locationSelectionActive = true;
+    this.locationSelectionTarget = target;
     this.locationSelectionActionId = selection.actionId as ActionId;
     this.locationSelectionHoveredTileId = null;
     this.locationSelectionPointerId = null;
-    this.characterPanel?.setLocationSelectionPending(true);
+    if (target === "second") {
+      this.characterPanel?.setSecondLocationSelectionPending(true);
+    } else {
+      this.characterPanel?.setLocationSelectionPending(true);
+    }
     if (this.mobileLayout) {
       this.mobileViewMode = "map";
       this.layoutUI();
@@ -3437,7 +3498,9 @@ export class GameScene extends Phaser.Scene {
       this.input.setDefaultCursor("default");
     }
     this.locationSelectionPointerId = null;
+    this.locationSelectionTarget = "primary";
     this.characterPanel?.setLocationSelectionPending(false);
+    this.characterPanel?.setSecondLocationSelectionPending(false);
   }
 
   private completeMainActionLocationPick(tile: HexTile) {
@@ -3459,6 +3522,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const actionId = selection.actionId as ActionId;
+    const locationTarget = this.locationSelectionTarget;
     const inRange = this.isLocationInRange(
       actionId,
       coord,
@@ -3470,13 +3534,19 @@ export class GameScene extends Phaser.Scene {
     if (!inRange) {
       return;
     }
-    this.characterPanel?.setMainActionTarget(coord, true);
+    if (locationTarget === "second") {
+      this.characterPanel?.setMainActionSecondTarget(coord, true);
+    } else {
+      this.characterPanel?.setMainActionTarget(coord, true);
+    }
   }
 
   private buildMainActionSubmission(
     actionId: string,
     target: Axial | null,
+    secondTarget: Axial | null,
     targetPlayerIds: string[] | undefined,
+    secondTargetPlayerId: string | undefined,
     targetItemIds: string[] | undefined,
     extraExecutions?: number
   ): ActionSubmission {
@@ -3490,6 +3560,15 @@ export class GameScene extends Phaser.Scene {
     };
     if (target) {
       submission.targetLocationId = { q: target.q, r: target.r };
+    }
+    if (secondTarget) {
+      submission.secondTargetLocationId = {
+        q: secondTarget.q,
+        r: secondTarget.r
+      };
+    }
+    if (secondTargetPlayerId) {
+      submission.secondTargetPlayerId = secondTargetPlayerId;
     }
     if (targetPlayerIds !== undefined) {
       submission.targetPlayerIds =
@@ -3563,6 +3642,14 @@ export class GameScene extends Phaser.Scene {
       return null;
     }
     return { q, r };
+  }
+
+  private normalizePlayerId(value: string | null | undefined): string | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : null;
   }
 
   private normalizeTargetPlayers(

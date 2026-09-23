@@ -3,6 +3,7 @@
 import type { MatchRecord } from "../../models/types";
 import type {
   ActionId,
+  Axial,
   PlayerCharacter,
   ReplayActionDone,
   ReplayActionTarget,
@@ -26,6 +27,7 @@ import {
   type PlannedActionParticipant,
 } from "./utils";
 import { getUsableExtraExecutions } from "../../utils/energy";
+import { isCharacterDead } from "../../utils/playerCharacter";
 import { collectTargets } from "./targeting";
 import { BaseAction } from "./classes/BaseAction";
 
@@ -61,33 +63,59 @@ export class ShootPistolAction extends BaseAction {
       const weaponUsed = hasSuppressed ? "suppressed_pistol" : "pistol";
 
       const definition = ActionLibrary[actionId];
-      const usableExtra = definition
-        ? getUsableExtraExecutions(
-            participant.character,
-            participant.plan,
-            definition
-          )
-        : 0;
       const canAffordExtraAmmo = hasCarriedItem(
         participant.character,
         "bullet",
         2
       );
-      const extraExecutions = usableExtra > 0 && canAffordExtraAmmo ? 1 : 0;
+      const usableExtra =
+        definition && canAffordExtraAmmo
+          ? getUsableExtraExecutions(
+              participant.character,
+              participant.plan,
+              definition
+            )
+          : 0;
+      const extraExecutions = usableExtra > 0 ? 1 : 0;
       const bulletsConsumed = 1 + extraExecutions;
 
       consumeCarriedItem(participant.character, "bullet", bulletsConsumed);
 
-      const targets = collectTargets(actionId, participant, match, {
-        allowMultiple: false,
-      });
-
       const targetEntries: ReplayActionTarget[] = [];
+      const shotTargetLocations: Axial[] = [];
       let totalDamage = 0;
       const postEvents: ReplayPlayerEvent[] = [];
-      const primaryTargetCandidate = targets[0] ?? null;
 
-      for (const targetCandidate of targets) {
+      for (let shotIndex = 0; shotIndex < bulletsConsumed; shotIndex += 1) {
+        const requestedTargetId =
+          shotIndex === 0
+            ? participant.plan.targetPlayerIds?.[0]
+            : participant.plan.secondTargetPlayerId;
+        const targetLocationId =
+          shotIndex === 0
+            ? participant.plan.targetLocationId
+            : participant.plan.secondTargetLocationId;
+        const shotParticipant: PlannedActionParticipant = {
+          ...participant,
+          plan: {
+            ...participant.plan,
+            targetPlayerIds: requestedTargetId ? [requestedTargetId] : [],
+            targetLocationId,
+          },
+        };
+        const targetCandidate = collectTargets(
+          actionId,
+          shotParticipant,
+          match,
+          {
+            allowMultiple: false,
+            filter: (candidate) => !isCharacterDead(candidate.character),
+          }
+        )[0];
+        if (!targetCandidate) {
+          continue;
+        }
+        shotTargetLocations.push(targetCandidate.coord);
         const targetId = targetCandidate.id;
         const target = match.playerCharacters?.[targetId];
         if (!target) {
@@ -100,13 +128,16 @@ export class ShootPistolAction extends BaseAction {
             targetId,
             damageTaken: 0,
             effects: ReplayActionEffect.Dodged,
+            metadata: {
+              shotNumber: shotIndex + 1,
+              targetLocation: targetCandidate.coord,
+            },
           });
           continue;
         }
 
         const guarded = isTargetProtected(target);
-        const baseDamage = 10 * (1 + extraExecutions);
-        const guardedDamage = resolveGuardedDamage(baseDamage, guarded);
+        const guardedDamage = resolveGuardedDamage(10, guarded);
         const damageReduction =
           getDamageReduction(target) +
           getInventoryDamageReduction(target, "bullet");
@@ -133,6 +164,10 @@ export class ShootPistolAction extends BaseAction {
           targetId,
           damageTaken: applied,
           effects: buildGuardedEffectMask(guarded),
+          metadata: {
+            shotNumber: shotIndex + 1,
+            targetLocation: targetCandidate.coord,
+          },
         };
         if (eliminated) {
           targetEntry.eliminated = true;
@@ -145,6 +180,7 @@ export class ShootPistolAction extends BaseAction {
       const actionMetadata: Record<string, unknown> = {
         weaponUsed,
         bulletsConsumed,
+        shotTargetLocations,
         ...(extraExecutions > 0 ? { extraExecutions } : {}),
       };
 
@@ -158,10 +194,10 @@ export class ShootPistolAction extends BaseAction {
       if (participant.character.position?.coord) {
         action.originLocation = participant.character.position.coord;
       }
-      if (participant.plan.targetLocationId) {
+      if (shotTargetLocations.length > 0) {
+        action.targetLocation = shotTargetLocations[0];
+      } else if (participant.plan.targetLocationId) {
         action.targetLocation = participant.plan.targetLocationId;
-      } else if (primaryTargetCandidate?.coord) {
-        action.targetLocation = primaryTargetCandidate.coord;
       }
 
       events.push({

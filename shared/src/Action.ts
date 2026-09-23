@@ -164,6 +164,8 @@ export interface ActionSubmission {
   inspectAdditionalTarget?: boolean;
   targetPlayerIds?: string[];
   targetLocationId?: Axial;
+  secondTargetPlayerId?: string;
+  secondTargetLocationId?: Axial;
   conditions?: ActionCondition[];
   notes?: string;
   targetItemIds?: string[];
