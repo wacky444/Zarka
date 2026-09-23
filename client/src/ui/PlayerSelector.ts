@@ -4,6 +4,7 @@ import { GridSelect, type GridSelectItem } from "./GridSelect";
 export type PlayerOption = {
   id: string;
   label: string;
+  labelColor?: string;
   name?: string;
   description?: string;
   warning?: string;
@@ -222,6 +223,7 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
     return this.options.map((option) => ({
       id: option.id,
       name: option.label,
+      labelColor: option.labelColor,
       description: option.description,
       missingRequirement: option.warning,
       texture: option.texture ?? "char",

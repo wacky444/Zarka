@@ -4236,6 +4236,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     currentUserId: string | null
   ) {
     const options: PlayerOption[] = [];
+    const viewerCharacter = currentUserId
+      ? match?.playerCharacters?.[currentUserId]
+      : undefined;
+    const viewerTeamId =
+      viewerCharacter?.secretTeamId?.trim() ||
+      viewerCharacter?.teamId?.trim() ||
+      undefined;
+    const confirmedTeammates = new Set(
+      viewerCharacter?.relationships?.confirmedTeammates ?? []
+    );
     if (match) {
       const seen = new Set<string>();
       const pushOption = (id: string | null | undefined) => {
@@ -4258,6 +4268,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
           currentUserId && id === currentUserId
             ? `${displayName} (You)`
             : displayName;
+        const revealedTeamId =
+          match.revealedTeamsByPlayerId?.[id]?.trim() ||
+          viewerCharacter?.revealedTeamIdsByPlayerId?.[id]?.trim();
+        const knownTeamId =
+          revealedTeamId || character?.teamId?.trim() || undefined;
+        const labelColor =
+          id === currentUserId ||
+          confirmedTeammates.has(id) ||
+          (viewerTeamId && knownTeamId && viewerTeamId === knownTeamId)
+            ? THEME.colors.healthRecover
+            : viewerTeamId && knownTeamId
+              ? THEME.colors.healthDamage
+              : THEME.colors.textPrimary;
         const sprite = this.resolvePlayerSpriteInfo(
           id,
           character,
@@ -4267,6 +4290,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         options.push({
           id,
           label,
+          labelColor,
           name: displayName,
           texture: sprite.texture,
           frame: sprite.frame,

@@ -31,6 +31,7 @@ function stripActionDescriptionMarkup(content: string): string {
 export interface GridSelectItem {
   id: string;
   name: string;
+  labelColor?: string;
   description?: string | null;
   texture: string;
   frame?: string;
@@ -1075,7 +1076,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       const nameText = scene.add
         .text(0, 0, item.name, {
           fontSize: "17px",
-          color: "#ffffff",
+          color: item.labelColor ?? "#ffffff",
           align: "center"
         })
         .setOrigin(0.5, 0.5);
@@ -1357,7 +1358,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
       config.icon.setAlpha(disabled ? 0.5 : 1);
     }
     config.nameText?.setColor(
-      disabled ? THEME.colors.textDisabled : THEME.colors.textPrimary
+      disabled
+        ? THEME.colors.textDisabled
+        : (config.item.labelColor ?? THEME.colors.textPrimary)
     );
     config.descText?.setColor(
       disabled ? THEME.colors.textDisabled : THEME.colors.modalText
