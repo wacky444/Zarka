@@ -40,6 +40,9 @@ export class InventoryGrid extends Phaser.GameObjects.Container {
   private containerHeight: number;
   private emptyLabel: Phaser.GameObjects.Text;
   private tooltip: HoverTooltip | null = null;
+  private readonly hideTooltipOnPointerDown = (): void => {
+    this.tooltip?.hide();
+  };
 
   constructor(
     scene: Phaser.Scene,
@@ -51,6 +54,11 @@ export class InventoryGrid extends Phaser.GameObjects.Container {
   ) {
     super(scene, x, y);
     scene.add.existing(this);
+    scene.input.on(
+      Phaser.Input.Events.POINTER_DOWN,
+      this.hideTooltipOnPointerDown,
+      this
+    );
     this.containerWidth = width;
     this.containerHeight = height;
     this.setSize(width, height);
@@ -73,6 +81,11 @@ export class InventoryGrid extends Phaser.GameObjects.Container {
   }
 
   override destroy(fromScene?: boolean) {
+    this.scene.input.off(
+      Phaser.Input.Events.POINTER_DOWN,
+      this.hideTooltipOnPointerDown,
+      this
+    );
     this.clearCards();
     this.tooltip?.destroy();
     this.tooltip = null;

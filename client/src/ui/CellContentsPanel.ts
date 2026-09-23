@@ -367,8 +367,10 @@ export class CellContentsPanel {
   }
 
   private destroyOverlay(): void {
+    this.scrollPanel?.setScrollerEnable?.(false);
+    this.scrollPanel?.setMouseWheelScrollerEnable?.(false);
     this.scrollPanel?.clearMask?.();
-    this.scrollPanel?.destroy(true);
+    this.scrollPanel?.destroy();
     this.scrollPanel = null;
     this.scrollMask?.destroy();
     this.scrollMask = null;
