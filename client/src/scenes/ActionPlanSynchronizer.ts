@@ -2,6 +2,7 @@ import type { RpcResponse } from "@heroiclabs/nakama-js";
 import {
   ActionCategory,
   ActionLibrary,
+  normalizeAxial,
   type ActionId,
   type ActionSubmission,
   type Axial,
@@ -15,7 +16,6 @@ import type {
   SecondaryActionSelection,
 } from "../ui/CharacterPanel";
 import type { TurnService } from "../services/turnService";
-import { normalizeAxial } from "../utils/axial";
 
 export interface ActionPlanSynchronizerContext {
   getTurnService(): TurnService | null;

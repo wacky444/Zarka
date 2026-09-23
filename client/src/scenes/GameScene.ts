@@ -9,7 +9,6 @@ import {
 } from "../ui/CharacterPanel";
 import { GameBoardRenderer } from "./GameBoardRenderer";
 import { ActionPlanSynchronizer } from "./ActionPlanSynchronizer";
-import { normalizeAxial } from "../utils/axial";
 import type { TurnService } from "../services/turnService";
 import { MatchChatService } from "../services/chatService";
 import {
@@ -34,6 +33,7 @@ import {
   type GetReplayPayload,
   type MatchChatMessage,
   axialDistance,
+  normalizeAxial,
   ItemLibrary,
   type SkillId,
   type UpgradeSkillPayload,
