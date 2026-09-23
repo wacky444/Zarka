@@ -9,11 +9,16 @@ import { THEME } from "./ColorPalette";
 type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   layout?: () => void;
   setPosition?: (x: number, y: number) => Phaser.GameObjects.GameObject;
+  setDepth?: (depth: number) => Phaser.GameObjects.GameObject;
   setOrigin?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
   setSize?: (width: number, height: number) => Phaser.GameObjects.GameObject;
   setScrollFactor?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
   setScrollerEnable?: (enabled: boolean) => void;
   setMouseWheelScrollerEnable?: (enabled: boolean) => void;
+  setMask?: (
+    mask: Phaser.Display.Masks.BitmapMask | Phaser.Display.Masks.GeometryMask
+  ) => Phaser.GameObjects.GameObject;
+  clearMask?: (destroyMask?: boolean) => Phaser.GameObjects.GameObject;
 };
 
 export interface CellContentsEntry {
@@ -24,6 +29,9 @@ export interface CellContentsEntry {
 export class CellContentsPanel {
   private overlay: Phaser.GameObjects.Container | null = null;
   private content: Phaser.GameObjects.Container | null = null;
+  private scrollPanel: ScrollablePanelInstance | null = null;
+  private scrollMaskShape: Phaser.GameObjects.Rectangle | null = null;
+  private scrollMask: Phaser.Display.Masks.GeometryMask | null = null;
   private isVisible = false;
   private coord: Axial = { q: 0, r: 0 };
   private entries: CellContentsEntry[] = [];
@@ -275,13 +283,27 @@ export class CellContentsPanel {
       content.setSize(listWidth, entries.length * rowHeight);
     }
 
+    this.scrollMaskShape = this.scene.add
+      .rectangle(
+        modalX + 16,
+        listY,
+        listWidth,
+        listHeight,
+        0xffffff,
+        0
+      )
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setVisible(true);
+    this.scrollMask = this.scrollMaskShape.createGeometryMask();
+
     const scrollPanel = this.scene.rexUI.add.scrollablePanel({
       x: modalX + 16,
       y: listY,
       width: listWidth,
       height: listHeight,
       scrollMode: 0,
-      panel: { child: content, mask: true },
+      panel: { child: content, mask: false },
       slider: {
         track: this.scene.rexUI.add.roundRectangle(0, 0, 4, 120, 2, 0x1f2a4a),
         thumb: this.scene.rexUI.add.roundRectangle(0, 0, 6, 36, 3, 0x3b82f6)
@@ -296,8 +318,12 @@ export class CellContentsPanel {
       mouseWheelScroller: { focus: 2, speed: 0.45 },
       space: { left: 0, right: 8, top: 0, bottom: 0, panel: 6 }
     }) as ScrollablePanelInstance;
+    this.scrollPanel = scrollPanel;
     scrollPanel.setOrigin?.(0, 0);
     scrollPanel.setScrollFactor?.(0);
+    scrollPanel.setMask?.(this.scrollMask);
+    scrollPanel.setDepth?.(12001);
+    this.scene.cameras.main.ignore(scrollPanel);
     const rawScrollPanel = scrollPanel as unknown as {
       childrenMap?: {
         scrollableBlock?: {
@@ -326,7 +352,6 @@ export class CellContentsPanel {
     scrollPanel.setScrollerEnable?.(true);
     scrollPanel.setMouseWheelScrollerEnable?.(true);
     scrollPanel.layout?.();
-    overlay.add(scrollPanel);
 
     const closeButton: UIButton = makeButton(
       this.scene,
@@ -342,6 +367,13 @@ export class CellContentsPanel {
   }
 
   private destroyOverlay(): void {
+    this.scrollPanel?.clearMask?.();
+    this.scrollPanel?.destroy(true);
+    this.scrollPanel = null;
+    this.scrollMask?.destroy();
+    this.scrollMask = null;
+    this.scrollMaskShape?.destroy();
+    this.scrollMaskShape = null;
     this.overlay?.destroy(true);
     this.overlay = null;
     if (this.content?.active) {
