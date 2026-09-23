@@ -283,6 +283,11 @@ export type BuyShopItemPayload = {
   target_player_id?: string;
   target_team_id?: string;
   target_location?: Axial;
+  fire?: {
+    coord: Axial;
+    startTurn: number;
+    endTurn: number;
+  };
   character?: PlayerCharacter;
   playerCharacters?: Record<string, PlayerCharacter>;
   event?: ReplayEvent;

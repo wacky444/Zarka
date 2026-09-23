@@ -185,6 +185,7 @@ export function buyShopItemRpc(
   const targetDamages: Record<string, number> = {};
   const postPurchaseEvents: ReplayPlayerEvent[] = [];
   let targetTeamId: string | undefined;
+  let fire: BuyShopItemPayload["fire"];
   let reward = 0;
   let opposingTeam = false;
   let metadata: Record<string, unknown> = { shopId, cost };
@@ -295,10 +296,16 @@ export function buyShopItemRpc(
         typeof targetTile.meta?.fireEndTurn === "number"
           ? targetTile.meta.fireEndTurn
           : 0;
+      const fireEndTurn = Math.max(existingEndTurn, fireStartTurn + 2);
       targetTile.meta = {
         ...(targetTile.meta ?? {}),
         fireStartTurn,
-        fireEndTurn: Math.max(existingEndTurn, fireStartTurn + 2),
+        fireEndTurn,
+      };
+      fire = {
+        coord: { q: targetLocation.q, r: targetLocation.r },
+        startTurn: fireStartTurn,
+        endTurn: fireEndTurn,
       };
       metadata = {
         ...metadata,
@@ -407,6 +414,7 @@ export function buyShopItemRpc(
     ...(targetPlayerId ? { target_player_id: targetPlayerId } : {}),
     ...(targetTeamId ? { target_team_id: targetTeamId } : {}),
     ...(targetLocation ? { target_location: targetLocation } : {}),
+    ...(fire ? { fire } : {}),
     character: actor,
     playerCharacters: tailorPlayerCharactersForViewer(
       match.playerCharacters,

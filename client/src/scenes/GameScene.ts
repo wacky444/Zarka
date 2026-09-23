@@ -50,6 +50,10 @@ import {
   playReplayEvents,
   type MoveReplayContext
 } from "../animation/moveReplay";
+import {
+  createFireTileAnimation,
+  type FireTileAnimation
+} from "../animation/FireTileAnimation";
 import { collectItemSpriteInfos, resolveItemTexture } from "../ui/itemIcons";
 import { ItemTooltipManager, composeItemDescription } from "../ui/ItemTooltip";
 import { CellContentsPanel } from "../ui/CellContentsPanel";
@@ -100,6 +104,7 @@ export class GameScene extends Phaser.Scene {
     skullShiverTween?: Phaser.Tweens.Tween;
   }> = [];
   private trapVisuals: Phaser.GameObjects.Graphics[] = [];
+  private fireTileAnimations = new Map<string, FireTileAnimation>();
   private playerSprites = new Map<string, SkinContainer>();
   private playerNameLabels = new Map<string, Phaser.GameObjects.Text>();
   private playerDizzyStars = new Map<string, Phaser.GameObjects.Container>();
@@ -1002,7 +1007,64 @@ export class GameScene extends Phaser.Scene {
       entry.skullImage?.destroy();
     }
     this.mapTileSprites = [];
+    this.clearFireTileAnimations();
     this.clearTrapVisuals();
+  }
+
+  private clearFireTileAnimations(): void {
+    for (const animation of this.fireTileAnimations.values()) {
+      for (const tween of animation.tweens) {
+        tween.remove();
+      }
+      animation.container.destroy(true);
+    }
+    this.fireTileAnimations.clear();
+  }
+
+  private renderFireTileAnimations(map: GameMap): void {
+    this.clearFireTileAnimations();
+    const currentTurn =
+      this.replayView?.turn ?? this.currentMatch?.current_turn ?? 0;
+    const nextTurn = currentTurn + 1;
+
+    for (const snapshot of map.tiles) {
+      const fireStartTurn =
+        typeof snapshot.meta?.fireStartTurn === "number"
+          ? snapshot.meta.fireStartTurn
+          : undefined;
+      const fireEndTurn =
+        typeof snapshot.meta?.fireEndTurn === "number"
+          ? snapshot.meta.fireEndTurn
+          : undefined;
+      const destructionTurn =
+        typeof snapshot.meta?.destructionTurn === "number"
+          ? snapshot.meta.destructionTurn
+          : undefined;
+      const isDestroyed =
+        snapshot.meta?.destroyed === true ||
+        (typeof destructionTurn === "number" && currentTurn >= destructionTurn);
+      if (
+        isDestroyed ||
+        fireStartTurn === undefined ||
+        fireEndTurn === undefined ||
+        nextTurn < fireStartTurn ||
+        nextTurn > fireEndTurn
+      ) {
+        continue;
+      }
+
+      const world = this.getTileWorldPosition(snapshot.id, snapshot.coord);
+      const animation = createFireTileAnimation(
+        this,
+        world.x,
+        world.y,
+        GameScene.TILE_WIDTH,
+        GameScene.TILE_HEIGHT,
+        2 + world.y / 1000,
+      );
+      this.uiCam.ignore(animation.container);
+      this.fireTileAnimations.set(snapshot.id, animation);
+    }
   }
 
   private clearTrapVisuals(): void {
@@ -1173,6 +1235,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.uiCam.ignore(sprites);
+    this.renderFireTileAnimations(map);
 
     const gridWidth = map.cols * dx + tileW * 2 + dx / 2;
     const gridHeight = map.rows * dy + tileH * 2 + dy / 2;
@@ -3171,6 +3234,22 @@ export class GameScene extends Phaser.Scene {
             ...(this.currentMatch.revealedTeamsByPlayerId ?? {}),
             [result.target_player_id]: result.target_team_id
           };
+        }
+        const map = this.currentMatch.map;
+        if (result.fire && map && !this.replayView) {
+          const tile = map.tiles.find(
+            (candidate) =>
+              candidate.coord.q === result.fire?.coord.q &&
+              candidate.coord.r === result.fire?.coord.r
+          );
+          if (tile) {
+            tile.meta = {
+              ...(tile.meta ?? {}),
+              fireStartTurn: result.fire.startTurn,
+              fireEndTurn: result.fire.endTurn
+            };
+            this.renderFireTileAnimations(map);
+          }
         }
         this.updateCharacterPanel(this.currentMatch);
         const turn = this.currentMatch.current_turn ?? 0;
