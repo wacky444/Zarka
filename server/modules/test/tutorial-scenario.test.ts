@@ -12,6 +12,7 @@ import {
   TUTORIAL_CELL_COORDS
 } from "../src/match/TutorialScenario";
 import { planTutorialBotActions } from "../src/match/TutorialBotPlanner";
+import { resolveTurnForMatch } from "../src/match/turnResolution";
 
 test("tutorial fixture and scripted bot plans are deterministic", () => {
   const options = {
@@ -92,9 +93,72 @@ test("tutorial fixture and scripted bot plans are deterministic", () => {
     actionId: "scare",
     extraExecutions: 1,
     targetPlayerIds: [player.id],
-    targetLocationId: TUTORIAL_CELL_COORDS.botStart
+    targetLocationId: TUTORIAL_CELL_COORDS.doomed
   });
   assert.equal(getTutorialBotPlan("buy_detective", player.id), null);
+});
+
+test("scripted Scare moves the player out of Axe range before Axe resolves", () => {
+  const match = createTutorialMatch({
+    matchId: "tutorial-scare-test",
+    playerId: "player-test",
+    createdAt: 123
+  });
+  const playerId = match.players[0];
+  const player = match.playerCharacters[playerId];
+  const bot = match.playerCharacters[TUTORIAL_BOT_ID];
+  if (!player.position) {
+    throw new Error("Tutorial player has no starting position");
+  }
+  bot.position = {
+    tileId: player.position.tileId,
+    coord: { ...player.position.coord }
+  };
+  player.inventory.carriedItems = [
+    { itemId: "axe", quantity: 1, weight: 3 }
+  ];
+  player.actionPlan = {
+    main: { actionId: "axe_attack", targetPlayerIds: [TUTORIAL_BOT_ID] }
+  };
+
+  const logger = {
+    debug: () => undefined,
+    info: () => undefined,
+    warn: () => undefined,
+    error: () => undefined
+  } as unknown as nkruntime.Logger;
+  const result = resolveTurnForMatch(
+    match,
+    logger,
+    undefined as unknown as nkruntime.Nakama
+  );
+
+  assert.equal(result.advanced, true);
+  assert.deepEqual(player.position.coord, TUTORIAL_CELL_COORDS.doomed);
+  assert.equal(bot.stats.health.current, 12);
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.kind === "player" && event.action.actionId === "axe_attack"
+    ),
+    false
+  );
+  const scareEvent = result.events.find(
+    (event) =>
+      event.kind === "player" &&
+      event.actorId === TUTORIAL_BOT_ID &&
+      event.action.actionId === "scare"
+  );
+  if (!scareEvent || scareEvent.kind !== "player") {
+    throw new Error("Expected the tutorial bot's Scare event");
+  }
+  const target = scareEvent.targets?.find(
+    (entry) => entry.targetId === playerId
+  );
+  if (!target) {
+    throw new Error("Expected Scare to move the tutorial player");
+  }
+  assert.deepEqual(target.metadata?.movedTo, TUTORIAL_CELL_COORDS.doomed);
 });
 
 test("tutorial bot only executes the scripted feed and scare plans", () => {

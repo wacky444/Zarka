@@ -12,6 +12,7 @@ import {
   type ReplaySnapshot,
   type Skin,
   type TrapRecord,
+  TUTORIAL_MATCH_METADATA_KEY,
   axialDistance,
   getHexTileOffsets,
 } from "@shared";
@@ -24,7 +25,10 @@ import {
   ItemTooltipManager,
   composeItemDescription,
 } from "../ui/ItemTooltip";
-import { CellContentsPanel } from "../ui/CellContentsPanel";
+import {
+  CellContentsPanel,
+  type CellContentsEntry
+} from "../ui/CellContentsPanel";
 import { HoverTooltip } from "../ui/HoverTooltip";
 import {
   createSkinContainer,
@@ -63,6 +67,7 @@ export interface GameBoardRendererCallbacks {
   ): boolean;
   onTileHover(tileId: string | null): void;
   onTilePick(tile: HexTile): void;
+  onCellInfoOpened(coord: Axial): void;
   onPlayerCardClick(playerId: string): void;
 }
 
@@ -235,18 +240,31 @@ export class GameBoardRenderer {
         (pointer: Phaser.Input.Pointer) => {
           const selection = this.callbacks.getLocationSelection();
           if (
-            !selection.active ||
             this.callbacks.isPinchGestureInProgress() ||
             pointer.button !== 0 ||
-            selection.pointerId === null ||
-            pointer.id !== selection.pointerId ||
             pointer.getDistance() > 15
           ) {
             return;
           }
           const tileData = img.getData("tile") as HexTile | undefined;
-          if (tileData) {
-            this.callbacks.onTilePick(tileData);
+          if (!tileData) {
+            return;
+          }
+          if (selection.active) {
+            if (
+              selection.pointerId !== null &&
+              pointer.id === selection.pointerId
+            ) {
+              this.callbacks.onTilePick(tileData);
+            }
+            return;
+          }
+          if (
+            this.callbacks.getCurrentMatch()?.metadata?.[
+              TUTORIAL_MATCH_METADATA_KEY
+            ]
+          ) {
+            this.showTutorialCellInfo(tileData);
           }
         },
       );
@@ -503,7 +521,7 @@ export class GameBoardRenderer {
                 if (pointer.button !== 0 || pointer.getDistance() > 15) {
                   return;
                 }
-                this.cellContentsPanel.show(
+                this.showCellContents(
                   snapshot.coord,
                   entries.map(([itemId, quantity]) => ({ itemId, quantity })),
                 );
@@ -618,6 +636,30 @@ export class GameBoardRenderer {
       this.uiCamera.ignore(container);
       this.tileItemContainers.set(snapshot.id, container);
     }
+  }
+
+  private showTutorialCellInfo(tile: HexTile): void {
+    const itemTypeById = new Map<string, ItemId>();
+    for (const item of this.callbacks.getCurrentMatch()?.items ?? []) {
+      itemTypeById.set(item.item_id, item.item_type);
+    }
+
+    const quantities = new Map<ItemId, number>();
+    for (const itemId of tile.itemIds) {
+      const itemType = itemTypeById.get(itemId);
+      if (itemType) {
+        quantities.set(itemType, (quantities.get(itemType) ?? 0) + 1);
+      }
+    }
+    const entries: CellContentsEntry[] = Array.from(quantities.entries()).map(
+      ([itemId, quantity]) => ({ itemId, quantity })
+    );
+    this.showCellContents(tile.coord, entries);
+  }
+
+  private showCellContents(coord: Axial, entries: CellContentsEntry[]): void {
+    this.cellContentsPanel.show(coord, entries);
+    this.callbacks.onCellInfoOpened(coord);
   }
 
   renderTraps(traps: TrapRecord[] | undefined): void {

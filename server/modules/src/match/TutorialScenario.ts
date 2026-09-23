@@ -3,6 +3,8 @@ import {
   HexTile,
   LocalizationType,
   ShopLibrary,
+  TUTORIAL_BOT_ID,
+  TUTORIAL_CELL_COORDS,
   TUTORIAL_MATCH_METADATA_KEY,
   type Axial,
   type GameMap,
@@ -15,15 +17,9 @@ import {
 import type { MatchRecord } from "../models/types";
 import { createDefaultCharacter } from "../utils/playerCharacter";
 
-export const TUTORIAL_BOT_ID = "bot1";
-export const TUTORIAL_BOT_NAME = "Tutorial Bot";
+export { TUTORIAL_BOT_ID, TUTORIAL_CELL_COORDS };
 
-export const TUTORIAL_CELL_COORDS = {
-  playerStart: { q: 0, r: 0 },
-  botStart: { q: 1, r: 0 },
-  doomed: { q: 0, r: 1 },
-  spare: { q: 1, r: 1 }
-} as const;
+export const TUTORIAL_BOT_NAME = "Tutorial Bot";
 
 const PLAYER_TEAM_ID = "tutorial-player";
 const BOT_TEAM_ID = "tutorial-bot";
@@ -218,7 +214,7 @@ export function getTutorialBotPlan(
       actionId: "scare",
       extraExecutions: 1,
       targetPlayerIds: [playerId],
-      targetLocationId: { ...TUTORIAL_CELL_COORDS.botStart }
+      targetLocationId: { ...TUTORIAL_CELL_COORDS.doomed }
     };
   }
   return null;

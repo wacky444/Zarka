@@ -1,12 +1,10 @@
 import {
+  TUTORIAL_BOT_ID,
   TUTORIAL_MATCH_METADATA_KEY,
   type PlayerCharacter
 } from "@shared";
 import type { MatchRecord } from "../models/types";
-import {
-  getTutorialBotPlan,
-  TUTORIAL_BOT_ID
-} from "./TutorialScenario";
+import { getTutorialBotPlan } from "./TutorialScenario";
 
 function sharesTile(left: PlayerCharacter, right: PlayerCharacter): boolean {
   const tileId = left.position?.tileId;

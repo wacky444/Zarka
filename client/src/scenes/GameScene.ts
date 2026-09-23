@@ -9,6 +9,7 @@ import {
 } from "../ui/CharacterPanel";
 import { GameBoardRenderer } from "./GameBoardRenderer";
 import { ActionPlanSynchronizer } from "./ActionPlanSynchronizer";
+import { TutorialProgressController } from "../tutorial/TutorialProgressController";
 import type { TurnService } from "../services/turnService";
 import { MatchChatService } from "../services/chatService";
 import {
@@ -35,7 +36,12 @@ import {
   axialDistance,
   normalizeAxial,
   ItemLibrary,
+  TUTORIAL_BOT_ID,
+  TUTORIAL_CELL_COORDS,
+  TUTORIAL_MATCH_METADATA_KEY,
+  TUTORIAL_STEP_IDS,
   type SkillId,
+  type TutorialStepId,
   type UpgradeSkillPayload,
   type UpdateTestamentPayload,
   type BuyShopItemPayload,
@@ -137,6 +143,9 @@ export class GameScene extends Phaser.Scene {
   private chatMessages: MatchChatMessage[] = [];
   private chatUnsubscribe: (() => void) | null = null;
   private chatHistoryRefreshRunning = false;
+  private chatTabActive = false;
+  private tutorialPanDistance = 0;
+  private tutorialController: TutorialProgressController | null = null;
   private currentPlayerSkin: import("@shared").Skin | null = null;
   private playerSkinMap = new Map<string, import("@shared").Skin>();
   private accountService: AccountService | null = null;
@@ -178,6 +187,7 @@ export class GameScene extends Phaser.Scene {
     this.handleReadyStateUpdate(payload);
   };
   private readonly pointerDownHandler = (pointer: Phaser.Input.Pointer) => {
+    this.tutorialPanDistance = 0;
     const overUI = this.isPointerOverUI(pointer);
     this.pointerDownInUI = overUI;
     this.itemTooltip?.hide();
@@ -204,6 +214,7 @@ export class GameScene extends Phaser.Scene {
     this.mapTouchPointerIds.delete(pointer.id);
     this.endPinchIfNeeded();
     this.pointerDownInUI = false;
+    this.tutorialPanDistance = 0;
   };
   private readonly pinchMoveHandler = () => {
     this.updatePinchZoom();
@@ -513,6 +524,7 @@ export class GameScene extends Phaser.Scene {
           this.isLocationInRange(actionId, coord, extraExecutions),
         onTileHover: (tileId) => this.setLocationSelectionHoveredTile(tileId),
         onTilePick: (tile) => this.completeMainActionLocationPick(tile),
+        onCellInfoOpened: (coord) => this.handleTutorialCellInfoOpened(coord),
         onPlayerCardClick: (playerId) => this.openPlayerCard(playerId),
       },
     );
@@ -651,6 +663,7 @@ export class GameScene extends Phaser.Scene {
 
     const match = await this.fetchMatchFromServer();
     this.currentMatch = match;
+    this.initializeTutorialController(match);
     this.logReplayCache.clear();
     if (this.characterPanel) {
       this.characterPanel.setLogTurnInfo(match?.current_turn ?? 0);
@@ -724,6 +737,7 @@ export class GameScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.actionPlanSynchronizer?.destroy();
       this.actionPlanSynchronizer = null;
+      this.tutorialController = null;
       this.scale.off("resize", this.handleResize, this);
       this.hideLoadingOverlay();
       this.input.off(Phaser.Input.Events.POINTER_DOWN, this.pointerDownHandler);
@@ -931,6 +945,10 @@ export class GameScene extends Phaser.Scene {
 
       cam.scrollX -= diffX / cam.zoom;
       cam.scrollY -= diffY / cam.zoom;
+      this.tutorialPanDistance += Math.sqrt(diffX * diffX + diffY * diffY);
+      if (this.tutorialPanDistance >= 16) {
+        this.recordTutorialPresentation("map_pan");
+      }
     });
   }
 
@@ -1097,6 +1115,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.currentUserId) {
       return;
     }
+    this.recordTutorialGameplay("victory_recap");
     if (this.replayPlaying) {
       this.pendingMatchEndPayload = payload;
     } else {
@@ -1438,6 +1457,287 @@ export class GameScene extends Phaser.Scene {
     this.characterPanel.setLogTurnInfo(turns);
     if (!match) {
       this.logReplayCache.clear();
+      return;
+    }
+    this.observeTutorialMatchState(match);
+  }
+
+  private initializeTutorialController(match: MatchRecord | null): void {
+    this.tutorialController = match?.metadata?.[TUTORIAL_MATCH_METADATA_KEY]
+      ? new TutorialProgressController(TUTORIAL_STEP_IDS)
+      : null;
+  }
+
+  private recordTutorialPresentation(stepId: TutorialStepId): void {
+    this.tutorialController?.recordPresentation(stepId);
+    this.completeVisibleTutorialSteps();
+  }
+
+  private recordTutorialGameplay(stepId: TutorialStepId): void {
+    this.tutorialController?.recordGameplay(stepId);
+    this.completeVisibleTutorialSteps();
+  }
+
+  private completeVisibleTutorialSteps(): void {
+    const controller = this.tutorialController;
+    if (!controller) {
+      return;
+    }
+    let currentStep = controller.currentStep;
+    while (currentStep) {
+      if (
+        currentStep === "open_chat" &&
+        this.chatTabActive &&
+        this.characterPanel?.visible === true &&
+        controller.hasObservedGameplayStep("bot_chat")
+      ) {
+        controller.recordPresentation(currentStep);
+        currentStep = controller.currentStep;
+        continue;
+      }
+      if (
+        currentStep === "read_detective_result" &&
+        this.logTabActive &&
+        this.characterPanel?.visible === true &&
+        this.hasTutorialDetectiveResult()
+      ) {
+        controller.recordPresentation(currentStep);
+        currentStep = controller.currentStep;
+        continue;
+      }
+      return;
+    }
+  }
+
+  private hasTutorialDetectiveReveal(): boolean {
+    const player =
+      this.currentUserId && this.currentMatch?.playerCharacters
+        ? this.currentMatch.playerCharacters[this.currentUserId]
+        : undefined;
+    const revealedTeam =
+      this.currentMatch?.revealedTeamsByPlayerId?.[TUTORIAL_BOT_ID] ??
+      player?.revealedTeamIdsByPlayerId?.[TUTORIAL_BOT_ID];
+    return typeof revealedTeam === "string" && revealedTeam.length > 0;
+  }
+
+  private hasTutorialDetectiveResult(): boolean {
+    if (!this.currentUserId || !this.hasTutorialDetectiveReveal()) {
+      return false;
+    }
+    for (const replay of this.logReplayCache.values()) {
+      if (
+        replay.events.some(
+          (event) =>
+            event.kind === "player" &&
+            event.actorId === this.currentUserId &&
+            event.action.actionId === "buy_detective"
+        )
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private observeTutorialMatchState(match: MatchRecord): void {
+    if (!this.tutorialController || !this.currentUserId) {
+      return;
+    }
+    const player = match.playerCharacters?.[this.currentUserId];
+    const bot = match.playerCharacters?.[TUTORIAL_BOT_ID];
+    if (!player) {
+      return;
+    }
+
+    const abilities = player.abilities ?? [];
+    if (
+      abilities.indexOf("vitality") !== -1 &&
+      abilities.indexOf("strength2") !== -1 &&
+      player.stats.health.max > 12
+    ) {
+      this.recordTutorialGameplay("choose_skills");
+    }
+    if ((player.discoveredItemIds?.length ?? 0) > 0) {
+      this.recordTutorialGameplay("search");
+    }
+    const hasItem = (itemId: string): boolean =>
+      player.inventory.carriedItems.some(
+        (item) => item.itemId === itemId && item.quantity > 0
+      );
+    if (hasItem("bandage") && hasItem("axe") && hasItem("food")) {
+      this.recordTutorialGameplay("pickup_items");
+    }
+    if (this.hasTutorialDetectiveReveal()) {
+      this.recordTutorialGameplay("buy_detective");
+    }
+
+    const mainPlan = player.actionPlan?.main;
+    if (
+      mainPlan?.actionId === "axe_attack" &&
+      mainPlan.targetPlayerIds?.indexOf(TUTORIAL_BOT_ID) !== -1
+    ) {
+      this.recordTutorialGameplay("plan_axe_attack");
+    }
+    if (
+      mainPlan?.actionId === "scare" &&
+      mainPlan.extraExecutions === 1 &&
+      mainPlan.targetPlayerIds?.indexOf(TUTORIAL_BOT_ID) !== -1 &&
+      mainPlan.targetLocationId?.q === TUTORIAL_CELL_COORDS.doomed.q &&
+      mainPlan.targetLocationId?.r === TUTORIAL_CELL_COORDS.doomed.r
+    ) {
+      this.recordTutorialGameplay("scare_bot_to_doomed_cell");
+    }
+
+    const currentTurn = match.current_turn ?? 0;
+    const doomedTile = match.map?.tiles.find(
+      (tile) =>
+        tile.coord.q === TUTORIAL_CELL_COORDS.doomed.q &&
+        tile.coord.r === TUTORIAL_CELL_COORDS.doomed.r
+    );
+    const warningTurn = doomedTile?.meta?.warningTurn;
+    const destructionTurn = doomedTile?.meta?.destructionTurn;
+    if (
+      typeof warningTurn === "number" &&
+      typeof destructionTurn === "number" &&
+      currentTurn >= warningTurn &&
+      currentTurn < destructionTurn &&
+      doomedTile?.meta?.destroyed !== true
+    ) {
+      this.recordTutorialGameplay("observe_destruction_warning");
+    }
+
+    const botDead =
+      match.deadCharacters?.[TUTORIAL_BOT_ID] === true ||
+      bot?.statuses?.conditions?.indexOf("dead") !== -1 ||
+      (typeof bot?.stats.health.current === "number" &&
+        bot.stats.health.current <= 0);
+    if (doomedTile?.meta?.destroyed === true && botDead) {
+      this.recordTutorialGameplay("resolve_destruction");
+    }
+    if ((match.started === false || match.removed !== 0) && botDead) {
+      this.recordTutorialGameplay("victory_recap");
+    }
+  }
+
+  private handleTutorialCellInfoOpened(coord: Axial): void {
+    const currentStep = this.tutorialController?.currentStep;
+    const currentCoord = this.getCurrentPlayerCoord();
+    if (!currentStep || !currentCoord) {
+      return;
+    }
+    if (
+      currentStep === "search" &&
+      this.hasDiscoveredTutorialItemAt(coord)
+    ) {
+      this.recordTutorialPresentation("search");
+    } else if (
+      currentStep === "inspect_current_cell" &&
+      coord.q === currentCoord.q &&
+      coord.r === currentCoord.r
+    ) {
+      this.recordTutorialPresentation("inspect_current_cell");
+    } else if (
+      currentStep === "inspect_nearby_cell" &&
+      axialDistance(currentCoord, coord) === 1
+    ) {
+      this.recordTutorialPresentation("inspect_nearby_cell");
+    }
+  }
+
+  private hasDiscoveredTutorialItemAt(coord: Axial): boolean {
+    const player =
+      this.currentUserId && this.currentMatch?.playerCharacters
+        ? this.currentMatch.playerCharacters[this.currentUserId]
+        : undefined;
+    const tile = this.currentMatch?.map?.tiles.find(
+      (candidate) =>
+        candidate.coord.q === coord.q && candidate.coord.r === coord.r
+    );
+    return (
+      tile?.itemIds.some((itemId) =>
+        player?.discoveredItemIds?.includes(itemId)
+      ) ?? false
+    );
+  }
+
+  private handleTutorialTurn(
+    match: MatchRecord,
+    events: ReplayEvent[]
+  ): void {
+    if (!this.tutorialController || !this.currentUserId) {
+      return;
+    }
+    const userId = this.currentUserId;
+    const player = match.playerCharacters?.[userId];
+    const bot = match.playerCharacters?.[TUTORIAL_BOT_ID];
+    if (!player || !bot) {
+      return;
+    }
+
+    const feedResolved = events.some(
+      (event) =>
+        event.kind === "player" &&
+        event.actorId === userId &&
+        event.action.actionId === "feed"
+    );
+    const botMovedIntoPlayerCell = events.some(
+      (event) =>
+        event.kind === "player" &&
+        event.actorId === TUTORIAL_BOT_ID &&
+        event.action.actionId === "move"
+    );
+    if (
+      feedResolved &&
+      botMovedIntoPlayerCell &&
+      bot.position?.tileId === player.position?.tileId
+    ) {
+      this.recordTutorialGameplay("feed_bot");
+    }
+
+    const scareResolved = events.some(
+      (event) =>
+        event.kind === "player" &&
+        event.actorId === TUTORIAL_BOT_ID &&
+        event.action.actionId === "scare" &&
+        event.targets?.some((target) => target.targetId === userId)
+    );
+    const axeHitEvent = events.some(
+      (event) =>
+        event.kind === "player" &&
+        event.actorId === userId &&
+        event.action.actionId === "axe_attack"
+    );
+    if (
+      scareResolved &&
+      !axeHitEvent &&
+      player.position?.coord.q === TUTORIAL_CELL_COORDS.doomed.q &&
+      player.position?.coord.r === TUTORIAL_CELL_COORDS.doomed.r
+    ) {
+      this.recordTutorialGameplay("resolve_bot_scare");
+    }
+
+    const playerMovedToBot = events.some(
+      (event) =>
+        event.kind === "player" &&
+        event.actorId === userId &&
+        event.action.actionId === "move"
+    );
+    if (
+      playerMovedToBot &&
+      bot.position?.tileId === player.position?.tileId
+    ) {
+      this.recordTutorialGameplay("return_to_bot");
+    }
+
+    const doomedCellDestroyed = events.some(
+      (event) =>
+        event.kind === "map" &&
+        event.action === "destroyed" &&
+        event.cell.q === TUTORIAL_CELL_COORDS.doomed.q &&
+        event.cell.r === TUTORIAL_CELL_COORDS.doomed.r
+    );
+    if (doomedCellDestroyed) {
+      this.observeTutorialMatchState(match);
     }
   }
 
@@ -1569,6 +1869,7 @@ export class GameScene extends Phaser.Scene {
     try {
       const history = await this.chatService.connect(matchId);
       this.chatMessages = Array.isArray(history) ? history : [];
+      this.observeTutorialChatHistory(this.chatMessages);
       this.syncChatMessagesToPanel();
       panel.setChatConnectionState("ready", "Connected");
       panel.setChatInputEnabled(true);
@@ -1584,6 +1885,9 @@ export class GameScene extends Phaser.Scene {
 
   private handleIncomingChatMessage(message: MatchChatMessage) {
     this.chatMessages = [...this.chatMessages, message].slice(-100);
+    if (message.senderId === TUTORIAL_BOT_ID) {
+      this.recordTutorialGameplay("bot_chat");
+    }
     if (!this.characterPanel) {
       return;
     }
@@ -1595,6 +1899,12 @@ export class GameScene extends Phaser.Scene {
       this.turnService
     ) {
       this.resolveSinglePlayerName(message.senderId);
+    }
+  }
+
+  private observeTutorialChatHistory(messages: MatchChatMessage[]): void {
+    if (messages.some((message) => message.senderId === TUTORIAL_BOT_ID)) {
+      this.recordTutorialGameplay("bot_chat");
     }
   }
 
@@ -1677,6 +1987,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private async handleChatTabOpened() {
+    this.chatTabActive = true;
+    this.recordTutorialPresentation("open_chat");
     if (this.chatService) {
       if (this.chatMessages.length === 0) {
         await this.refreshChatHistory();
@@ -1699,6 +2011,7 @@ export class GameScene extends Phaser.Scene {
     try {
       const history = await this.chatService.refreshHistory();
       this.chatMessages = Array.isArray(history) ? history : [];
+      this.observeTutorialChatHistory(this.chatMessages);
       this.syncChatMessagesToPanel();
     } catch (error) {
       console.warn("chat history refresh failed", error);
@@ -1917,6 +2230,7 @@ export class GameScene extends Phaser.Scene {
             events
           });
           this.characterPanel?.appendLogReplay(turn, turn, events);
+          this.completeVisibleTutorialSteps();
           if (
             result.event.kind === "player" &&
             result.event.action.actionId === "buy_bomber"
@@ -2098,6 +2412,7 @@ export class GameScene extends Phaser.Scene {
       : [];
     const replayEvents =
       eventsFromField.length > 0 ? eventsFromField : alternateEvents;
+    this.handleTutorialTurn(match, replayEvents);
     const turnNumber =
       typeof payload.turn === "number"
         ? payload.turn
@@ -2311,7 +2626,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleTabChange(key: string) {
+    this.chatTabActive = key === "chat";
     this.logTabActive = key === "log";
+    this.completeVisibleTutorialSteps();
   }
 
   private openPlayerCard(playerId: string): void {
@@ -2545,6 +2862,7 @@ export class GameScene extends Phaser.Scene {
 
   private handleLogTabOpened() {
     this.logTabActive = true;
+    this.completeVisibleTutorialSteps();
     const turns = this.currentMatch?.current_turn ?? 0;
     if (turns === 0) {
       this.characterPanel?.setLogTurnInfo(0);
@@ -2606,6 +2924,7 @@ export class GameScene extends Phaser.Scene {
       };
       this.logReplayCache.set(resolvedTurn, replay);
       panel.setLogReplay(resolvedTurn, maxTurn, events);
+      this.completeVisibleTutorialSteps();
       this.applyReplaySnapshot(resolvedTurn, payload.snapshot);
     } catch (error) {
       console.warn("get_replay failed", error);

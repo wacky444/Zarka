@@ -1,4 +1,12 @@
 export const TUTORIAL_MATCH_METADATA_KEY = "tutorial" as const;
+export const TUTORIAL_BOT_ID = "bot1" as const;
+
+export const TUTORIAL_CELL_COORDS = {
+  playerStart: { q: 0, r: 0 },
+  botStart: { q: 1, r: 0 },
+  doomed: { q: 0, r: 1 },
+  spare: { q: 1, r: 1 }
+} as const;
 export const TUTORIAL_COMPLETION_PROFILE_KEY = "tutorialCompleted" as const;
 
 export const TUTORIAL_STEP_IDS = [
