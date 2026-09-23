@@ -273,8 +273,12 @@ export function triggerTrapsForTransition(
   if (axialDistance(from.coord, to.coord) !== 1) {
     return [];
   }
-  const matchingTraps = (match.traps ?? []).filter((trap) =>
-    sameEdge(trap, from, to),
+  const resolvingTurn = (match.current_turn ?? 0) + 1;
+  const matchingTraps = (match.traps ?? []).filter(
+    (trap) =>
+      (typeof trap.placedTurn !== "number" ||
+        trap.placedTurn < resolvingTurn) &&
+      sameEdge(trap, from, to),
   );
   if (matchingTraps.length === 0) {
     return [];
