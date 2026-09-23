@@ -41,7 +41,7 @@ type ShopCardItem = {
 };
 
 const HEADER_HEIGHT = 44;
-const SELECTOR_TO_LIST_GAP = 172;
+const SELECTOR_VERTICAL_GAP = 12;
 const CARD_PADDING = 12;
 const CARD_SPACING = 8;
 
@@ -173,7 +173,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.droneLocationSelector.setActive(false);
     parent.add(this.droneLocationSelector);
 
-    const listTop = selectorY + SELECTOR_TO_LIST_GAP;
+    const listTop = this.getShopListTop(selectorY);
     const listWidth = width - 24;
     const listHeight = Math.max(100, height - (listTop - layout.contentTop) - 8);
     const matrix = parent.getWorldTransformMatrix();
@@ -315,6 +315,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     if (!canPurchase) {
       return;
     }
+    this.finishShopPurchase();
     this.detectiveSelector.setVisible(true);
     this.detectiveSelector.setActive(true);
     this.detectiveSelector.setEnabled(true);
@@ -332,6 +333,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     if (!this.currentCharacter || this.currentCharacter.statuses?.conditions?.includes("dead")) {
       return;
     }
+    this.finishShopPurchase();
     this.locationSelectionShopId = "spy_drone";
     this.droneLocationSelector.setVisible(true);
     this.droneLocationSelector.setActive(true);
@@ -342,6 +344,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     if (!this.currentCharacter || this.currentCharacter.statuses?.conditions?.includes("dead")) {
       return;
     }
+    this.finishShopPurchase();
     this.locationSelectionShopId = "pyromaniac";
     this.droneLocationSelector.setVisible(true);
     this.droneLocationSelector.setActive(true);
@@ -352,6 +355,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     if (!this.currentCharacter || this.currentCharacter.statuses?.conditions?.includes("dead")) {
       return;
     }
+    this.finishShopPurchase();
     this.locationSelectionShopId = "bomber";
     this.droneLocationSelector.setVisible(true);
     this.droneLocationSelector.setActive(true);
@@ -410,14 +414,20 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.balanceText.setPosition(options.margin + 24, headerY + HEADER_HEIGHT / 2);
 
     const selectorY = headerY + HEADER_HEIGHT + 10;
-    this.testamentSelector.setPosition(options.margin + 12, selectorY);
-    this.testamentSelector.setSelectorWidth(width - 24);
-    this.detectiveSelector.setPosition(options.margin + 12, selectorY + 72);
-    this.detectiveSelector.setSelectorWidth(width - 24);
-    this.droneLocationSelector.setPosition(options.margin + 12, selectorY + 72);
-    this.droneLocationSelector.setDisplayWidth(width - 24);
+    const selectorX = options.margin + 12;
+    const selectorWidth = width - 24;
+    this.testamentSelector.setPosition(selectorX, selectorY);
+    this.testamentSelector.setSelectorWidth(selectorWidth);
+    const detectiveY =
+      selectorY + this.testamentSelector.height + SELECTOR_VERTICAL_GAP;
+    this.detectiveSelector.setPosition(selectorX, detectiveY);
+    this.detectiveSelector.setSelectorWidth(selectorWidth);
+    const locationY =
+      detectiveY + this.detectiveSelector.height + SELECTOR_VERTICAL_GAP;
+    this.droneLocationSelector.setPosition(selectorX, locationY);
+    this.droneLocationSelector.setDisplayWidth(selectorWidth);
 
-    const listTop = selectorY + SELECTOR_TO_LIST_GAP;
+    const listTop = this.getShopListTop(selectorY);
     const listWidth = width - 24;
     const listHeight = Math.max(100, height - (listTop - options.contentTop) - 8);
     const matrix = this.parent.getWorldTransformMatrix();
@@ -451,6 +461,18 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     }
     this.cards.length = 0;
     this.removeAllListeners();
+  }
+
+  private getShopListTop(selectorY: number): number {
+    return (
+      selectorY +
+      this.testamentSelector.height +
+      SELECTOR_VERTICAL_GAP +
+      this.detectiveSelector.height +
+      SELECTOR_VERTICAL_GAP +
+      this.droneLocationSelector.height +
+      SELECTOR_VERTICAL_GAP
+    );
   }
 
   private buildShopList(cardWidth: number): void {
