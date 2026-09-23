@@ -1,7 +1,8 @@
-import type { ReplayEvent } from "@shared";
+import { TUTORIAL_MATCH_METADATA_KEY, type ReplayEvent } from "@shared";
 import { MatchRecord } from "../models/types";
 import { advanceTurn } from "./advanceTurn";
 import { processBotActions } from "./botAI";
+import { planTutorialBotActions } from "./TutorialBotPlanner";
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
 
 export interface TurnResolutionResult {
@@ -21,7 +22,11 @@ export function resolveTurnForMatch(
   }
 
   const resolvedTurn = (match.current_turn || 0) + 1;
-  processBotActions(match, logger);
+  if (match.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
+    planTutorialBotActions(match);
+  } else {
+    processBotActions(match, logger);
+  }
   const { events } = advanceTurn(match, resolvedTurn, logger, nk);
 
   const resetStates: Record<string, boolean> = {};
