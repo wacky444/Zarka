@@ -12,22 +12,7 @@ import {
   updateCharacterCooldowns
 } from "../match/actions/cooldowns";
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
-
-function parseTargetLocation(value: unknown): Axial | undefined {
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-  if (typeof value !== "object") {
-    throw makeNakamaError("invalid_target_location", 3);
-  }
-  const raw = value as { q?: unknown; r?: unknown };
-  const q = typeof raw.q === "number" ? raw.q : Number(raw.q);
-  const r = typeof raw.r === "number" ? raw.r : Number(raw.r);
-  if (!isFinite(q) || !isFinite(r)) {
-    throw makeNakamaError("invalid_target_location", 3);
-  }
-  return { q, r };
-}
+import { parseAxial } from "../utils/location";
 
 export function updateMainActionRpc(
   ctx: nkruntime.Context,
@@ -80,10 +65,32 @@ export function updateMainActionRpc(
       throw makeNakamaError("action_not_available", 9);
     }
     normalizedActionId = candidate;
-    targetLocation = parseTargetLocation(submission.targetLocationId);
-    secondTargetLocation = parseTargetLocation(
-      submission.secondTargetLocationId
+    const rawTargetLocation = submission.targetLocationId;
+    const parsedTargetLocation = parseAxial(rawTargetLocation, {
+      coerceNumericCoordinates: true,
+    });
+    if (
+      rawTargetLocation !== undefined &&
+      rawTargetLocation !== null &&
+      parsedTargetLocation === null
+    ) {
+      throw makeNakamaError("invalid_target_location", 3);
+    }
+    targetLocation = parsedTargetLocation ?? undefined;
+
+    const rawSecondTargetLocation = submission.secondTargetLocationId;
+    const parsedSecondTargetLocation = parseAxial(
+      rawSecondTargetLocation,
+      { coerceNumericCoordinates: true }
     );
+    if (
+      rawSecondTargetLocation !== undefined &&
+      rawSecondTargetLocation !== null &&
+      parsedSecondTargetLocation === null
+    ) {
+      throw makeNakamaError("invalid_target_location", 3);
+    }
+    secondTargetLocation = parsedSecondTargetLocation ?? undefined;
     const rawTargetPlayerId = submission.secondTargetPlayerId;
     if (typeof rawTargetPlayerId === "string") {
       const trimmed = rawTargetPlayerId.trim();

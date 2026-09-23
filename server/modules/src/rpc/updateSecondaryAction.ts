@@ -21,6 +21,7 @@ import {
   clearSecondaryPlan
 } from "../match/actions/utils";
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
+import { parseAxial } from "../utils/location";
 
 export function updateSecondaryActionRpc(
   ctx: nkruntime.Context,
@@ -90,28 +91,21 @@ export function updateSecondaryActionRpc(
         nkruntime.Codes.INVALID_ARGUMENT
       );
     }
-    const locationCandidate = submission.targetLocationId as Axial | undefined;
-    if (locationCandidate) {
-      const rawCandidate = locationCandidate as unknown as {
-        q?: unknown;
-        r?: unknown;
-      };
-      const qNum =
-        typeof rawCandidate.q === "number"
-          ? rawCandidate.q
-          : Number(rawCandidate.q);
-      const rNum =
-        typeof rawCandidate.r === "number"
-          ? rawCandidate.r
-          : Number(rawCandidate.r);
-      if (isNaN(qNum) || isNaN(rNum)) {
-        throw makeNakamaError(
-          "invalid_target_location",
-          nkruntime.Codes.INVALID_ARGUMENT
-        );
-      }
-      targetLocation = { q: qNum, r: rNum };
+    const rawTargetLocation = submission.targetLocationId;
+    const parsedTargetLocation = parseAxial(rawTargetLocation, {
+      coerceNumericCoordinates: true,
+    });
+    if (
+      rawTargetLocation !== undefined &&
+      rawTargetLocation !== null &&
+      parsedTargetLocation === null
+    ) {
+      throw makeNakamaError(
+        "invalid_target_location",
+        nkruntime.Codes.INVALID_ARGUMENT
+      );
     }
+    targetLocation = parsedTargetLocation ?? undefined;
     const rawTargetPlayers = submission.targetPlayerIds;
     if (Array.isArray(rawTargetPlayers)) {
       const filtered = rawTargetPlayers

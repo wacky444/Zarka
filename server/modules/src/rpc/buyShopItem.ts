@@ -18,6 +18,7 @@ import {
 } from "../match/actions/utils";
 import { isCharacterDead } from "../utils/playerCharacter";
 import { tailorPlayerCharactersForViewer } from "../utils/matchView";
+import { parseAxial } from "../utils/location";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -29,21 +30,6 @@ function effectiveTeamId(character: {
 }): string | null {
   const teamId = character.secretTeamId?.trim() || character.teamId?.trim();
   return teamId && teamId.length > 0 ? teamId : null;
-}
-
-function parseAxial(value: unknown): Axial | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-  if (
-    typeof value.q !== "number" ||
-    !isFinite(value.q) ||
-    typeof value.r !== "number" ||
-    !isFinite(value.r)
-  ) {
-    return null;
-  }
-  return { q: value.q, r: value.r };
 }
 
 function isSameCoord(a: Axial | undefined, b: Axial | undefined): boolean {
