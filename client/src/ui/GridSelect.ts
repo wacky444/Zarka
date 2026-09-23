@@ -36,6 +36,7 @@ export interface GridSelectItem {
   texture: string;
   frame?: string;
   iconScale?: number;
+  highlighted?: boolean;
   tags?: string[];
   cooldownRemaining?: number;
   missingRequirement?: string | null;
@@ -1345,11 +1346,14 @@ export class GridSelect extends Phaser.GameObjects.Container {
   ) {
     const disabled = config.item.disabled === true;
     const selected = config.isSelected && !disabled;
+    const highlighted = config.item.highlighted === true && !disabled;
     const baseColor = selected
       ? THEME.colors.cardSelected
-      : disabled
-        ? THEME.colors.cardDisabled
-        : THEME.colors.cardBackground;
+      : highlighted
+        ? THEME.colors.cardPrioritized
+        : disabled
+          ? THEME.colors.cardDisabled
+          : THEME.colors.cardBackground;
     config.bg?.setFillStyle?.(baseColor, 1);
     config.bg?.setSize?.(config.cellWidth, config.cellHeight);
     config.bg?.setDisplaySize?.(config.cellWidth, config.cellHeight);
@@ -1360,7 +1364,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
     config.nameText?.setColor(
       disabled
         ? THEME.colors.textDisabled
-        : (config.item.labelColor ?? THEME.colors.textPrimary)
+        : highlighted
+          ? THEME.colors.healthRecover
+          : (config.item.labelColor ?? THEME.colors.textPrimary)
     );
     config.descText?.setColor(
       disabled ? THEME.colors.textDisabled : THEME.colors.modalText

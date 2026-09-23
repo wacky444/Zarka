@@ -6,6 +6,7 @@ export const THEME = {
 
     cardBackground: 0x1b2440,
     cardSelected: 0x2b3a6b,
+    cardPrioritized: 0x164e37,
     cardDisabled: 0x151e35,
     collapsedBackground: 0x101828,
     collapsedBorder: 0x1f2a4a,

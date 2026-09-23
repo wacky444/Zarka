@@ -237,6 +237,7 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
       texture: option.texture ?? "hex",
       frame: option.frame,
       iconScale: option.iconScale,
+      highlighted: this.priority.includes(option.id),
       disabled: option.disabled,
     }));
   }
@@ -278,6 +279,7 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
 
   private updateListDisplay(emit: boolean): void {
     this.clearEntries();
+    this.grid.setItems(this.buildGridItems());
     if (this.priority.length === 0) {
       this.emptyLabel.setVisible(true);
       this.listHeight = this.emptyLabel.height;
