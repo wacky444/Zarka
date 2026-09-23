@@ -27,6 +27,7 @@ import { executeBreakfastAction } from "./actions/breakfast";
 import { canFeedParticipant, executeFeedAction } from "./actions/feed";
 import { executeFocusAction } from "./actions/focus";
 import { executeUseBandageAction } from "./actions/useBandage";
+import { executeUseMedicineAction } from "./actions/useMedicine";
 import { executeUseChemicalWeaponAction } from "./actions/UseChemicalWeapon";
 import { executeSearchAction } from "./actions/search";
 import { executeInspectAction } from "./actions/inspect";
@@ -331,6 +332,49 @@ export function executeAction(
             createFailedActionEvent(participant, action.id, {
               reason: "missing_item",
               missingItemId: "bandage",
+            }),
+          )
+        : [];
+      eventsForAction = [...energyEvents, ...actionEvents, ...failureEvents];
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.use_medicine.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const eligible: PlannedActionParticipant[] = [];
+      const missing: PlannedActionParticipant[] = [];
+      for (const participant of participants) {
+        if (hasCarriedItem(participant.character, "medicine")) {
+          eligible.push(participant);
+        } else {
+          missing.push(participant);
+          clearPlanByKey(participant.character, participant.planKey);
+          match.playerCharacters![participant.playerId] = participant.character;
+        }
+      }
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = eligible.length
+        ? executeUseMedicineAction(eligible, match)
+        : [];
+      const failureEvents = missing.length
+        ? missing.map((participant) =>
+            createFailedActionEvent(participant, action.id, {
+              reason: "missing_item",
+              missingItemId: "medicine",
             }),
           )
         : [];

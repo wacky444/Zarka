@@ -18,6 +18,7 @@ import { animateScareEvent } from "./replayActions/ScareAnimation";
 import { animateSearchEvent } from "./replayActions/SearchAnimation";
 import { animateSleepEvent } from "./replayActions/SleepAnimation";
 import { animateUseBandageEvent } from "./replayActions/UseBandageAnimation";
+import { animateUseMedicineEvent } from "./replayActions/UseMedicineAnimation";
 import { animateFocusEvent } from "./replayActions/FocusAnimation";
 import { animateFailedActionEvent } from "./replayActions/FailedActionAnimation";
 import { animateDetectEvent } from "./replayActions/DetectAnimation";
@@ -65,6 +66,8 @@ export async function playReplayEvents(
       await animateScareEvent(context, event);
     } else if (actionId === ActionLibrary.use_bandage.id) {
       await animateUseBandageEvent(context, event);
+    } else if (actionId === ActionLibrary.use_medicine.id) {
+      await animateUseMedicineEvent(context, event);
     } else if (actionId === ActionLibrary.sleep.id) {
       await animateSleepEvent(context, event);
     } else if (actionId === ActionLibrary.recover.id) {

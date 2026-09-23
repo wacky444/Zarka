@@ -84,6 +84,7 @@ const SUPPORTED_ACTION_IDS: ActionId[] = [
   ActionLibrary.feed.id,
   ActionLibrary.focus.id,
   ActionLibrary.use_bandage.id,
+  ActionLibrary.use_medicine.id,
   ActionLibrary.protect.id,
   ActionLibrary.sleep.id,
   ActionLibrary.recover.id,
@@ -355,6 +356,8 @@ function createCandidateForAction(
       return createFocusCandidate(definition, context);
     case "use_bandage":
       return createBandageCandidate(definition, context);
+    case "use_medicine":
+      return createMedicineCandidate(definition, context);
     case "protect":
       return createProtectCandidate(definition, context);
     case "sleep":
@@ -538,6 +541,27 @@ function createBandageCandidate(
   };
   const weight =
     computeBaseWeight(definition, context.personality) * (1 + deficit / 5);
+  return { definition, plan, weight };
+}
+
+function createMedicineCandidate(
+  definition: ActionDefinition,
+  context: BotActionContext
+): BotActionCandidate | null {
+  if (!hasMedicine(context.character)) {
+    return null;
+  }
+  const healthStats = getHealthStats(context.character);
+  const deficit = Math.max(0, healthStats.max - healthStats.current);
+  if (deficit < 4) {
+    return null;
+  }
+  const plan: PlayerPlannedAction = {
+    actionId: definition.id,
+    targetPlayerIds: [context.playerId]
+  };
+  const weight =
+    computeBaseWeight(definition, context.personality) * (1 + deficit / 8);
   return { definition, plan, weight };
 }
 
@@ -965,6 +989,20 @@ function hasBandage(character: PlayerCharacter): boolean {
     }
   }
   return false;
+}
+
+function hasMedicine(character: PlayerCharacter): boolean {
+  const stacks = character.inventory?.carriedItems;
+  if (!Array.isArray(stacks)) {
+    return false;
+  }
+  return stacks.some(
+    (stack) =>
+      stack?.itemId === "medicine" &&
+      typeof stack.quantity === "number" &&
+      isFinite(stack.quantity) &&
+      stack.quantity > 0
+  );
 }
 
 function isActionAllowedAtLocation(
