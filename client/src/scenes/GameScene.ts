@@ -2931,6 +2931,9 @@ export class GameScene extends Phaser.Scene {
       if (payload.error) {
         throw new Error(payload.error);
       }
+      const turnAdvanced =
+        payload.advanced === true ||
+        (typeof payload.turn === "number" && payload.turn !== previousTurn);
       const nextStates = payload.readyStates ?? null;
       if (this.currentMatch) {
         if (nextStates) {
@@ -2950,7 +2953,7 @@ export class GameScene extends Phaser.Scene {
         }
         if (payload.playerCharacters) {
           this.currentMatch.playerCharacters = payload.playerCharacters;
-          if (!this.replayView) {
+          if (!turnAdvanced && !this.replayView) {
             this.renderPlayerCharacters(this.currentMatch);
           }
         }
@@ -2980,10 +2983,6 @@ export class GameScene extends Phaser.Scene {
         ready;
       this.characterPanel?.setReadyState(appliedReady, false);
       if (this.currentMatch) {
-        const turnAdvanced =
-          payload.advanced === true ||
-          (typeof payload.turn === "number" &&
-            payload.turn !== previousTurn);
         if (turnAdvanced) {
           // An advanced turn changes character state. Reapply the complete
           // panel only in that case; a plain ready toggle must not rebuild
