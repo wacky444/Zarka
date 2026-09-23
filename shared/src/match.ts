@@ -5,6 +5,7 @@ import type {
 } from "./playerCharacter";
 import type { ItemId } from "./Item";
 import type { MatchReportProgress } from "./matchReport";
+import type { MatchMetadata } from "./Tutorial";
 
 export interface MatchItemRecord {
   item_id: string;
@@ -58,6 +59,7 @@ export interface MatchRecord {
   revealedTeamsByPlayerId?: Record<string, string>;
   lastAutoAdvanceAt?: number;
   reportProgress?: MatchReportProgress;
+  metadata?: MatchMetadata;
 }
 
 export interface TurnRecord {
