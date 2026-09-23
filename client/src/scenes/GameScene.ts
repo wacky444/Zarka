@@ -8,27 +8,24 @@ import {
   type ChatMessageViewModel
 } from "../ui/CharacterPanel";
 import { GameBoardRenderer } from "./GameBoardRenderer";
+import { ActionPlanSynchronizer } from "./ActionPlanSynchronizer";
+import { normalizeAxial } from "../utils/axial";
 import type { TurnService } from "../services/turnService";
 import { MatchChatService } from "../services/chatService";
 import {
   ActionLibrary,
-  ActionCategory,
   ExtraExecutionEffect,
   CellLibrary,
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
   HexTile,
   type ActionId,
-  type ActionSubmission,
   type Axial,
-  type PlayerPlannedAction,
   type GameMap,
   generateGameMap,
   type GetStatePayload,
   type MatchRecord,
   type TrapRecord,
-  type UpdateMainActionPayload,
-  type UpdateSecondaryActionPayload,
   type UpdateReadyStatePayload,
   type TurnAdvancedMessagePayload,
   type ReadyStateUpdateMessagePayload,
@@ -103,28 +100,7 @@ export class GameScene extends Phaser.Scene {
   private currentPlayerName: string | null = null;
   private turnService: TurnService | null = null;
   private pointerDownInUI = false;
-  private mainActionUpdateRunning = false;
-  private pendingMainActionSelection: MainActionSelection | undefined;
-  private mainActionDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-  private queuedMainActionSelection: MainActionSelection | null | undefined;
-  private secondaryActionUpdateRunning = false;
-  private pendingSecondaryActionSelection: SecondaryActionSelection | undefined;
-  private secondaryActionDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-  private queuedSecondaryActionSelection:
-    | SecondaryActionSelection
-    | null
-    | undefined;
-  private extraSecondaryActionUpdateRunning = false;
-  private pendingExtraSecondaryActionSelection:
-    | SecondaryActionSelection
-    | undefined;
-  private extraSecondaryActionDebounceTimer:
-    | ReturnType<typeof setTimeout>
-    | null = null;
-  private queuedExtraSecondaryActionSelection:
-    | SecondaryActionSelection
-    | null
-    | undefined;
+  private actionPlanSynchronizer: ActionPlanSynchronizer | null = null;
   private readyUpdateRunning = false;
   private pendingReadyState: boolean | undefined;
   private locationSelectionActive = false;
@@ -543,6 +519,18 @@ export class GameScene extends Phaser.Scene {
 
     this.characterPanel = new CharacterPanel(this, 0, 0);
     this.characterPanelDesktopWidth = this.characterPanel.getPanelWidth();
+    this.actionPlanSynchronizer = new ActionPlanSynchronizer({
+      getTurnService: () => this.turnService,
+      getCurrentUserId: () => this.currentUserId,
+      getCurrentMatchId: () =>
+        this.registry.get("currentMatchId") as string | null,
+      getCurrentMatch: () => this.currentMatch,
+      isReplayViewActive: () => this.replayView !== null,
+      cancelMainActionLocationPick: () => this.cancelMainActionLocationPick(),
+      parseRpcPayload: <T>(response: RpcResponse) =>
+        this.parseRpcPayload<T>(response),
+      updateCharacterPanel: (match) => this.updateCharacterPanel(match),
+    });
     this.cam.ignore(this.characterPanel);
     this.characterPanel.on(
       "main-action-change",
@@ -734,18 +722,8 @@ export class GameScene extends Phaser.Scene {
     this.hideLoadingOverlay();
     this.scale.on("resize", this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      if (this.mainActionDebounceTimer !== null) {
-        clearTimeout(this.mainActionDebounceTimer);
-        this.mainActionDebounceTimer = null;
-      }
-      if (this.secondaryActionDebounceTimer !== null) {
-        clearTimeout(this.secondaryActionDebounceTimer);
-        this.secondaryActionDebounceTimer = null;
-      }
-      if (this.extraSecondaryActionDebounceTimer !== null) {
-        clearTimeout(this.extraSecondaryActionDebounceTimer);
-        this.extraSecondaryActionDebounceTimer = null;
-      }
+      this.actionPlanSynchronizer?.destroy();
+      this.actionPlanSynchronizer = null;
       this.scale.off("resize", this.handleResize, this);
       this.hideLoadingOverlay();
       this.input.off(Phaser.Input.Events.POINTER_DOWN, this.pointerDownHandler);
@@ -1722,569 +1700,24 @@ export class GameScene extends Phaser.Scene {
   }
 
   private scheduleMainActionSelection = (
-    selection: MainActionSelection | null | undefined
+    selection: MainActionSelection | null | undefined,
   ): void => {
-    if (this.replayView) {
-      return;
-    }
-    this.queuedMainActionSelection = selection;
-    if (this.mainActionDebounceTimer !== null) {
-      clearTimeout(this.mainActionDebounceTimer);
-    }
-    this.mainActionDebounceTimer = setTimeout(() => {
-      const nextSelection = this.queuedMainActionSelection;
-      this.queuedMainActionSelection = undefined;
-      this.mainActionDebounceTimer = null;
-      void this.handleMainActionSelection(nextSelection);
-    }, 250);
+    this.actionPlanSynchronizer?.scheduleMainActionSelection(selection);
   };
 
   private scheduleSecondaryActionSelection = (
-    selection: SecondaryActionSelection | null | undefined
+    selection: SecondaryActionSelection | null | undefined,
   ): void => {
-    if (this.replayView) {
-      return;
-    }
-    this.queuedSecondaryActionSelection = selection;
-    if (this.secondaryActionDebounceTimer !== null) {
-      clearTimeout(this.secondaryActionDebounceTimer);
-    }
-    this.secondaryActionDebounceTimer = setTimeout(() => {
-      const nextSelection = this.queuedSecondaryActionSelection;
-      this.queuedSecondaryActionSelection = undefined;
-      this.secondaryActionDebounceTimer = null;
-      void this.handleSecondaryActionSelection(nextSelection);
-    }, 250);
+    this.actionPlanSynchronizer?.scheduleSecondaryActionSelection(selection);
   };
 
   private scheduleExtraSecondaryActionSelection = (
-    selection: SecondaryActionSelection | null | undefined
+    selection: SecondaryActionSelection | null | undefined,
   ): void => {
-    if (this.replayView) {
-      return;
-    }
-    this.queuedExtraSecondaryActionSelection = selection;
-    if (this.extraSecondaryActionDebounceTimer !== null) {
-      clearTimeout(this.extraSecondaryActionDebounceTimer);
-    }
-    this.extraSecondaryActionDebounceTimer = setTimeout(() => {
-      const nextSelection = this.queuedExtraSecondaryActionSelection;
-      this.queuedExtraSecondaryActionSelection = undefined;
-      this.extraSecondaryActionDebounceTimer = null;
-      void this.handleExtraSecondaryActionSelection(nextSelection);
-    }, 250);
+    this.actionPlanSynchronizer?.scheduleExtraSecondaryActionSelection(
+      selection,
+    );
   };
-
-  private async handleMainActionSelection(
-    selection: MainActionSelection | null | undefined
-  ) {
-    this.cancelMainActionLocationPick();
-    const matchId = this.registry.get("currentMatchId") as string | null;
-    if (!this.turnService || !this.currentUserId || !matchId) {
-      return;
-    }
-    const normalizedPlayers = this.normalizeTargetPlayers(
-      selection?.targetPlayerIds ?? undefined
-    );
-    const normalizedItems = this.normalizeTargetItems(
-      selection?.targetItemIds ?? undefined
-    );
-    const normalizedSelection: MainActionSelection = {
-      actionId: selection?.actionId ?? null,
-      targetLocation: this.normalizeAxial(selection?.targetLocation),
-      secondTargetLocation: this.normalizeAxial(
-        selection?.secondTargetLocation
-      ),
-      targetPlayerIds: normalizedPlayers,
-      secondTargetPlayerId: this.normalizePlayerId(
-        selection?.secondTargetPlayerId
-      ),
-      targetItemIds: normalizedItems,
-      extraExecutions:
-        typeof selection?.extraExecutions === "number"
-          ? selection.extraExecutions
-          : undefined
-    };
-    const character =
-      this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
-    const previousPlan = character?.actionPlan?.main ?? null;
-    const previousActionId = previousPlan?.actionId ?? null;
-    const previousTarget = this.normalizeAxial(previousPlan?.targetLocationId);
-    const previousSecondTarget = this.normalizeAxial(
-      previousPlan?.secondTargetLocationId
-    );
-    const previousSecondTargetPlayerId = this.normalizePlayerId(
-      previousPlan?.secondTargetPlayerId
-    );
-    const previousPlayers = this.normalizeTargetPlayers(
-      previousPlan?.targetPlayerIds ?? undefined
-    );
-    const previousItems = this.normalizeTargetItems(
-      previousPlan?.targetItemIds ?? undefined
-    );
-    if (
-      normalizedSelection.actionId === previousActionId &&
-      this.isSameAxial(normalizedSelection.targetLocation, previousTarget) &&
-      this.isSameAxial(
-        normalizedSelection.secondTargetLocation,
-        previousSecondTarget
-      ) &&
-      normalizedSelection.secondTargetPlayerId ===
-        previousSecondTargetPlayerId &&
-      this.isSameTargetPlayers(
-        normalizedSelection.targetPlayerIds,
-        previousPlayers
-      ) &&
-      this.isSameTargetItems(
-        normalizedSelection.targetItemIds,
-        previousItems
-      ) &&
-      (normalizedSelection.extraExecutions ?? 0) ===
-        (previousPlan?.extraExecutions ?? 0)
-    ) {
-      return;
-    }
-    if (this.mainActionUpdateRunning) {
-      this.pendingMainActionSelection = normalizedSelection;
-      return;
-    }
-    this.mainActionUpdateRunning = true;
-    this.pendingMainActionSelection = undefined;
-    try {
-      const submission = normalizedSelection.actionId
-        ? this.buildMainActionSubmission(
-            normalizedSelection.actionId,
-            normalizedSelection.targetLocation,
-            normalizedSelection.secondTargetLocation ?? null,
-            normalizedSelection.targetPlayerIds,
-            normalizedSelection.secondTargetPlayerId ?? undefined,
-            normalizedSelection.targetItemIds,
-            normalizedSelection.extraExecutions
-          )
-        : null;
-      const res = await this.turnService.updateMainAction(matchId, submission);
-      const payload = this.parseRpcPayload<UpdateMainActionPayload>(res);
-      if (payload.error) {
-        throw new Error(payload.error);
-      }
-      if (!this.currentMatch) {
-        return;
-      }
-      const target =
-        this.currentMatch.playerCharacters?.[this.currentUserId] ?? null;
-      if (!target) {
-        return;
-      }
-      target.actionPlan = target.actionPlan ?? {};
-      if (!submission) {
-        if (target.actionPlan.main) {
-          delete target.actionPlan.main;
-        }
-        if (
-          target.actionPlan.secondary === undefined &&
-          target.actionPlan.extraSecondary === undefined &&
-          target.actionPlan.nextMain === undefined &&
-          target.actionPlan.main === undefined
-        ) {
-          delete target.actionPlan;
-        }
-      } else {
-        const nextPlan: PlayerPlannedAction = {
-          ...(target.actionPlan.main ?? {}),
-          actionId: submission.actionId
-        };
-        if (payload.targetLocationId) {
-          nextPlan.targetLocationId = payload.targetLocationId;
-        } else if (nextPlan.targetLocationId) {
-          delete nextPlan.targetLocationId;
-        }
-        if (payload.secondTargetLocationId) {
-          nextPlan.secondTargetLocationId = payload.secondTargetLocationId;
-        } else {
-          delete nextPlan.secondTargetLocationId;
-        }
-        if (payload.secondTargetPlayerId) {
-          nextPlan.secondTargetPlayerId = payload.secondTargetPlayerId;
-        } else {
-          delete nextPlan.secondTargetPlayerId;
-        }
-        if (payload.targetPlayerIds && payload.targetPlayerIds.length > 0) {
-          nextPlan.targetPlayerIds = [...payload.targetPlayerIds];
-        } else if (nextPlan.targetPlayerIds) {
-          delete nextPlan.targetPlayerIds;
-        }
-        if (payload.targetItemIds && payload.targetItemIds.length > 0) {
-          nextPlan.targetItemIds = [...payload.targetItemIds];
-        } else if (nextPlan.targetItemIds) {
-          delete nextPlan.targetItemIds;
-        }
-        if (
-          typeof payload.extraExecutions === "number" &&
-          payload.extraExecutions > 0
-        ) {
-          nextPlan.extraExecutions = payload.extraExecutions;
-        } else if (nextPlan.extraExecutions) {
-          delete nextPlan.extraExecutions;
-        }
-        target.actionPlan.main = nextPlan;
-      }
-      if (
-        this.pendingMainActionSelection === undefined &&
-        this.queuedMainActionSelection === undefined
-      ) {
-        this.updateCharacterPanel(this.currentMatch);
-      }
-    } catch (error) {
-      console.warn("update_main_action failed", error);
-      // this.updateCharacterPanel(this.currentMatch); TODO it creates a loop
-    } finally {
-      this.mainActionUpdateRunning = false;
-      if (this.pendingMainActionSelection) {
-        const nextSelection = this.pendingMainActionSelection;
-        this.pendingMainActionSelection = undefined;
-        void this.handleMainActionSelection(nextSelection);
-      }
-    }
-  }
-
-  private async handleSecondaryActionSelection(
-    selection: SecondaryActionSelection | null | undefined
-  ) {
-    const matchId = this.registry.get("currentMatchId") as string | null;
-    if (!this.turnService || !this.currentUserId || !matchId) {
-      return;
-    }
-    const normalizedPlayers = this.normalizeTargetPlayers(
-      selection?.targetPlayerIds ?? undefined
-    );
-    const normalizedItems = this.normalizeTargetItems(
-      selection?.targetItemIds ?? undefined
-    );
-    const normalizedSelection: SecondaryActionSelection = {
-      actionId: selection?.actionId ?? null,
-      targetLocation: this.normalizeAxial(selection?.targetLocation),
-      targetPlayerIds: normalizedPlayers,
-      targetItemIds: normalizedItems,
-      extraExecutions:
-        typeof selection?.extraExecutions === "number"
-          ? selection.extraExecutions
-          : undefined,
-      prioritizeFoodDrink: selection?.prioritizeFoodDrink === true,
-      sellInstead: selection?.sellInstead === true,
-      singleTarget: selection?.singleTarget === true,
-      inspectAdditionalTarget: selection?.inspectAdditionalTarget === true
-    };
-    const character =
-      this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
-    const previousPlan = character?.actionPlan?.secondary ?? null;
-    const previousActionId = previousPlan?.actionId ?? null;
-    const previousTarget = this.normalizeAxial(
-      previousPlan?.targetLocationId ?? null
-    );
-    const previousPlayers = this.normalizeTargetPlayers(
-      previousPlan?.targetPlayerIds ?? undefined
-    );
-    const previousItems = this.normalizeTargetItems(
-      previousPlan?.targetItemIds ?? undefined
-    );
-    if (
-      normalizedSelection.actionId === previousActionId &&
-      this.isSameAxial(normalizedSelection.targetLocation, previousTarget) &&
-      this.isSameTargetPlayers(
-        normalizedSelection.targetPlayerIds,
-        previousPlayers
-      ) &&
-      this.isSameTargetItems(
-        normalizedSelection.targetItemIds,
-        previousItems
-      ) &&
-      (normalizedSelection.extraExecutions ?? 0) ===
-        (previousPlan?.extraExecutions ?? 0) &&
-      normalizedSelection.prioritizeFoodDrink ===
-        (previousPlan?.prioritizeFoodDrink ?? false) &&
-      normalizedSelection.sellInstead ===
-        (previousPlan?.sellInstead ?? false) &&
-      normalizedSelection.singleTarget === (previousPlan?.singleTarget ?? false) &&
-      normalizedSelection.inspectAdditionalTarget ===
-        (previousPlan?.inspectAdditionalTarget ?? false)
-    ) {
-      return;
-    }
-    if (this.secondaryActionUpdateRunning) {
-      this.pendingSecondaryActionSelection = normalizedSelection;
-      return;
-    }
-    this.secondaryActionUpdateRunning = true;
-    this.pendingSecondaryActionSelection = undefined;
-    try {
-      const submission = normalizedSelection.actionId
-        ? this.buildSecondaryActionSubmission(
-            normalizedSelection.actionId,
-            normalizedSelection.targetLocation,
-            normalizedSelection.targetPlayerIds,
-            normalizedSelection.targetItemIds,
-            normalizedSelection.extraExecutions,
-            normalizedSelection.prioritizeFoodDrink,
-            normalizedSelection.sellInstead,
-            normalizedSelection.singleTarget,
-            normalizedSelection.inspectAdditionalTarget
-          )
-        : null;
-      const res = await this.turnService.updateSecondaryAction(
-        matchId,
-        submission
-      );
-      const payload = this.parseRpcPayload<UpdateSecondaryActionPayload>(res);
-      if (payload.error) {
-        throw new Error(payload.error);
-      }
-      if (!this.currentMatch) {
-        return;
-      }
-      const target =
-        this.currentMatch.playerCharacters?.[this.currentUserId] ?? null;
-      if (!target) {
-        return;
-      }
-      target.actionPlan = target.actionPlan ?? {};
-      if (!submission) {
-        if (target.actionPlan.secondary) {
-          delete target.actionPlan.secondary;
-        }
-        if (
-          target.actionPlan.secondary === undefined &&
-          target.actionPlan.extraSecondary === undefined &&
-          target.actionPlan.nextMain === undefined &&
-          target.actionPlan.main === undefined
-        ) {
-          delete target.actionPlan;
-        }
-      } else {
-        const nextPlan: PlayerPlannedAction = {
-          ...(target.actionPlan.secondary ?? {}),
-          actionId: submission.actionId
-        };
-        if (payload.targetLocationId) {
-          nextPlan.targetLocationId = payload.targetLocationId;
-        } else if (nextPlan.targetLocationId) {
-          delete nextPlan.targetLocationId;
-        }
-        if (payload.targetPlayerIds && payload.targetPlayerIds.length > 0) {
-          nextPlan.targetPlayerIds = [...payload.targetPlayerIds];
-        } else if (nextPlan.targetPlayerIds) {
-          delete nextPlan.targetPlayerIds;
-        }
-        if (payload.targetItemIds && payload.targetItemIds.length > 0) {
-          nextPlan.targetItemIds = [...payload.targetItemIds];
-        } else if (nextPlan.targetItemIds) {
-          delete nextPlan.targetItemIds;
-        }
-        if (
-          typeof payload.extraExecutions === "number" &&
-          payload.extraExecutions > 0
-        ) {
-          nextPlan.extraExecutions = payload.extraExecutions;
-        } else if (nextPlan.extraExecutions) {
-          delete nextPlan.extraExecutions;
-        }
-        if (payload.prioritizeFoodDrink === true) {
-          nextPlan.prioritizeFoodDrink = true;
-        } else {
-          delete nextPlan.prioritizeFoodDrink;
-        }
-        if (payload.sellInstead === true) {
-          nextPlan.sellInstead = true;
-        } else {
-          delete nextPlan.sellInstead;
-        }
-        if (payload.singleTarget === true) {
-          nextPlan.singleTarget = true;
-        } else {
-          delete nextPlan.singleTarget;
-        }
-        if (payload.inspectAdditionalTarget === true) {
-          nextPlan.inspectAdditionalTarget = true;
-        } else {
-          delete nextPlan.inspectAdditionalTarget;
-        }
-        target.actionPlan.secondary = nextPlan;
-      }
-      if (
-        this.pendingSecondaryActionSelection === undefined &&
-        this.queuedSecondaryActionSelection === undefined
-      ) {
-        this.updateCharacterPanel(this.currentMatch);
-      }
-    } catch (error) {
-      console.warn("update_secondary_action failed", error);
-      // this.updateCharacterPanel(this.currentMatch); TODO it creates a loop
-    } finally {
-      this.secondaryActionUpdateRunning = false;
-      if (this.pendingSecondaryActionSelection) {
-        const nextSelection = this.pendingSecondaryActionSelection;
-        this.pendingSecondaryActionSelection = undefined;
-        void this.handleSecondaryActionSelection(nextSelection);
-      }
-    }
-  }
-
-  private async handleExtraSecondaryActionSelection(
-    selection: SecondaryActionSelection | null | undefined
-  ) {
-    const matchId = this.registry.get("currentMatchId") as string | null;
-    if (!this.turnService || !this.currentUserId || !matchId) {
-      return;
-    }
-    const normalizedSelection: SecondaryActionSelection = {
-      actionId: selection?.actionId ?? null,
-      targetLocation: this.normalizeAxial(selection?.targetLocation),
-      targetPlayerIds: this.normalizeTargetPlayers(
-        selection?.targetPlayerIds ?? undefined
-      ),
-      targetItemIds: this.normalizeTargetItems(
-        selection?.targetItemIds ?? undefined
-      ),
-      extraExecutions:
-        typeof selection?.extraExecutions === "number"
-          ? selection.extraExecutions
-          : undefined,
-      prioritizeFoodDrink: selection?.prioritizeFoodDrink === true,
-      sellInstead: selection?.sellInstead === true,
-      singleTarget: selection?.singleTarget === true
-    };
-    const character =
-      this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
-    const previousPlan = character?.actionPlan?.extraSecondary ?? null;
-    if (
-      normalizedSelection.actionId === (previousPlan?.actionId ?? null) &&
-      this.isSameAxial(
-        normalizedSelection.targetLocation,
-        this.normalizeAxial(previousPlan?.targetLocationId ?? null)
-      ) &&
-      this.isSameTargetPlayers(
-        normalizedSelection.targetPlayerIds,
-        this.normalizeTargetPlayers(previousPlan?.targetPlayerIds)
-      ) &&
-      this.isSameTargetItems(
-        normalizedSelection.targetItemIds,
-        this.normalizeTargetItems(previousPlan?.targetItemIds)
-      ) &&
-      (normalizedSelection.extraExecutions ?? 0) ===
-        (previousPlan?.extraExecutions ?? 0) &&
-      normalizedSelection.prioritizeFoodDrink ===
-        (previousPlan?.prioritizeFoodDrink ?? false) &&
-      normalizedSelection.sellInstead ===
-        (previousPlan?.sellInstead ?? false) &&
-      normalizedSelection.singleTarget === (previousPlan?.singleTarget ?? false)
-    ) {
-      return;
-    }
-    if (this.extraSecondaryActionUpdateRunning) {
-      this.pendingExtraSecondaryActionSelection = normalizedSelection;
-      return;
-    }
-    this.extraSecondaryActionUpdateRunning = true;
-    this.pendingExtraSecondaryActionSelection = undefined;
-    try {
-      const submission = normalizedSelection.actionId
-        ? this.buildSecondaryActionSubmission(
-            normalizedSelection.actionId,
-            normalizedSelection.targetLocation,
-            normalizedSelection.targetPlayerIds,
-            normalizedSelection.targetItemIds,
-            normalizedSelection.extraExecutions,
-            normalizedSelection.prioritizeFoodDrink,
-            normalizedSelection.sellInstead,
-            normalizedSelection.singleTarget
-          )
-        : null;
-      const res = await this.turnService.updateSecondaryAction(
-        matchId,
-        submission,
-        "extra_secondary"
-      );
-      const payload = this.parseRpcPayload<UpdateSecondaryActionPayload>(res);
-      if (payload.error) {
-        throw new Error(payload.error);
-      }
-      const target =
-        this.currentMatch?.playerCharacters?.[this.currentUserId] ?? null;
-      if (!target) {
-        return;
-      }
-      target.actionPlan = target.actionPlan ?? {};
-      if (!submission) {
-        delete target.actionPlan.extraSecondary;
-        if (
-          target.actionPlan.main === undefined &&
-          target.actionPlan.secondary === undefined &&
-          target.actionPlan.extraSecondary === undefined &&
-          target.actionPlan.nextMain === undefined
-        ) {
-          delete target.actionPlan;
-        }
-      } else {
-        const nextPlan: PlayerPlannedAction = {
-          ...(target.actionPlan.extraSecondary ?? {}),
-          actionId: submission.actionId
-        };
-        if (payload.targetLocationId) {
-          nextPlan.targetLocationId = payload.targetLocationId;
-        } else {
-          delete nextPlan.targetLocationId;
-        }
-        if (payload.targetPlayerIds && payload.targetPlayerIds.length > 0) {
-          nextPlan.targetPlayerIds = [...payload.targetPlayerIds];
-        } else {
-          delete nextPlan.targetPlayerIds;
-        }
-        if (payload.targetItemIds && payload.targetItemIds.length > 0) {
-          nextPlan.targetItemIds = [...payload.targetItemIds];
-        } else {
-          delete nextPlan.targetItemIds;
-        }
-        if (
-          typeof payload.extraExecutions === "number" &&
-          payload.extraExecutions > 0
-        ) {
-          nextPlan.extraExecutions = payload.extraExecutions;
-        } else {
-          delete nextPlan.extraExecutions;
-        }
-        if (payload.prioritizeFoodDrink === true) {
-          nextPlan.prioritizeFoodDrink = true;
-        } else {
-          delete nextPlan.prioritizeFoodDrink;
-        }
-        if (payload.sellInstead === true) {
-          nextPlan.sellInstead = true;
-        } else {
-          delete nextPlan.sellInstead;
-        }
-        if (payload.singleTarget === true) {
-          nextPlan.singleTarget = true;
-        } else {
-          delete nextPlan.singleTarget;
-        }
-        target.actionPlan.extraSecondary = nextPlan;
-      }
-      if (
-        this.pendingExtraSecondaryActionSelection === undefined &&
-        this.queuedExtraSecondaryActionSelection === undefined
-      ) {
-        this.updateCharacterPanel(this.currentMatch);
-      }
-    } catch (error) {
-      console.warn("update_extra_secondary_action failed", error);
-    } finally {
-      this.extraSecondaryActionUpdateRunning = false;
-      if (this.pendingExtraSecondaryActionSelection) {
-        const nextSelection = this.pendingExtraSecondaryActionSelection;
-        this.pendingExtraSecondaryActionSelection = undefined;
-        void this.handleExtraSecondaryActionSelection(nextSelection);
-      }
-    }
-  }
 
   private async handleReadyStateChange(ready: boolean) {
     if (this.replayView) {
@@ -2811,7 +2244,7 @@ export class GameScene extends Phaser.Scene {
       this.showMobileSidebar();
       return;
     }
-    const coord = this.normalizeAxial(tile.coord);
+    const coord = normalizeAxial(tile.coord);
     if (!coord) {
       this.locationSelectionPointerId = null;
       this.cancelMainActionLocationPick();
@@ -2836,238 +2269,6 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.characterPanel?.setMainActionTarget(coord, true);
     }
-  }
-
-  private buildMainActionSubmission(
-    actionId: string,
-    target: Axial | null,
-    secondTarget: Axial | null,
-    targetPlayerIds: string[] | undefined,
-    secondTargetPlayerId: string | undefined,
-    targetItemIds: string[] | undefined,
-    extraExecutions?: number
-  ): ActionSubmission {
-    const typedId = actionId as ActionId;
-    const definition = ActionLibrary[typedId] ?? null;
-    const category = definition?.category ?? ActionCategory.Primary;
-    const submission: ActionSubmission = {
-      playerId: this.currentUserId!,
-      actionId: definition ? definition.id : typedId,
-      category
-    };
-    if (target) {
-      submission.targetLocationId = { q: target.q, r: target.r };
-    }
-    if (secondTarget) {
-      submission.secondTargetLocationId = {
-        q: secondTarget.q,
-        r: secondTarget.r
-      };
-    }
-    if (secondTargetPlayerId) {
-      submission.secondTargetPlayerId = secondTargetPlayerId;
-    }
-    if (targetPlayerIds !== undefined) {
-      submission.targetPlayerIds =
-        targetPlayerIds.length > 0 ? [...targetPlayerIds] : [];
-    }
-    if (targetItemIds !== undefined) {
-      submission.targetItemIds =
-        targetItemIds.length > 0 ? [...targetItemIds] : [];
-    }
-    if (typeof extraExecutions === "number" && extraExecutions > 0) {
-      submission.extraExecutions = extraExecutions;
-    }
-    return submission;
-  }
-
-  private buildSecondaryActionSubmission(
-    actionId: string,
-    target: Axial | null,
-    targetPlayerIds: string[] | undefined,
-    targetItemIds: string[] | undefined,
-    extraExecutions?: number,
-    prioritizeFoodDrink = false,
-    sellInstead = false,
-    singleTarget?: boolean,
-    inspectAdditionalTarget = false
-  ): ActionSubmission {
-    const typedId = actionId as ActionId;
-    const definition = ActionLibrary[typedId] ?? null;
-    const category = definition?.category ?? ActionCategory.Secondary;
-    const submission: ActionSubmission = {
-      playerId: this.currentUserId!,
-      actionId: definition ? definition.id : typedId,
-      category
-    };
-    if (target) {
-      submission.targetLocationId = { q: target.q, r: target.r };
-    }
-    if (targetPlayerIds !== undefined) {
-      submission.targetPlayerIds =
-        targetPlayerIds.length > 0 ? [...targetPlayerIds] : [];
-    }
-    if (targetItemIds !== undefined) {
-      submission.targetItemIds =
-        targetItemIds.length > 0 ? [...targetItemIds] : [];
-    }
-    if (typeof extraExecutions === "number" && extraExecutions > 0) {
-      submission.extraExecutions = extraExecutions;
-    }
-    if (prioritizeFoodDrink) {
-      submission.prioritizeFoodDrink = true;
-    }
-    if (sellInstead) {
-      submission.sellInstead = true;
-    }
-    if (singleTarget !== undefined) {
-      submission.singleTarget = singleTarget;
-    }
-    if (inspectAdditionalTarget) {
-      submission.inspectAdditionalTarget = true;
-    }
-    return submission;
-  }
-
-  private normalizeAxial(value: Axial | null | undefined): Axial | null {
-    if (!value) {
-      return null;
-    }
-    const q = typeof value.q === "number" ? value.q : Number(value.q);
-    const r = typeof value.r === "number" ? value.r : Number(value.r);
-    if (Number.isNaN(q) || Number.isNaN(r)) {
-      return null;
-    }
-    return { q, r };
-  }
-
-  private normalizePlayerId(value: string | null | undefined): string | null {
-    if (typeof value !== "string") {
-      return null;
-    }
-    const normalized = value.trim();
-    return normalized.length > 0 ? normalized : null;
-  }
-
-  private normalizeTargetPlayers(
-    value: string[] | undefined | null
-  ): string[] | undefined {
-    if (value === undefined) {
-      return undefined;
-    }
-    if (!Array.isArray(value) || value.length === 0) {
-      return [];
-    }
-    const seen = new Set<string>();
-    const normalized: string[] = [];
-    for (const entry of value) {
-      if (typeof entry !== "string") {
-        continue;
-      }
-      const trimmed = entry.trim();
-      if (!trimmed || seen.has(trimmed)) {
-        continue;
-      }
-      seen.add(trimmed);
-      normalized.push(trimmed);
-    }
-    return normalized;
-  }
-
-  private normalizeTargetItems(
-    value: string[] | undefined | null
-  ): string[] | undefined {
-    if (value === undefined) {
-      return undefined;
-    }
-    if (!Array.isArray(value) || value.length === 0) {
-      return [];
-    }
-    const seen = new Set<string>();
-    const normalized: string[] = [];
-    for (const entry of value) {
-      if (typeof entry !== "string") {
-        continue;
-      }
-      const trimmed = entry.trim();
-      if (!trimmed || seen.has(trimmed)) {
-        continue;
-      }
-      seen.add(trimmed);
-      normalized.push(trimmed);
-    }
-    return normalized;
-  }
-
-  private isSameAxial(a: Axial | null, b: Axial | null) {
-    if (!a && !b) {
-      return true;
-    }
-    if (!a || !b) {
-      return false;
-    }
-    return a.q === b.q && a.r === b.r;
-  }
-
-  private isSameTargetPlayers(
-    a: string[] | undefined | null,
-    b: string[] | undefined | null
-  ): boolean {
-    const normalize = (input: string[] | undefined | null) => {
-      if (!input || input.length === 0) {
-        return [] as string[];
-      }
-      return input
-        .filter((value) => typeof value === "string")
-        .map((value) => value.trim())
-        .filter((value) => value.length > 0)
-        .sort();
-    };
-    const aNorm = normalize(a);
-    const bNorm = normalize(b);
-    if (aNorm.length !== bNorm.length) {
-      return false;
-    }
-    for (let i = 0; i < aNorm.length; i += 1) {
-      if (aNorm[i] !== bNorm[i]) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  private isSameTargetItems(
-    a: string[] | undefined | null,
-    b: string[] | undefined | null
-  ): boolean {
-    const normalize = (input: string[] | undefined | null) => {
-      if (!input || input.length === 0) {
-        return [] as string[];
-      }
-      const result: string[] = [];
-      for (const value of input) {
-        if (typeof value !== "string") {
-          continue;
-        }
-        const trimmed = value.trim();
-        if (!trimmed) {
-          continue;
-        }
-        result.push(trimmed);
-      }
-      return result;
-    };
-    const aNormalized = normalize(a);
-    const bNormalized = normalize(b);
-    if (aNormalized.length !== bNormalized.length) {
-      return false;
-    }
-    for (let index = 0; index < aNormalized.length; index += 1) {
-      if (aNormalized[index] !== bNormalized[index]) {
-        return false;
-      }
-    }
-    return true;
   }
 
   private isPointerOverUI(pointer: Phaser.Input.Pointer) {
