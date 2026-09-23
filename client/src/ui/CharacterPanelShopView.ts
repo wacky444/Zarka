@@ -41,7 +41,7 @@ type ShopCardItem = {
 };
 
 const HEADER_HEIGHT = 44;
-const SELECTOR_VERTICAL_GAP = 12;
+const SHOP_LIST_GAP = 12;
 const CARD_PADDING = 12;
 const CARD_SPACING = 8;
 
@@ -316,7 +316,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
       return;
     }
     this.finishShopPurchase();
-    this.detectiveSelector.setVisible(true);
+    this.detectiveSelector.setVisible(false);
     this.detectiveSelector.setActive(true);
     this.detectiveSelector.setEnabled(true);
     this.detectiveSelector.showDropdown();
@@ -335,9 +335,10 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     }
     this.finishShopPurchase();
     this.locationSelectionShopId = "spy_drone";
-    this.droneLocationSelector.setVisible(true);
+    this.droneLocationSelector.setVisible(false);
     this.droneLocationSelector.setActive(true);
     this.droneLocationSelector.setEnabled(true);
+    this.droneLocationSelector.showModal();
   }
 
   beginPyromaniacPurchase(): void {
@@ -346,9 +347,10 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     }
     this.finishShopPurchase();
     this.locationSelectionShopId = "pyromaniac";
-    this.droneLocationSelector.setVisible(true);
+    this.droneLocationSelector.setVisible(false);
     this.droneLocationSelector.setActive(true);
     this.droneLocationSelector.setEnabled(true);
+    this.droneLocationSelector.showModal();
   }
 
   beginBomberPurchase(): void {
@@ -357,9 +359,10 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     }
     this.finishShopPurchase();
     this.locationSelectionShopId = "bomber";
-    this.droneLocationSelector.setVisible(true);
+    this.droneLocationSelector.setVisible(false);
     this.droneLocationSelector.setActive(true);
     this.droneLocationSelector.setEnabled(true);
+    this.droneLocationSelector.showModal();
   }
 
   finishShopPurchase(): void {
@@ -386,10 +389,8 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     if (!visible) {
       this.finishShopPurchase();
     }
-    this.detectiveSelector.setVisible(visible && this.detectiveSelector.active);
-    this.droneLocationSelector.setVisible(
-      visible && this.droneLocationSelector.active
-    );
+    this.detectiveSelector.setVisible(false);
+    this.droneLocationSelector.setVisible(false);
     this.scrollPanel.setVisible?.(visible);
     this.setScrollerEnable(visible);
   }
@@ -418,13 +419,9 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     const selectorWidth = width - 24;
     this.testamentSelector.setPosition(selectorX, selectorY);
     this.testamentSelector.setSelectorWidth(selectorWidth);
-    const detectiveY =
-      selectorY + this.testamentSelector.height + SELECTOR_VERTICAL_GAP;
-    this.detectiveSelector.setPosition(selectorX, detectiveY);
+    this.detectiveSelector.setPosition(selectorX, selectorY);
     this.detectiveSelector.setSelectorWidth(selectorWidth);
-    const locationY =
-      detectiveY + this.detectiveSelector.height + SELECTOR_VERTICAL_GAP;
-    this.droneLocationSelector.setPosition(selectorX, locationY);
+    this.droneLocationSelector.setPosition(selectorX, selectorY);
     this.droneLocationSelector.setDisplayWidth(selectorWidth);
 
     const listTop = this.getShopListTop(selectorY);
@@ -464,15 +461,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
   }
 
   private getShopListTop(selectorY: number): number {
-    return (
-      selectorY +
-      this.testamentSelector.height +
-      SELECTOR_VERTICAL_GAP +
-      this.detectiveSelector.height +
-      SELECTOR_VERTICAL_GAP +
-      this.droneLocationSelector.height +
-      SELECTOR_VERTICAL_GAP
-    );
+    return selectorY + this.testamentSelector.height + SHOP_LIST_GAP;
   }
 
   private buildShopList(cardWidth: number): void {
