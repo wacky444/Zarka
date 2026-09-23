@@ -59,7 +59,14 @@ export function tailorReplayEvents(
   const result: ReplayEvent[] = [];
   for (const event of events) {
     if (event.kind === "player") {
-      if (filterPlayerEvent(event, playerId)) {
+      if (event.action.actionId === "status_dead") {
+        result.push({
+          kind: "player",
+          actorId: event.actorId,
+          action: { actionId: event.action.actionId },
+          visibility: { scope: "all" },
+        });
+      } else if (filterPlayerEvent(event, playerId)) {
         result.push(event);
       }
     } else if (event.kind === "map") {

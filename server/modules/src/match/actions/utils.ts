@@ -457,12 +457,7 @@ export function applyHealthDelta(
   }
 
   const event = becameDead
-    ? createDeathReplayEvent(
-        character.id,
-        result.previous,
-        result.current,
-        character.secretTeamId || character.teamId
-      )
+    ? createDeathReplayEvent(character.id)
     : becameUnconscious
     ? createUnconsciousReplayEvent(
         character.id,
@@ -654,10 +649,7 @@ function createUnconsciousReplayEvent(
 }
 
 function createDeathReplayEvent(
-  actorId: string | undefined,
-  previous: number,
-  current: number,
-  teamId?: string
+  actorId: string | undefined
 ): ReplayPlayerEvent | undefined {
   if (!actorId) {
     return undefined;
@@ -667,11 +659,7 @@ function createDeathReplayEvent(
     actorId,
     action: {
       actionId: STATUS_DEAD_ACTION_ID,
-      metadata: {
-        previous,
-        current,
-        teamId,
-      },
     },
+    visibility: { scope: "all" },
   };
 }

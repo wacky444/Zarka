@@ -38,7 +38,6 @@ interface CharacterPanelLogViewOptions {
   onElimination: (payload: {
     playerId: string;
     playerName: string;
-    teamName?: string;
     turn: number;
   }) => void;
 }
@@ -421,11 +420,7 @@ export class CharacterPanelLogView {
           continue;
         }
         if (actionId === "status_dead") {
-          const team =
-            (event.action.metadata as { teamId?: string })?.teamId ||
-            this.resolvePlayerTeam(event.actorId);
-          const teamSuffix = team ? ` (${t("Team")} ${team})` : "";
-          lines.push(`${actor}${teamSuffix} ${t("died")}`);
+          lines.push(`${actor} ${t("was eliminated")}`);
           continue;
         }
         if (actionId === "status_unconscious") {
@@ -971,14 +966,9 @@ export class CharacterPanelLogView {
       }
       this.eliminationKeys.add(key);
       const playerName = this.resolvePlayerName(actorId);
-      const teamName =
-        (event.action.metadata as { teamId?: string })?.teamId ||
-        this.resolvePlayerTeam(actorId) ||
-        undefined;
       this.options.onElimination({
         playerId: actorId,
         playerName,
-        teamName,
         turn,
       });
     }

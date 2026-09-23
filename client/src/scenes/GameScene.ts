@@ -71,7 +71,6 @@ import { ReplayControls } from "../ui/ReplayControls";
 type PlayerEliminationBannerEvent = {
   playerId: string;
   playerName: string;
-  teamName?: string;
   texture: string;
   frame: string;
   turn: number;
@@ -1799,11 +1798,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePlayerEliminated(payload: PlayerEliminationBannerEvent) {
-    const teamSuffix = payload.teamName
-      ? ` (${t("Team")} ${payload.teamName})`
-      : "";
     const bannerPayload: TopBannerPayload = {
-      text: `Player ${payload.playerName}${teamSuffix} eliminated`,
+      text: `${payload.playerName} ${t("was eliminated")}`,
       texture: payload.texture,
       frame: payload.frame
     };
