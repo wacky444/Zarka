@@ -38,6 +38,7 @@ import {
   getHexTileOffsets,
   ItemLibrary,
   DEFAULT_SKIN,
+  type ItemId,
   type SkillId,
   type UpgradeSkillPayload,
   type UpdateTestamentPayload,
@@ -51,6 +52,7 @@ import {
 } from "../animation/moveReplay";
 import { collectItemSpriteInfos, resolveItemTexture } from "../ui/itemIcons";
 import { ItemTooltipManager, composeItemDescription } from "../ui/ItemTooltip";
+import { CellContentsPanel } from "../ui/CellContentsPanel";
 import { HoverTooltip } from "../ui/HoverTooltip";
 import { TopBanner, type TopBannerPayload } from "../ui/TopBanner";
 import {
@@ -164,6 +166,7 @@ export class GameScene extends Phaser.Scene {
   private browserHistoryGuardUrl: string | null = null;
   private tileItemContainers = new Map<string, Phaser.GameObjects.Container>();
   private itemTooltip: ItemTooltipManager | null = null;
+  private cellContentsPanel: CellContentsPanel | null = null;
   private hoverTooltip: HoverTooltip | null = null;
   private topBanner: TopBanner | null = null;
   private autoAdvanceText: Phaser.GameObjects.Text | null = null;
@@ -318,7 +321,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleBackNavigation(fromBrowser: boolean): void {
-    if (this.gridModalActive) {
+    if (this.cellContentsPanel?.isOpen) {
+      this.cellContentsPanel.close();
+    } else if (this.gridModalActive) {
       this.characterPanel?.closeCurrentGridSelect();
       this.gridModalActive = false;
     } else if (this.mobileLayout && this.mobileViewMode === "sidebar") {
@@ -507,6 +512,7 @@ export class GameScene extends Phaser.Scene {
     this.uiCam.setScroll(0, 0);
     this.uiCam.setZoom(1);
     this.itemTooltip = new ItemTooltipManager(this);
+    this.cellContentsPanel = new CellContentsPanel(this);
     this.hoverTooltip = new HoverTooltip(this);
     this.turnService = this.registry.get("turnService") as TurnService | null;
     this.currentUserId = this.registry.get("currentUserId") as string | null;
@@ -783,6 +789,8 @@ export class GameScene extends Phaser.Scene {
       this.gridModalActive = false;
       this.cancelMainActionLocationPick();
       this.itemTooltip?.hide();
+      this.cellContentsPanel?.destroy();
+      this.cellContentsPanel = null;
       this.stopAutoAdvanceTimer();
       for (const container of this.tileItemContainers.values()) {
         container.destroy(true);
@@ -1318,6 +1326,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private renderItems(map: GameMap) {
+    this.cellContentsPanel?.close();
     this.itemTooltip?.hide();
     for (const container of this.tileItemContainers.values()) {
       container.destroy(true);
@@ -1335,7 +1344,7 @@ export class GameScene extends Phaser.Scene {
     const matchItemsRaw =
       this.replayView?.snapshot.items ?? this.currentMatch?.items;
     const matchItems = Array.isArray(matchItemsRaw) ? matchItemsRaw : [];
-    const itemTypeById = new Map<string, string>();
+    const itemTypeById = new Map<string, ItemId>();
     for (const entry of matchItems) {
       if (!entry || typeof entry.item_id !== "string") {
         continue;
@@ -1351,7 +1360,7 @@ export class GameScene extends Phaser.Scene {
       if (itemIds.length === 0) {
         continue;
       }
-      const aggregated = new Map<string, number>();
+      const aggregated = new Map<ItemId, number>();
       for (const id of itemIds) {
         if (typeof id !== "string") {
           continue;
@@ -1377,20 +1386,78 @@ export class GameScene extends Phaser.Scene {
         }
         return b[1] - a[1];
       });
-      const limited = entries.slice(0, maxIcons);
+      const hasMoreItemTypes = entries.length > maxIcons;
+      const visibleEntries = entries.slice(
+        0,
+        hasMoreItemTypes ? maxIcons - 1 : maxIcons
+      );
+      const displayCount =
+        visibleEntries.length + (hasMoreItemTypes ? 1 : 0);
       const world = this.getTileWorldPosition(snapshot.id, snapshot.coord);
       const container = this.add.container(world.x, world.y + verticalOffset);
       container.setDepth(4 + world.y / 1000);
 
-      const rows = Math.ceil(limited.length / iconsPerRow);
+      const rows = Math.ceil(displayCount / iconsPerRow);
       for (let row = 0; row < rows; row += 1) {
         const rowStart = row * iconsPerRow;
-        const rowCount = Math.min(iconsPerRow, limited.length - rowStart);
+        const rowCount = Math.min(iconsPerRow, displayCount - rowStart);
         const y = (row - (rows - 1) / 2) * spacing;
         for (let col = 0; col < rowCount; col += 1) {
           const index = rowStart + col;
-          const [itemType, quantity] = limited[index];
           const x = (col - (rowCount - 1) / 2) * spacing;
+          if (hasMoreItemTypes && index === visibleEntries.length) {
+            const hiddenCount = entries
+              .slice(visibleEntries.length)
+              .reduce((total, entry) => total + entry[1], 0);
+            const hiddenCountLabel =
+              hiddenCount > 99 ? "+99+" : `+${hiddenCount}`;
+            const moreBackground = this.add
+              .circle(0, 0, 13, 0x1d4ed8, 0.98)
+              .setStrokeStyle(2, 0xbfdbfe, 1)
+              .setInteractive({ useHandCursor: true });
+            const moreLabel = this.add
+              .text(0, 0, hiddenCountLabel, {
+                fontFamily: "Arial",
+                fontSize: hiddenCountLabel.length > 3 ? "8px" : "11px",
+                fontStyle: "bold",
+                color: "#ffffff",
+                stroke: "#0f172a",
+                strokeThickness: 2,
+                resolution: 3
+              })
+              .setOrigin(0.5);
+            moreBackground.on(
+              Phaser.Input.Events.POINTER_UP,
+              (
+                pointer: Phaser.Input.Pointer,
+                _localX: number,
+                _localY: number,
+                event?: Phaser.Types.Input.EventData
+              ) => {
+                event?.stopPropagation();
+                if (pointer.button !== 0 || pointer.getDistance() > 15) {
+                  return;
+                }
+                this.cellContentsPanel?.show(
+                  snapshot.coord,
+                  entries.map(([itemId, quantity]) => ({ itemId, quantity }))
+                );
+              }
+            );
+            moreBackground.on(Phaser.Input.Events.POINTER_OVER, () => {
+              this.input.setDefaultCursor("pointer");
+            });
+            moreBackground.on(Phaser.Input.Events.POINTER_OUT, () => {
+              this.resetDefaultCursor();
+            });
+            const moreButton = this.add.container(x, y, [
+              moreBackground,
+              moreLabel
+            ]);
+            container.add(moreButton);
+            continue;
+          }
+          const [itemType, quantity] = visibleEntries[index];
           const definition =
             ItemLibrary[itemType as keyof typeof ItemLibrary] ?? null;
           if (!definition) {
@@ -3624,6 +3691,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private isPointerOverUI(pointer: Phaser.Input.Pointer) {
+    if (this.cellContentsPanel?.isOpen) {
+      return true;
+    }
     if (this.viewModeButton?.visible) {
       const bounds = this.viewModeButton.getBounds();
       if (bounds.contains(pointer.x, pointer.y)) {
