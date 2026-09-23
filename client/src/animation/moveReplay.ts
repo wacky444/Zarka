@@ -6,6 +6,7 @@ import { animateDeathEvent } from "./replayActions/DeathAnimation";
 import { animateUnconsciousEvent } from "./replayActions/UnconsciousAnimation";
 import { animateMoveEvent } from "./replayActions/MoveAnimation";
 import { animatePickUpEvent } from "./replayActions/PickUpAnimation";
+import { animateStealEvent } from "./replayActions/StealAnimation";
 import { animateDropEvent } from "./replayActions/DropAnimation";
 import { animateProtectEvent } from "./replayActions/ProtectAnimation";
 import { animatePunchEvent } from "./replayActions/PunchAnimation";
@@ -96,6 +97,8 @@ export async function playReplayEvents(
       await animatePunchEvent(context, event);
     } else if (actionId === ActionLibrary.pick_up.id) {
       await animatePickUpEvent(context, event);
+    } else if (actionId === ActionLibrary.steal.id) {
+      await animateStealEvent(context, event);
     } else if (actionId === ActionLibrary.drop.id) {
       await animateDropEvent(context, event);
     } else if (actionId === ActionLibrary.search.id) {
