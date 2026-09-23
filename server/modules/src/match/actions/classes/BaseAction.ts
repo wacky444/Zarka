@@ -13,18 +13,20 @@ export abstract class BaseAction {
 
   public execute(
     participants: PlannedActionParticipant[],
-    match: MatchRecord
+    match: MatchRecord,
+    logger?: nkruntime.Logger
   ): ReplayPlayerEvent[] {
     const roster = sortParticipantsBySpeed(
       participants,
       this.shouldShuffleParticipants
     );
-    return this.processRoster(roster, match);
+    return this.processRoster(roster, match, logger);
   }
 
   protected abstract processRoster(
     roster: PlannedActionParticipant[],
-    match: MatchRecord
+    match: MatchRecord,
+    logger?: nkruntime.Logger
   ): ReplayPlayerEvent[];
 
   protected clearPlan(participant: PlannedActionParticipant): void {

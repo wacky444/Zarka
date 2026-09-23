@@ -62,7 +62,8 @@ function randomAdjacentDestination(
 export class ScareAction extends BaseAction {
   protected processRoster(
     roster: PlannedActionParticipant[],
-    match: MatchRecord
+    match: MatchRecord,
+    logger?: nkruntime.Logger
   ): ReplayPlayerEvent[] {
     const events: ReplayPlayerEvent[] = [];
     for (const participant of roster) {
@@ -163,7 +164,8 @@ export class ScareAction extends BaseAction {
             ...triggerTrapsForTransition(match, targetSelection.id, previous, {
               tileId: destination.tileId,
               coord: destination.coord,
-            }),
+            },
+            logger),
           );
         }
       }
@@ -176,7 +178,8 @@ const scareAction = new ScareAction();
 
 export function executeScareAction(
   participants: PlannedActionParticipant[],
-  match: MatchRecord
+  match: MatchRecord,
+  logger?: nkruntime.Logger
 ): ReplayPlayerEvent[] {
-  return scareAction.execute(participants, match);
+  return scareAction.execute(participants, match, logger);
 }

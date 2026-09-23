@@ -37,6 +37,13 @@ export function getStateRpc(
   }
 
   const match: MatchRecord = read.match;
+  logger.debug(
+    "get_state match=%s user=%s turn=%d traps=%d",
+    matchId,
+    ctx?.userId ?? "unknown",
+    match.current_turn ?? 0,
+    match.traps?.length ?? 0,
+  );
   if (typeof match.started !== "boolean") {
     match.started = false;
   }

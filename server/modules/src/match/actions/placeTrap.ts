@@ -87,6 +87,7 @@ export class PlaceTrapAction extends BaseAction {
   protected processRoster(
     roster: PlannedActionParticipant[],
     match: MatchRecord,
+    logger?: nkruntime.Logger,
   ): ReplayPlayerEvent[] {
     const events: ReplayPlayerEvent[] = [];
 
@@ -99,20 +100,43 @@ export class PlaceTrapAction extends BaseAction {
       const destinationTile = destination
         ? findTileAtCoord(match, destination.coord)
         : undefined;
-      if (
-        !origin?.coord ||
-        !originTile ||
-        !destination ||
-        !destinationTile ||
-        originTile.walkable === false ||
-        originTile.meta?.destroyed === true ||
-        destinationTile.walkable === false ||
-        destinationTile.meta?.destroyed === true ||
-        axialDistance(origin.coord, destination.coord) !== 1
-      ) {
+      const invalidReason =
+        !origin?.coord
+          ? "missing_origin"
+          : !originTile
+            ? "missing_origin_tile"
+            : !destination
+              ? "missing_destination"
+              : !destinationTile
+                ? "missing_destination_tile"
+                : originTile.walkable === false
+                  ? "origin_not_walkable"
+                  : originTile.meta?.destroyed === true
+                    ? "origin_destroyed"
+                    : destinationTile.walkable === false
+                      ? "destination_not_walkable"
+                      : destinationTile.meta?.destroyed === true
+                        ? "destination_destroyed"
+                        : axialDistance(origin.coord, destination.coord) !== 1
+                          ? "destination_not_adjacent"
+                          : undefined;
+      if (invalidReason) {
+        logger?.debug(
+          "place_trap rejected match=%s player=%s turn=%d reason=%s origin=%s target=%s",
+          match.match_id,
+          participant.playerId,
+          match.current_turn ?? 0,
+          invalidReason,
+          JSON.stringify(origin?.coord ?? null),
+          JSON.stringify(destination?.coord ?? null),
+        );
         this.clearPlan(participant);
         continue;
       }
+      const validOrigin = origin!;
+      const validOriginTile = originTile!;
+      const validDestination = destination!;
+      const validDestinationTile = destinationTile!;
 
       const trapCount = (participant.character.inventory?.carriedItems ?? [])
         .filter((item) => item.itemId === "trap")
@@ -138,9 +162,26 @@ export class PlaceTrapAction extends BaseAction {
       );
       const placements = 1 + extraExecutions;
       match.traps = match.traps ?? [];
+      logger?.debug(
+        "place_trap attempt match=%s player=%s turn=%d inventory=%d placements=%d traps_before=%d origin=%s target=%s",
+        match.match_id,
+        participant.playerId,
+        match.current_turn ?? 0,
+        trapCount,
+        placements,
+        match.traps.length,
+        JSON.stringify(validOrigin.coord),
+        JSON.stringify(validDestination.coord),
+      );
 
       for (let index = 0; index < placements; index += 1) {
         if (!consumeCarriedItem(participant.character, "trap")) {
+          logger?.debug(
+            "place_trap item consumption failed match=%s player=%s index=%d",
+            match.match_id,
+            participant.playerId,
+            index,
+          );
           break;
         }
         const trap: TrapRecord = {
@@ -151,17 +192,24 @@ export class PlaceTrapAction extends BaseAction {
           ),
           ownerId: participant.playerId,
           from: {
-            tileId: originTile.id,
-            coord: { ...origin.coord },
+            tileId: validOriginTile.id,
+            coord: { ...validOrigin.coord },
           },
           to: {
-            tileId: destinationTile.id,
-            coord: { ...destinationTile.coord },
+            tileId: validDestinationTile.id,
+            coord: { ...validDestinationTile.coord },
           },
           damage: TRAP_DAMAGE,
           placedTurn: (match.current_turn ?? 0) + 1,
         };
         match.traps.push(trap);
+        logger?.debug(
+          "place_trap added match=%s trap=%s owner=%s traps_after=%d",
+          match.match_id,
+          trap.id,
+          participant.playerId,
+          match.traps.length,
+        );
         events.push({
           kind: "player",
           actorId: participant.playerId,
@@ -178,6 +226,13 @@ export class PlaceTrapAction extends BaseAction {
         });
       }
 
+      logger?.debug(
+        "place_trap result match=%s player=%s events=%d traps_after=%d",
+        match.match_id,
+        participant.playerId,
+        events.length,
+        match.traps.length,
+      );
       this.clearPlan(participant);
       match.playerCharacters![participant.playerId] = participant.character;
     }
@@ -191,8 +246,9 @@ const placeTrapAction = new PlaceTrapAction();
 export function executePlaceTrapAction(
   participants: PlannedActionParticipant[],
   match: MatchRecord,
+  logger?: nkruntime.Logger,
 ): ReplayPlayerEvent[] {
-  return placeTrapAction.execute(participants, match);
+  return placeTrapAction.execute(participants, match, logger);
 }
 
 function findMovementPath(
@@ -273,13 +329,21 @@ export function triggerTrapsForTransition(
   if (axialDistance(from.coord, to.coord) !== 1) {
     return [];
   }
-  const resolvingTurn = (match.current_turn ?? 0) + 1;
-  const matchingTraps = (match.traps ?? []).filter(
-    (trap) =>
-      (typeof trap.placedTurn !== "number" ||
-        trap.placedTurn < resolvingTurn) &&
-      sameEdge(trap, from, to),
+  const existingTraps = match.traps ?? [];
+  const matchingTraps = existingTraps.filter((trap) =>
+    sameEdge(trap, from, to),
   );
+  if (existingTraps.length > 0) {
+    logger?.debug(
+      "trap transition check match=%s player=%s from=%s to=%s traps=%d matching=%d",
+      match.match_id,
+      playerId,
+      JSON.stringify(from.coord),
+      JSON.stringify(to.coord),
+      existingTraps.length,
+      matchingTraps.length,
+    );
+  }
   if (matchingTraps.length === 0) {
     return [];
   }
@@ -295,8 +359,20 @@ export function triggerTrapsForTransition(
     }
   }
   match.traps = remainingTraps;
+  logger?.debug(
+    "trap triggered match=%s player=%s ids=%s traps_remaining=%d",
+    match.match_id,
+    playerId,
+    JSON.stringify(matchingTraps.map((trap) => trap.id)),
+    match.traps.length,
+  );
   let character = match.playerCharacters?.[playerId];
   if (!character || isCharacterDead(character)) {
+    logger?.debug(
+      "trap trigger had no living character match=%s player=%s",
+      match.match_id,
+      playerId,
+    );
     return [];
   }
 

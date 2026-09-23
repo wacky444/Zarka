@@ -157,9 +157,23 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       }
     }
 
+    const trapsBeforeTurn = match.traps?.length ?? 0;
     const outcome = resolveTurnForMatch(match, logger, nk);
     if (!outcome.advanced || !outcome.resolvedTurn) {
       return { state };
+    }
+    const trapEvents = outcome.events.filter(
+      (event) => event.kind === "player" && event.action.actionId === "place_trap",
+    );
+    if (trapEvents.length > 0) {
+      logger.debug(
+        "autoskip traps resolved match=%s turn=%d before=%d after=%d trap_events=%d",
+        match.match_id,
+        match.current_turn,
+        trapsBeforeTurn,
+        match.traps?.length ?? 0,
+        trapEvents.length,
+      );
     }
     logger.debug("Auto-advancing turn for match %s", runtimeMatchId);
     const timestampSeconds = Math.floor(nowMs / 1000);
@@ -167,6 +181,16 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
 
     try {
       storage.writeMatch(match, stored.version);
+      if (trapEvents.length > 0) {
+        const persisted = storage.getMatch(match.match_id);
+        logger.debug(
+          "autoskip traps persisted match=%s turn=%d in_memory=%d stored=%d",
+          match.match_id,
+          match.current_turn,
+          match.traps?.length ?? 0,
+          persisted?.match.traps?.length ?? -1,
+        );
+      }
     } catch (error) {
       logger.warn(
         "autoskip write failed for %s: %s",

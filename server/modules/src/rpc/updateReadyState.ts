@@ -100,6 +100,7 @@ export function updateReadyStateRpc(
   match.readyStates[ctx.userId] = effectiveReady;
 
   let advanced = false;
+  const trapsBeforeTurn = match.traps?.length ?? 0;
   const players = Array.isArray(match.players) ? match.players : [];
   const allReady =
     players.length > 0 &&
@@ -125,8 +126,32 @@ export function updateReadyStateRpc(
     }
   }
 
+  const trapEvents = advanceResult?.events.filter(
+    (event) => event.kind === "player" && event.action.actionId === "place_trap",
+  ) ?? [];
+  if (trapEvents.length > 0) {
+    logger.debug(
+      "update_ready_state traps resolved match=%s turn=%d before=%d after=%d trap_events=%d",
+      matchId,
+      match.current_turn,
+      trapsBeforeTurn,
+      match.traps?.length ?? 0,
+      trapEvents.length,
+    );
+  }
+
   try {
     storage.writeMatch(match, read.version);
+    if (trapEvents.length > 0) {
+      const persisted = storage.getMatch(matchId);
+      logger.debug(
+        "update_ready_state traps persisted match=%s turn=%d in_memory=%d stored=%d",
+        matchId,
+        match.current_turn,
+        match.traps?.length ?? 0,
+        persisted?.match.traps?.length ?? -1,
+      );
+    }
   } catch (e) {
     logger.warn(
       "update_ready_state storage write failed: %s",

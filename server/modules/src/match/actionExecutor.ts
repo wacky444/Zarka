@@ -196,7 +196,7 @@ export function executeAction(
         match,
         logger,
       );
-      const actionEvents = executeMoveAction(participants, match);
+      const actionEvents = executeMoveAction(participants, match, logger);
       eventsForAction = energyEvents.length
         ? [...energyEvents, ...actionEvents]
         : actionEvents;
@@ -225,6 +225,23 @@ export function executeAction(
           match.playerCharacters![participant.playerId] = participant.character;
         }
       }
+      for (const participant of missing) {
+        logger.debug(
+          "place_trap missing item match=%s player=%s",
+          match.match_id,
+          participant.playerId,
+        );
+      }
+      const trapsBefore = match.traps?.length ?? 0;
+      logger.debug(
+        "place_trap resolve match=%s turn=%d participants=%d eligible=%d missing=%d traps_before=%d",
+        match.match_id,
+        match.current_turn ?? 0,
+        participants.length,
+        eligible.length,
+        missing.length,
+        trapsBefore,
+      );
       const energyEvents = applyEnergyForParticipants(
         participants,
         action.energyCost,
@@ -232,8 +249,16 @@ export function executeAction(
         logger,
       );
       const actionEvents = eligible.length
-        ? executePlaceTrapAction(eligible, match)
+        ? executePlaceTrapAction(eligible, match, logger)
         : [];
+      logger.debug(
+        "place_trap resolved match=%s turn=%d action_events=%d traps_before=%d traps_after=%d",
+        match.match_id,
+        match.current_turn ?? 0,
+        actionEvents.length,
+        trapsBefore,
+        match.traps?.length ?? 0,
+      );
       const failureEvents = missing.length
         ? missing.map((participant) =>
             createFailedActionEvent(participant, action.id, {
@@ -263,7 +288,7 @@ export function executeAction(
         match,
         logger,
       );
-      const actionEvents = executeScareAction(participants, match);
+      const actionEvents = executeScareAction(participants, match, logger);
       eventsForAction = energyEvents.length
         ? [...energyEvents, ...actionEvents]
         : actionEvents;

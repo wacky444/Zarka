@@ -15,7 +15,8 @@ import { triggerTrapsForMovement } from "./placeTrap";
 export class MoveAction extends BaseAction {
   protected processRoster(
     roster: PlannedActionParticipant[],
-    match: MatchRecord
+    match: MatchRecord,
+    logger?: nkruntime.Logger
   ): ReplayPlayerEvent[] {
     const events: ReplayPlayerEvent[] = [];
 
@@ -77,6 +78,7 @@ export class MoveAction extends BaseAction {
             entry.playerId,
             previousPosition,
             entry.character.position,
+            logger,
           ),
         );
       }
@@ -90,7 +92,8 @@ const moveAction = new MoveAction();
 
 export function executeMoveAction(
   participants: PlannedActionParticipant[],
-  match: MatchRecord
+  match: MatchRecord,
+  logger?: nkruntime.Logger
 ): ReplayPlayerEvent[] {
-  return moveAction.execute(participants, match);
+  return moveAction.execute(participants, match, logger);
 }
