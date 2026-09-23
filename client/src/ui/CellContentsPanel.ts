@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { ItemLibrary, type Axial, type ItemId } from "@shared";
 import { t } from "../services/i18n";
 import { resolveItemTexture } from "./itemIcons";
+import { composeItemDescription, ItemTooltipManager } from "./ItemTooltip";
 import { makeButton, type UIButton } from "./button";
 import { THEME } from "./ColorPalette";
 
@@ -26,8 +27,21 @@ export class CellContentsPanel {
   private isVisible = false;
   private coord: Axial = { q: 0, r: 0 };
   private entries: CellContentsEntry[] = [];
+  private readonly itemTooltip: ItemTooltipManager;
+
+  private readonly handlePointerDown = (): void => {
+    if (this.isVisible) {
+      this.itemTooltip.hide();
+    }
+  };
 
   constructor(private readonly scene: Phaser.Scene) {
+    this.itemTooltip = new ItemTooltipManager(scene, 12005);
+    this.scene.input.on(
+      Phaser.Input.Events.POINTER_DOWN,
+      this.handlePointerDown,
+      this
+    );
     this.scene.scale.on(
       Phaser.Scale.Events.RESIZE,
       this.handleResize,
@@ -51,16 +65,23 @@ export class CellContentsPanel {
       return;
     }
     this.isVisible = false;
+    this.itemTooltip.hide();
     this.destroyOverlay();
   }
 
   destroy(): void {
+    this.scene.input.off(
+      Phaser.Input.Events.POINTER_DOWN,
+      this.handlePointerDown,
+      this
+    );
     this.scene.scale.off(
       Phaser.Scale.Events.RESIZE,
       this.handleResize,
       this
     );
     this.isVisible = false;
+    this.itemTooltip.destroy();
     this.destroyOverlay();
   }
 
@@ -71,6 +92,7 @@ export class CellContentsPanel {
   };
 
   private render(): void {
+    this.itemTooltip.hide();
     this.destroyOverlay();
 
     const width = this.scene.scale.width;
@@ -151,34 +173,6 @@ export class CellContentsPanel {
       )
       .setStrokeStyle(2, 0x334155, 1)
       .setInteractive();
-    background.on(
-      Phaser.Input.Events.POINTER_DOWN,
-      (
-        _pointer: Phaser.Input.Pointer,
-        _x: number,
-        _y: number,
-        event: Phaser.Types.Input.EventData
-      ) => event.stopPropagation()
-    );
-    background.on(
-      Phaser.Input.Events.POINTER_UP,
-      (
-        _pointer: Phaser.Input.Pointer,
-        _x: number,
-        _y: number,
-        event: Phaser.Types.Input.EventData
-      ) => event.stopPropagation()
-    );
-    background.on(
-      "wheel",
-      (
-        _pointer: Phaser.Input.Pointer,
-        _dx: number,
-        _dy: number,
-        _dz: number,
-        event: WheelEvent
-      ) => event.stopPropagation()
-    );
     overlay.add(background);
 
     const title = this.scene.add
@@ -245,6 +239,19 @@ export class CellContentsPanel {
           iconFrame
         );
         icon.setDisplaySize(34, 34);
+        const showDescription = (pointer: Phaser.Input.Pointer): void => {
+          if ((pointer.button !== 0 && !pointer.wasTouch) || pointer.getDistance() > 15) {
+            return;
+          }
+          this.itemTooltip.show(
+            pointer.x,
+            pointer.y,
+            definition.name,
+            composeItemDescription(definition.description, definition.notes)
+          );
+        };
+        icon.setInteractive({ useHandCursor: true });
+        icon.on(Phaser.Input.Events.POINTER_UP, showDescription);
         const name = this.scene.add
           .text(58, rowY + 12, t(definition.name), {
             fontFamily: "Arial",
@@ -252,7 +259,9 @@ export class CellContentsPanel {
             color: THEME.colors.textPrimary,
             wordWrap: { width: Math.max(80, listWidth - 144) }
           })
-          .setOrigin(0, 0);
+          .setOrigin(0, 0)
+          .setInteractive({ useHandCursor: true });
+        name.on(Phaser.Input.Events.POINTER_UP, showDescription);
         const quantity = this.scene.add
           .text(listWidth - 14, rowY + (rowHeight - 6) / 2, `×${entry.quantity}`, {
             fontFamily: "Arial",
@@ -289,6 +298,33 @@ export class CellContentsPanel {
     }) as ScrollablePanelInstance;
     scrollPanel.setOrigin?.(0, 0);
     scrollPanel.setScrollFactor?.(0);
+    const rawScrollPanel = scrollPanel as unknown as {
+      childrenMap?: {
+        scrollableBlock?: {
+          setScrollFactor?: (x: number, y?: number) => void;
+          scrollFactorX?: number;
+          scrollFactorY?: number;
+        };
+        child?: {
+          setScrollFactor?: (x: number, y?: number) => void;
+          scrollFactorX?: number;
+          scrollFactorY?: number;
+        };
+      };
+    };
+    if (rawScrollPanel.childrenMap?.scrollableBlock) {
+      rawScrollPanel.childrenMap.scrollableBlock.setScrollFactor?.(0);
+      rawScrollPanel.childrenMap.scrollableBlock.scrollFactorX = 0;
+      rawScrollPanel.childrenMap.scrollableBlock.scrollFactorY = 0;
+    }
+    if (rawScrollPanel.childrenMap?.child) {
+      rawScrollPanel.childrenMap.child.setScrollFactor?.(0);
+      rawScrollPanel.childrenMap.child.scrollFactorX = 0;
+      rawScrollPanel.childrenMap.child.scrollFactorY = 0;
+    }
+    content.setScrollFactor(0);
+    scrollPanel.setScrollerEnable?.(true);
+    scrollPanel.setMouseWheelScrollerEnable?.(true);
     scrollPanel.layout?.();
     overlay.add(scrollPanel);
 

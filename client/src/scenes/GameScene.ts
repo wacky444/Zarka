@@ -919,6 +919,7 @@ export class GameScene extends Phaser.Scene {
         !p.isDown ||
         this.pointerDownInUI ||
         this.gridModalActive ||
+        this.cellContentsPanel?.isOpen ||
         this.pinchActive
       ) {
         return;
@@ -944,7 +945,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private beginPinchIfPossible(): void {
-    if (this.pinchActive || this.gridModalActive) {
+    if (
+      this.pinchActive ||
+      this.gridModalActive ||
+      this.cellContentsPanel?.isOpen
+    ) {
       return;
     }
     const pointers = this.getMapTouchPointers();
@@ -987,6 +992,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updatePinchZoom(): void {
+    if (this.cellContentsPanel?.isOpen) {
+      return;
+    }
     if (!this.pinchActive) {
       this.beginPinchIfPossible();
       return;
