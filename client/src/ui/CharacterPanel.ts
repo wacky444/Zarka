@@ -3340,6 +3340,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       }
     }
 
+    if (definition.id === "throw_object") {
+      const hasThrowableItem = (character?.inventory?.carriedItems ?? []).some(
+        (stack) =>
+          stack.itemId !== "zarkans" &&
+          typeof stack.quantity === "number" &&
+          stack.quantity > 0 &&
+          ItemLibrary[stack.itemId as ItemId] !== undefined
+      );
+      if (!hasThrowableItem) {
+        return t("Missing throwable item");
+      }
+    }
+
     if (definition.requiredItems && definition.requiredItems.length > 0) {
       const carried = Array.isArray(character?.inventory?.carriedItems)
         ? character!.inventory.carriedItems
@@ -4956,6 +4969,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private getMainActionItemOptions(): ItemPriorityOption[] {
+    if (this.mainActionSelection === "throw_object") {
+      return this.inventoryItemOptions.filter(
+        (option) => option.id !== "zarkans"
+      );
+    }
     return this.mainActionSelection === "steal"
       ? this.stealItemOptions
       : this.itemOptions;

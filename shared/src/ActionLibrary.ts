@@ -546,6 +546,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 2,
     cooldown: 3,
+    developed: true,
     range: [0, 1],
     experience: {
       base: 1,
@@ -570,7 +571,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "hand.png",
     actionOrder: 8,
     actionSubOrder: 1,
-    tags: ["Attack", "Area", "Ranged"]
+    tags: ["Attack", "Area", "Ranged", "TargetItems"]
   },
   use_chemical_weapon: {
     id: "use_chemical_weapon",

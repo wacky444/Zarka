@@ -42,6 +42,7 @@ import { executeStealAction } from "./actions/steal";
 import { executeBlackMarketTradeAction } from "./actions/blackMarketTrade";
 import { executePickUpAction } from "./actions/pickup";
 import { executeDropAction } from "./actions/drop";
+import { executeThrowObjectAction } from "./actions/throwObject";
 import { applyActionCooldown } from "./actions/cooldowns";
 import {
   applyActionEnergyCost,
@@ -717,6 +718,30 @@ export function executeAction(
         logger,
       );
       const actionEvents = executeDropAction(participants, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.throw_object.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = executeThrowObjectAction(participants, match);
       eventsForAction = energyEvents.length
         ? [...energyEvents, ...actionEvents]
         : actionEvents;

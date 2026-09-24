@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { t } from "../services/i18n";
+import { getLocale, t } from "../services/i18n";
 import {
   ActionLibrary,
   ItemLibrary,
@@ -582,7 +582,50 @@ export class CharacterPanelLogView {
         const actionName = definition
           ? t(definition.name)
           : t(this.options.formatActionName(actionId));
-        if (actionId === "move" && event.action.targetLocation) {
+        if (actionId === "throw_object") {
+          const thrownItems = this.extractThrownItems(event.action.metadata);
+          if (thrownItems.length > 0) {
+            if (getLocale() === "es") {
+              if (event.targets && event.targets.length > 0) {
+                for (const target of event.targets) {
+                  lines.push(
+                    `${actor} ${t("throws")} ${t("to")} ${this.resolvePlayerName(
+                      target.targetId
+                    )}: ${thrownItems
+                      .map((item) => item.name.toLowerCase())
+                      .join(", ")}`
+                  );
+                }
+              } else if (event.action.targetLocation) {
+                const { q, r } = event.action.targetLocation;
+                lines.push(
+                  `${actor} ${t("throws")} ${thrownItems
+                    .map((item) => item.name.toLowerCase())
+                    .join(", ")} ${t("at")} (${q}, ${r})`
+                );
+              }
+            } else if (event.targets && event.targets.length > 0) {
+              for (const target of event.targets) {
+                lines.push(
+                  `${actor} ${t("throws")} ${this.resolvePlayerName(
+                    target.targetId
+                  )} ${thrownItems
+                    .map((item) => this.formatEnglishThrownItem(item))
+                    .join(", ")}`
+                );
+              }
+            } else if (event.action.targetLocation) {
+              const { q, r } = event.action.targetLocation;
+              lines.push(
+                `${actor} ${t("throws")} ${thrownItems
+                  .map((item) => this.formatEnglishThrownItem(item))
+                  .join(", ")} ${t("at")} (${q}, ${r})`
+              );
+            }
+          } else {
+            lines.push(`${actor} ${t("used")} ${actionName}`);
+          }
+        } else if (actionId === "move" && event.action.targetLocation) {
           const { q, r } = event.action.targetLocation;
           lines.push(`${actor} ${t("moved to")} (${q}, ${r})`);
         } else {
@@ -1201,6 +1244,49 @@ export class CharacterPanelLogView {
       }
     }
     return result;
+  }
+
+  private extractThrownItems(
+    metadata: unknown
+  ): Array<{ itemType: string; name: string }> {
+    if (!metadata || typeof metadata !== "object") {
+      return [];
+    }
+    const entries = (metadata as { thrownItems?: unknown }).thrownItems;
+    if (!Array.isArray(entries)) {
+      return [];
+    }
+    const result: Array<{ itemType: string; name: string }> = [];
+    for (const entry of entries) {
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
+      const itemType = (entry as { itemType?: unknown }).itemType;
+      if (typeof itemType !== "string") {
+        continue;
+      }
+      result.push({ itemType, name: this.resolveItemName(itemType) });
+    }
+    return result;
+  }
+
+  private formatEnglishThrownItem(item: {
+    itemType: string;
+    name: string;
+  }): string {
+    const name = item.name.charAt(0).toLowerCase() + item.name.slice(1);
+    if (
+      item.itemType === "food" ||
+      item.itemType === "wood" ||
+      item.itemType === "fuel" ||
+      item.itemType === "poison" ||
+      item.itemType === "nails" ||
+      item.itemType === "binoculars"
+    ) {
+      return `some ${name}`;
+    }
+    const article = /^[aeiou]/i.test(name) ? "an" : "a";
+    return `${article} ${name}`;
   }
 
   private didSearchFindNothing(metadata: unknown): boolean {
