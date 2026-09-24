@@ -13,6 +13,7 @@ import {
 } from "../utils/matchView";
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
 import { resolveTurnForMatch } from "../match/turnResolution";
+import { sendTutorialBotMessageForTurn } from "../match/TutorialBotChat";
 import { getAliveCharacterIds } from "../match/checkEndGame";
 import { validateTime } from "../utils/validation";
 import { getRuntimeMatchId } from "../utils/matchIds";
@@ -175,6 +176,15 @@ export function updateReadyStateRpc(
         (e as Error).message,
       );
     }
+  }
+
+  if (advanced && advanceResult) {
+    sendTutorialBotMessageForTurn(
+      match,
+      advanceResult.events,
+      nk,
+      logger
+    );
   }
 
   if (!advanced) {

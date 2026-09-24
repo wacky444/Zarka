@@ -1,6 +1,11 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import { ActionLibrary, type ActionId } from "@shared";
+import {
+  ActionLibrary,
+  TUTORIAL_BOT_ID,
+  TUTORIAL_MATCH_METADATA_KEY,
+  type ActionId
+} from "@shared";
 import { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
@@ -13,6 +18,7 @@ import {
 } from "../match/actions/cooldowns";
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
 import { parseAxial } from "../utils/location";
+import { sendTutorialBotMessage } from "../match/TutorialBotChat";
 
 export function updateMainActionRpc(
   ctx: nkruntime.Context,
@@ -240,6 +246,29 @@ export function updateMainActionRpc(
     character.actionPlan.main = nextPlan;
   }
   storage.writeMatch(match, read.version);
+  const bot = match.playerCharacters[TUTORIAL_BOT_ID];
+  const mainPlan = character.actionPlan?.main;
+  const isAxeAttackOnBot =
+    mainPlan?.actionId === "axe_attack" &&
+    (!mainPlan.targetPlayerIds ||
+      mainPlan.targetPlayerIds.length === 0 ||
+      mainPlan.targetPlayerIds.indexOf(TUTORIAL_BOT_ID) !== -1);
+  const sharesTileWithBot =
+    bot &&
+    (character.position?.tileId === bot.position?.tileId ||
+      (character.position?.coord?.q === bot.position?.coord?.q &&
+        character.position?.coord?.r === bot.position?.coord?.r));
+
+  if (
+    match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] &&
+    isAxeAttackOnBot &&
+    character.inventory.carriedItems.some(
+      (item) => item.itemId === "axe" && item.quantity > 0
+    ) &&
+    sharesTileWithBot
+  ) {
+    sendTutorialBotMessage(match, "axe_ordering", nk, _logger);
+  }
   const response: import("@shared").UpdateMainActionPayload = {
     ok: true,
     match_id: matchId,

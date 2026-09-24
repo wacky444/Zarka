@@ -51,6 +51,7 @@ const DEFAULT_FONT_SIZE = "14px";
 
 export class Subtabs<T extends string = string> {
   private activeKey: T;
+  private highlightedKey: T | null = null;
   private entries: SubtabEntry<T>[] = [];
   private readonly elements: Phaser.GameObjects.GameObject[] = [];
   private height: number;
@@ -78,6 +79,14 @@ export class Subtabs<T extends string = string> {
     if (emitChange) {
       this.options.onChange?.(key, previous);
     }
+  }
+
+  setHighlightedKey(key: T | null): void {
+    if (this.highlightedKey === key) {
+      return;
+    }
+    this.highlightedKey = key;
+    this.updateStyles();
   }
 
   getElements(): Phaser.GameObjects.GameObject[] {
@@ -192,17 +201,18 @@ export class Subtabs<T extends string = string> {
 
     for (const entry of this.entries) {
       const isActive = entry.key === this.activeKey;
+      const isHighlighted = entry.key === this.highlightedKey;
       entry.button.setFillStyle(
         isActive ? activeFill : inactiveFill,
         isActive ? activeFillAlpha : inactiveFillAlpha
       );
       entry.button.setStrokeStyle(
-        1,
-        isActive ? activeStroke : inactiveStroke,
-        isActive ? activeStrokeAlpha : inactiveStrokeAlpha
+        isHighlighted ? 3 : 1,
+        isHighlighted ? 0xfbbf24 : isActive ? activeStroke : inactiveStroke,
+        isHighlighted ? 1 : isActive ? activeStrokeAlpha : inactiveStrokeAlpha
       );
       entry.label.setColor(isActive ? activeTextColor : inactiveTextColor);
-      entry.label.setAlpha(isActive ? 1 : 0.7);
+      entry.label.setAlpha(isActive || isHighlighted ? 1 : 0.7);
     }
   }
 }

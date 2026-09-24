@@ -13,6 +13,7 @@ export * from "./ItemLibrary";
 export * from "./Replay";
 export * from "./chat";
 export * from "./UserAccount";
+export * from "./Tutorial";
 export * from "./SkinOptions";
 export * from "./skills/Skill";
 export * from "./skills/SkillLibrary";

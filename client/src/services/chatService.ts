@@ -9,14 +9,22 @@ import type {
   GetChatHistoryPayload,
   MatchChatMessage,
   SaveChatMessageRequest,
+  TutorialBotMessageKey,
 } from "@shared";
-import { MAX_CHAT_MESSAGE_LENGTH } from "@shared";
+import {
+  MATCH_CHAT_ROOM_CHANNEL_TYPE,
+  MATCH_CHAT_ROOM_PREFIX,
+  MAX_CHAT_MESSAGE_LENGTH,
+  TUTORIAL_BOT_ID,
+  TUTORIAL_BOT_MESSAGE_KEYS,
+  TUTORIAL_BOT_NAME,
+  TUTORIAL_BOT_SYSTEM_SENDER_ID,
+} from "@shared";
 import { getEnv } from "./nakama";
 import type { TurnService } from "./turnService";
 
 const HISTORY_LIMIT = 50;
 const MAX_MESSAGE_LENGTH = MAX_CHAT_MESSAGE_LENGTH;
-const CHANNEL_TYPE_ROOM = 1; // Nakama: 1 = room, 2 = DM, 3 = group
 
 function stringFromContent(value: unknown): string {
   if (typeof value === "string") {
@@ -56,6 +64,38 @@ function decodeMessageContent(raw: unknown): string {
     }
   }
   return stringified;
+}
+
+function isTutorialBotMessageKey(value: unknown): value is TutorialBotMessageKey {
+  return (
+    typeof value === "string" &&
+    TUTORIAL_BOT_MESSAGE_KEYS.some((key) => key === value)
+  );
+}
+
+function decodeTutorialBotMessageKey(
+  raw: unknown,
+  senderId: string | undefined
+): TutorialBotMessageKey | null {
+  if (senderId !== TUTORIAL_BOT_SYSTEM_SENDER_ID) {
+    return null;
+  }
+  const stringified = stringFromContent(raw);
+  if (!stringified) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(stringified) as {
+      tutorialBotId?: unknown;
+      tutorialMessageKey?: unknown;
+    };
+    return parsed.tutorialBotId === TUTORIAL_BOT_ID &&
+      isTutorialBotMessageKey(parsed.tutorialMessageKey)
+      ? parsed.tutorialMessageKey
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 function decodeMessageDisplayName(raw: unknown): string | undefined {
@@ -102,7 +142,12 @@ export class MatchChatService {
     }
     await this.leaveChannel();
     const room = this.buildRoomName(normalized);
-    this.channel = await socket.joinChat(room, CHANNEL_TYPE_ROOM, true, false);
+    this.channel = await socket.joinChat(
+      room,
+      MATCH_CHAT_ROOM_CHANNEL_TYPE,
+      true,
+      false
+    );
     this.matchId = normalized;
     return this.fetchRecentMessages();
   }
@@ -231,13 +276,23 @@ export class MatchChatService {
     const createdAt = payload.create_time
       ? Date.parse(payload.create_time)
       : Date.now();
-    const senderId = payload.sender_id || payload.user_id_one || "";
+    const tutorialMessageKey = decodeTutorialBotMessageKey(
+      payload.content,
+      payload.sender_id
+    );
+    const senderId = tutorialMessageKey
+      ? TUTORIAL_BOT_ID
+      : payload.sender_id || payload.user_id_one || "";
     return {
-      messageId: payload.message_id || "",
+      messageId: tutorialMessageKey
+        ? `tutorial:${this.matchId ?? ""}:${tutorialMessageKey}`
+        : payload.message_id || "",
       matchId: this.matchId ?? "",
       senderId,
       username: payload.username ?? undefined,
-      displayName: decodeMessageDisplayName(payload.content),
+      displayName:
+        decodeMessageDisplayName(payload.content) ??
+        (tutorialMessageKey ? TUTORIAL_BOT_NAME : undefined),
       content: decodeMessageContent(payload.content),
       createdAt: Number.isFinite(createdAt) ? createdAt : Date.now(),
       code: payload.code,
@@ -247,7 +302,7 @@ export class MatchChatService {
   }
 
   private buildRoomName(matchId: string) {
-    return `match:${matchId}`;
+    return `${MATCH_CHAT_ROOM_PREFIX}${matchId}`;
   }
 
   private parseRpcPayload<T>(res: RpcResponse): T {

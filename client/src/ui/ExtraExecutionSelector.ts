@@ -24,6 +24,7 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
   private enabled = false;
   private preferredWidth: number;
   private disposed = false;
+  private tutorialHighlighted = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, width: number) {
     super(scene, x, y);
@@ -130,6 +131,18 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
     this.updateCostDisplay();
     this.applyEnabled();
     this.layoutChildren();
+  }
+
+  setTutorialHighlight(highlighted: boolean): void {
+    if (this.disposed || this.tutorialHighlighted === highlighted) {
+      return;
+    }
+    this.tutorialHighlighted = highlighted;
+    this.label.setStyle({
+      color: highlighted ? "#fbbf24" : "#ffffff",
+      fontStyle: highlighted ? "bold" : "normal"
+    });
+    this.label.setStroke(highlighted ? "#fbbf24" : "#000000", highlighted ? 1 : 0);
   }
 
   setEnabled(enabled: boolean): void {

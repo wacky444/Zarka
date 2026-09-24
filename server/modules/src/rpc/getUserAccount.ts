@@ -156,6 +156,7 @@ function buildAccountFromUser(
     timezone: user.timezone || undefined,
     isAdmin:
       metadata?.admin === true || zarka?.admin === true ? true : undefined,
+    tutorialCompleted: zarka?.tutorialCompleted === true,
     stats,
     cosmetics,
     createdAtMs,

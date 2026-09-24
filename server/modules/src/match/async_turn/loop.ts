@@ -5,6 +5,7 @@ import { AsyncTurnState, MatchRecord } from "../../models/types";
 import { createNakamaWrapper } from "../../services/nakamaWrapper";
 import { StorageService } from "../../services/storageService";
 import { resolveTurnForMatch } from "../turnResolution";
+import { sendTutorialBotMessageForTurn } from "../TutorialBotChat";
 import { isBotId } from "../botAI";
 import { validateTime } from "../../utils/validation";
 import {
@@ -215,6 +216,8 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
         (error as Error).message,
       );
     }
+
+    sendTutorialBotMessageForTurn(match, outcome.events, nk, logger);
 
     try {
       nkWrapper.matchSignal(

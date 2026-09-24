@@ -5,6 +5,7 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { MatchRecord } from "../models/types";
 import { getRuntimeMatchId } from "../utils/matchIds";
+import { TUTORIAL_MATCH_METADATA_KEY } from "@shared";
 
 export function leaveMatchRpc(
   ctx: nkruntime.Context,
@@ -55,27 +56,61 @@ export function leaveMatchRpc(
     ) {
       delete match.readyStates[ctx.userId];
     }
-    try {
-      storage.writeMatch(match, read.version);
+    if (match.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
+      match.removed = 1;
+      match.started = false;
+      try {
+        storage.writeMatch(match, read.version);
+      } catch {
+        throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
+      }
       try {
         nkWrapper.matchSignal(
           getRuntimeMatchId(match),
-          JSON.stringify({
-            type: "sync_players",
-            players: match.players,
-            size: match.size,
-            name: match.name,
-            started: match.started,
-          })
+          JSON.stringify({ type: "match_removed" })
         );
       } catch (signalError) {
         logger.debug(
-          "leave_match: matchSignal sync failed: %s",
+          "leave_match tutorial removal signal failed: %s",
           (signalError as Error).message
         );
       }
-    } catch (e) {
-      throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
+      try {
+        for (const replay of storage.listReplaysForMatch(matchId)) {
+          storage.deleteReplayByKey(replay.key);
+        }
+        storage.deleteChatLog(matchId);
+        storage.deleteMatch(matchId);
+      } catch (cleanupError) {
+        logger.warn(
+          "leave_match tutorial cleanup failed for %s: %s",
+          matchId,
+          (cleanupError as Error).message || String(cleanupError)
+        );
+      }
+    } else {
+      try {
+        storage.writeMatch(match, read.version);
+        try {
+          nkWrapper.matchSignal(
+            getRuntimeMatchId(match),
+            JSON.stringify({
+              type: "sync_players",
+              players: match.players,
+              size: match.size,
+              name: match.name,
+              started: match.started,
+            })
+          );
+        } catch (signalError) {
+          logger.debug(
+            "leave_match: matchSignal sync failed: %s",
+            (signalError as Error).message
+          );
+        }
+      } catch (e) {
+        throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
+      }
     }
   }
 

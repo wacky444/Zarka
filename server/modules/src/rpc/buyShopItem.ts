@@ -3,6 +3,8 @@
 import {
   ShopLibrary,
   LocalizationType,
+  TUTORIAL_BOT_ID,
+  TUTORIAL_MATCH_METADATA_KEY,
   isCharacterHidden,
   type Axial,
   type BuyShopItemPayload,
@@ -20,6 +22,7 @@ import {
 import { isCharacterDead } from "../utils/playerCharacter";
 import { tailorPlayerCharactersForViewer } from "../utils/matchView";
 import { parseAxial } from "../utils/location";
+import { sendTutorialBotMessage } from "../match/TutorialBotChat";
 import { canCharacterDetectFire } from "../utils/fireVisibility";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -410,6 +413,14 @@ export function buyShopItemRpc(
     ...(existingReplay?.snapshot ? { snapshot: existingReplay.snapshot } : {}),
     created_at: existingReplay?.created_at ?? Math.floor(Date.now() / 1000),
   });
+  if (
+    match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] &&
+    resolvedShopId === "detective" &&
+    targetPlayerId === TUTORIAL_BOT_ID &&
+    targetTeamId
+  ) {
+    sendTutorialBotMessage(match, "detective_result", nk, _logger);
+  }
 
   const response: BuyShopItemPayload = {
     ok: true,

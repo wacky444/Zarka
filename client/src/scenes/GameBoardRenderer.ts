@@ -12,6 +12,7 @@ import {
   type ReplaySnapshot,
   type Skin,
   type TrapRecord,
+  TUTORIAL_MATCH_METADATA_KEY,
   axialDistance,
   getHexTileOffsets,
   isCharacterHidden,
@@ -25,7 +26,10 @@ import {
   ItemTooltipManager,
   composeItemDescription,
 } from "../ui/ItemTooltip";
-import { CellContentsPanel } from "../ui/CellContentsPanel";
+import {
+  CellContentsPanel,
+  type CellContentsEntry
+} from "../ui/CellContentsPanel";
 import { HoverTooltip } from "../ui/HoverTooltip";
 import {
   createSkinContainer,
@@ -64,6 +68,7 @@ export interface GameBoardRendererCallbacks {
   ): boolean;
   onTileHover(tileId: string | null): void;
   onTilePick(tile: HexTile): void;
+  onCellInfoOpened(coord: Axial): void;
   onPlayerCardClick(playerId: string): void;
 }
 
@@ -236,18 +241,31 @@ export class GameBoardRenderer {
         (pointer: Phaser.Input.Pointer) => {
           const selection = this.callbacks.getLocationSelection();
           if (
-            !selection.active ||
             this.callbacks.isPinchGestureInProgress() ||
             pointer.button !== 0 ||
-            selection.pointerId === null ||
-            pointer.id !== selection.pointerId ||
             pointer.getDistance() > 15
           ) {
             return;
           }
           const tileData = img.getData("tile") as HexTile | undefined;
-          if (tileData) {
-            this.callbacks.onTilePick(tileData);
+          if (!tileData) {
+            return;
+          }
+          if (selection.active) {
+            if (
+              selection.pointerId !== null &&
+              pointer.id === selection.pointerId
+            ) {
+              this.callbacks.onTilePick(tileData);
+            }
+            return;
+          }
+          if (
+            this.callbacks.getCurrentMatch()?.metadata?.[
+              TUTORIAL_MATCH_METADATA_KEY
+            ]
+          ) {
+            this.showTutorialCellInfo(tileData);
           }
         },
       );
@@ -507,7 +525,7 @@ export class GameBoardRenderer {
                 if (pointer.button !== 0 || pointer.getDistance() > 15) {
                   return;
                 }
-                this.cellContentsPanel.show(
+                this.showCellContents(
                   snapshot.coord,
                   entries.map(([itemId, quantity]) => ({ itemId, quantity })),
                 );
@@ -624,6 +642,30 @@ export class GameBoardRenderer {
     }
   }
 
+  private showTutorialCellInfo(tile: HexTile): void {
+    const itemTypeById = new Map<string, ItemId>();
+    for (const item of this.callbacks.getCurrentMatch()?.items ?? []) {
+      itemTypeById.set(item.item_id, item.item_type);
+    }
+
+    const quantities = new Map<ItemId, number>();
+    for (const itemId of tile.itemIds) {
+      const itemType = itemTypeById.get(itemId);
+      if (itemType) {
+        quantities.set(itemType, (quantities.get(itemType) ?? 0) + 1);
+      }
+    }
+    const entries: CellContentsEntry[] = Array.from(quantities.entries()).map(
+      ([itemId, quantity]) => ({ itemId, quantity })
+    );
+    this.showCellContents(tile.coord, entries);
+  }
+
+  private showCellContents(coord: Axial, entries: CellContentsEntry[]): void {
+    this.cellContentsPanel.show(coord, entries);
+    this.callbacks.onCellInfoOpened(coord);
+  }
+
   renderTraps(traps: TrapRecord[] | undefined): void {
     this.clearTrapVisuals();
     for (const trap of traps ?? []) {
@@ -703,6 +745,52 @@ export class GameBoardRenderer {
 
   getPlayerSprite(playerId: string): SkinContainer | undefined {
     return this.playerSprites.get(playerId);
+  }
+
+  ensurePlayerSprite(
+    playerId: string,
+    coord?: Axial,
+  ): SkinContainer | undefined {
+    let sprite = this.playerSprites.get(playerId);
+    const world = coord ? this.axialToWorld(coord) : { x: 0, y: 0 };
+    if (!sprite || !sprite.active || sprite.scene !== this.scene) {
+      const playerSkin =
+        this.callbacks.getPlayerSkin(playerId) ?? DEFAULT_SKIN;
+      sprite = createSkinContainer(this.scene, world.x, world.y, playerSkin, 2);
+      sprite.setData("playerId", playerId);
+      sprite.setInteractive({ useHandCursor: true });
+      this.attachPlayerCardClickHandler(sprite, playerId);
+      this.uiCamera.ignore(sprite);
+      this.playerSprites.set(playerId, sprite);
+    }
+    sprite.setPosition(world.x, world.y);
+    sprite.setVisible(true);
+    sprite.setDepth(5 + world.y / 1000);
+
+    let label = this.playerNameLabels.get(playerId);
+    const name = this.callbacks.getPlayerName(playerId);
+    if (!label || !label.active || label.scene !== this.scene) {
+      label = this.scene.add.text(world.x, world.y, name, {
+        fontFamily: "Arial",
+        fontSize: "10px",
+        color: "#ffffff",
+        stroke: "#000000",
+        strokeThickness: 4,
+        resolution: 3,
+      });
+      label.setOrigin(0.5, 0.5);
+      label.setDepth(6);
+      label.setInteractive({ useHandCursor: true });
+      this.attachPlayerCardClickHandler(label, playerId);
+      this.uiCamera.ignore(label);
+      this.playerNameLabels.set(playerId, label);
+    }
+    label.setText(name);
+    label.setPosition(world.x, world.y);
+    label.setVisible(true);
+    this.positionLabel(label, sprite);
+
+    return sprite;
   }
 
   getPlayerLabel(playerId: string): Phaser.GameObjects.Text | undefined {

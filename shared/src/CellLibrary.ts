@@ -8,7 +8,7 @@ export const CellLibrary: CellLibraryDefinition = {
     specialActionIds: [ActionLibrary.look_through_window.id],
     walkable: true,
     numberMin: 0,
-    numberMax: 1,
+    numberMax: 4,
     startingItems: [
       { itemId: "drink", quantity: 4 },
       { itemId: "food", quantity: 3 },
@@ -26,8 +26,8 @@ export const CellLibrary: CellLibraryDefinition = {
       { itemId: "lockpick", quantity: 2 },
       { itemId: "binoculars", quantity: 1 },
       { itemId: "walkie_talkie", quantity: 1 },
-      { itemId: "zarkans", quantity: 4 },
-    ],
+      { itemId: "zarkans", quantity: 4 }
+    ]
   },
   [LocalizationType.Pharmacy]: {
     sprite: "modern_shop.png",
@@ -47,8 +47,8 @@ export const CellLibrary: CellLibraryDefinition = {
       { itemId: "poison", quantity: 2 },
       { itemId: "vaccine", quantity: 1 },
       { itemId: "walkie_talkie", quantity: 1 },
-      { itemId: "zarkans", quantity: 3 },
-    ],
+      { itemId: "zarkans", quantity: 3 }
+    ]
   },
   [LocalizationType.PoliceStation]: {
     sprite: "western_sheriff.png",
@@ -66,8 +66,8 @@ export const CellLibrary: CellLibraryDefinition = {
       { itemId: "c4", quantity: 3 },
       { itemId: "fuel", quantity: 3 },
       { itemId: "walkie_talkie", quantity: 1 },
-      { itemId: "zarkans", quantity: 2 },
-    ],
+      { itemId: "zarkans", quantity: 2 }
+    ]
   },
   [LocalizationType.Hardware]: {
     sprite: "mill_storage.png",
@@ -86,8 +86,8 @@ export const CellLibrary: CellLibraryDefinition = {
       { itemId: "lockpick", quantity: 3 },
       { itemId: "binoculars", quantity: 2 },
       { itemId: "walkie_talkie", quantity: 1 },
-      { itemId: "zarkans", quantity: 3 },
-    ],
+      { itemId: "zarkans", quantity: 3 }
+    ]
   },
   [LocalizationType.Factory]: {
     sprite: "mill_factory.png",
@@ -112,8 +112,8 @@ export const CellLibrary: CellLibraryDefinition = {
       { itemId: "lockpick", quantity: 2 },
       { itemId: "binoculars", quantity: 2 },
       { itemId: "walkie_talkie", quantity: 1 },
-      { itemId: "zarkans", quantity: 2 },
-    ],
+      { itemId: "zarkans", quantity: 2 }
+    ]
   },
   [LocalizationType.Hospital]: {
     sprite: "modern_largeBuilding.png",
@@ -134,8 +134,8 @@ export const CellLibrary: CellLibraryDefinition = {
       { itemId: "poison", quantity: 2 },
       { itemId: "virus", quantity: 1 },
       { itemId: "vaccine", quantity: 1 },
-      { itemId: "zarkans", quantity: 2 },
-    ],
+      { itemId: "zarkans", quantity: 2 }
+    ]
   },
   [LocalizationType.Workshop]: {
     sprite: "medieval_blacksmith.png",
@@ -153,8 +153,8 @@ export const CellLibrary: CellLibraryDefinition = {
       { itemId: "molotov", quantity: 2 },
       { itemId: "bullet", quantity: 3 },
       { itemId: "nails", quantity: 4 },
-      { itemId: "zarkans", quantity: 5 },
-    ],
+      { itemId: "zarkans", quantity: 5 }
+    ]
   },
   [LocalizationType.Security]: {
     sprite: "military_turretMedium.png",
@@ -173,8 +173,8 @@ export const CellLibrary: CellLibraryDefinition = {
       { itemId: "tracker", quantity: 6 },
       { itemId: "binoculars", quantity: 3 },
       { itemId: "walkie_talkie", quantity: 1 },
-      { itemId: "zarkans", quantity: 3 },
-    ],
+      { itemId: "zarkans", quantity: 3 }
+    ]
   },
   [LocalizationType.GasStation]: {
     sprite: "modern_petrol.png",
@@ -193,8 +193,8 @@ export const CellLibrary: CellLibraryDefinition = {
       { itemId: "fuel", quantity: 6 },
       { itemId: "nails", quantity: 1 },
       { itemId: "walkie_talkie", quantity: 1 },
-      { itemId: "zarkans", quantity: 5 },
-    ],
+      { itemId: "zarkans", quantity: 5 }
+    ]
   },
   [LocalizationType.Market]: {
     sprite: "modern_cornerShop.png",
@@ -220,8 +220,8 @@ export const CellLibrary: CellLibraryDefinition = {
       { itemId: "binoculars", quantity: 1 },
       { itemId: "walkie_talkie", quantity: 2 },
       { itemId: "tracker", quantity: 4 },
-      { itemId: "zarkans", quantity: 3 },
-    ],
+      { itemId: "zarkans", quantity: 3 }
+    ]
   },
   [LocalizationType.Restaurant]: {
     sprite: "western_saloon.png",
@@ -239,8 +239,8 @@ export const CellLibrary: CellLibraryDefinition = {
       { itemId: "bat", quantity: 1 },
       { itemId: "poison", quantity: 2 },
       { itemId: "molotov", quantity: 3 },
-      { itemId: "zarkans", quantity: 3 },
-    ],
+      { itemId: "zarkans", quantity: 3 }
+    ]
   },
   [LocalizationType.Road]: {
     sprite: "dirt_02.png",
@@ -252,8 +252,8 @@ export const CellLibrary: CellLibraryDefinition = {
       { itemId: "wood", quantity: 1 },
       { itemId: "spike", quantity: 5 },
       { itemId: "fuel", quantity: 1 },
-      { itemId: "zarkans", quantity: 3 },
-    ],
+      { itemId: "zarkans", quantity: 3 }
+    ]
   },
   [LocalizationType.Path]: {
     sprite: "grass_02.png",
@@ -263,8 +263,8 @@ export const CellLibrary: CellLibraryDefinition = {
     numberMax: -1,
     startingItems: [
       { itemId: "food", quantity: 2 },
-      { itemId: "wood", quantity: 8 },
-    ],
+      { itemId: "wood", quantity: 8 }
+    ]
   },
   [LocalizationType.Alley]: {
     sprite: "stone_04.png",
@@ -274,7 +274,7 @@ export const CellLibrary: CellLibraryDefinition = {
     numberMax: -1,
     startingItems: [
       { itemId: "spike", quantity: 1 },
-      { itemId: "bottle", quantity: 9 },
-    ],
-  },
+      { itemId: "bottle", quantity: 9 }
+    ]
+  }
 };

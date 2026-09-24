@@ -3,7 +3,10 @@
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
-import type { ListMyMatchesPayload } from "@shared";
+import {
+  TUTORIAL_MATCH_METADATA_KEY,
+  type ListMyMatchesPayload
+} from "@shared";
 
 type MatchListEntry = NonNullable<ListMyMatchesPayload["matches"]>[number];
 
@@ -23,6 +26,9 @@ export function listMyMatchesRpc(
     const finishedMatches: MatchListEntry[] = [];
 
     for (const { match } of storage.listAllMatches()) {
+      if (match.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
+        continue;
+      }
       const players = Array.isArray(match.players) ? match.players : [];
       if (players.indexOf(ctx.userId) === -1) {
         continue;

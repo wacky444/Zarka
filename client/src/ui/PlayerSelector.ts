@@ -80,6 +80,10 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
     this.refreshSize();
   }
 
+  setTutorialHighlight(highlighted: boolean): void {
+    this.grid.setTutorialHighlight(highlighted);
+  }
+
   setOptions(options: PlayerOption[]): void {
     if (this.disposed) {
       return;

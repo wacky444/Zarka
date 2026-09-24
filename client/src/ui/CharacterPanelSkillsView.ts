@@ -71,6 +71,7 @@ export class CharacterPanelSkillsView {
   private readonly cardItems: SkillCardItem[] = [];
   private currentCharacter: PlayerCharacter | null = null;
   private pendingUpgrades: SkillId[] = [];
+  private allowedSkillIds: ReadonlySet<SkillId> | null = null;
   private onConfirmSkills?: (skillIds: SkillId[]) => void;
 
   constructor(
@@ -404,6 +405,23 @@ export class CharacterPanelSkillsView {
     this.onConfirmSkills = callback;
   }
 
+  setAllowedSkillIds(skillIds: readonly SkillId[] | null): void {
+    const next = skillIds ? new Set(skillIds) : null;
+    if (
+      this.allowedSkillIds?.size === next?.size &&
+      (this.allowedSkillIds === null ||
+        [...this.allowedSkillIds].every((id) => next?.has(id)))
+    ) {
+      return;
+    }
+    this.allowedSkillIds = next;
+    this.rebuildSkillList();
+  }
+
+  setHighlightedCategory(category: SkillCategory | null): void {
+    this.categoryTabs.setHighlightedKey(category);
+  }
+
   update(character: PlayerCharacter | null): void {
     this.currentCharacter = character;
     this.pendingUpgrades = [];
@@ -621,7 +639,9 @@ export class CharacterPanelSkillsView {
 
   private buildSkillList(cardWidth: number): void {
     const skills = Object.values(SkillLibrary).filter(
-      (skill) => skill.category === this.activeCategory
+      (skill) =>
+        skill.category === this.activeCategory &&
+        (!this.allowedSkillIds || this.allowedSkillIds.has(skill.id))
     );
     let currentY = 0;
 

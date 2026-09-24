@@ -1,6 +1,9 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import type { ReplayEvent } from "@shared";
+import {
+  TUTORIAL_MATCH_METADATA_KEY,
+  type ReplayEvent
+} from "@shared";
 import type { MatchRecord } from "../models/types";
 import { isCharacterDead } from "../utils/playerCharacter";
 import { createStorageService } from "../services/storageService";
@@ -90,18 +93,23 @@ function parsePlayerStatsFromUser(
 function writePlayerStatsToMetadata(
   user: nkruntime.User,
   nextStats: import("@shared").PlayerStats,
+  completedTutorial: boolean
 ): { [key: string]: any } {
   const existingMetadata = asRecord(
     (user as unknown as { metadata?: unknown }).metadata,
   );
   const existingZarka = asRecord(existingMetadata?.zarka);
 
+  const nextZarka: UnknownRecord = {
+    ...(existingZarka ?? {}),
+    stats: nextStats,
+  };
+  if (completedTutorial) {
+    nextZarka.tutorialCompleted = true;
+  }
   return {
     ...(existingMetadata ?? {}),
-    zarka: {
-      ...(existingZarka ?? {}),
-      stats: nextStats,
-    },
+    zarka: nextZarka,
   };
 }
 
@@ -302,7 +310,11 @@ export function finalizeMatchIfEnded(
           playerId,
           nextStats,
         );
-        const nextMetadata = writePlayerStatsToMetadata(user, nextStats);
+        const nextMetadata = writePlayerStatsToMetadata(
+          user,
+          nextStats,
+          isWinner && !!match.metadata?.[TUTORIAL_MATCH_METADATA_KEY]
+        );
         // Nakama runtime API: metadata is replaced, so we preserve existing fields.
         nk.accountUpdateId(
           playerId,

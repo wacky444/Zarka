@@ -1,18 +1,27 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
 import { DEFAULT_MATCH_NAME } from "../constants";
+import { makeNakamaError } from "../utils/errors";
+import { hasTutorialCompleted } from "../utils/tutorialProfile";
 import { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { normalizeMatchName } from "../utils/normalize";
 import { validateTime } from "../utils/validation";
-import { DEFAULT_MAP_COLS, DEFAULT_MAP_ROWS } from "@shared";
+import {
+  DEFAULT_MAP_COLS,
+  DEFAULT_MAP_ROWS,
+  TUTORIAL_MATCH_METADATA_KEY
+} from "@shared";
 
 function getNumberOfMatches(storage: StorageService, userId: string): number {
   const allMatches = storage.listAllMatches();
   let creatorMatchCount = 0;
 
   for (const { match } of allMatches) {
+    if (match.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
+      continue;
+    }
     if (
       match.creator === userId &&
       (match.removed === 0 || match.removed === undefined)
@@ -35,6 +44,13 @@ export function createMatchRpc(
       message: "No user context",
       code: nkruntime.Codes.INVALID_ARGUMENT
     } as nkruntime.Error;
+  }
+
+  if (!hasTutorialCompleted(nk, ctx.userId, logger)) {
+    throw makeNakamaError(
+      "tutorial_incomplete",
+      nkruntime.Codes.FAILED_PRECONDITION
+    );
   }
 
   let size = 2;

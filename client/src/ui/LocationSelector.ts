@@ -67,6 +67,14 @@ export class LocationSelector extends Phaser.GameObjects.Container {
     this.layoutChildren();
   }
 
+  setTutorialHighlight(highlighted: boolean): void {
+    if (this.disposed) {
+      return;
+    }
+    this.label.setColor(highlighted ? "#fbbf24" : "#ffffff");
+    this.label.setStroke(highlighted ? "#fbbf24" : "#000000", highlighted ? 1 : 0);
+  }
+
   setValue(value: Axial | null): void {
     if (this.disposed) {
       return;

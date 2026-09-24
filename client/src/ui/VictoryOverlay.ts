@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { t } from "../services/i18n";
 
 export interface VictoryOverlayOptions {
   depth?: number;
@@ -13,6 +14,7 @@ export interface VictoryOverlayData {
   winnerId?: string;
   turns?: number;
   skin?: import("@shared").Skin;
+  tutorial?: boolean;
 }
 
 export class VictoryOverlay {
@@ -128,13 +130,25 @@ export class VictoryOverlay {
     this.clearParticles();
 
     if (data.result === "win") {
+      if (data.tutorial) {
+        this.subtitleText.setStyle({ fontSize: "18px", align: "center" });
+        this.subtitleText.setWordWrapWidth(Math.max(240, width - 40), true);
+        this.statsText.setStyle({ align: "center" });
+        this.statsText.setWordWrapWidth(Math.max(240, width - 40), true);
+      }
       this.titleText.setText("VICTORY!");
       this.titleText.setStyle({
         color: "#fbbf24",
         shadow: { blur: 16, color: "#92400e", fill: true }
       });
-      this.subtitleText.setText("You are the last character standing!");
-      this.rewardBadge.setText("🏆 +1 WIN!");
+      this.subtitleText.setText(
+        data.tutorial
+          ? t("You won by combining information, preparation, positioning, and timing.")
+          : "You are the last character standing!"
+      );
+      this.rewardBadge.setText(
+        data.tutorial ? t("Tutorial complete") : "🏆 +1 WIN!"
+      );
       this.rewardBadge.setStyle({
         color: "#fef08a",
         backgroundColor: "#854d0e"
@@ -161,7 +175,12 @@ export class VictoryOverlay {
 
     this.createVictoryParticles();
 
-    if (typeof data.turns === "number" && data.turns > 0) {
+    if (data.tutorial && data.result === "win") {
+      this.statsText.setText(
+        t("You learned to inspect, prepare, verify, and plan ahead.")
+      );
+      this.statsText.setVisible(true);
+    } else if (typeof data.turns === "number" && data.turns > 0) {
       this.statsText.setText(`Match completed in ${data.turns} turns`);
       this.statsText.setVisible(true);
     } else {

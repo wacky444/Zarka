@@ -3,6 +3,7 @@
 import { AsyncTurnState } from "./models/types";
 import {
   createMatchRpc,
+  createTutorialMatchRpc,
   getStateRpc,
   joinMatchRpc,
   leaveMatchRpc,
@@ -41,6 +42,14 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register create_match: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("create_tutorial_match", createTutorialMatchRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register create_tutorial_match: %s",
       (error && (error as Error).message) || String(error)
     );
   }

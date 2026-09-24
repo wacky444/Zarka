@@ -35,6 +35,7 @@ function parseAccountFromRaw(raw: NakamaUserRaw): UserAccount | null {
     userId,
     username: raw.username ?? userId,
     displayName: raw.display_name || undefined,
+    tutorialCompleted: zarka?.tutorialCompleted === true,
     stats: {
       matchesPlayed: 0,
       wins: 0,

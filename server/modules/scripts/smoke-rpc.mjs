@@ -54,16 +54,40 @@ const rpcHeaders = {
   "Content-Type": "application/json",
 };
 
-const createMatchPayload = JSON.stringify({ size: 2 });
-const createMatchResponse = await fetch(`${baseUrl}/v2/rpc/create_match`, {
+const blockedMatchPayload = JSON.stringify({ size: 2 });
+const blockedMatchResponse = await fetch(`${baseUrl}/v2/rpc/create_match`, {
   method: "POST",
   headers: rpcHeaders,
-  body: JSON.stringify(createMatchPayload),
+  body: JSON.stringify(blockedMatchPayload),
 });
+
+if (blockedMatchResponse.ok) {
+  throw new Error(
+    "create_match unexpectedly succeeded for incomplete tutorial account"
+  );
+}
+const blockedText = await blockedMatchResponse.text();
+if (!blockedText.includes("tutorial_incomplete")) {
+  throw new Error(
+    `Expected tutorial_incomplete error, got: ${blockedMatchResponse.status} ${blockedText}`
+  );
+}
+
+const createMatchPayload = JSON.stringify({});
+const createMatchResponse = await fetch(
+  `${baseUrl}/v2/rpc/create_tutorial_match`,
+  {
+    method: "POST",
+    headers: rpcHeaders,
+    body: JSON.stringify(createMatchPayload),
+  }
+);
 
 if (!createMatchResponse.ok) {
   const text = await createMatchResponse.text();
-  throw new Error(`create_match failed: ${createMatchResponse.status} ${text}`);
+  throw new Error(
+    `create_tutorial_match failed: ${createMatchResponse.status} ${text}`
+  );
 }
 
 const createMatchResponseBody = await createMatchResponse.json();
@@ -73,7 +97,7 @@ const createMatchResponsePayload =
     : createMatchResponseBody;
 const matchId = createMatchResponsePayload.match_id;
 if (!matchId) {
-  throw new Error("create_match did not return match_id");
+  throw new Error("create_tutorial_match did not return match_id");
 }
 
 const submitTurnPayload = JSON.stringify({
