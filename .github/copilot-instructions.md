@@ -82,7 +82,8 @@ docker compose up -d --build nakama
 ### Developing or editing character actions
 
 - Actions are defined in `shared/src/ActionLibrary.ts`. Implemented actions has developed=true.
-- In the server there is a file for each action in `server/modules/src/match/actions/`. Each action has an execute function that will be called from `server/modules/src/match/advanceTurn.ts` when processing player turns.
+- For actions with actionable requirements, add an advisory warning through `CharacterPanel.resolveActionMetadata()` and `getMissingRequirement()`, then pass it as `GridSelectItem.missingRequirement`; `GridSelect` renders the warning. Check `requiredItems` (handle any-of alternatives explicitly), add location rules to `ACTION_REQUIRED_LOCATIONS` and labels to `LOCATION_DISPLAY_NAMES` in `CharacterPanel.ts`, and localize new messages. `ActionDefinition.requirements` only supplies descriptive tooltip text; keep enforcement server-side.
+- In the server, action implementations live in `server/modules/src/match/actions/`, and `server/modules/src/match/actionExecutor.ts` dispatches them during turn resolution through `advanceTurn.ts`.
 - In the server `server/modules/src/match/actions/targeting.ts` there is the logic for target collection
 - In the server, when developing new prioritization selectors, the `server/modules/src/rpc/updateMainAction.ts` file sets the action's complementary fields, like location target or player target.
 - In the client there is a file that shows the log to the player, formatReplayEvents in `client/src/ui/CharacterPanelLogView.ts`. Each action has its own function to format the log entry.
