@@ -26,7 +26,7 @@
 
 - safe icon
 
-- autoreplay after turn
+- autoreplay after turn in mobile
 
 - not getting the logs of player eliminateds
 
@@ -43,3 +43,25 @@
 - in mobile there is very bad performance when the selectors are open
 
 - after changing a selector the gui freezes until the server answers in both pc and mobile
+
+- clicking cell should show posible items
+
+- cel 1,0 should be another type so clicking cell shows other stuff
+
+- tutorial shouldnt allow to click ready until needed
+
+-step 6 should tell abou prioritzen items
+
+
+  - Mercado: hay dos cajas fuertes, en cada una de ellas hay medicamento, pistola y arma química 
+Restaurante: comida, bate, 3Zarkan
+Gasolinera: comida, motosierra, 3Zarkan
+Sala seguridad: chaleco, pistola, silenciador
+Taller: bate, motosierra, 3zarkan
+Hospital: medicamento, arma química, virus
+Ferretería: Hacha, motosierra, 3Zarkan
+Comisaría: hay 2 cajas, en cada una chaleco, pistola, C4
+Farmacia: venda, medicamento, arma química 
+Industria: hay 2 cajas, en cada una arma química, C4, trampa.
+
+En las casas varío un poco, como suelo poner 4 o 5 casas... Pero siempre tienen una única caja fuerte con arma química y los otros dos objetos juego entre medicamento, 3zarkan, Hacha, walkie, comida
