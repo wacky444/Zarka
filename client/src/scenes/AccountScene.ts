@@ -41,7 +41,8 @@ function buildSkinItems(category: SkinCategory): GridSelectItem[] {
       name,
       texture: "char",
       frame,
-      iconScale: 2
+      iconScale: 2,
+      centerOpaquePixels: true
     };
   });
 }
