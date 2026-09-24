@@ -76,11 +76,16 @@ export const SkillLibrary: SkillLibraryDefinition = {
   strength5: {
     id: "strength5",
     name: "Fuerza 5",
-    description: "Permite lanzar 1 objeto extra sin coste",
+    description: "Reduce en 2 puntos el esfuerzo de lanzar objetos",
     cost: 2,
     max: 1,
-    implemented: false,
-    category: "offensive"
+    implemented: true,
+    category: "offensive",
+    effect: {
+      type: "action_energy_discount",
+      affectedAction: "throw_object",
+      value: 2
+    }
   },
   dexterity1: {
     id: "dexterity1",

@@ -154,6 +154,28 @@ test("extra executions throw additional items and charge extra energy", () => {
   assert.equal(target.discoveredItemIds?.length, 2);
 });
 
+test("strength5 discounts the base throw action cost", () => {
+  const actor = createCharacter("thrower", 0);
+  actor.inventory.carriedItems = [
+    { itemId: "drink", quantity: 1, weight: 3 },
+    { itemId: "molotov", quantity: 1, weight: 3 },
+  ];
+  actor.stats.load.current = 6;
+  actor.stats.energy.current = 2;
+  actor.abilities.push("strength5");
+  const target = createCharacter("target", 1);
+  const match = createMatch(actor, [target], { q: 1, r: 0 }, 1);
+  actor.actionPlan!.main!.targetItemIds = ["drink", "molotov"];
+  const event = getThrowEvent(
+    executeAction(match, ActionLibrary.throw_object, 1, {}, logger)
+  );
+
+  assert.equal(actor.stats.energy.current, 0);
+  assert.equal(match.map?.tiles[1].itemIds.length, 2);
+  assert.equal(event.action.metadata?.extraExecutions, 1);
+  assert.equal(event.action.damageDealt, 5);
+});
+
 test("zarkans alone cannot be thrown", () => {
   const actor = createCharacter("thrower", 0);
   actor.inventory.carriedItems = [
