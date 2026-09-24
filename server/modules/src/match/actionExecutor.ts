@@ -11,6 +11,7 @@ import type {
 import type { MatchRecord } from "../models/types";
 import { executeMoveAction } from "./actions/move";
 import { executePlaceTrapAction } from "./actions/placeTrap";
+import { executeCreateFireAction } from "./actions/createFire";
 import { executeDodgeAction } from "./actions/dodge";
 import { executeScareAction } from "./actions/scare";
 import { executeProtectAction } from "./actions/protect";
@@ -269,6 +270,30 @@ export function executeAction(
           )
         : [];
       eventsForAction = [...energyEvents, ...actionEvents, ...failureEvents];
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.create_fire.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = executeCreateFireAction(participants, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
       for (const participant of participants) {
         applyActionCooldown(
           participant.character,

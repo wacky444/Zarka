@@ -19,6 +19,7 @@ import {
 import { isCharacterDead } from "../utils/playerCharacter";
 import { tailorPlayerCharactersForViewer } from "../utils/matchView";
 import { parseAxial } from "../utils/location";
+import { canCharacterDetectFire } from "../utils/fireVisibility";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -302,11 +303,13 @@ export function buyShopItemRpc(
         fireStartTurn,
         fireEndTurn,
       };
-      fire = {
-        coord: { q: targetLocation.q, r: targetLocation.r },
-        startTurn: fireStartTurn,
-        endTurn: fireEndTurn,
-      };
+      if (canCharacterDetectFire(actor, targetLocation)) {
+        fire = {
+          coord: { q: targetLocation.q, r: targetLocation.r },
+          startTurn: fireStartTurn,
+          endTurn: fireEndTurn,
+        };
+      }
       metadata = {
         ...metadata,
         fireTurns: 3,

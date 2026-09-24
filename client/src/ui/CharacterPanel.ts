@@ -3345,7 +3345,20 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         ? character!.inventory.carriedItems
         : [];
 
-      if (definition.id === "bat_attack") {
+      if (definition.id === "create_fire") {
+        const fuelQuantity = carried.reduce(
+          (total, stack) =>
+            stack.itemId === "fuel" &&
+            typeof stack.quantity === "number" &&
+            Number.isFinite(stack.quantity)
+              ? total + Math.max(0, Math.floor(stack.quantity))
+              : total,
+          0
+        );
+        if (fuelQuantity < 2) {
+          return t("Missing 2 units of fuel");
+        }
+      } else if (definition.id === "bat_attack") {
         const hasBat = carried.some(
           (s) =>
             (s.itemId === "bat" || s.itemId === "nail_bat") &&
@@ -5423,7 +5436,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     return true;
   }
 
-  private setExtraSecondaryActionTarget(
+  setExtraSecondaryActionTarget(
     target: Axial | null,
     emit = false
   ): boolean {
@@ -5525,6 +5538,23 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     };
   }
 
+  getExtraSecondaryActionSelection(): SecondaryActionSelection {
+    const supportsLocation = this.selectedExtraSecondaryActionSupportsLocation();
+    return {
+      actionId: this.extraSecondaryActionSelection,
+      targetLocation:
+        supportsLocation && this.extraSecondaryActionTarget
+          ? {
+              q: this.extraSecondaryActionTarget.q,
+              r: this.extraSecondaryActionTarget.r,
+            }
+          : null,
+      extraExecutions: this.selectedExtraSecondaryActionSupportsExtraExecution()
+        ? this.extraSecondaryExtraExecutions
+        : undefined,
+    };
+  }
+
   setLocationSelectionPending(active: boolean): void {
     if (!this.selectedActionSupportsLocation()) {
       this.locationSelector.setPending(false);
@@ -5547,6 +5577,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       return;
     }
     this.secondaryLocationSelector.setPending(active);
+  }
+
+  setExtraSecondaryLocationSelectionPending(active: boolean): void {
+    if (!this.selectedExtraSecondaryActionSupportsLocation()) {
+      this.extraSecondaryLocationSelector.setPending(false);
+      return;
+    }
+    this.extraSecondaryLocationSelector.setPending(active);
   }
 
   private normalizeAxial(target: Axial | null): Axial | null {

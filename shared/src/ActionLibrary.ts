@@ -18,6 +18,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "fire.png",
     actionOrder: 0,
     actionSubOrder: 0,
+    developed: true,
     requiredItems: ["fuel"],
     requirements: [
       { description: "Consume 2 combustibles.", consumesResource: true }
@@ -30,7 +31,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     notes: [
       "Gastando 3 combustibles adicionales el incendio puede iniciarse en una localización adyacente.",
-      "Solo jugadores con Percepción 4 detectan el incendio en el turno en que se crea."
+      "Jugadores con Percepción 4 pueden detectar el incendio desde cualquier distancia"
     ],
     tags: ["Attack", "Area", "Ranged"]
   },

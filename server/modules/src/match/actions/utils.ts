@@ -80,7 +80,7 @@ export function buildGuardedEffectMask(
   return guarded ? baseMask | ReplayActionEffect.Guard : baseMask;
 }
 
-export type FailedActionReason = "missing_item";
+export type FailedActionReason = "missing_item" | "invalid_target";
 
 export interface FailedActionDetails {
   reason: FailedActionReason;

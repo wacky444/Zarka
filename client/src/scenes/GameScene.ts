@@ -72,6 +72,11 @@ type PlayerEliminationBannerEvent = {
 };
 
 type MobileViewMode = "map" | "sidebar";
+type LocationSelectionTarget =
+  | "primary"
+  | "second"
+  | "secondary"
+  | "extraSecondary";
 
 type CachedReplay = {
   events: ReplayEvent[];
@@ -104,7 +109,7 @@ export class GameScene extends Phaser.Scene {
   private readyUpdateRunning = false;
   private pendingReadyState: boolean | undefined;
   private locationSelectionActive = false;
-  private locationSelectionTarget: "primary" | "second" = "primary";
+  private locationSelectionTarget: LocationSelectionTarget = "primary";
   private locationSelectionPointerId: number | null = null;
   private locationSelectionActionId: ActionId | null = null;
   private locationSelectionHoveredTileId: string | null = null;
@@ -506,7 +511,8 @@ export class GameScene extends Phaser.Scene {
           hoveredTileId: this.locationSelectionHoveredTileId,
           pointerId: this.locationSelectionPointerId,
           extraExecutions:
-            this.characterPanel?.getMainActionSelection().extraExecutions ?? 0,
+            this.getLocationPickSelection(this.locationSelectionTarget)
+              ?.extraExecutions ?? 0,
         }),
         isPinchGestureInProgress: () => this.pinchGestureInProgress,
         isLocationInRange: (actionId, coord, extraExecutions) =>
@@ -555,6 +561,16 @@ export class GameScene extends Phaser.Scene {
     this.characterPanel.on(
       "main-action-second-location-request",
       this.beginSecondMainActionLocationPick,
+      this
+    );
+    this.characterPanel.on(
+      "secondary-action-location-request",
+      this.beginSecondaryActionLocationPick,
+      this
+    );
+    this.characterPanel.on(
+      "extra-secondary-action-location-request",
+      this.beginExtraSecondaryActionLocationPick,
       this
     );
     this.characterPanel.on("ready-change", this.handleReadyStateChange, this);
@@ -756,6 +772,16 @@ export class GameScene extends Phaser.Scene {
       this.characterPanel?.off(
         "main-action-second-location-request",
         this.beginSecondMainActionLocationPick,
+        this
+      );
+      this.characterPanel?.off(
+        "secondary-action-location-request",
+        this.beginSecondaryActionLocationPick,
+        this
+      );
+      this.characterPanel?.off(
+        "extra-secondary-action-location-request",
+        this.beginExtraSecondaryActionLocationPick,
         this
       );
       this.characterPanel?.off(
@@ -2186,21 +2212,42 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
+  private getLocationPickSelection(
+    target: LocationSelectionTarget
+  ): MainActionSelection | SecondaryActionSelection | null {
+    if (!this.characterPanel) {
+      return null;
+    }
+    if (target === "primary" || target === "second") {
+      return this.characterPanel.getMainActionSelection();
+    }
+    if (target === "secondary") {
+      return this.characterPanel.getSecondaryActionSelection();
+    }
+    return this.characterPanel.getExtraSecondaryActionSelection();
+  }
+
   private beginMainActionLocationPick() {
-    this.beginMainActionLocationPickFor("primary");
+    this.beginLocationPick("primary");
   }
 
   private beginSecondMainActionLocationPick() {
-    this.beginMainActionLocationPickFor("second");
+    this.beginLocationPick("second");
   }
 
-  private beginMainActionLocationPickFor(
-    target: "primary" | "second"
-  ): void {
+  private beginSecondaryActionLocationPick() {
+    this.beginLocationPick("secondary");
+  }
+
+  private beginExtraSecondaryActionLocationPick() {
+    this.beginLocationPick("extraSecondary");
+  }
+
+  private beginLocationPick(target: LocationSelectionTarget): void {
     if (this.replayView || this.locationSelectionActive) {
       return;
     }
-    const selection = this.characterPanel?.getMainActionSelection();
+    const selection = this.getLocationPickSelection(target);
     if (
       !selection?.actionId ||
       (target === "second" &&
@@ -2214,17 +2261,28 @@ export class GameScene extends Phaser.Scene {
     this.locationSelectionActionId = selection.actionId as ActionId;
     this.locationSelectionHoveredTileId = null;
     this.locationSelectionPointerId = null;
-    if (target === "second") {
-      this.characterPanel?.setSecondLocationSelectionPending(true);
-    } else {
-      this.characterPanel?.setLocationSelectionPending(true);
-    }
+    this.setLocationSelectionPendingForTarget(target, true);
     if (this.mobileLayout) {
       this.mobileViewMode = "map";
       this.layoutUI();
     }
     this.refreshLocationSelectionVisuals();
     this.input.setDefaultCursor("crosshair");
+  }
+
+  private setLocationSelectionPendingForTarget(
+    target: LocationSelectionTarget,
+    pending: boolean
+  ): void {
+    if (target === "primary") {
+      this.characterPanel?.setLocationSelectionPending(pending);
+    } else if (target === "second") {
+      this.characterPanel?.setSecondLocationSelectionPending(pending);
+    } else if (target === "secondary") {
+      this.characterPanel?.setSecondaryLocationSelectionPending(pending);
+    } else {
+      this.characterPanel?.setExtraSecondaryLocationSelectionPending(pending);
+    }
   }
 
   private cancelMainActionLocationPick() {
@@ -2239,6 +2297,8 @@ export class GameScene extends Phaser.Scene {
     this.locationSelectionTarget = "primary";
     this.characterPanel?.setLocationSelectionPending(false);
     this.characterPanel?.setSecondLocationSelectionPending(false);
+    this.characterPanel?.setSecondaryLocationSelectionPending(false);
+    this.characterPanel?.setExtraSecondaryLocationSelectionPending(false);
   }
 
   private completeMainActionLocationPick(tile: HexTile) {
@@ -2246,8 +2306,9 @@ export class GameScene extends Phaser.Scene {
       this.cancelMainActionLocationPick();
       return;
     }
-    const selection = this.characterPanel?.getMainActionSelection();
-    if (!selection || !selection.actionId) {
+    const locationTarget = this.locationSelectionTarget;
+    const selection = this.getLocationPickSelection(locationTarget);
+    if (!selection?.actionId) {
       this.cancelMainActionLocationPick();
       this.showMobileSidebar();
       return;
@@ -2260,7 +2321,6 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const actionId = selection.actionId as ActionId;
-    const locationTarget = this.locationSelectionTarget;
     const inRange = this.isLocationInRange(
       actionId,
       coord,
@@ -2274,6 +2334,10 @@ export class GameScene extends Phaser.Scene {
     }
     if (locationTarget === "second") {
       this.characterPanel?.setMainActionSecondTarget(coord, true);
+    } else if (locationTarget === "secondary") {
+      this.characterPanel?.setSecondaryActionTarget(coord, true);
+    } else if (locationTarget === "extraSecondary") {
+      this.characterPanel?.setExtraSecondaryActionTarget(coord, true);
     } else {
       this.characterPanel?.setMainActionTarget(coord, true);
     }
@@ -2398,7 +2462,28 @@ export class GameScene extends Phaser.Scene {
       return false;
     }
     const distance = axialDistance(origin, target);
-    return allowed.indexOf(distance) !== -1;
+    if (allowed.indexOf(distance) === -1) {
+      return false;
+    }
+    if (actionId === "create_fire") {
+      const character = this.currentUserId
+        ? this.currentMatch?.playerCharacters?.[this.currentUserId]
+        : null;
+      const fuelQuantity = (character?.inventory?.carriedItems ?? []).reduce(
+        (total, stack) =>
+          stack.itemId === "fuel" &&
+          typeof stack.quantity === "number" &&
+          Number.isFinite(stack.quantity)
+            ? total + Math.max(0, Math.floor(stack.quantity))
+            : total,
+        0
+      );
+      const requiredFuel = distance === 0 ? 2 : 5;
+      if (fuelQuantity < requiredFuel) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private setLocationSelectionHoveredTile(tileId: string | null) {

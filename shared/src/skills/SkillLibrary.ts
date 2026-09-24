@@ -309,7 +309,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     id: "perception4",
     name: "Percepción 4",
     description:
-      "Detecta fuego y número de personas hasta 1 localización de distancia. Desmayado no detecta. El incendio lo detecta en el mismo turno en el que se crea",
+      "Detecta incendios a cualquier distancia y número de personas hasta 1 localización de distancia",
     cost: 5,
     max: 1,
     implemented: false,
