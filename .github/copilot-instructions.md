@@ -54,6 +54,7 @@ Key files:
 - Use services (`nakama.ts`, `turnService.ts`, `sessionManager.ts`) for IO; scenes should focus on presentation and state orchestration.
 - Put map and board rendering in `client/src/scenes/GameBoardRenderer.ts`; keep `GameScene` focused on scene coordination.
 - Keep UI building blocks in `client/src/ui/`; prefer lightweight composition over deep inheritance.
+- For viewport-positioned Rex `scrollablePanel`s, call `setOrigin(0, 0)` before `setPosition(x, y)`; the default center origin shifts top-left-positioned panels and can leave their right edge at screen center.
 - Assets live under `client/public/assets/`; update XML/JSON atlases alongside spritesheets when editing.
 - Use external libraries freely, preferring libraries officially recommended by Phaser or widely used in Phaser projects (e.g. `phaser3-rex-plugins`).
 
@@ -81,7 +82,8 @@ docker compose up -d --build nakama
 ### Developing or editing character actions
 
 - Actions are defined in `shared/src/ActionLibrary.ts`. Implemented actions has developed=true.
-- In the server there is a file for each action in `server/modules/src/match/actions/`. Each action has an execute function that will be called from `server/modules/src/match/advanceTurn.ts` when processing player turns.
+- For actions with actionable requirements, implement advisory checks in `client/src/ui/ActionRequirementWarnings.ts::getMissingRequirement()` and wire the result through `CharacterPanel.resolveActionMetadata()` to `GridSelectItem.missingRequirement`; `GridSelect` renders the warning. Check `requiredItems` (handle any-of alternatives explicitly), add location rules to `ACTION_REQUIRED_LOCATIONS` and labels to `LOCATION_DISPLAY_NAMES` in `ActionRequirementWarnings.ts`, and localize new messages. `ActionDefinition.requirements` only supplies descriptive tooltip text; keep enforcement server-side.
+- In the server, action implementations live in `server/modules/src/match/actions/`, and `server/modules/src/match/actionExecutor.ts` dispatches them during turn resolution through `advanceTurn.ts`.
 - In the server `server/modules/src/match/actions/targeting.ts` there is the logic for target collection
 - In the server, when developing new prioritization selectors, the `server/modules/src/rpc/updateMainAction.ts` file sets the action's complementary fields, like location target or player target.
 - In the client there is a file that shows the log to the player, formatReplayEvents in `client/src/ui/CharacterPanelLogView.ts`. Each action has its own function to format the log entry.

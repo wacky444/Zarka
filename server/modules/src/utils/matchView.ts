@@ -1,13 +1,15 @@
-import type {
-  GameMap,
-  MatchItemRecord,
-  MatchRecord as SharedMatchRecord,
-  PlayerCharacter,
-  PlayerCharacterUnknown
+import {
+  isCharacterHidden,
+  type GameMap,
+  type MatchItemRecord,
+  type MatchRecord as SharedMatchRecord,
+  type PlayerCharacter,
+  type PlayerCharacterUnknown
 } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { axialDistance } from "./location";
 import { isCharacterDead } from "./playerCharacter";
+import { canCharacterDetectFire } from "./fireVisibility";
 
 type DiscoveredItemLookup = Record<string, true>;
 
@@ -29,20 +31,30 @@ function buildDiscoveredItemLookup(
 
 function filterMapByDiscoveredLookup(
   map: GameMap | undefined,
-  discovered: DiscoveredItemLookup
+  discovered: DiscoveredItemLookup,
+  viewer: PlayerCharacter | undefined | null
 ): GameMap | undefined {
   if (!map) {
     return undefined;
   }
   const tiles = Array.isArray(map.tiles)
-    ? map.tiles.map((tile) => ({
-        ...tile,
-        itemIds: Array.isArray(tile.itemIds)
+    ? map.tiles.map((tile) => {
+        const itemIds = Array.isArray(tile.itemIds)
           ? tile.itemIds.filter((itemId) =>
               Object.prototype.hasOwnProperty.call(discovered, itemId)
             )
-          : []
-      }))
+          : [];
+        const hasFire =
+          typeof tile.meta?.fireStartTurn === "number" ||
+          typeof tile.meta?.fireEndTurn === "number";
+        if (canCharacterDetectFire(viewer, tile.coord) || !hasFire) {
+          return { ...tile, itemIds };
+        }
+        const meta = { ...(tile.meta ?? {}) };
+        delete meta.fireStartTurn;
+        delete meta.fireEndTurn;
+        return { ...tile, itemIds, meta };
+      })
     : [];
   return {
     ...map,
@@ -122,6 +134,9 @@ export function tailorPlayerCharactersForViewer(
       filtered[id] = candidate;
       continue;
     }
+    if (isCharacterHidden(candidate, currentTurn ?? 0)) {
+      continue;
+    }
     if (!viewerCoord) {
       continue;
     }
@@ -172,7 +187,7 @@ export function tailorMapForCharacter(
   character: PlayerCharacter | undefined | null
 ): GameMap | undefined {
   const discovered = buildDiscoveredItemLookup(character);
-  return filterMapByDiscoveredLookup(map, discovered);
+  return filterMapByDiscoveredLookup(map, discovered, character);
 }
 
 export function tailorMatchItemsForCharacter(
@@ -195,7 +210,7 @@ export function tailorMatchForPlayer(
   const discovered = buildDiscoveredItemLookup(character);
   const map = viewAll
     ? match.map
-    : filterMapByDiscoveredLookup(match.map, discovered);
+    : filterMapByDiscoveredLookup(match.map, discovered, character);
   const items = viewAll
     ? match.items
     : filterItemsByDiscoveredLookup(match.items, discovered);

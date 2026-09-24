@@ -29,6 +29,8 @@ export interface PlayerCharacter {
   remoteView?: PlayerRemoteView;
   /** Character positions revealed by activated cameras for one turn. */
   cameraView?: PlayerCameraView;
+  /** Turn in which a coward character became visible by acting. */
+  cowardRevealedTurn?: number;
 }
 
 export interface PlayerRemoteView {

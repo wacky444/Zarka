@@ -16,12 +16,11 @@ import {
   PlayerCharacterUnknown,
   getActionEnergyDiscount,
   getSkillEffectTotal,
-  LocalizationType,
-  type HexTileSnapshot,
   type ShopId,
   type TutorialStepId
 } from "@shared";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
+import { getMissingRequirement } from "./ActionRequirementWarnings";
 import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
 import { ProgressBar } from "./ProgressBar";
 import { LocationSelector } from "./LocationSelector";
@@ -102,54 +101,6 @@ const SECONDARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
   )
   .map((definition) => definition.id)
   .sort((a, b) => ActionLibrary[a].name.localeCompare(ActionLibrary[b].name));
-
-const ACTION_REQUIRED_LOCATIONS: Partial<Record<ActionId, LocalizationType[]>> = {
-  breakfast: [LocalizationType.Restaurant],
-  recover: [LocalizationType.Hospital],
-  refuel: [LocalizationType.GasStation],
-  fabricate: [LocalizationType.Workshop],
-  activate_cameras: [LocalizationType.Security],
-  black_market_trade: [LocalizationType.Market],
-  look_through_window: [LocalizationType.House, LocalizationType.Pharmacy]
-};
-
-const LOCATION_DISPLAY_NAMES: Partial<Record<LocalizationType, string>> = {
-  [LocalizationType.Restaurant]: "restaurant",
-  [LocalizationType.Hospital]: "hospital",
-  [LocalizationType.GasStation]: "gas station",
-  [LocalizationType.Workshop]: "workshop",
-  [LocalizationType.Security]: "security room",
-  [LocalizationType.Market]: "black market",
-  [LocalizationType.House]: "house",
-  [LocalizationType.Pharmacy]: "pharmacy"
-};
-
-const ITEM_DISPLAY_NAMES: Record<string, string> = {
-  axe: "axe",
-  bat: "bat",
-  nail_bat: "nail bat",
-  knife: "knife",
-  bandage: "bandage",
-  medicine: "medicine",
-  chemical_weapon: "chemical weapon",
-  fuel: "fuel",
-  chainsaw: "chainsaw",
-  pistol: "pistol",
-  suppressed_pistol: "silenced pistol",
-  bullet: "bullet",
-  harpoon: "harpoon",
-  arrow: "arrow",
-  rocket_launcher: "rocket launcher",
-  antidote: "antidote",
-  virus: "virus",
-  vaccine: "vaccine",
-  poison: "poison",
-  tracker: "tracker",
-  c4: "c4",
-  trap: "trap",
-  detonator: "detonator",
-  binoculars: "binoculars"
-};
 
 export type MainActionSelection = {
   actionId: string | null;
@@ -3422,7 +3373,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         : 0;
       const effectiveEnergyCost = Math.max(0, definition.energyCost - discount);
       const missingRequirement = developed
-        ? this.getMissingRequirement(definition, targetCharacter)
+        ? getMissingRequirement(
+            definition,
+            targetCharacter,
+            this.currentMatch?.map
+          )
         : null;
       return {
         id: definition.id,
@@ -3451,139 +3406,6 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       cooldownRemaining: normalizedRemaining,
       disabled: isDisabled
     };
-  }
-
-  private getCurrentCharacterTile(
-    character: PlayerCharacter | null
-  ): HexTileSnapshot | null {
-    if (!this.currentMatch || !character?.position) {
-      return null;
-    }
-    const tiles = Array.isArray(this.currentMatch.map?.tiles)
-      ? this.currentMatch.map!.tiles
-      : [];
-    const tileId = character.position.tileId;
-    if (tileId) {
-      const tile = tiles.find((t) => t && t.id === tileId);
-      if (tile) {
-        return tile;
-      }
-    }
-    const coord = character.position.coord;
-    if (coord && typeof coord.q === "number" && typeof coord.r === "number") {
-      const tile = tiles.find(
-        (t) => t && t.coord && t.coord.q === coord.q && t.coord.r === coord.r
-      );
-      if (tile) {
-        return tile;
-      }
-    }
-    return null;
-  }
-
-  private getMissingRequirement(
-    definition: ActionDefinition,
-    character: PlayerCharacter | null
-  ): string | null {
-    const requiredLocations = ACTION_REQUIRED_LOCATIONS[definition.id];
-    if (requiredLocations && requiredLocations.length > 0) {
-      const currentTile = this.getCurrentCharacterTile(character);
-      const currentLocType = currentTile?.localizationType;
-      if (!currentLocType || !requiredLocations.includes(currentLocType)) {
-        if (requiredLocations.length === 1) {
-          const locName =
-            LOCATION_DISPLAY_NAMES[requiredLocations[0]] ??
-            requiredLocations[0].toLowerCase();
-          return `Not in ${locName}`;
-        }
-        const names = requiredLocations
-          .map((t) => LOCATION_DISPLAY_NAMES[t] ?? t.toLowerCase())
-          .join(" or ");
-        return `Not in ${names}`;
-      }
-    }
-
-    if (definition.requiredItems && definition.requiredItems.length > 0) {
-      const carried = Array.isArray(character?.inventory?.carriedItems)
-        ? character!.inventory.carriedItems
-        : [];
-
-      if (definition.id === "bat_attack") {
-        const hasBat = carried.some(
-          (s) =>
-            (s.itemId === "bat" || s.itemId === "nail_bat") &&
-            typeof s.quantity === "number" &&
-            s.quantity > 0
-        );
-        if (!hasBat) {
-          return t("Missing bat");
-        }
-      } else if (definition.id === "shoot_pistol") {
-        const hasPistol = carried.some(
-          (s) =>
-            (s.itemId === "pistol" || s.itemId === "suppressed_pistol") &&
-            typeof s.quantity === "number" &&
-            s.quantity > 0
-        );
-        const hasBullet = carried.some(
-          (s) =>
-            s.itemId === "bullet" &&
-            typeof s.quantity === "number" &&
-            s.quantity > 0
-        );
-        if (!hasPistol && !hasBullet) {
-          return t("Missing pistol, bullet");
-        }
-        if (!hasPistol) {
-          return t("Missing pistol");
-        }
-        if (!hasBullet) {
-          return t("Missing bullet");
-        }
-      } else if (definition.id === "use_bandage") {
-        const hasBandage = carried.some(
-          (s) =>
-            s.itemId === "bandage" &&
-            typeof s.quantity === "number" &&
-            s.quantity > 0
-        );
-        if (!hasBandage) {
-          return t("Missing bandage");
-        }
-      } else if (definition.id === "use_medicine") {
-        const hasMedicine = carried.some(
-          (s) =>
-            s.itemId === "medicine" &&
-            typeof s.quantity === "number" &&
-            s.quantity > 0
-        );
-        if (!hasMedicine) {
-          return t("Missing medicine");
-        }
-      } else {
-        const missingItems: string[] = [];
-        for (const itemId of definition.requiredItems) {
-          const hasItem = carried.some(
-            (s) =>
-              s.itemId === itemId &&
-              typeof s.quantity === "number" &&
-              s.quantity > 0
-          );
-          if (!hasItem) {
-            const itemName =
-              ItemLibrary[itemId as ItemId]?.name ??
-              ITEM_DISPLAY_NAMES[itemId] ??
-              itemId.replace(/_/g, " ");
-            missingItems.push(t(itemName));
-          }
-        }
-        if (missingItems.length > 0) {
-          return `${t("Missing")} ${missingItems.join(", ")}`;
-        }
-      }
-    }
-
-    return null;
   }
 
   private getCurrentCharacter(): PlayerCharacter | null {
@@ -5106,6 +4928,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private getMainActionItemOptions(): ItemPriorityOption[] {
+    if (this.mainActionSelection === "throw_object") {
+      return this.inventoryItemOptions.filter(
+        (option) => option.id !== "zarkans"
+      );
+    }
     return this.mainActionSelection === "steal"
       ? this.stealItemOptions
       : this.itemOptions;
@@ -5586,7 +5413,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     return true;
   }
 
-  private setExtraSecondaryActionTarget(
+  setExtraSecondaryActionTarget(
     target: Axial | null,
     emit = false
   ): boolean {
@@ -5688,6 +5515,23 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     };
   }
 
+  getExtraSecondaryActionSelection(): SecondaryActionSelection {
+    const supportsLocation = this.selectedExtraSecondaryActionSupportsLocation();
+    return {
+      actionId: this.extraSecondaryActionSelection,
+      targetLocation:
+        supportsLocation && this.extraSecondaryActionTarget
+          ? {
+              q: this.extraSecondaryActionTarget.q,
+              r: this.extraSecondaryActionTarget.r,
+            }
+          : null,
+      extraExecutions: this.selectedExtraSecondaryActionSupportsExtraExecution()
+        ? this.extraSecondaryExtraExecutions
+        : undefined,
+    };
+  }
+
   setLocationSelectionPending(active: boolean): void {
     if (!this.selectedActionSupportsLocation()) {
       this.locationSelector.setPending(false);
@@ -5710,6 +5554,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       return;
     }
     this.secondaryLocationSelector.setPending(active);
+  }
+
+  setExtraSecondaryLocationSelectionPending(active: boolean): void {
+    if (!this.selectedExtraSecondaryActionSupportsLocation()) {
+      this.extraSecondaryLocationSelector.setPending(false);
+      return;
+    }
+    this.extraSecondaryLocationSelector.setPending(active);
   }
 
   private normalizeAxial(target: Axial | null): Axial | null {

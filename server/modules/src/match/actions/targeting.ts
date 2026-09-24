@@ -1,5 +1,10 @@
-import type { Axial, ActionId, PlayerCharacter } from "@shared";
-import { ActionLibrary } from "@shared";
+import {
+  ActionLibrary,
+  isCharacterHidden,
+  type Axial,
+  type ActionId,
+  type PlayerCharacter,
+} from "@shared";
 import { axialDistance } from "../../utils/location";
 import type { MatchRecord } from "../../models/types";
 import type { PlannedActionParticipant } from "./utils";
@@ -86,7 +91,7 @@ export function collectTargets(
   if (candidates.length === 0) {
     return [];
   }
-  const filtered = options.filter
+  let filtered = options.filter
     ? candidates.filter((candidate) => options.filter!(candidate))
     : candidates.slice();
   if (filtered.length === 0) {
@@ -95,6 +100,37 @@ export function collectTargets(
   const requested = (participant.plan.targetPlayerIds ?? [])
     .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
     .filter((entry): entry is string => entry.length > 0);
+  const targetLocation = participant.plan.targetLocationId;
+  if (
+    definition &&
+    Array.isArray(definition.tags) &&
+    definition.tags.indexOf("Attack") !== -1 &&
+    actionId !== "bat_attack"
+  ) {
+    const currentTurn = Math.max(0, Math.floor(match.current_turn ?? 0)) + 1;
+    const visibleCandidates = filtered.filter(
+      (candidate) => !isCharacterHidden(candidate.character, currentTurn)
+    );
+    if (targetLocation && requested.length === 0) {
+      const atTargetLocation = filtered.filter((candidate) =>
+        coordsEqual(candidate.coord, targetLocation)
+      );
+      const visibleAtTargetLocation = visibleCandidates.filter((candidate) =>
+        coordsEqual(candidate.coord, targetLocation)
+      );
+      if (atTargetLocation.length > 0) {
+        filtered =
+          visibleAtTargetLocation.length > 0
+            ? visibleAtTargetLocation
+            : atTargetLocation;
+      } else {
+        filtered =
+          visibleCandidates.length > 0 ? visibleCandidates : filtered;
+      }
+    } else if (visibleCandidates.length > 0) {
+      filtered = visibleCandidates;
+    }
+  }
   const selected: TargetCandidate[] = [];
   let priorityMissed = false;
   const primaryId = requested[0];
@@ -120,7 +156,6 @@ export function collectTargets(
     }
   }
   if (selected.length === 0) {
-    const targetLocation = participant.plan.targetLocationId;
     if (targetLocation) {
       for (const candidate of filtered) {
         if (coordsEqual(candidate.coord, targetLocation)) {

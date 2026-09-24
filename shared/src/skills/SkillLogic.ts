@@ -15,6 +15,24 @@ export function getSkillRank(
   return character.abilities.filter((ability) => ability === skillId).length;
 }
 
+export function isCharacterHidden(
+  character: PlayerCharacter | undefined | null,
+  currentTurn: number
+): boolean {
+  if (getSkillRank(character, "coward") <= 0) {
+    return false;
+  }
+  const conditions = character?.statuses?.conditions ?? [];
+  if (
+    conditions.indexOf("dead") !== -1 ||
+    (typeof character?.stats?.health?.current === "number" &&
+      character.stats.health.current <= 0)
+  ) {
+    return false;
+  }
+  return character?.cowardRevealedTurn !== currentTurn;
+}
+
 export function getSkillEffectTotal(
   character: PlayerCharacter | undefined | null,
   effectType: string

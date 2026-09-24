@@ -12,6 +12,7 @@ import type {
 import {
   ActionLibrary,
   ReplayActionEffect,
+  axialDistance,
   getDamageReduction,
   getDodgeSuccessChance,
 } from "@shared";
@@ -190,9 +191,47 @@ export class ShootPistolAction extends BaseAction {
         effects: ReplayActionEffect.Hit,
         metadata: actionMetadata,
       };
-
-      if (participant.character.position?.coord) {
-        action.originLocation = participant.character.position.coord;
+      const originLocation = participant.character.position?.coord;
+      if (originLocation) {
+        action.originLocation = originLocation;
+      }
+      const hearingRadious = ActionLibrary[actionId].hearingRadious;
+      let visibility: ReplayPlayerEvent["visibility"];
+      if (
+        weaponUsed !== "suppressed_pistol" &&
+        typeof hearingRadious === "number" &&
+        isFinite(hearingRadious) &&
+        hearingRadious >= 0
+      ) {
+        const hearingPlayerIds = [participant.playerId];
+        for (const target of targetEntries) {
+          if (hearingPlayerIds.indexOf(target.targetId) === -1) {
+            hearingPlayerIds.push(target.targetId);
+          }
+        }
+        if (originLocation) {
+          const characters = match.playerCharacters ?? {};
+          for (const playerId in characters) {
+            if (!Object.prototype.hasOwnProperty.call(characters, playerId)) {
+              continue;
+            }
+            const character = characters[playerId];
+            const coord = character?.position?.coord;
+            if (
+              !isCharacterDead(character) &&
+              coord &&
+              axialDistance(originLocation, coord) <= hearingRadious
+            ) {
+              if (hearingPlayerIds.indexOf(playerId) === -1) {
+                hearingPlayerIds.push(playerId);
+              }
+            }
+          }
+        }
+        visibility = {
+          scope: "limited",
+          playerIds: hearingPlayerIds,
+        };
       }
       if (shotTargetLocations.length > 0) {
         action.targetLocation = shotTargetLocations[0];
@@ -205,6 +244,7 @@ export class ShootPistolAction extends BaseAction {
         actorId: participant.playerId,
         action,
         targets: targetEntries,
+        ...(visibility ? { visibility } : {}),
       });
 
       if (postEvents.length > 0) {

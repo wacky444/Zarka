@@ -15,6 +15,7 @@ import {
   TUTORIAL_MATCH_METADATA_KEY,
   axialDistance,
   getHexTileOffsets,
+  isCharacterHidden,
 } from "@shared";
 import {
   createFireTileAnimation,
@@ -335,6 +336,7 @@ export class GameBoardRenderer {
         const isUnconscious = Array.isArray(conditions)
           ? conditions.indexOf("unconscious") !== -1
           : false;
+        const isHidden = isCharacterHidden(character, match.current_turn);
         const playerSkin =
           this.callbacks.getPlayerSkin(playerId) ?? DEFAULT_SKIN;
         let sprite = this.playerSprites.get(playerId);
@@ -350,6 +352,7 @@ export class GameBoardRenderer {
         }
         sprite.setPosition(x, y);
         sprite.setVisible(true);
+        sprite.setAlpha(isHidden ? 0.35 : 1);
         sprite.setDepth(5 + y / 1000);
         sprite.setAngle(isDead ? -90 : isUnconscious ? -18 : 0);
         if (isUnconscious && !isDead) {
@@ -379,6 +382,7 @@ export class GameBoardRenderer {
         label.setText(name);
         label.setPosition(x, y);
         label.setVisible(true);
+        label.setAlpha(isHidden ? 0.35 : 1);
         this.positionLabel(label, sprite);
         seen.add(playerId);
       }

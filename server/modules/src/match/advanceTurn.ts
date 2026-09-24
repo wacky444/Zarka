@@ -1,10 +1,13 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import { ActionLibrary } from "@shared";
-import type {
-  ActionDefinition,
-  PlayerCharacter,
-  ReplayEvent,
+import {
+  ActionLibrary,
+  getSkillRank,
+  isCharacterHidden,
+  type ActionDefinition,
+  type PlayerCharacter,
+  type ReplayEvent,
+  type ReplayPlayerEvent,
 } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { finalizeMatchIfEnded } from "./checkEndGame";
@@ -136,6 +139,122 @@ function clearDodgeAttempts(match: MatchRecord) {
   }
 }
 
+function getPlannedPlayerIds(
+  match: MatchRecord,
+  actionId: string
+): string[] {
+  const playerIds: string[] = [];
+  for (const playerId in match.playerCharacters) {
+    if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, playerId)) {
+      continue;
+    }
+    const plan = match.playerCharacters[playerId]?.actionPlan;
+    if (
+      plan?.main?.actionId === actionId ||
+      plan?.secondary?.actionId === actionId ||
+      plan?.extraSecondary?.actionId === actionId
+    ) {
+      playerIds.push(playerId);
+    }
+  }
+  return playerIds;
+}
+
+function findActionEvent(
+  events: ReplayEvent[],
+  playerId: string,
+  actionId: string
+): ReplayPlayerEvent | undefined {
+  for (const event of events) {
+    if (
+      event.kind === "player" &&
+      event.actorId === playerId &&
+      event.action.actionId === actionId
+    ) {
+      return event;
+    }
+  }
+  return undefined;
+}
+
+function doesCowardActionReveal(
+  action: ActionDefinition,
+  event: ReplayPlayerEvent,
+  playerId: string,
+  match: MatchRecord,
+  resolvedTurn: number
+): boolean {
+  if (action.id === "shoot_pistol") {
+    const weaponUsed = (event.action.metadata as { weaponUsed?: unknown } | undefined)
+      ?.weaponUsed;
+    return weaponUsed !== "suppressed_pistol";
+  }
+  if (action.id === "sleep") {
+    const extraExecutions = (
+      event.action.metadata as { extraExecutions?: unknown } | undefined
+    )?.extraExecutions;
+    return typeof extraExecutions === "number" && extraExecutions > 0;
+  }
+  if (action.id === "protect") {
+    for (const target of event.targets ?? []) {
+      if (
+        target.targetId !== playerId &&
+        !isCharacterHidden(match.playerCharacters?.[target.targetId], resolvedTurn)
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+  return action.revealsHidden === true;
+}
+
+function revealCowardActors(
+  match: MatchRecord,
+  action: ActionDefinition,
+  events: ReplayEvent[],
+  playerIds: string[],
+  resolvedTurn: number
+): void {
+  if (action.revealsHidden !== true || !match.playerCharacters) {
+    return;
+  }
+  for (const playerId of playerIds) {
+    const character = match.playerCharacters[playerId];
+    if (!character || getSkillRank(character, "coward") <= 0) {
+      continue;
+    }
+    const event = findActionEvent(events, playerId, action.id);
+    if (!event || !doesCowardActionReveal(action, event, playerId, match, resolvedTurn)) {
+      continue;
+    }
+    character.cowardRevealedTurn = resolvedTurn;
+    match.playerCharacters[playerId] = character;
+  }
+}
+
+function appendHiddenStatusEvents(
+  match: MatchRecord,
+  resolvedTurn: number,
+  events: ReplayEvent[]
+): void {
+  for (const playerId in match.playerCharacters) {
+    if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, playerId)) {
+      continue;
+    }
+    const character = match.playerCharacters[playerId];
+    if (!isCharacterHidden(character, resolvedTurn)) {
+      continue;
+    }
+    events.push({
+      kind: "player",
+      actorId: playerId,
+      action: { actionId: ActionLibrary.status_hidden.id },
+      visibility: { scope: "all" },
+    });
+  }
+}
+
 export function advanceTurn(
   match: MatchRecord,
   resolvedTurn: number,
@@ -191,6 +310,7 @@ export function advanceTurn(
     replayEvents.push(
       ...applyFireDamageBeforeAction(match, action.id, resolvedTurn, logger),
     );
+    const playerIds = getPlannedPlayerIds(match, action.id);
     const events = executeAction(
       match,
       action,
@@ -198,6 +318,7 @@ export function advanceTurn(
       tileLookup,
       logger,
     );
+    revealCowardActors(match, action, events, playerIds, resolvedTurn);
     if (events.length) {
       replayEvents.push(...events);
     }
@@ -210,6 +331,7 @@ export function advanceTurn(
   // removeProtectedState(match);
 
   applyTestaments(match, replayEvents);
+  appendHiddenStatusEvents(match, resolvedTurn, replayEvents);
   recordMatchReportProgress(match);
   if (nk) {
     finalizeMatchIfEnded(match, nk, logger, replayEvents, resolvedTurn);

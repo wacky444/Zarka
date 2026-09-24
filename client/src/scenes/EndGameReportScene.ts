@@ -9,6 +9,7 @@ import { assetPath } from "../utils/assetPath";
 
 interface ScrollablePanel extends Phaser.GameObjects.GameObject {
   layout?: () => void;
+  setOrigin: (x: number, y: number) => ScrollablePanel;
   setPosition: (x: number, y: number) => ScrollablePanel;
   setSize?: (width: number, height: number) => ScrollablePanel;
 }
@@ -125,6 +126,7 @@ export class EndGameReportScene extends Phaser.Scene {
       },
       space: { left: 12, right: 12, top: 8, bottom: 8, panel: 8 },
     }) as unknown as ScrollablePanel;
+    this.scrollPanel.setOrigin(0, 0);
     this.scrollPanel.setPosition(0, 54);
     this.scrollPanel.layout?.();
 

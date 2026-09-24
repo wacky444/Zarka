@@ -5,6 +5,7 @@ import {
   LocalizationType,
   TUTORIAL_BOT_ID,
   TUTORIAL_MATCH_METADATA_KEY,
+  isCharacterHidden,
   type Axial,
   type BuyShopItemPayload,
   type ReplayPlayerEvent,
@@ -22,6 +23,7 @@ import { isCharacterDead } from "../utils/playerCharacter";
 import { tailorPlayerCharactersForViewer } from "../utils/matchView";
 import { parseAxial } from "../utils/location";
 import { sendTutorialBotMessage } from "../match/TutorialBotChat";
+import { canCharacterDetectFire } from "../utils/fireVisibility";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -280,6 +282,7 @@ export function buyShopItemRpc(
         return (
           !!candidate &&
           !isCharacterDead(candidate) &&
+          !isCharacterHidden(candidate, match.current_turn) &&
           isSameCoord(candidate.position?.coord, targetLocation)
         );
       });
@@ -305,11 +308,13 @@ export function buyShopItemRpc(
         fireStartTurn,
         fireEndTurn,
       };
-      fire = {
-        coord: { q: targetLocation.q, r: targetLocation.r },
-        startTurn: fireStartTurn,
-        endTurn: fireEndTurn,
-      };
+      if (canCharacterDetectFire(actor, targetLocation)) {
+        fire = {
+          coord: { q: targetLocation.q, r: targetLocation.r },
+          startTurn: fireStartTurn,
+          endTurn: fireEndTurn,
+        };
+      }
       metadata = {
         ...metadata,
         fireTurns: 3,

@@ -76,11 +76,16 @@ export const SkillLibrary: SkillLibraryDefinition = {
   strength5: {
     id: "strength5",
     name: "Fuerza 5",
-    description: "Permite lanzar 1 objeto extra sin coste",
+    description: "Reduce en 2 puntos el esfuerzo de lanzar objetos",
     cost: 2,
     max: 1,
-    implemented: false,
-    category: "offensive"
+    implemented: true,
+    category: "offensive",
+    effect: {
+      type: "action_energy_discount",
+      affectedAction: "throw_object",
+      value: 2
+    }
   },
   dexterity1: {
     id: "dexterity1",
@@ -309,7 +314,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     id: "perception4",
     name: "Percepción 4",
     description:
-      "Detecta fuego y número de personas hasta 1 localización de distancia. Desmayado no detecta. El incendio lo detecta en el mismo turno en el que se crea",
+      "Detecta incendios a cualquier distancia y número de personas hasta 1 localización de distancia",
     cost: 5,
     max: 1,
     implemented: false,
@@ -440,7 +445,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
       "Se esconde automáticamente para no ser visto en la localización. Tampoco es visible a los prismáticos, al dron espía, a los neutrales ni al sicario. Sale de su escondite en un turno si ataca, dispara (salvo si usa silenciador), se desplaza, lanza, asusta, roba, duerme con esfuerzo o se enamora. También si protege a otro jugador que no esté escondido o si un jugador que no esté escondido le protege (esto último requiere autorización del escondido). No puede priorizarse atacar o asustar a un escondido, pero puede ser asustado o atacado si el ataque no fuera a dar a nadie o fuera un ataque con bate. Aunque un jugador escondido fuese agredido no sería visible en ese turno si no se da alguno de los casos anteriores",
     cost: 8,
     max: 1,
-    implemented: false,
+    implemented: true,
     category: "defense"
   }
 };

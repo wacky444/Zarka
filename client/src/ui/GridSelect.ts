@@ -13,6 +13,8 @@ const ACTION_DESCRIPTION_TAG_COLORS: Record<string, string> = {
   "health-recover": THEME.colors.healthRecover
 };
 
+const COLLAPSED_ICON_LEFT = 12;
+
 export function parseActionDescription(content: string): string {
   return content.replace(
     ACTION_DESCRIPTION_TAG_PATTERN,
@@ -36,6 +38,7 @@ export interface GridSelectItem {
   texture: string;
   frame?: string;
   iconScale?: number;
+  centerOpaquePixels?: boolean;
   highlighted?: boolean;
   tags?: string[];
   cooldownRemaining?: number;
@@ -43,6 +46,130 @@ export interface GridSelectItem {
   energyCost?: number;
   disabled?: boolean;
   isEmptyOption?: boolean;
+}
+
+interface OpaquePixelCenter {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface TextureAlphaData {
+  width: number;
+  height: number;
+  pixels: Uint8ClampedArray;
+}
+
+const OPAQUE_PIXEL_CENTERS = new Map<string, OpaquePixelCenter | null>();
+const TEXTURE_ALPHA_DATA = new Map<string, TextureAlphaData | null>();
+
+function getTextureAlphaData(
+  scene: Phaser.Scene,
+  textureKey: string,
+  sourceIndex: number
+): TextureAlphaData | null {
+  const cacheKey = `${textureKey}:${sourceIndex}`;
+  if (TEXTURE_ALPHA_DATA.has(cacheKey)) {
+    return TEXTURE_ALPHA_DATA.get(cacheKey) ?? null;
+  }
+  if (typeof document === "undefined" || !scene.textures.exists(textureKey)) {
+    return null;
+  }
+
+  const source = scene.textures.get(textureKey).source[sourceIndex];
+  const image = source?.image;
+  if (!source || !image || image instanceof Uint8Array) {
+    return null;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) {
+    TEXTURE_ALPHA_DATA.set(cacheKey, null);
+    return null;
+  }
+
+  try {
+    context.drawImage(image as unknown as CanvasImageSource, 0, 0);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    const alphaData = {
+      width: canvas.width,
+      height: canvas.height,
+      pixels,
+    };
+    TEXTURE_ALPHA_DATA.set(cacheKey, alphaData);
+    return alphaData;
+  } catch {
+    TEXTURE_ALPHA_DATA.set(cacheKey, null);
+    return null;
+  }
+}
+
+function getOpaqueCenterOffset(
+  scene: Phaser.Scene,
+  item: GridSelectItem,
+  displayWidth: number,
+  displayHeight: number
+): { x: number; y: number } {
+  if (
+    !item.centerOpaquePixels ||
+    !item.frame ||
+    !scene.textures.exists(item.texture)
+  ) {
+    return { x: 0, y: 0 };
+  }
+
+  const cacheKey = `${item.texture}:${item.frame}`;
+  let center = OPAQUE_PIXEL_CENTERS.get(cacheKey);
+  if (!OPAQUE_PIXEL_CENTERS.has(cacheKey)) {
+    const texture = scene.textures.get(item.texture);
+    if (!texture.has(item.frame)) {
+      return { x: 0, y: 0 };
+    }
+    const frame = texture.get(item.frame);
+    const alphaData = getTextureAlphaData(scene, item.texture, frame.sourceIndex);
+    if (!alphaData) {
+      return { x: 0, y: 0 };
+    }
+
+    let minX = frame.cutWidth;
+    let minY = frame.cutHeight;
+    let maxX = -1;
+    let maxY = -1;
+    for (let y = 0; y < frame.cutHeight; y += 1) {
+      for (let x = 0; x < frame.cutWidth; x += 1) {
+        const pixelX = frame.cutX + x;
+        const pixelY = frame.cutY + y;
+        const alphaIndex = (pixelY * alphaData.width + pixelX) * 4 + 3;
+        if (alphaData.pixels[alphaIndex] > 0) {
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        }
+      }
+    }
+    center = maxX < 0
+      ? null
+      : {
+          x: (minX + maxX + 1) / 2,
+          y: (minY + maxY + 1) / 2,
+          width: frame.cutWidth,
+          height: frame.cutHeight,
+        };
+    OPAQUE_PIXEL_CENTERS.set(cacheKey, center);
+  }
+
+  if (!center) {
+    return { x: 0, y: 0 };
+  }
+  return {
+    x: (center.width / 2 - center.x) * (displayWidth / center.width),
+    y: (center.height / 2 - center.y) * (displayHeight / center.height),
+  };
 }
 
 interface GridSelectConfig {
@@ -215,7 +342,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.background.setStrokeStyle?.(2, THEME.colors.collapsedBorder, 1);
 
     this.icon = scene.add.image(
-      12,
+      COLLAPSED_ICON_LEFT,
       this.collapsedHeight / 2,
       "hex",
       "grass_01.png"
@@ -423,7 +550,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
   private updateLabelPosition() {
     if (this.icon?.visible) {
-      this.label.setX(this.icon.x + this.icon.displayWidth + this.iconTextGap);
+      this.label.setX(
+        COLLAPSED_ICON_LEFT + this.icon.displayWidth + this.iconTextGap
+      );
     } else {
       this.label.setX(16);
     }
@@ -490,6 +619,16 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.icon.setDisplaySize(
         this.iconTargetSize * scale,
         this.iconTargetSize * scale
+      );
+      const offset = getOpaqueCenterOffset(
+        this.scene,
+        item,
+        this.icon.displayWidth,
+        this.icon.displayHeight
+      );
+      this.icon.setPosition(
+        COLLAPSED_ICON_LEFT + offset.x,
+        this.collapsedHeight / 2 + offset.y
       );
       this.icon.setVisible(true);
     } else {
@@ -1065,6 +1204,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
       const icon = scene.add
         .image(0, 0, item.texture, item.frame)
         .setOrigin(0.5, 0.5);
+      const iconSlot = item.centerOpaquePixels
+        ? scene.add.container(0, 0)
+        : null;
+      let resolvedIconSize = 0;
       if (item.isEmptyOption) {
         icon.setVisible(false);
         icon.setActive(false);
@@ -1073,12 +1216,23 @@ export class GridSelect extends Phaser.GameObjects.Container {
         const baseIconSize = this.resolveIconSize(cellHeight);
         const iconScale = Phaser.Math.Clamp(item.iconScale ?? 1, 0.1, 4);
         const maxIconSize = this.resolveMaxIconDimension(cellHeight);
-        const resolvedIconSize = Math.min(
+        resolvedIconSize = Math.min(
           baseIconSize * iconScale,
           maxIconSize
         );
         icon.setDisplaySize(resolvedIconSize, resolvedIconSize);
+        const offset = getOpaqueCenterOffset(
+          scene,
+          item,
+          resolvedIconSize,
+          resolvedIconSize
+        );
+        icon.setPosition(offset.x, offset.y);
         icon.setActive(true);
+      }
+      if (iconSlot) {
+        iconSlot.setSize(resolvedIconSize, resolvedIconSize);
+        iconSlot.add(icon);
       }
 
       const nameText = scene.add
@@ -1148,7 +1302,13 @@ export class GridSelect extends Phaser.GameObjects.Container {
       );
 
       const iconMarginBottom = item.isEmptyOption ? 0 : layoutSpace.iconGap;
-      container.add(icon, 0, "center", { bottom: iconMarginBottom }, false);
+      container.add(
+        iconSlot ?? icon,
+        0,
+        "center",
+        { bottom: iconMarginBottom },
+        false
+      );
       container.add(
         nameText,
         0,
@@ -1176,6 +1336,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
       (container as unknown as Phaser.GameObjects.GameObject).setData(
         "icon",
         icon
+      );
+      (container as unknown as Phaser.GameObjects.GameObject).setData(
+        "iconSlot",
+        iconSlot
       );
       (container as unknown as Phaser.GameObjects.GameObject).setData(
         "name",
@@ -1228,6 +1392,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
     const icon = containerGO.getData("icon") as
       | Phaser.GameObjects.Image
       | undefined;
+    const iconSlot = containerGO.getData("iconSlot") as
+      | Phaser.GameObjects.Container
+      | undefined;
     const nameText = containerGO.getData("name") as
       | Phaser.GameObjects.Text
       | undefined;
@@ -1248,19 +1415,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
       const hasTexture = textureManager.exists(item.texture);
       const texture = hasTexture ? textureManager.get(item.texture) : null;
       const hasFrame = item.frame ? texture?.has(item.frame) : true;
+      let iconMarginBottom = 0;
       if (item.isEmptyOption) {
         icon.setVisible(false);
         icon.setActive(false);
         icon.setDisplaySize(0, 0);
-        const iconSizerConfig = (
-          icon as unknown as {
-            sizerConfig?: { margin?: { bottom?: number } };
-          }
-        ).sizerConfig;
-        if (iconSizerConfig) {
-          iconSizerConfig.margin = iconSizerConfig.margin ?? {};
-          iconSizerConfig.margin.bottom = 0;
-        }
+        iconSlot?.setSize(0, 0);
       } else if (hasTexture && hasFrame) {
         if (item.frame) {
           icon.setTexture(item.texture, item.frame);
@@ -1272,30 +1432,34 @@ export class GridSelect extends Phaser.GameObjects.Container {
         const maxIconSize = this.resolveMaxIconDimension(cellHeight);
         const resolvedIconSize = Math.min(baseIconSize * scale, maxIconSize);
         icon.setDisplaySize(resolvedIconSize, resolvedIconSize);
+        if (iconSlot) {
+          iconSlot.setSize(resolvedIconSize, resolvedIconSize);
+          const offset = getOpaqueCenterOffset(
+            scene,
+            item,
+            resolvedIconSize,
+            resolvedIconSize
+          );
+          icon.setPosition(offset.x, offset.y);
+        }
         icon.setVisible(true);
         icon.setActive(true);
-        const iconSizerConfig = (
-          icon as unknown as {
-            sizerConfig?: { margin?: { bottom?: number } };
-          }
-        ).sizerConfig;
-        if (iconSizerConfig) {
-          iconSizerConfig.margin = iconSizerConfig.margin ?? {};
-          iconSizerConfig.margin.bottom = layoutSpaceExisting.iconGap;
-        }
+        iconMarginBottom = layoutSpaceExisting.iconGap;
       } else {
         icon.setVisible(false);
         icon.setActive(false);
         icon.setDisplaySize(0, 0);
-        const iconSizerConfig = (
-          icon as unknown as {
-            sizerConfig?: { margin?: { bottom?: number } };
-          }
-        ).sizerConfig;
-        if (iconSizerConfig) {
-          iconSizerConfig.margin = iconSizerConfig.margin ?? {};
-          iconSizerConfig.margin.bottom = 0;
+        iconSlot?.setSize(0, 0);
+      }
+      const iconLayoutChild = iconSlot ?? icon;
+      const iconSizerConfig = (
+        iconLayoutChild as unknown as {
+          sizerConfig?: { margin?: { bottom?: number } };
         }
+      ).sizerConfig;
+      if (iconSizerConfig) {
+        iconSizerConfig.margin = iconSizerConfig.margin ?? {};
+        iconSizerConfig.margin.bottom = iconMarginBottom;
       }
     }
     const nameTruncated = nameText

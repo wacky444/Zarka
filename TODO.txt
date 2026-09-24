@@ -14,22 +14,9 @@
 
 - train and experience
 
-- stealing
-
-- move status_dead out of actionLibrary
-
 - placin the trap didnt work
 
-- victory animation was too short and it auto goes to the report
-
 - the victory report, "informe no disponible":
-
-{"level":"debug","ts":"2026-09-16T15:37:10.968+0200","caller":"server/runtime_javascript_logger.go:106","msg":"botAI: updating character%!(EXTRA string=bot2)","rpc_id":"update_ready_state","trace_id":"7d7bf592-bf17-4720-ad0d-89a0ca85f5e8"}
-{"level":"info","ts":"2026-09-16T15:37:10.969+0200","caller":"server/runtime_javascript_logger.go:76","msg":"finalizeMatchIfEnded match 5342cdd7-c275-430b-a360-b49e45e8ac8e outcome: map[%!o(string=aliveCharacterIds):[%!o(string=70ef9f33-99a1-4808-98ea-4333820b8d9e)] %!o(string=ended):%!o(bool=true) %!o(string=reason):%!o(string=last_alive) %!o(string=winnerId):%!o(string=70ef9f33-99a1-4808-98ea-4333820b8d9e)]","rpc_id":"update_ready_state","trace_id":"7d7bf592-bf17-4720-ad0d-89a0ca85f5e8"}
-{"level":"error","ts":"2026-09-16T15:37:10.970+0200","caller":"server/runtime_javascript_logger.go:96","msg":"finalizeMatchIfEnded report write failed for match 5342cdd7-c275-430b-a360-b49e45e8ac8e: Cannot read property 'metadata' of undefined","rpc_id":"update_ready_state","trace_id":"7d7bf592-bf17-4720-ad0d-89a0ca85f5e8"}
-
-
-- finished match is not on my matches list
 
 - y diría q cuando seleccionas una skill q necesita un objetivo, debería cambiar directamente a seleccionarlo
 
@@ -37,11 +24,9 @@
 
 - y muchas skills de atacar tienen iconos muy distintos
 
+- safe icon
+
 - autoreplay after turn
-
-- only 6 items visible in current cell
-
-- green name in target selector for confirmed teammates
 
 - not getting the logs of player eliminateds
 
@@ -53,40 +38,8 @@
 
 - there isnt a effect on the ground on pyro, also didnt get a confirm when bought
 
-- no steal animation
-
 - ending screen says bot2 won, not team?
 
- ### Localhost
+- in mobile there is very bad performance when the selectors are open
 
- The Google client ID is being loaded locally. This error:
-
- ```text
-   [GSI_LOGGER]: The given origin is not allowed for the given client ID
- ```
-
- means Google rejected the current browser origin. In Google Cloud Console, open the Web application OAuth client used by
- VITE_GOOGLE_CLIENT_ID and add the exact origins under Authorized JavaScript origins:
-
- ```text
-   http://localhost:5173
-   http://127.0.0.1:5173
- ```
-
- Add any other port you use, such as http://localhost:3000.
-
- Do not include a path or trailing route:
-
- ```text
-   Correct:   https://wacky444.github.io
-   Incorrect: https://wacky444.github.io/zarka/
- ```
-
- The client must be a Web application OAuth client ID, ending in something like:
-
- ```text
-   .apps.googleusercontent.com
- ```
-
- After changing client/.env, restart the Vite dev server.
-
+- after changing a selector the gui freezes until the server answers in both pc and mobile

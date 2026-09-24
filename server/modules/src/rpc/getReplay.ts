@@ -108,6 +108,7 @@ export function getReplayRpc(
               replay.snapshot.playerCharacters,
               ctx.userId,
               false,
+              turn,
             ),
           };
         }
