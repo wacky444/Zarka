@@ -51,6 +51,7 @@ import { CharacterPanelSkillsView } from "./CharacterPanelSkillsView";
 import { CharacterPanelShopView } from "./CharacterPanelShopView";
 import {
   getTutorialUiPolicy,
+  isTutorialReadyActionAllowed,
   type TutorialControlHighlight
 } from "../tutorial/TutorialUiPolicy";
 import { t } from "../services/i18n";
@@ -304,6 +305,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.refreshExtraExecutionSelectorState();
     this.refreshLocationSelectorState();
     this.refreshPlayerSelectorState();
+    this.setReadyEnabled(this.readyEnabled);
     this.emitMainActionChange();
   };
   private readonly handleLocationPickRequest = () => {
@@ -342,7 +344,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.setMainActionPriorityItems(itemIds ?? [], true);
   };
   private readonly handleReadyToggle = () => {
-    if (!this.readyEnabled) {
+    if (!this.readyEnabled || !this.isTutorialReadyAllowed()) {
       return;
     }
     this.setReadyState(!this.readyState, true);
@@ -364,6 +366,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     localY: number,
     event: Phaser.Types.Input.EventData
   ) => {
+    if (!this.readyEnabled || !this.isTutorialReadyAllowed()) {
+      return;
+    }
     this.readyPointerIsDown = true;
     event.stopPropagation();
   };
@@ -2126,6 +2131,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (active && policy.actionEditingEnabled) {
       this.syncTutorialActionSelection(policy);
     }
+    this.setReadyEnabled(this.readyEnabled);
   }
 
   private syncTutorialActionSelection(
@@ -3025,6 +3031,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.extraSecondaryItemSelector.setEnabled(false);
   }
 
+  private isTutorialReadyAllowed(): boolean {
+    if (!this.tutorialActive || !this.tutorialStepId) {
+      return true;
+    }
+    return isTutorialReadyActionAllowed(this.tutorialStepId, {
+      mainActionId: this.mainActionSelection,
+      targetLocation: this.mainActionTarget
+    });
+  }
+
   private setReadyEnabled(enabled: boolean) {
     this.readyEnabled = enabled;
     if (!this.readyToggle) {
@@ -3035,9 +3051,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const isStatusActive =
       !this.characterSubtabs ||
       this.characterSubtabs.getActiveKey() === "status";
+    const tutorialReadyAllowed = this.isTutorialReadyAllowed();
     const showReady =
       enabled &&
-      (!this.tutorialActive || this.tutorialReadyEnabled) &&
+      (!this.tutorialActive || (this.tutorialReadyEnabled && tutorialReadyAllowed)) &&
       isCharacterActive &&
       isStatusActive;
     if (showReady) {
@@ -3046,6 +3063,18 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     } else {
       this.readyToggle.setAlpha(0.5);
       this.readyToggle.disableInteractive();
+      if (this.tutorialActive && !tutorialReadyAllowed && this.readyState) {
+        this.setReadyState(false, true);
+      }
+    }
+    if (this.tutorialActive) {
+      const isReadyHighlighted =
+        this.tutorialStepId === "return_to_bot"
+          ? tutorialReadyAllowed
+          : (this.tutorialStepId
+              ? getTutorialUiPolicy(this.tutorialStepId).highlightedControls.includes("ready")
+              : false);
+      this.readyToggle.setColor(isReadyHighlighted ? "#fbbf24" : "#ffffff");
     }
   }
 
@@ -5274,6 +5303,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       const changed = this.mainActionTarget !== null;
       if (changed) {
         this.mainActionTarget = null;
+        this.setReadyEnabled(this.readyEnabled);
       }
       this.locationSelector.setValue(null);
       this.locationSelector.setPending(false);
@@ -5301,6 +5331,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (!normalized) {
       this.locationSelector.setPending(false);
     }
+    this.setReadyEnabled(this.readyEnabled);
     if (emit) {
       this.emitMainActionChange();
     }

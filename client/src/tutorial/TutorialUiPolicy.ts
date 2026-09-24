@@ -1,8 +1,10 @@
-import type {
-  ActionId,
-  ShopId,
-  SkillId,
-  TutorialStepId
+import {
+  type ActionId,
+  type Axial,
+  type ShopId,
+  type SkillId,
+  type TutorialStepId,
+  TUTORIAL_CELL_COORDS
 } from "@shared";
 import type { TabKey } from "../ui/CharacterPanelTabs";
 
@@ -120,7 +122,7 @@ const STEP_POLICIES: Record<TutorialStepId, TutorialUiPolicy> = {
   }),
   return_to_bot: policy({
     ...STATUS_PANEL,
-    highlightedControls: ["main_action"],
+    highlightedControls: ["main_action", "location_target"],
     primaryActionIds: ["move"],
     actionEditingEnabled: true,
     readyEnabled: true
@@ -151,4 +153,30 @@ export function getTutorialUiPolicy(
   stepId: TutorialStepId | null
 ): TutorialUiPolicy {
   return stepId ? STEP_POLICIES[stepId] : policy();
+}
+
+export function isTutorialReadyActionAllowed(
+  stepId: TutorialStepId | null,
+  options: {
+    mainActionId?: string | null;
+    targetLocation?: Axial | null;
+  }
+): boolean {
+  if (!stepId) {
+    return true;
+  }
+  const policy = getTutorialUiPolicy(stepId);
+  if (!policy.readyEnabled) {
+    return false;
+  }
+  if (stepId === "return_to_bot") {
+    const isMove = options.mainActionId === "move";
+    const isStartCell =
+      options.targetLocation !== null &&
+      options.targetLocation !== undefined &&
+      options.targetLocation.q === TUTORIAL_CELL_COORDS.playerStart.q &&
+      options.targetLocation.r === TUTORIAL_CELL_COORDS.playerStart.r;
+    return isMove && isStartCell;
+  }
+  return true;
 }

@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { TutorialProgressController } from "../src/tutorial/TutorialProgressController.ts";
-import { getTutorialUiPolicy } from "../src/tutorial/TutorialUiPolicy.ts";
+import {
+  getTutorialUiPolicy,
+  isTutorialReadyActionAllowed
+} from "../src/tutorial/TutorialUiPolicy.ts";
 import { TUTORIAL_INSTRUCTIONS } from "../src/tutorial/TutorialInstructions.ts";
 import {
   clearActiveTutorialMatchId,
@@ -96,6 +99,45 @@ test("tutorial UI policy exposes only the actions and items for the current less
   const resolveScare = getTutorialUiPolicy("resolve_bot_scare");
   assert.equal(resolveScare.actionEditingEnabled, false);
   assert.equal(resolveScare.readyEnabled, true);
+
+  const returnToBot = getTutorialUiPolicy("return_to_bot");
+  assert.equal(returnToBot.readyEnabled, true);
+  assert.ok(returnToBot.highlightedControls.includes("location_target"));
+
+  assert.equal(
+    isTutorialReadyActionAllowed("return_to_bot", {
+      mainActionId: "move",
+      targetLocation: { q: 0, r: 0 }
+    }),
+    true
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("return_to_bot", {
+      mainActionId: "move",
+      targetLocation: { q: 0, r: 1 }
+    }),
+    false
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("return_to_bot", {
+      mainActionId: "move",
+      targetLocation: null
+    }),
+    false
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("return_to_bot", {
+      mainActionId: "axe_attack",
+      targetLocation: { q: 0, r: 0 }
+    }),
+    false
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("scare_bot_to_doomed_cell", {
+      mainActionId: "scare"
+    }),
+    true
+  );
 });
 
 test("active tutorial match storage is user-scoped and survives scene reloads", () => {

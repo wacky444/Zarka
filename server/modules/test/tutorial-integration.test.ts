@@ -808,6 +808,17 @@ function runTutorialIntegration(runNumber: number): IntegrationSignature {
     assert.equal(afterCombat.playerCharacters[PLAYER_ID].stats.energy.current, 17);
     completeGameplayStep("resolve_bot_scare");
 
+    assert.throws(
+      () =>
+        updateReadyStateRpc(
+          context,
+          harness.logger,
+          harness.nakama,
+          JSON.stringify({ match_id: matchId, ready: true })
+        ),
+      (err: any) => err?.message === "tutorial_must_move_to_bot"
+    );
+
     invokeRpc<{ ok: boolean }>("return_to_bot", "update_main_action", () =>
       updateMainActionRpc(
         context,

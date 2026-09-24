@@ -1,6 +1,10 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import { DEFAULT_REPLAY_VIEW_DISTANCE } from "@shared";
+import {
+  DEFAULT_REPLAY_VIEW_DISTANCE,
+  TUTORIAL_CELL_COORDS,
+  TUTORIAL_MATCH_METADATA_KEY
+} from "@shared";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
@@ -94,6 +98,25 @@ export function updateReadyStateRpc(
   const viewerIsIncapadited = isCharacterIncapacitated(viewerCharacter);
   if (viewerIsIncapadited) {
     // throw makeNakamaError("character_incapacitated", 9); TODO uncomment when the turn advances automatically when only bots remain
+  }
+
+  if (
+    match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] &&
+    requestedReady &&
+    match.current_turn === 4 &&
+    viewerCharacter
+  ) {
+    const mainPlan = viewerCharacter.actionPlan?.main;
+    const isMoveToStart =
+      mainPlan?.actionId === "move" &&
+      mainPlan.targetLocationId?.q === TUTORIAL_CELL_COORDS.playerStart.q &&
+      mainPlan.targetLocationId?.r === TUTORIAL_CELL_COORDS.playerStart.r;
+    if (!isMoveToStart) {
+      throw makeNakamaError(
+        "tutorial_must_move_to_bot",
+        nkruntime.Codes.FAILED_PRECONDITION,
+      );
+    }
   }
 
   const effectiveReady = viewerIsIncapadited ? true : requestedReady;
