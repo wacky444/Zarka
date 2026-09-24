@@ -867,6 +867,17 @@ function runTutorialIntegration(runNumber: number): IntegrationSignature {
     );
 
     const energyBeforeFinalScare = beforeFinal.playerCharacters[PLAYER_ID].stats.energy.current;
+    assert.throws(
+      () =>
+        updateReadyStateRpc(
+          context,
+          harness.logger,
+          harness.nakama,
+          JSON.stringify({ match_id: matchId, ready: true })
+        ),
+      (err: any) => err?.message === "tutorial_must_scare_to_doomed_cell"
+    );
+
     invokeRpc<{ ok: boolean }>(
       "scare_bot_to_doomed_cell",
       "update_main_action",

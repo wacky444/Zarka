@@ -119,6 +119,26 @@ export function updateReadyStateRpc(
     }
   }
 
+  if (
+    match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] &&
+    requestedReady &&
+    match.current_turn === 5 &&
+    viewerCharacter
+  ) {
+    const mainPlan = viewerCharacter.actionPlan?.main;
+    const isScareToDoomed =
+      mainPlan?.actionId === "scare" &&
+      (mainPlan.extraExecutions ?? 0) >= 1 &&
+      mainPlan.targetLocationId?.q === TUTORIAL_CELL_COORDS.doomed.q &&
+      mainPlan.targetLocationId?.r === TUTORIAL_CELL_COORDS.doomed.r;
+    if (!isScareToDoomed) {
+      throw makeNakamaError(
+        "tutorial_must_scare_to_doomed_cell",
+        nkruntime.Codes.FAILED_PRECONDITION,
+      );
+    }
+  }
+
   const effectiveReady = viewerIsIncapadited ? true : requestedReady;
   match.readyStates = match.readyStates ?? {};
   match.readyStates[ctx.userId] = effectiveReady;

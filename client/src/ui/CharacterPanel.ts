@@ -280,6 +280,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.mainExtraExecutions = reps;
     this.refreshLocationSelectorState();
     this.refreshScareSecondPlayerSelectorState();
+    this.setReadyEnabled(this.readyEnabled);
     this.emitMainActionChange();
   };
   private readonly handleSecondaryExtraExecutionChange = (reps: number) => {
@@ -3037,7 +3038,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     return isTutorialReadyActionAllowed(this.tutorialStepId, {
       mainActionId: this.mainActionSelection,
-      targetLocation: this.mainActionTarget
+      targetLocation: this.mainActionTarget,
+      extraExecutions: this.mainExtraExecutions
     });
   }
 
@@ -3069,7 +3071,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     if (this.tutorialActive) {
       const isReadyHighlighted =
-        this.tutorialStepId === "return_to_bot"
+        this.tutorialStepId === "return_to_bot" ||
+        this.tutorialStepId === "scare_bot_to_doomed_cell"
           ? tutorialReadyAllowed
           : (this.tutorialStepId
               ? getTutorialUiPolicy(this.tutorialStepId).highlightedControls.includes("ready")
@@ -4228,6 +4231,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.setMainActionTarget(null, false);
     }
     this.refreshScareSecondPlayerSelectorState();
+    this.setReadyEnabled(this.readyEnabled);
     if (emit) {
       this.emitMainActionChange();
     }

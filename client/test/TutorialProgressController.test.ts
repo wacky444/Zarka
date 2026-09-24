@@ -134,9 +134,43 @@ test("tutorial UI policy exposes only the actions and items for the current less
   );
   assert.equal(
     isTutorialReadyActionAllowed("scare_bot_to_doomed_cell", {
-      mainActionId: "scare"
+      mainActionId: "scare",
+      extraExecutions: 1,
+      targetLocation: { q: 0, r: 1 }
     }),
     true
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("scare_bot_to_doomed_cell", {
+      mainActionId: "scare",
+      extraExecutions: 0,
+      targetLocation: { q: 0, r: 1 }
+    }),
+    false
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("scare_bot_to_doomed_cell", {
+      mainActionId: "scare",
+      extraExecutions: 1,
+      targetLocation: { q: 0, r: 0 }
+    }),
+    false
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("scare_bot_to_doomed_cell", {
+      mainActionId: "scare",
+      extraExecutions: 1,
+      targetLocation: null
+    }),
+    false
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("scare_bot_to_doomed_cell", {
+      mainActionId: "axe_attack",
+      extraExecutions: 1,
+      targetLocation: { q: 0, r: 1 }
+    }),
+    false
   );
 });
 

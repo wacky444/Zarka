@@ -160,6 +160,7 @@ export function isTutorialReadyActionAllowed(
   options: {
     mainActionId?: string | null;
     targetLocation?: Axial | null;
+    extraExecutions?: number;
   }
 ): boolean {
   if (!stepId) {
@@ -177,6 +178,16 @@ export function isTutorialReadyActionAllowed(
       options.targetLocation.q === TUTORIAL_CELL_COORDS.playerStart.q &&
       options.targetLocation.r === TUTORIAL_CELL_COORDS.playerStart.r;
     return isMove && isStartCell;
+  }
+  if (stepId === "scare_bot_to_doomed_cell" || stepId === "resolve_destruction") {
+    const isScare = options.mainActionId === "scare";
+    const hasExtraPower = (options.extraExecutions ?? 0) >= 1;
+    const isDoomedCell =
+      options.targetLocation !== null &&
+      options.targetLocation !== undefined &&
+      options.targetLocation.q === TUTORIAL_CELL_COORDS.doomed.q &&
+      options.targetLocation.r === TUTORIAL_CELL_COORDS.doomed.r;
+    return isScare && hasExtraPower && isDoomedCell;
   }
   return true;
 }
