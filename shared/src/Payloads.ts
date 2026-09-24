@@ -22,6 +22,13 @@ export const OPCODE_TURN_ADVANCED = 102;
 export const OPCODE_MATCH_ENDED = 103;
 export const OPCODE_READY_STATE_UPDATE = 104;
 
+export type CreateTutorialMatchPayload = {
+  ok?: boolean;
+  match_id?: string;
+  runtime_match_id?: string;
+  error?: string;
+};
+
 export type CreateMatchPayload = {
   match_id: string;
   runtime_match_id?: string;

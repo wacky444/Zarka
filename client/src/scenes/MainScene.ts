@@ -46,7 +46,14 @@ export class MainScene extends Phaser.Scene {
   private activeView: "main" | "matchList" | "myMatchList" | "inMatch" = "main";
   private buttons: UIButton[] = [];
   private mainButtons: UIButton[] = [];
+  private normalMatchButtons: UIButton[] = [];
   private currentUserId: string | null = null;
+  private tutorialCompleted = false;
+  private tutorialProfileRequestId = 0;
+  private readonly wakeHandler = () => {
+    this.layoutMain();
+    void this.refreshTutorialGate(true);
+  };
 
   constructor() {
     super("MainScene");
@@ -199,12 +206,13 @@ export class MainScene extends Phaser.Scene {
     this.mainRoot.add(this.statusText);
 
     this.createMainButtons();
+    this.applyTutorialGate();
     this.layoutMain();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutMain, this);
-    this.events.on(Phaser.Scenes.Events.WAKE, this.layoutMain, this);
+    this.events.on(Phaser.Scenes.Events.WAKE, this.wakeHandler);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutMain, this);
-      this.events.off(Phaser.Scenes.Events.WAKE, this.layoutMain, this);
+      this.events.off(Phaser.Scenes.Events.WAKE, this.wakeHandler);
     });
 
     try {
@@ -234,6 +242,7 @@ export class MainScene extends Phaser.Scene {
       this.setCurrentMatchId(this.currentMatchId);
       this.currentUserId = session.user_id ?? null;
       this.registry.set("currentUserId", this.currentUserId);
+      await this.refreshTutorialGate(false);
       // Pre-connect the realtime socket so join calls don't race the connection
       await this.turnService.connectSocket();
       // Real-time settings updates from server
@@ -521,6 +530,45 @@ export class MainScene extends Phaser.Scene {
     this.scene.run("EndGameReportScene", { matchId });
   }
 
+  private async refreshTutorialGate(forceRefresh: boolean): Promise<void> {
+    const requestId = ++this.tutorialProfileRequestId;
+    const accountService = this.accountService;
+    const userId = this.currentUserId;
+    if (!accountService || !userId) {
+      this.tutorialCompleted = false;
+      this.applyTutorialGate();
+      return;
+    }
+    if (forceRefresh) {
+      accountService.invalidate(userId);
+    }
+
+    let completed = false;
+    try {
+      const account = await accountService.getAccount(userId);
+      completed = account?.tutorialCompleted === true;
+    } catch (error) {
+      console.warn("Failed to load tutorial profile state", error);
+    }
+    if (requestId !== this.tutorialProfileRequestId) {
+      return;
+    }
+    this.tutorialCompleted = completed;
+    this.applyTutorialGate();
+  }
+
+  private applyTutorialGate(): void {
+    for (const button of this.normalMatchButtons) {
+      if (this.tutorialCompleted) {
+        button.setAlpha(1);
+        button.setInteractive({ useHandCursor: true });
+      } else {
+        button.setAlpha(0.45);
+        button.disableInteractive();
+      }
+    }
+  }
+
   private showView(view: "main" | "matchList" | "myMatchList" | "inMatch") {
     this.activeView = view;
     if (view === "main") {
@@ -686,6 +734,11 @@ export class MainScene extends Phaser.Scene {
       ["main"]
     ).setOrigin(0.5);
 
+    this.normalMatchButtons = [
+      createMatchButton,
+      listMatchesButton,
+      myMatchesButton
+    ];
     this.mainButtons = [
       tutorialButton,
       createMatchButton,

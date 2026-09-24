@@ -3,12 +3,14 @@
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
+import { hasTutorialCompleted } from "../utils/tutorialProfile";
 import { MatchRecord } from "../models/types";
 import {
   CellLibrary,
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
   generateGameMap,
+  TUTORIAL_MATCH_METADATA_KEY
 } from "@shared";
 import {
   ensureAllPlayerCharacters,
@@ -54,6 +56,19 @@ export function joinMatchRpc(
   }
 
   const match: MatchRecord = read.match;
+  if (match.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
+    if (!Array.isArray(match.players) || match.players.indexOf(ctx.userId) === -1) {
+      throw makeNakamaError(
+        "not_in_tutorial_match",
+        nkruntime.Codes.PERMISSION_DENIED
+      );
+    }
+  } else if (!hasTutorialCompleted(nk, ctx.userId, logger)) {
+    throw makeNakamaError(
+      "tutorial_incomplete",
+      nkruntime.Codes.FAILED_PRECONDITION
+    );
+  }
   if (typeof match.started !== "boolean") {
     match.started = false;
   }

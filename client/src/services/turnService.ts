@@ -134,6 +134,15 @@ export class TurnService {
     }
   }
 
+  async createTutorialMatch() {
+    const res = await this.client.rpc(
+      this.session,
+      "create_tutorial_match",
+      {}
+    );
+    return res;
+  }
+
   async createMatch(size = 2, name?: string, turnsToBeAt1Tile = 30) {
     const payload: { size: number; name?: string; turnsToBeAt1Tile?: number } =
       {

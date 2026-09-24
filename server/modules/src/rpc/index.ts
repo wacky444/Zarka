@@ -1,4 +1,5 @@
 export { createMatchRpc } from "./createMatch";
+export { createTutorialMatchRpc } from "./createTutorialMatch";
 export { submitTurnRpc } from "./submitTurn";
 export { getStateRpc } from "./getState";
 export { joinMatchRpc } from "./joinMatch";
