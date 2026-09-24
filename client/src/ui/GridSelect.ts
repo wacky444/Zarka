@@ -98,7 +98,7 @@ function getTextureAlphaData(
     const alphaData = {
       width: canvas.width,
       height: canvas.height,
-      pixels,
+      pixels
     };
     TEXTURE_ALPHA_DATA.set(cacheKey, alphaData);
     return alphaData;
@@ -130,7 +130,11 @@ function getOpaqueCenterOffset(
       return { x: 0, y: 0 };
     }
     const frame = texture.get(item.frame);
-    const alphaData = getTextureAlphaData(scene, item.texture, frame.sourceIndex);
+    const alphaData = getTextureAlphaData(
+      scene,
+      item.texture,
+      frame.sourceIndex
+    );
     if (!alphaData) {
       return { x: 0, y: 0 };
     }
@@ -152,14 +156,15 @@ function getOpaqueCenterOffset(
         }
       }
     }
-    center = maxX < 0
-      ? null
-      : {
-          x: (minX + maxX + 1) / 2,
-          y: (minY + maxY + 1) / 2,
-          width: frame.cutWidth,
-          height: frame.cutHeight,
-        };
+    center =
+      maxX < 0
+        ? null
+        : {
+            x: (minX + maxX + 1) / 2,
+            y: (minY + maxY + 1) / 2,
+            width: frame.cutWidth,
+            height: frame.cutHeight
+          };
     OPAQUE_PIXEL_CENTERS.set(cacheKey, center);
   }
 
@@ -168,7 +173,7 @@ function getOpaqueCenterOffset(
   }
   return {
     x: (center.width / 2 - center.x) * (displayWidth / center.width),
-    y: (center.height / 2 - center.y) * (displayHeight / center.height),
+    y: (center.height / 2 - center.y) * (displayHeight / center.height)
   };
 }
 
@@ -908,7 +913,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
         if (!selected || selected.disabled) {
           return;
         }
-        this.emit("change", selected.isEmptyOption ? null : selected.id, selected);
+        this.emit(
+          "change",
+          selected.isEmptyOption ? null : selected.id,
+          selected
+        );
         this.closeModal();
       }
     );
@@ -922,9 +931,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
     if (!this.confirmButton) {
       return;
     }
-    const background = this.confirmButton.getData(
-      "background"
-    ) as Phaser.GameObjects.Rectangle | undefined;
+    const background = this.confirmButton.getData("background") as
+      | Phaser.GameObjects.Rectangle
+      | undefined;
     const enabled = Boolean(this.selectedItem && !this.selectedItem.disabled);
     background?.setAlpha(enabled ? 1 : 0.45);
     if (enabled) {
@@ -1216,10 +1225,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         const baseIconSize = this.resolveIconSize(cellHeight);
         const iconScale = Phaser.Math.Clamp(item.iconScale ?? 1, 0.1, 4);
         const maxIconSize = this.resolveMaxIconDimension(cellHeight);
-        resolvedIconSize = Math.min(
-          baseIconSize * iconScale,
-          maxIconSize
-        );
+        resolvedIconSize = Math.min(baseIconSize * iconScale, maxIconSize);
         icon.setDisplaySize(resolvedIconSize, resolvedIconSize);
         const offset = getOpaqueCenterOffset(
           scene,
@@ -1286,8 +1292,32 @@ export class GridSelect extends Phaser.GameObjects.Container {
               }
             })
       ) as Phaser.GameObjects.Text;
-      cooldownText.setOrigin(1, 0);
+      cooldownText.setOrigin(0, 0);
       cooldownText.setVisible(false);
+
+      const warningText = (
+        scene.rexUI?.add?.BBCodeText
+          ? scene.rexUI.add.BBCodeText(0, 0, "", {
+              fontSize: "12px",
+              fontStyle: "bold",
+              align: "left",
+              wrap: {
+                mode: "word",
+                width: 95
+              }
+            })
+          : scene.add.text(0, 0, "", {
+              fontSize: "12px",
+              color: THEME.colors.warning,
+              fontStyle: "bold",
+              align: "left",
+              wordWrap: {
+                width: 95
+              }
+            })
+      ) as Phaser.GameObjects.Text;
+      warningText.setOrigin(0, 0);
+      warningText.setVisible(false);
 
       const nameTruncated = this.applySingleLineText(
         nameText,
@@ -1331,6 +1361,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         { right: 12, top: 12 },
         false
       );
+      container.add(warningText, 0, "left-top", { left: 12, top: 12 }, false);
 
       (container as unknown as Phaser.GameObjects.GameObject).setData("bg", bg);
       (container as unknown as Phaser.GameObjects.GameObject).setData(
@@ -1364,6 +1395,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
       (container as unknown as Phaser.GameObjects.GameObject).setData(
         "cooldown",
         cooldownText
+      );
+      (container as unknown as Phaser.GameObjects.GameObject).setData(
+        "warning",
+        warningText
       );
 
       (
@@ -1405,6 +1440,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
       | Phaser.GameObjects.Text
       | undefined;
     const cooldownText = containerGO.getData("cooldown") as
+      | Phaser.GameObjects.Text
+      | undefined;
+    const warningText = containerGO.getData("warning") as
       | Phaser.GameObjects.Text
       | undefined;
 
@@ -1477,6 +1515,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
     containerGO.setData("showTooltip", nameTruncated || descTruncated);
     if (cooldownText) {
       cooldownText.setVisible(false);
+    }
+    if (warningText) {
+      warningText.setVisible(false);
     }
 
     (
@@ -1566,38 +1607,48 @@ export class GridSelect extends Phaser.GameObjects.Container {
       | undefined;
     if (cooldownText) {
       const remaining = config.item.cooldownRemaining ?? 0;
-      const missing = config.item.missingRequirement?.trim();
       const isBBCode =
         typeof (cooldownText as unknown as { getWrappedText?: unknown })
           .getWrappedText === "function";
 
-      const parts: string[] = [];
       if (remaining > 0) {
-        parts.push(
+        cooldownText.setText(
           isBBCode
             ? `[color=${THEME.colors.cooldown}]CD: ${remaining}[/color]`
             : `CD: ${remaining}`
         );
-      }
-      if (missing) {
-        parts.push(
-          isBBCode
-            ? `[color=${THEME.colors.warning}]${missing}[/color]`
-            : missing
-        );
-      }
-
-      if (parts.length > 0) {
-        cooldownText.setText(parts.join("\n"));
         if (!isBBCode) {
-          cooldownText.setColor(
-            missing ? THEME.colors.warning : THEME.colors.cooldown
-          );
+          cooldownText.setColor(THEME.colors.cooldown);
         }
         cooldownText.setVisible(true);
       } else {
         cooldownText.setText("");
         cooldownText.setVisible(false);
+      }
+    }
+
+    const warningText = container.getData("warning") as
+      | Phaser.GameObjects.Text
+      | undefined;
+    if (warningText) {
+      const missing = config.item.missingRequirement?.trim();
+      const isBBCode =
+        typeof (warningText as unknown as { getWrappedText?: unknown })
+          .getWrappedText === "function";
+
+      if (missing) {
+        warningText.setText(
+          isBBCode
+            ? `[color=${THEME.colors.warning}]${missing}[/color]`
+            : missing
+        );
+        if (!isBBCode) {
+          warningText.setColor(THEME.colors.warning);
+        }
+        warningText.setVisible(true);
+      } else {
+        warningText.setText("");
+        warningText.setVisible(false);
       }
     }
 
@@ -1745,7 +1796,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
     const color = this.tutorialHighlighted
       ? 0xfbbf24
       : THEME.colors.collapsedBorder;
-    this.background.setStrokeStyle?.(this.tutorialHighlighted ? 3 : 2, color, 1);
+    this.background.setStrokeStyle?.(
+      this.tutorialHighlighted ? 3 : 2,
+      color,
+      1
+    );
   }
 
   private syncTextFont(target: Phaser.GameObjects.Text) {
