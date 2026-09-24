@@ -1707,6 +1707,21 @@ export class GameScene extends Phaser.Scene {
     }
 
     const currentTurn = match.current_turn ?? 0;
+    if (
+      player.position?.coord.q === TUTORIAL_CELL_COORDS.doomed.q &&
+      player.position?.coord.r === TUTORIAL_CELL_COORDS.doomed.r &&
+      currentTurn >= 4
+    ) {
+      this.recordTutorialGameplay("resolve_bot_scare");
+    }
+    if (
+      player.position?.coord.q === TUTORIAL_CELL_COORDS.playerStart.q &&
+      player.position?.coord.r === TUTORIAL_CELL_COORDS.playerStart.r &&
+      currentTurn >= 5
+    ) {
+      this.recordTutorialGameplay("return_to_bot");
+    }
+
     const doomedTile = match.map?.tiles.find(
       (tile) =>
         tile.coord.q === TUTORIAL_CELL_COORDS.doomed.q &&
@@ -1767,7 +1782,7 @@ export class GameScene extends Phaser.Scene {
     const userId = this.currentUserId;
     const player = match.playerCharacters?.[userId];
     const bot = match.playerCharacters?.[TUTORIAL_BOT_ID];
-    if (!player || !bot) {
+    if (!player) {
       return;
     }
 
@@ -1826,8 +1841,8 @@ export class GameScene extends Phaser.Scene {
     if (
       feedResolved &&
       (botMovedIntoPlayerCell ||
-        bot.position?.tileId === player.position?.tileId) &&
-      bot.position?.tileId === player.position?.tileId
+        bot?.position?.tileId === player.position?.tileId) &&
+      bot?.position?.tileId === player.position?.tileId
     ) {
       this.recordTutorialGameplay("feed_bot");
     }
@@ -1860,10 +1875,12 @@ export class GameScene extends Phaser.Scene {
         event.actorId === userId &&
         event.action.actionId === "move"
     );
-    if (
-      playerMovedToBot &&
-      bot.position?.tileId === player.position?.tileId
-    ) {
+    const sharesTileWithBot =
+      (typeof bot?.position?.tileId === "string" &&
+        bot.position.tileId === player.position?.tileId) ||
+      (player.position?.coord.q === TUTORIAL_CELL_COORDS.playerStart.q &&
+        player.position?.coord.r === TUTORIAL_CELL_COORDS.playerStart.r);
+    if (playerMovedToBot && sharesTileWithBot) {
       this.recordTutorialGameplay("return_to_bot");
     }
 
