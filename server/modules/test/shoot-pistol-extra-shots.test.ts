@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type {
-  PlayerCharacter,
-  PlayerPlannedAction,
-  ReplayPlayerEvent,
+import {
+  ActionLibrary,
+  type PlayerCharacter,
+  type PlayerPlannedAction,
+  type ReplayPlayerEvent,
 } from "@shared";
 import type { MatchRecord } from "../src/models/types";
 import {
@@ -11,6 +12,7 @@ import {
   isCharacterDead,
 } from "../src/utils/playerCharacter";
 import { executeShootPistolAction } from "../src/match/actions/shootPistol";
+import { tailorReplayEvents } from "../src/match/replay/tailorReplay";
 import type { PlannedActionParticipant } from "../src/match/actions/utils";
 
 function createMatch(firstTargetHealth = 10): {
@@ -137,6 +139,62 @@ test("each pistol shot can use its own selected destination", () => {
   assert.deepEqual(
     event.targets?.map((target) => target.targetId),
     [firstTarget.id, secondTarget.id]
+  );
+});
+
+test("normal pistol shots are heard in the same and adjacent cells only", () => {
+  const { match, participant } = createMatch();
+  participant.plan.extraExecutions = 0;
+  const sameCellListener = createDefaultCharacter("same-cell-listener");
+  sameCellListener.position = { tileId: "same", coord: { q: 0, r: 0 } };
+  const adjacentListener = createDefaultCharacter("adjacent-listener");
+  adjacentListener.position = { tileId: "adjacent", coord: { q: -1, r: 0 } };
+  const distantListener = createDefaultCharacter("distant-listener");
+  distantListener.position = { tileId: "distant", coord: { q: 2, r: 0 } };
+  for (const listener of [sameCellListener, adjacentListener, distantListener]) {
+    match.players.push(listener.id);
+    match.playerCharacters![listener.id] = listener;
+  }
+
+  const event = pistolEvent(executeShootPistolAction([participant], match));
+  assert.equal(ActionLibrary.shoot_pistol.hearingRadious, 1);
+
+  for (const listener of [sameCellListener, adjacentListener]) {
+    assert.equal(
+      tailorReplayEvents([event], listener.id, match.playerCharacters, 0).length,
+      1
+    );
+  }
+  assert.equal(
+    tailorReplayEvents([event], distantListener.id, match.playerCharacters, 0)
+      .length,
+    0
+  );
+});
+
+test("a silenced pistol shot is not heard by nearby bystanders", () => {
+  const { attacker, match, participant, firstTarget } = createMatch();
+  participant.plan.extraExecutions = 0;
+  attacker.inventory.carriedItems = [
+    { itemId: "suppressed_pistol", quantity: 1, weight: 4 },
+    { itemId: "bullet", quantity: 2, weight: 1 },
+  ];
+  const listener = createDefaultCharacter("listener");
+  listener.position = { tileId: "listener", coord: { q: 0, r: 0 } };
+  match.players.push(listener.id);
+  match.playerCharacters![listener.id] = listener;
+
+  const event = pistolEvent(executeShootPistolAction([participant], match));
+
+  assert.equal(event.visibility, undefined);
+  assert.equal(
+    tailorReplayEvents([event], listener.id, match.playerCharacters, 0).length,
+    0
+  );
+  assert.equal(
+    tailorReplayEvents([event], firstTarget.id, match.playerCharacters, 0)
+      .length,
+    1
   );
 });
 

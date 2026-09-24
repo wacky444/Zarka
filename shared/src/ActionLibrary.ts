@@ -789,6 +789,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   shoot_pistol: {
     id: "shoot_pistol",
+    hearingRadious: 1,
     revealsHidden: true,
     name: "Disparar pistola",
     category: ActionCategory.Primary,

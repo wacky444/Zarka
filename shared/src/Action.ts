@@ -134,6 +134,7 @@ export interface ActionDefinition {
   actionSubOrder: number;
   developed?: boolean;
   hidden?: boolean;
+  hearingRadious?: number;
   revealsHidden?: boolean;
   experience?: ActionExperienceReward;
   requirements?: ActionRequirement[];
