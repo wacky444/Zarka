@@ -117,7 +117,7 @@ export function sendTutorialBotMessage(
 
   try {
     const channelId = nk.channelIdBuild(
-      "",
+      TUTORIAL_BOT_SYSTEM_SENDER_ID,
       `${MATCH_CHAT_ROOM_PREFIX}${match.match_id}`,
       MATCH_CHAT_ROOM_CHANNEL_TYPE
     );

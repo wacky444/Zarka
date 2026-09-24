@@ -13,12 +13,22 @@ export async function animateMoveEvent(
   context: MoveReplayContext,
   event: ReplayPlayerEvent
 ): Promise<void> {
-  const sprite = context.getSprite(event.actorId);
+  const origin = event.action.originLocation;
+  const targetCoord =
+    event.action.targetLocation ??
+    context.currentMatch?.playerCharacters?.[event.actorId]?.position?.coord ??
+    null;
+  let sprite = context.getSprite(event.actorId);
+  if (!sprite && context.ensureSprite) {
+    sprite = context.ensureSprite(
+      event.actorId,
+      origin ?? targetCoord ?? undefined
+    );
+  }
   if (!sprite) {
     return;
   }
   const label = context.getLabel(event.actorId) ?? null;
-  const origin = event.action.originLocation;
   if (origin) {
     const originWorld = context.axialToWorld(origin);
     sprite.setPosition(originWorld.x, originWorld.y);
@@ -26,10 +36,6 @@ export async function animateMoveEvent(
       context.positionLabel(label, sprite);
     }
   }
-  const targetCoord =
-    event.action.targetLocation ??
-    context.currentMatch?.playerCharacters?.[event.actorId]?.position?.coord ??
-    null;
   if (!targetCoord) {
     return;
   }
@@ -43,11 +49,13 @@ export async function animateMoveEvent(
       duration: 450,
       ease: "Sine.easeInOut",
       onUpdate: () => {
+        sprite.setDepth(5 + sprite.y / 1000);
         if (label) {
           context.positionLabel(label, sprite);
         }
       },
       onComplete: () => {
+        sprite.setDepth(5 + sprite.y / 1000);
         if (label) {
           context.positionLabel(label, sprite);
         }

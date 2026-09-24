@@ -6,6 +6,10 @@ export interface MoveReplayContext {
   tweens: Phaser.Tweens.TweenManager;
   axialToWorld: (coord: Axial) => { x: number; y: number };
   getSprite: (playerId: string) => SkinContainer | undefined;
+  ensureSprite?: (
+    playerId: string,
+    coord?: Axial,
+  ) => SkinContainer | undefined;
   getLabel: (playerId: string) => Phaser.GameObjects.Text | undefined;
   positionLabel: (
     label: Phaser.GameObjects.Text,

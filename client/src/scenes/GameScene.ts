@@ -2666,6 +2666,8 @@ export class GameScene extends Phaser.Scene {
       axialToWorld: (coord) => this.boardRenderer!.axialToWorld(coord),
       getSprite: (playerId) =>
         this.boardRenderer?.getPlayerSprite(playerId),
+      ensureSprite: (playerId, coord) =>
+        this.boardRenderer?.ensurePlayerSprite(playerId, coord),
       getLabel: (playerId) =>
         this.boardRenderer?.getPlayerLabel(playerId),
       positionLabel: (label, sprite) =>

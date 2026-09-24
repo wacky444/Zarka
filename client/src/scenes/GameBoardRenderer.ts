@@ -747,6 +747,52 @@ export class GameBoardRenderer {
     return this.playerSprites.get(playerId);
   }
 
+  ensurePlayerSprite(
+    playerId: string,
+    coord?: Axial,
+  ): SkinContainer | undefined {
+    let sprite = this.playerSprites.get(playerId);
+    const world = coord ? this.axialToWorld(coord) : { x: 0, y: 0 };
+    if (!sprite || !sprite.active || sprite.scene !== this.scene) {
+      const playerSkin =
+        this.callbacks.getPlayerSkin(playerId) ?? DEFAULT_SKIN;
+      sprite = createSkinContainer(this.scene, world.x, world.y, playerSkin, 2);
+      sprite.setData("playerId", playerId);
+      sprite.setInteractive({ useHandCursor: true });
+      this.attachPlayerCardClickHandler(sprite, playerId);
+      this.uiCamera.ignore(sprite);
+      this.playerSprites.set(playerId, sprite);
+    }
+    sprite.setPosition(world.x, world.y);
+    sprite.setVisible(true);
+    sprite.setDepth(5 + world.y / 1000);
+
+    let label = this.playerNameLabels.get(playerId);
+    const name = this.callbacks.getPlayerName(playerId);
+    if (!label || !label.active || label.scene !== this.scene) {
+      label = this.scene.add.text(world.x, world.y, name, {
+        fontFamily: "Arial",
+        fontSize: "10px",
+        color: "#ffffff",
+        stroke: "#000000",
+        strokeThickness: 4,
+        resolution: 3,
+      });
+      label.setOrigin(0.5, 0.5);
+      label.setDepth(6);
+      label.setInteractive({ useHandCursor: true });
+      this.attachPlayerCardClickHandler(label, playerId);
+      this.uiCamera.ignore(label);
+      this.playerNameLabels.set(playerId, label);
+    }
+    label.setText(name);
+    label.setPosition(world.x, world.y);
+    label.setVisible(true);
+    this.positionLabel(label, sprite);
+
+    return sprite;
+  }
+
   getPlayerLabel(playerId: string): Phaser.GameObjects.Text | undefined {
     return this.playerNameLabels.get(playerId);
   }
