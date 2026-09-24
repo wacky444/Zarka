@@ -25,6 +25,8 @@ const BOT_TEAM_ID = "tutorial-bot";
 const TUTORIAL_MAP_COLS = 2;
 const TUTORIAL_MAP_ROWS = 2;
 const TUTORIAL_TURNS_TO_BE_AT_1_TILE = 30;
+const TUTORIAL_DESTRUCTION_WARNING_TURN = 5;
+const TUTORIAL_DESTRUCTION_TURN = 6;
 const TUTORIAL_STARTING_HEALTH = 12;
 const TUTORIAL_STARTING_ENERGY = 20;
 const TUTORIAL_STARTING_SKILL_POINTS = 5;
@@ -47,13 +49,18 @@ export interface CreateTutorialMatchOptions {
   runtimeMatchId?: string;
 }
 
-function createTutorialTile(coord: Axial, itemIds: string[] = []) {
+function createTutorialTile(
+  coord: Axial,
+  itemIds: string[] = [],
+  meta?: Record<string, unknown>
+) {
   return new HexTile(
     { q: coord.q, r: coord.r },
     CellLibrary[LocalizationType.Path],
     {
       id: `hex_${coord.q}_${coord.r}`,
-      itemIds
+      itemIds,
+      meta
     }
   ).toSnapshot();
 }
@@ -84,7 +91,10 @@ function createTutorialMap(matchId: string): {
         itemIdsAt(TUTORIAL_CELL_COORDS.playerStart)
       ),
       createTutorialTile(TUTORIAL_CELL_COORDS.botStart),
-      createTutorialTile(TUTORIAL_CELL_COORDS.doomed),
+      createTutorialTile(TUTORIAL_CELL_COORDS.doomed, [], {
+        warningTurn: TUTORIAL_DESTRUCTION_WARNING_TURN,
+        destructionTurn: TUTORIAL_DESTRUCTION_TURN
+      }),
       createTutorialTile(TUTORIAL_CELL_COORDS.spare)
     ]
   };

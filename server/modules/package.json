@@ -10,7 +10,8 @@
     "test:rpc": "node ./scripts/smoke-rpc.mjs",
     "test": "node ./test/test_skill_library_effects.mjs",
     "test:tutorial-scenario": "node ./scripts/test-tutorial-scenario.mjs",
-    "test:tutorial-profile-gate": "node ./scripts/test-tutorial-profile-gate.mjs"
+    "test:tutorial-profile-gate": "node ./scripts/test-tutorial-profile-gate.mjs",
+    "test:tutorial-integration": "node ./scripts/test-tutorial-integration.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.23.0",

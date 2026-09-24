@@ -6,6 +6,7 @@ import {
   TUTORIAL_BOT_ID,
   TUTORIAL_BOT_MESSAGES,
   TUTORIAL_BOT_SYSTEM_SENDER_ID,
+  TUTORIAL_CELL_COORDS,
   TUTORIAL_MATCH_METADATA_KEY,
   type MatchChatMessage,
   type ReplayEvent,
@@ -22,6 +23,19 @@ export function getTutorialBotMessageKeyForTurn(
 ): TutorialBotMessageKey | null {
   if (!match.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
     return null;
+  }
+  const currentTurn = match.current_turn ?? 0;
+  const warningIsVisible = (match.map?.tiles ?? []).some(
+    (tile) =>
+      tile.coord.q === TUTORIAL_CELL_COORDS.doomed.q &&
+      tile.coord.r === TUTORIAL_CELL_COORDS.doomed.r &&
+      tile.meta?.warningTurn === currentTurn &&
+      typeof tile.meta.destructionTurn === "number" &&
+      currentTurn < tile.meta.destructionTurn &&
+      tile.meta.destroyed !== true
+  );
+  if (warningIsVisible) {
+    return "destruction_warning";
   }
   let playerId: string | undefined;
   for (const candidateId of match.players) {
