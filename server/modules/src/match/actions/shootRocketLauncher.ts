@@ -13,6 +13,7 @@ import {
   ReplayActionEffect,
   axialDistance,
   getDamageReduction,
+  isCharacterHidden,
 } from "@shared";
 import {
   applyHealthDelta,
@@ -79,6 +80,22 @@ export class ShootRocketLauncherAction extends BaseAction {
       let totalDamage = 0;
       const postEvents: ReplayPlayerEvent[] = [];
       const characters = match.playerCharacters ?? {};
+      const currentTurn = Math.max(0, Math.floor(match.current_turn ?? 0)) + 1;
+      let visibleTargetCount = 0;
+      for (const targetId in characters) {
+        if (!Object.prototype.hasOwnProperty.call(characters, targetId)) {
+          continue;
+        }
+        const character = characters[targetId];
+        const characterCoord = character.position?.coord;
+        if (
+          characterCoord?.q === target.q &&
+          characterCoord.r === target.r &&
+          !isCharacterHidden(character, currentTurn)
+        ) {
+          visibleTargetCount += 1;
+        }
+      }
       for (const targetId in characters) {
         if (!Object.prototype.hasOwnProperty.call(characters, targetId)) {
           continue;
@@ -88,7 +105,9 @@ export class ShootRocketLauncherAction extends BaseAction {
         if (
           !characterCoord ||
           characterCoord.q !== target.q ||
-          characterCoord.r !== target.r
+          characterCoord.r !== target.r ||
+          (visibleTargetCount > 0 &&
+            isCharacterHidden(character, currentTurn))
         ) {
           continue;
         }

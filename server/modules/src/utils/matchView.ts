@@ -1,9 +1,10 @@
-import type {
-  GameMap,
-  MatchItemRecord,
-  MatchRecord as SharedMatchRecord,
-  PlayerCharacter,
-  PlayerCharacterUnknown
+import {
+  isCharacterHidden,
+  type GameMap,
+  type MatchItemRecord,
+  type MatchRecord as SharedMatchRecord,
+  type PlayerCharacter,
+  type PlayerCharacterUnknown
 } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { axialDistance } from "./location";
@@ -131,6 +132,9 @@ export function tailorPlayerCharactersForViewer(
     const candidate = playerCharacters[id];
     if (id === viewerKey) {
       filtered[id] = candidate;
+      continue;
+    }
+    if (isCharacterHidden(candidate, currentTurn ?? 0)) {
       continue;
     }
     if (!viewerCoord) {

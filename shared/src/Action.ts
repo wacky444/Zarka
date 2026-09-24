@@ -71,6 +71,7 @@ export type ActionId =
   | "sleep"
   | "status_dead"
   | "status_unconscious"
+  | "status_hidden"
   | "failedAction"
   | "team_assigned"
   | "buy_detective"
@@ -133,6 +134,7 @@ export interface ActionDefinition {
   actionSubOrder: number;
   developed?: boolean;
   hidden?: boolean;
+  revealsHidden?: boolean;
   experience?: ActionExperienceReward;
   requirements?: ActionRequirement[];
   requiredItems?: ItemId[];

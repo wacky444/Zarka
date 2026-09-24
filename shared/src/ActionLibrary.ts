@@ -9,6 +9,7 @@ import {
 export const ActionLibrary: ActionLibraryDefinition = {
   create_fire: {
     id: "create_fire",
+    revealsHidden: true,
     name: "Crear un incendio",
     category: ActionCategory.Secondary,
     energyCost: 2,
@@ -281,6 +282,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   protect: {
     id: "protect",
+    revealsHidden: true,
     name: "Proteger",
     category: ActionCategory.Primary,
     energyCost: 2,
@@ -331,6 +333,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   knife_attack: {
     id: "knife_attack",
+    revealsHidden: true,
     name: "Atacar con cuchillo",
     category: ActionCategory.Primary,
     energyCost: 3,
@@ -365,6 +368,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   move: {
     id: "move",
+    revealsHidden: true,
     name: "Desplazarse",
     category: ActionCategory.Primary,
     energyCost: 2,
@@ -480,6 +484,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   poison_food: {
     id: "poison_food",
+    revealsHidden: true,
     name: "Envenenar alimento",
     category: ActionCategory.Secondary,
     energyCost: 1,
@@ -542,6 +547,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   throw_object: {
     id: "throw_object",
+    revealsHidden: true,
     name: "Lanzar",
     category: ActionCategory.Primary,
     energyCost: 2,
@@ -575,6 +581,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   use_chemical_weapon: {
     id: "use_chemical_weapon",
+    revealsHidden: true,
     name: "Usar arma química",
     category: ActionCategory.Secondary,
     energyCost: 3,
@@ -605,6 +612,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   scare: {
     id: "scare",
+    revealsHidden: true,
     name: "Asustar",
     category: ActionCategory.Primary,
     energyCost: 3,
@@ -631,6 +639,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   detonate_c4: {
     id: "detonate_c4",
+    revealsHidden: true,
     name: "Detonar C4",
     category: ActionCategory.Primary,
     energyCost: 1,
@@ -657,6 +666,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   axe_attack: {
     id: "axe_attack",
+    revealsHidden: true,
     name: "Atacar con hacha",
     category: ActionCategory.Primary,
     energyCost: 3,
@@ -690,6 +700,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   bat_attack: {
     id: "bat_attack",
+    revealsHidden: true,
     name: "Golpear con bate",
     category: ActionCategory.Primary,
     energyCost: 3,
@@ -726,6 +737,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   chainsaw_attack: {
     id: "chainsaw_attack",
+    revealsHidden: true,
     name: "Atacar con motosierra",
     category: ActionCategory.Primary,
     energyCost: 3,
@@ -777,6 +789,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   shoot_pistol: {
     id: "shoot_pistol",
+    revealsHidden: true,
     name: "Disparar pistola",
     category: ActionCategory.Primary,
     energyCost: 2,
@@ -814,6 +827,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   shoot_harpoon: {
     id: "shoot_harpoon",
+    revealsHidden: true,
     name: "Disparar arpón",
     category: ActionCategory.Primary,
     energyCost: 2,
@@ -850,6 +864,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   fire_rocket_launcher: {
     id: "fire_rocket_launcher",
+    revealsHidden: true,
     name: "Disparar lanzacohetes",
     category: ActionCategory.Primary,
     energyCost: 3,
@@ -881,6 +896,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   punch: {
     id: "punch",
+    revealsHidden: true,
     name: "Puñetazo",
     category: ActionCategory.Primary,
     energyCost: 3,
@@ -936,6 +952,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   steal: {
     id: "steal",
+    revealsHidden: true,
     name: "Robar",
     category: ActionCategory.Primary,
     energyCost: 3,
@@ -1203,6 +1220,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   inject_virus: {
     id: "inject_virus",
+    revealsHidden: true,
     name: "Inyectar virus",
     category: ActionCategory.Primary,
     energyCost: 1,
@@ -1251,6 +1269,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   sleep: {
     id: "sleep",
+    revealsHidden: true,
     name: "Dormir",
     category: ActionCategory.Primary,
     energyCost: 0,
@@ -1309,6 +1328,21 @@ export const ActionLibrary: ActionLibraryDefinition = {
     notes: [
       "Evento automático cuando un personaje desciende a 5 puntos de vida o menos y no muere."
     ],
+    tags: ["Status"]
+  },
+  status_hidden: {
+    id: "status_hidden",
+    name: "Invisible",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "character_remove.png",
+    actionOrder: 99,
+    actionSubOrder: 3,
+    notes: ["Evento automático cuando un personaje con Cobarde permanece escondido."],
     tags: ["Status"]
   },
   failedAction: {

@@ -3,6 +3,7 @@
 import {
   ShopLibrary,
   LocalizationType,
+  isCharacterHidden,
   type Axial,
   type BuyShopItemPayload,
   type ReplayPlayerEvent,
@@ -278,6 +279,7 @@ export function buyShopItemRpc(
         return (
           !!candidate &&
           !isCharacterDead(candidate) &&
+          !isCharacterHidden(candidate, match.current_turn) &&
           isSameCoord(candidate.position?.coord, targetLocation)
         );
       });

@@ -427,6 +427,10 @@ export class CharacterPanelLogView {
           lines.push(`${actor} ${t("fell unconscious")}`);
           continue;
         }
+        if (actionId === "status_hidden") {
+          lines.push(`${actor} ${t("is invisible")}`);
+          continue;
+        }
         if ((actionId as string) === "zarkan_income") {
           const amount =
             typeof (event.action.metadata as { zarkansReceived?: unknown })
