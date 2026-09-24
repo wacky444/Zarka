@@ -10,6 +10,13 @@ import { MyMatchesListView } from "./MyMatchesList";
 import { LobbyView } from "./LobbyView";
 import { applyStoredVolume } from "../animation/soundPlayer";
 import { getLocale, toggleLocale } from "../services/i18n";
+import { TUTORIAL_MATCH_METADATA_KEY } from "@shared";
+import {
+  clearActiveTutorialMatchId,
+  readActiveTutorialMatchId,
+  saveActiveTutorialMatchId,
+  type TutorialMatchStorage
+} from "../tutorial/ActiveTutorialMatch";
 import type {
   LeaveMatchPayload,
   JoinMatchPayload,
@@ -50,6 +57,7 @@ export class MainScene extends Phaser.Scene {
   private currentUserId: string | null = null;
   private tutorialCompleted = false;
   private tutorialProfileRequestId = 0;
+  private tutorialLaunchInProgress = false;
   private readonly wakeHandler = () => {
     this.layoutMain();
     void this.refreshTutorialGate(true);
@@ -305,6 +313,11 @@ export class MainScene extends Phaser.Scene {
         if (this.scene.isSleeping("MainScene")) {
           this.scene.wake("MainScene");
         }
+        clearActiveTutorialMatchId(
+          this.getTutorialMatchStorage(),
+          this.currentUserId,
+          this.currentMatchId ?? undefined
+        );
         const runtimeMatchId = this.getCurrentRuntimeMatchId();
         if (runtimeMatchId && this.turnService) {
           this.turnService
@@ -346,6 +359,11 @@ export class MainScene extends Phaser.Scene {
             if (runtimeMatchId) {
               await this.turnService.leaveRealtimeMatch(runtimeMatchId);
             }
+            clearActiveTutorialMatchId(
+              this.getTutorialMatchStorage(),
+              this.currentUserId,
+              matchId
+            );
             // Clear the current match after leaving its realtime presence.
             this.setCurrentMatchId(null);
             this.currentMatchName = null;
@@ -387,6 +405,11 @@ export class MainScene extends Phaser.Scene {
           if (runtimeMatchId) {
             await this.turnService.leaveRealtimeMatch(runtimeMatchId);
           }
+          clearActiveTutorialMatchId(
+            this.getTutorialMatchStorage(),
+            this.currentUserId,
+            this.currentMatchId
+          );
           this.setCurrentMatchId(null);
           this.currentMatchName = null;
           this.lobbyView.setPlayers([]);
@@ -459,6 +482,11 @@ export class MainScene extends Phaser.Scene {
             if (runtimeMatchId) {
               await this.turnService.leaveRealtimeMatch(runtimeMatchId);
             }
+            clearActiveTutorialMatchId(
+              this.getTutorialMatchStorage(),
+              this.currentUserId,
+              this.currentMatchId ?? undefined
+            );
             this.setCurrentMatchId(null);
             this.currentMatchName = null;
             this.lobbyView.setPlayers([]);
@@ -479,6 +507,7 @@ export class MainScene extends Phaser.Scene {
 
       // Initialize in main view
       this.applyViewVisibility();
+      await this.resumeActiveTutorialMatch();
     } catch (e) {
       console.error(e);
       const msg = e instanceof Error ? e.message : String(e);
@@ -528,6 +557,157 @@ export class MainScene extends Phaser.Scene {
     }
     this.scene.sleep("MainScene");
     this.scene.run("EndGameReportScene", { matchId });
+  }
+
+  private getTutorialMatchStorage(): TutorialMatchStorage | null {
+    try {
+      return typeof window === "undefined" ? null : window.localStorage;
+    } catch {
+      return null;
+    }
+  }
+
+  private async startTutorial(): Promise<void> {
+    if (!this.turnService || !this.currentUserId || this.tutorialLaunchInProgress) {
+      return;
+    }
+    this.tutorialLaunchInProgress = true;
+    this.statusText.setText("Starting tutorial...");
+    try {
+      const savedMatchId = readActiveTutorialMatchId(
+        this.getTutorialMatchStorage(),
+        this.currentUserId
+      );
+      if (savedMatchId) {
+        const resumed = await this.openTutorialMatch(savedMatchId);
+        if (resumed !== "stale") {
+          return;
+        }
+      }
+
+      const createResponse = this.parseRpcPayload<{
+        ok?: boolean;
+        match_id?: string;
+      }>(await this.turnService.createTutorialMatch());
+      if (!createResponse.ok || !createResponse.match_id) {
+        throw new Error("Tutorial match creation failed");
+      }
+      saveActiveTutorialMatchId(
+        this.getTutorialMatchStorage(),
+        this.currentUserId,
+        createResponse.match_id
+      );
+      const opened = await this.openTutorialMatch(createResponse.match_id);
+      if (opened === "stale") {
+        throw new Error("The tutorial match is no longer available");
+      }
+    } catch (error) {
+      console.error("start tutorial failed", error);
+      this.statusText.setText(
+        error instanceof Error
+          ? `Could not start tutorial: ${error.message}`
+          : "Could not start tutorial. Please try again."
+      );
+    } finally {
+      this.tutorialLaunchInProgress = false;
+    }
+  }
+
+  private async resumeActiveTutorialMatch(): Promise<void> {
+    if (!this.turnService || !this.currentUserId) {
+      return;
+    }
+    const matchId = readActiveTutorialMatchId(
+      this.getTutorialMatchStorage(),
+      this.currentUserId
+    );
+    if (!matchId) {
+      return;
+    }
+    const result = await this.openTutorialMatch(matchId);
+    if (result === "stale") {
+      this.statusText.setText(
+        "The previous tutorial session ended. Select Tutorial to start again."
+      );
+    }
+  }
+
+  private async openTutorialMatch(
+    matchId: string
+  ): Promise<"opened" | "stale" | "retry"> {
+    if (!this.turnService || !this.currentUserId) {
+      return "retry";
+    }
+    let match: GetStatePayload["match"];
+    try {
+      const response = await this.turnService.getState(matchId);
+      const payload = this.parseRpcPayload<GetStatePayload>(response);
+      if (payload.error) {
+        if (payload.error === "not_found") {
+          clearActiveTutorialMatchId(
+            this.getTutorialMatchStorage(),
+            this.currentUserId,
+            matchId
+          );
+          return "stale";
+        }
+        throw new Error(payload.error);
+      }
+      match = payload.match;
+    } catch (error) {
+      console.warn("Failed to load tutorial match", error);
+      this.statusText.setText("Could not reconnect to the tutorial. Try again.");
+      return "retry";
+    }
+
+    if (
+      !match ||
+      !match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] ||
+      !match.players.includes(this.currentUserId)
+    ) {
+      clearActiveTutorialMatchId(
+        this.getTutorialMatchStorage(),
+        this.currentUserId,
+        matchId
+      );
+      return "stale";
+    }
+
+    saveActiveTutorialMatchId(
+      this.getTutorialMatchStorage(),
+      this.currentUserId,
+      matchId
+    );
+    if (this.currentMatchId === matchId) {
+      this.currentMatchName = match.name ?? "Tutorial";
+      this.showView("inMatch");
+      if (
+        !this.scene.isActive("GameScene") &&
+        !this.scene.isSleeping("GameScene")
+      ) {
+        this.scene.sleep("MainScene");
+        this.scene.run("GameScene");
+      }
+      return "opened";
+    }
+    if (match.started === false || match.removed !== 0) {
+      this.setCurrentMatchId(matchId);
+      this.currentRuntimeMatchId = match.runtime_match_id ?? matchId;
+      this.currentMatchName = match.name ?? "Tutorial";
+      this.showView("inMatch");
+      this.scene.sleep("MainScene");
+      this.scene.run("GameScene");
+      return "opened";
+    }
+
+    try {
+      await this.joinMatch(matchId);
+      return this.currentMatchId === matchId ? "opened" : "retry";
+    } catch (error) {
+      console.warn("Failed to join tutorial match", error);
+      this.statusText.setText("Could not reconnect to the tutorial. Try again.");
+      return "retry";
+    }
   }
 
   private async refreshTutorialGate(forceRefresh: boolean): Promise<void> {
@@ -617,7 +797,7 @@ export class MainScene extends Phaser.Scene {
       0,
       0,
       "Tutorial",
-      () => undefined,
+      () => this.startTutorial(),
       ["main"]
     ).setOrigin(0.5);
 

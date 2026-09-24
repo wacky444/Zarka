@@ -10,6 +10,10 @@ import {
 import { GameBoardRenderer } from "./GameBoardRenderer";
 import { ActionPlanSynchronizer } from "./ActionPlanSynchronizer";
 import { TutorialProgressController } from "../tutorial/TutorialProgressController";
+import {
+  clearActiveTutorialMatchId,
+  getBrowserTutorialMatchStorage
+} from "../tutorial/ActiveTutorialMatch";
 import { getTutorialUiPolicy } from "../tutorial/TutorialUiPolicy";
 import type { TurnService } from "../services/turnService";
 import { MatchChatService } from "../services/chatService";
@@ -682,6 +686,7 @@ export class GameScene extends Phaser.Scene {
       | string
       | null;
     await this.initMatchChat(match?.match_id ?? fallbackMatchId ?? null);
+    await this.restoreTutorialProgressFromHistory(match);
     this.renderMap(map);
     if (match) {
       this.renderPlayerCharacters(match);
@@ -859,6 +864,42 @@ export class GameScene extends Phaser.Scene {
         this.chatService = null;
       }
     });
+  }
+
+  private async restoreTutorialProgressFromHistory(
+    match: MatchRecord | null
+  ): Promise<void> {
+    if (!match || !this.tutorialController || !this.turnService) {
+      return;
+    }
+    const maxTurn = Math.max(0, Math.floor(match.current_turn ?? 0));
+    for (let turn = 1; turn <= maxTurn; turn += 1) {
+      try {
+        const response = await this.turnService.getReplay(match.match_id, turn);
+        const payload = this.parseRpcPayload<GetReplayPayload>(response);
+        if (payload.error) {
+          throw new Error(payload.error);
+        }
+        const events = Array.isArray(payload.events) ? payload.events : [];
+        const replayMatch: MatchRecord = {
+          ...match,
+          current_turn: payload.turn ?? turn,
+          playerCharacters:
+            payload.snapshot?.playerCharacters ?? match.playerCharacters,
+          deadCharacters:
+            payload.snapshot?.deadCharacters ?? match.deadCharacters,
+          map: payload.snapshot?.map ?? match.map,
+          items: payload.snapshot?.items ?? match.items
+        };
+        this.handleTutorialTurn(replayMatch, events);
+        this.observeTutorialMatchState(replayMatch);
+      } catch (error) {
+        console.warn(`Failed to restore tutorial replay for turn ${turn}`, error);
+        break;
+      }
+    }
+    this.observeTutorialMatchState(match);
+    this.observeTutorialChatHistory(this.chatMessages);
   }
 
   private async fetchMatchFromServer(): Promise<MatchRecord | null> {
@@ -1138,7 +1179,8 @@ export class GameScene extends Phaser.Scene {
     if (
       !this.victoryOverlay ||
       !this.currentUserId ||
-      this.reportTransitionStarted
+      this.reportTransitionStarted ||
+      this.victoryOverlay.isShowing()
     ) {
       return;
     }
@@ -1196,6 +1238,13 @@ export class GameScene extends Phaser.Scene {
     }
     this.reportTransitionStarted = true;
     const matchId = this.registry.get("currentMatchId") as string | null;
+    if (matchId && this.currentMatch?.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
+      clearActiveTutorialMatchId(
+        getBrowserTutorialMatchStorage(),
+        this.currentUserId,
+        matchId
+      );
+    }
     const runtimeMatchId = this.currentMatch?.runtime_match_id ?? matchId;
     if (runtimeMatchId && this.turnService) {
       this.turnService
@@ -1708,6 +1757,38 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (
+      events.some(
+        (event) =>
+          event.kind === "player" &&
+          event.actorId === userId &&
+          event.action.actionId === "search"
+      )
+    ) {
+      this.recordTutorialGameplay("search");
+    }
+    if (
+      events.some(
+        (event) =>
+          event.kind === "player" &&
+          event.actorId === userId &&
+          event.action.actionId === "pick_up" &&
+          Number(event.action.metadata?.pickedCount) > 0
+      )
+    ) {
+      this.recordTutorialGameplay("pickup_items");
+    }
+    if (
+      events.some(
+        (event) =>
+          event.kind === "player" &&
+          event.actorId === userId &&
+          event.action.actionId === "buy_detective"
+      )
+    ) {
+      this.recordTutorialGameplay("buy_detective");
+    }
+
     const feedResolved = events.some(
       (event) =>
         event.kind === "player" &&
@@ -1761,6 +1842,27 @@ export class GameScene extends Phaser.Scene {
       bot.position?.tileId === player.position?.tileId
     ) {
       this.recordTutorialGameplay("return_to_bot");
+    }
+
+    const finalScareResolved = events.some(
+      (event) =>
+        event.kind === "player" &&
+        event.actorId === userId &&
+        event.action.actionId === "scare" &&
+        event.targets?.some(
+          (target) =>
+            target.targetId === TUTORIAL_BOT_ID &&
+            target.metadata?.movedTo !== undefined &&
+            typeof target.metadata.movedTo === "object" &&
+            target.metadata.movedTo !== null &&
+            "q" in target.metadata.movedTo &&
+            "r" in target.metadata.movedTo &&
+            target.metadata.movedTo.q === TUTORIAL_CELL_COORDS.doomed.q &&
+            target.metadata.movedTo.r === TUTORIAL_CELL_COORDS.doomed.r
+        )
+    );
+    if (finalScareResolved) {
+      this.recordTutorialGameplay("scare_bot_to_doomed_cell");
     }
 
     const doomedCellDestroyed = events.some(
@@ -1962,6 +2064,15 @@ export class GameScene extends Phaser.Scene {
       )
     ) {
       this.recordTutorialGameplay("bot_chat");
+    }
+    if (
+      messages.some(
+        (message) =>
+          message.senderId === TUTORIAL_BOT_ID &&
+          message.content === TUTORIAL_BOT_MESSAGES.axe_ordering
+      )
+    ) {
+      this.recordTutorialGameplay("plan_axe_attack");
     }
   }
 

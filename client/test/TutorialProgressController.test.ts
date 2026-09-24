@@ -3,6 +3,12 @@ import { test } from "node:test";
 import { TutorialProgressController } from "../src/tutorial/TutorialProgressController.ts";
 import { getTutorialUiPolicy } from "../src/tutorial/TutorialUiPolicy.ts";
 import { TUTORIAL_INSTRUCTIONS } from "../src/tutorial/TutorialInstructions.ts";
+import {
+  clearActiveTutorialMatchId,
+  readActiveTutorialMatchId,
+  saveActiveTutorialMatchId,
+  type TutorialMatchStorage
+} from "../src/tutorial/ActiveTutorialMatch.ts";
 import { TUTORIAL_STEP_IDS, type TutorialStepId } from "@shared";
 
 test("tutorial progress is ordered and repeated events are idempotent", () => {
@@ -39,6 +45,36 @@ test("tutorial progress is ordered and repeated events are idempotent", () => {
   assert.equal(gameplayController.isComplete, true);
 });
 
+test("restored gameplay events wait for presentation steps, then resume in order", () => {
+  const controller = new TutorialProgressController(TUTORIAL_STEP_IDS);
+  const restoredGameplaySteps: TutorialStepId[] = [
+    "choose_skills",
+    "search",
+    "pickup_items",
+    "feed_bot",
+    "bot_chat",
+    "buy_detective",
+    "plan_axe_attack",
+    "resolve_bot_scare",
+    "return_to_bot",
+    "observe_destruction_warning",
+    "scare_bot_to_doomed_cell",
+    "resolve_destruction",
+    "victory_recap"
+  ];
+  for (const stepId of restoredGameplaySteps) {
+    controller.recordGameplay(stepId);
+  }
+  assert.equal(controller.currentStep, "map_pan");
+
+  controller.recordPresentation("map_pan");
+  controller.recordPresentation("inspect_current_cell");
+  controller.recordPresentation("inspect_nearby_cell");
+  assert.equal(controller.currentStep, "search");
+  controller.recordPresentation("search");
+  assert.equal(controller.currentStep, "open_chat");
+});
+
 test("tutorial UI policy exposes only the actions and items for the current lesson", () => {
   const inspect = getTutorialUiPolicy("inspect_current_cell");
   assert.deepEqual(inspect.primaryActionIds, []);
@@ -67,6 +103,26 @@ test("tutorial UI policy exposes only the actions and items for the current less
   const resolveScare = getTutorialUiPolicy("resolve_bot_scare");
   assert.equal(resolveScare.actionEditingEnabled, false);
   assert.equal(resolveScare.readyEnabled, true);
+});
+
+test("active tutorial match storage is user-scoped and survives scene reloads", () => {
+  const values = new Map<string, string>();
+  const storage: TutorialMatchStorage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key)
+  };
+
+  assert.equal(saveActiveTutorialMatchId(storage, "user-a", "match-a"), true);
+  assert.equal(readActiveTutorialMatchId(storage, "user-a"), "match-a");
+  assert.equal(readActiveTutorialMatchId(storage, "user-b"), null);
+  assert.equal(
+    clearActiveTutorialMatchId(storage, "user-a", "stale-match"),
+    false
+  );
+  assert.equal(readActiveTutorialMatchId(storage, "user-a"), "match-a");
+  assert.equal(clearActiveTutorialMatchId(storage, "user-a", "match-a"), true);
+  assert.equal(readActiveTutorialMatchId(storage, "user-a"), null);
 });
 
 test("every ordered tutorial step has an instruction and optional hint", () => {

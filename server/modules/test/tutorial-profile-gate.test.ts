@@ -7,6 +7,7 @@ import { createMatchRpc } from "../src/rpc/createMatch";
 import { createTutorialMatchRpc } from "../src/rpc/createTutorialMatch";
 import { getUserAccountRpc } from "../src/rpc/getUserAccount";
 import { joinMatchRpc } from "../src/rpc/joinMatch";
+import { leaveMatchRpc } from "../src/rpc/leaveMatch";
 import { listMyMatchesRpc } from "../src/rpc/listMyMatches";
 import { createTutorialMatch } from "../src/match/TutorialScenario";
 import { asyncTurnMatchJoinAttempt } from "../src/match/async_turn/joinAttempt";
@@ -51,6 +52,7 @@ function createLogger(): nkruntime.Logger {
 function createNakamaHarness() {
   const objects = new Map<string, StoredObject>();
   const users = new Map<string, FakeUser>();
+  const signals: string[] = [];
   let versionCounter = 0;
   let runtimeCounter = 0;
   let uuidCounter = 0;
@@ -125,7 +127,10 @@ function createNakamaHarness() {
     },
     matchCreate: () => `runtime-${++runtimeCounter}`,
     matchList: () => ({ matches: [] }),
-    matchSignal: () => "",
+    matchSignal: (_matchId: string, data: string) => {
+      signals.push(data);
+      return "";
+    },
     uuidv4: () => `match-${++uuidCounter}`,
     usersGetId: (userIds: string[]) =>
       userIds.flatMap((userId) => {
@@ -151,6 +156,7 @@ function createNakamaHarness() {
   return {
     nakama,
     storage,
+    signals,
     setUser(userId: string, metadata: unknown): void {
       users.set(userId, {
         id: userId,
@@ -249,6 +255,11 @@ test("profile gate blocks normal create and join but exempts tutorial matches", 
   assert.equal(tutorialResponse.ok, true);
   assert.equal(typeof tutorialResponse.match_id, "string");
   assert.equal(typeof tutorialResponse.runtime_match_id, "string");
+  const resumedTutorial = JSON.parse(
+    createTutorialMatchRpc(context, logger, harness.nakama, "")
+  ) as { ok?: boolean; match_id?: string; runtime_match_id?: string };
+  assert.equal(resumedTutorial.match_id, tutorialResponse.match_id);
+  assert.equal(resumedTutorial.runtime_match_id, tutorialResponse.runtime_match_id);
   const tutorialRecord = harness.storage.getMatch(tutorialResponse.match_id!);
   const tutorialMetadata = tutorialRecord?.match.metadata?.[
     TUTORIAL_MATCH_METADATA_KEY
@@ -304,6 +315,63 @@ test("profile gate blocks normal create and join but exempts tutorial matches", 
     realtimeJoin(harness.nakama, logger, normalCreate.match_id, userId).accept,
     true
   );
+});
+
+test("leaving an incomplete tutorial discards its session so it can restart", () => {
+  const harness = createNakamaHarness();
+  const logger = createLogger();
+  const userId = "tutorial-abandon-user";
+  harness.setUser(userId, { zarka: { tutorialCompleted: false } });
+  const context = { userId } as nkruntime.Context;
+  const created = JSON.parse(
+    createTutorialMatchRpc(context, logger, harness.nakama, "")
+  ) as { match_id: string };
+  const matchRead = harness.storage.getMatch(created.match_id);
+  assert.ok(matchRead);
+  harness.storage.appendReplayTurn({
+    match_id: created.match_id,
+    turn: 0,
+    events: [],
+    created_at: 123
+  });
+  harness.storage.appendChatMessage({
+    matchId: created.match_id,
+    messageId: `tutorial:${created.match_id}:bot_claim`,
+    senderId: TUTORIAL_BOT_ID,
+    displayName: "Tutorial Bot",
+    content: "I am on your team. You can trust me.",
+    createdAt: 123,
+    system: false
+  });
+
+  const left = JSON.parse(
+    leaveMatchRpc(
+      context,
+      logger,
+      harness.nakama,
+      JSON.stringify({ match_id: created.match_id })
+    )
+  ) as { ok?: boolean; left?: boolean };
+  assert.equal(left.ok, true);
+  assert.equal(left.left, true);
+  assert.ok(
+    harness.signals.some(
+      (signal) => JSON.parse(signal).type === "match_removed"
+    )
+  );
+  assert.equal(harness.storage.getMatch(created.match_id), null);
+  assert.equal(harness.storage.listReplaysForMatch(created.match_id).length, 0);
+  assert.equal(harness.storage.listChatMessages(created.match_id).length, 0);
+  assert.equal(
+    (harness.getUser(userId)?.metadata as { zarka?: { tutorialCompleted?: boolean } })
+      .zarka?.tutorialCompleted,
+    false
+  );
+
+  const restarted = JSON.parse(
+    createTutorialMatchRpc(context, logger, harness.nakama, "")
+  ) as { match_id: string };
+  assert.notEqual(restarted.match_id, created.match_id);
 });
 
 test("authoritative tutorial victory sets completion once and preserves profile data", () => {
