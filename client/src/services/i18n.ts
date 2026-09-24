@@ -229,6 +229,14 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "A prestigious hitman with a chainsaw and bulletproof vest.": "Un sicario prestigioso con una motosierra y un chaleco antibalas.",
   "20 + 5 per person": "20 + 5 por persona",
   "Match Chat": "Chat de partida",
+  "I am on your team. You can trust me.":
+    "Estoy en tu equipo. Puedes confiar en mí.",
+  "You checked instead of trusting me. Information can be more valuable than an attack.":
+    "Comprobaste la información en vez de confiar en mí. La información puede valer más que un ataque.",
+  "You planned to attack me, but actions resolve in an order. Scare can move you before your attack happens.":
+    "Planeaste atacarme, pero las acciones se resuelven en orden. Asustar puede moverte antes de que ataques.",
+  "The map itself is dangerous. Watch the warning, then use positioning to survive.":
+    "El propio mapa es peligroso. Observa la advertencia y usa el posicionamiento para sobrevivir.",
   "No messages yet.": "Todavía no hay mensajes.",
   "Type a message": "Escribe un mensaje",
   Send: "Enviar",

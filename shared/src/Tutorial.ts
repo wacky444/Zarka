@@ -1,5 +1,29 @@
+import { NAKAMA_SYSTEM_USER_ID } from "./chat";
+
 export const TUTORIAL_MATCH_METADATA_KEY = "tutorial" as const;
 export const TUTORIAL_BOT_ID = "bot1" as const;
+export const TUTORIAL_BOT_NAME = "Tutorial Bot" as const;
+export const TUTORIAL_BOT_SYSTEM_SENDER_ID = NAKAMA_SYSTEM_USER_ID;
+
+export const TUTORIAL_BOT_MESSAGE_KEYS = [
+  "bot_claim",
+  "detective_result",
+  "axe_ordering",
+  "destruction_warning"
+] as const;
+
+export type TutorialBotMessageKey =
+  (typeof TUTORIAL_BOT_MESSAGE_KEYS)[number];
+
+export const TUTORIAL_BOT_MESSAGES: Record<TutorialBotMessageKey, string> = {
+  bot_claim: "I am on your team. You can trust me.",
+  detective_result:
+    "You checked instead of trusting me. Information can be more valuable than an attack.",
+  axe_ordering:
+    "You planned to attack me, but actions resolve in an order. Scare can move you before your attack happens.",
+  destruction_warning:
+    "The map itself is dangerous. Watch the warning, then use positioning to survive."
+};
 
 export const TUTORIAL_CELL_COORDS = {
   playerStart: { q: 0, r: 0 },

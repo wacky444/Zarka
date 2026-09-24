@@ -291,7 +291,7 @@ export class StorageService {
   appendChatMessage(
     message: MatchChatMessage,
     limit = CHAT_HISTORY_LIMIT
-  ): void {
+  ): boolean {
     const matchId = message.matchId;
     const maxAttempts = 5;
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
@@ -302,9 +302,10 @@ export class StorageService {
       const alreadyStored = currentMessages.some(
         (entry) => entry.messageId === message.messageId
       );
-      if (!alreadyStored) {
-        currentMessages.push(message);
+      if (alreadyStored) {
+        return false;
       }
+      currentMessages.push(message);
       if (currentMessages.length > limit) {
         currentMessages.splice(0, currentMessages.length - limit);
       }
@@ -315,7 +316,7 @@ export class StorageService {
       };
       try {
         this.writeChatLog(log, existing?.version);
-        return;
+        return true;
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
         if (!/version conflict/i.test(errMsg)) {

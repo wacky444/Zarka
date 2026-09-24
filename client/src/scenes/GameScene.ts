@@ -37,6 +37,7 @@ import {
   normalizeAxial,
   ItemLibrary,
   TUTORIAL_BOT_ID,
+  TUTORIAL_BOT_MESSAGES,
   TUTORIAL_CELL_COORDS,
   TUTORIAL_MATCH_METADATA_KEY,
   TUTORIAL_STEP_IDS,
@@ -1869,8 +1870,8 @@ export class GameScene extends Phaser.Scene {
     try {
       const history = await this.chatService.connect(matchId);
       this.chatMessages = Array.isArray(history) ? history : [];
-      this.observeTutorialChatHistory(this.chatMessages);
       this.syncChatMessagesToPanel();
+      this.observeTutorialChatHistory(this.chatMessages);
       panel.setChatConnectionState("ready", "Connected");
       panel.setChatInputEnabled(true);
       this.chatUnsubscribe = this.chatService.onMessage((payload) => {
@@ -1884,17 +1885,29 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleIncomingChatMessage(message: MatchChatMessage) {
+    if (
+      message.senderId === TUTORIAL_BOT_ID &&
+      this.chatMessages.some((entry) => entry.messageId === message.messageId)
+    ) {
+      return;
+    }
     this.chatMessages = [...this.chatMessages, message].slice(-100);
-    if (message.senderId === TUTORIAL_BOT_ID) {
+    if (this.characterPanel) {
+      this.characterPanel.appendChatMessage(this.toChatViewModel(message));
+      this.characterPanel.markChatUnread(true);
+    }
+    if (
+      message.senderId === TUTORIAL_BOT_ID &&
+      message.content === TUTORIAL_BOT_MESSAGES.bot_claim
+    ) {
       this.recordTutorialGameplay("bot_chat");
     }
     if (!this.characterPanel) {
       return;
     }
-    this.characterPanel.appendChatMessage(this.toChatViewModel(message));
-    this.characterPanel.markChatUnread(true);
     if (
       message.senderId &&
+      message.senderId !== TUTORIAL_BOT_ID &&
       !this.playerNameMap[message.senderId] &&
       this.turnService
     ) {
@@ -1904,6 +1917,17 @@ export class GameScene extends Phaser.Scene {
 
   private observeTutorialChatHistory(messages: MatchChatMessage[]): void {
     if (messages.some((message) => message.senderId === TUTORIAL_BOT_ID)) {
+      if (!this.chatTabActive) {
+        this.characterPanel?.markChatUnread(true);
+      }
+    }
+    if (
+      messages.some(
+        (message) =>
+          message.senderId === TUTORIAL_BOT_ID &&
+          message.content === TUTORIAL_BOT_MESSAGES.bot_claim
+      )
+    ) {
       this.recordTutorialGameplay("bot_chat");
     }
   }
@@ -1958,7 +1982,10 @@ export class GameScene extends Phaser.Scene {
           ? message.messageId
           : `${message.createdAt}:${message.senderId}`,
       senderLabel: message.system ? "System" : resolvedName,
-      content: message.content,
+      content:
+        message.senderId === TUTORIAL_BOT_ID
+          ? t(message.content)
+          : message.content,
       timestamp: message.createdAt,
       isSelf: !!this.currentUserId && message.senderId === this.currentUserId,
       isSystem: message.system === true
@@ -1990,11 +2017,7 @@ export class GameScene extends Phaser.Scene {
     this.chatTabActive = true;
     this.recordTutorialPresentation("open_chat");
     if (this.chatService) {
-      if (this.chatMessages.length === 0) {
-        await this.refreshChatHistory();
-      } else {
-        this.syncChatMessagesToPanel();
-      }
+      await this.refreshChatHistory();
       return;
     }
     const matchId = this.registry.get("currentMatchId") as string | null;
@@ -2011,8 +2034,8 @@ export class GameScene extends Phaser.Scene {
     try {
       const history = await this.chatService.refreshHistory();
       this.chatMessages = Array.isArray(history) ? history : [];
-      this.observeTutorialChatHistory(this.chatMessages);
       this.syncChatMessagesToPanel();
+      this.observeTutorialChatHistory(this.chatMessages);
     } catch (error) {
       console.warn("chat history refresh failed", error);
     } finally {

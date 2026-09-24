@@ -4,6 +4,7 @@ import {
   LocalizationType,
   ShopLibrary,
   TUTORIAL_BOT_ID,
+  TUTORIAL_BOT_NAME,
   TUTORIAL_CELL_COORDS,
   TUTORIAL_MATCH_METADATA_KEY,
   type Axial,
@@ -17,9 +18,7 @@ import {
 import type { MatchRecord } from "../models/types";
 import { createDefaultCharacter } from "../utils/playerCharacter";
 
-export { TUTORIAL_BOT_ID, TUTORIAL_CELL_COORDS };
-
-export const TUTORIAL_BOT_NAME = "Tutorial Bot";
+export { TUTORIAL_BOT_ID, TUTORIAL_BOT_NAME, TUTORIAL_CELL_COORDS };
 
 const PLAYER_TEAM_ID = "tutorial-player";
 const BOT_TEAM_ID = "tutorial-bot";
