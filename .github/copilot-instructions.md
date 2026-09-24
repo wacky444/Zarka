@@ -54,6 +54,7 @@ Key files:
 - Use services (`nakama.ts`, `turnService.ts`, `sessionManager.ts`) for IO; scenes should focus on presentation and state orchestration.
 - Put map and board rendering in `client/src/scenes/GameBoardRenderer.ts`; keep `GameScene` focused on scene coordination.
 - Keep UI building blocks in `client/src/ui/`; prefer lightweight composition over deep inheritance.
+- For viewport-positioned Rex `scrollablePanel`s, call `setOrigin(0, 0)` before `setPosition(x, y)`; the default center origin shifts top-left-positioned panels and can leave their right edge at screen center.
 - Assets live under `client/public/assets/`; update XML/JSON atlases alongside spritesheets when editing.
 - Use external libraries freely, preferring libraries officially recommended by Phaser or widely used in Phaser projects (e.g. `phaser3-rex-plugins`).
 
