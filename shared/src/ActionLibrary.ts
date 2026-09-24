@@ -50,7 +50,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requirements: [{ description: "Debe realizarse en el hospital." }],
     effects: [
       {
-        description: "Recupera [health-recover]5[/health-recover] puntos de vida."
+        description:
+          "Recupera [health-recover]5[/health-recover] puntos de vida."
       }
     ],
     tags: ["Support", "Status"]
@@ -683,7 +684,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requirements: [{ description: "Requiere tener un hacha." }],
     effects: [
       {
-        description: "Inflige [health-damage]8[/health-damage] de vida al objetivo."
+        description:
+          "Inflige [health-damage]8[/health-damage] de vida al objetivo."
       }
     ],
     extraExecution: {
@@ -922,7 +924,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         "Cada repetición añade [health-damage]1[/health-damage] punto de daño."
     },
     texture: "Board Game Icons",
-    frame: "hand.png",
+    frame: "fist.png",
     actionOrder: 11,
     actionSubOrder: 8,
     tags: ["Attack", "SingleTarget"]
@@ -1284,7 +1286,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     },
     effects: [
       {
-        description: "Recupera [health-recover]2[/health-recover] puntos de vida."
+        description:
+          "Recupera [health-recover]2[/health-recover] puntos de vida."
       }
     ],
     extraExecution: {
@@ -1294,7 +1297,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         "Si otro personaje duerme con esfuerzo se recuperan [health-recover]5[/health-recover] puntos de vida adicionales."
     },
     texture: "Board Game Icons",
-    frame: "pawn_table.png",
+    frame: "bed.png",
     actionOrder: 17,
     actionSubOrder: 3,
     tags: ["Support", "Status"]
@@ -1343,7 +1346,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "character_remove.png",
     actionOrder: 99,
     actionSubOrder: 3,
-    notes: ["Evento automático cuando un personaje con Cobarde permanece escondido."],
+    notes: [
+      "Evento automático cuando un personaje con Cobarde permanece escondido."
+    ],
     tags: ["Status"]
   },
   failedAction: {
@@ -1375,9 +1380,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "flag.png",
     actionOrder: 0,
     actionSubOrder: 0,
-    notes: [
-      "Informe personal de asignación de equipo en el turno 0."
-    ],
+    notes: ["Informe personal de asignación de equipo en el turno 0."],
     tags: ["Status"]
   },
   buy_detective: {

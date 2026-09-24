@@ -24,8 +24,6 @@
 
 - y muchas skills de atacar tienen iconos muy distintos
 
-- safe icon
-
 - autoreplay after turn in mobile
 
 - not getting the logs of player eliminateds

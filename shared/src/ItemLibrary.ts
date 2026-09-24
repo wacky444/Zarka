@@ -11,7 +11,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     weight: 1,
     description:
       "Recipiente vacío que puede combinarse con combustible para elaborar un cóctel molotov.",
-    tags: ["Component", "Crafting"],
+    tags: ["Component", "Crafting"]
   },
   drink: {
     id: "drink",
@@ -24,7 +24,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description: "Recupera 12 puntos de esfuerzo.",
     sellValue: 2,
     notes: ["Al usarla se obtiene una botella."],
-    tags: ["Energy"],
+    tags: ["Energy"]
   },
   food: {
     id: "food",
@@ -36,7 +36,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     weight: 3,
     description: "Recupera 20 puntos de esfuerzo.",
     sellValue: 3,
-    tags: ["Energy"],
+    tags: ["Energy"]
   },
   bandage: {
     id: "bandage",
@@ -49,7 +49,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Recupera 5 puntos de vida y puede aplicarse a otro personaje.",
     sellValue: 3,
-    tags: ["Healing"],
+    tags: ["Healing"]
   },
   medicine: {
     id: "medicine",
@@ -61,7 +61,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     weight: 1,
     description: "Recupera 8 puntos de vida y puede compartirse con aliados.",
     sellValue: 5,
-    tags: ["Healing"],
+    tags: ["Healing"]
   },
   antidote: {
     id: "antidote",
@@ -74,7 +74,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Cura una intoxicación al aplicarse sobre un personaje en la misma localización.",
     sellValue: 2,
-    tags: ["Healing", "Status"],
+    tags: ["Healing", "Status"]
   },
   bulletproof_vest: {
     id: "bulletproof_vest",
@@ -89,7 +89,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
       "Reduce en 1 el daño recibido y en 3 si procede de balas o flechas mientras permanezca en el inventario. No protege frente a fuego, veneno, virus, motosierra ni arma química.",
     sellValue: 20,
     notes: ["No se puede robar."],
-    tags: ["Protective", "Wearable"],
+    tags: ["Protective", "Wearable"]
   },
   bandolier: {
     id: "bandolier",
@@ -101,7 +101,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     weight: 0,
     description: "Aumenta la capacidad máxima de carga en 5 unidades.",
     sellValue: 4,
-    tags: ["Wearable", "Storage"],
+    tags: ["Wearable", "Storage"]
   },
   wood: {
     id: "wood",
@@ -114,7 +114,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Materia prima para fabricar o manipular armas y otros objetos.",
     sellValue: 0,
-    tags: ["Component", "Crafting"],
+    tags: ["Component", "Crafting"]
   },
   spike: {
     id: "spike",
@@ -127,7 +127,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Pieza punzante usada como componente en la creación de armas.",
     sellValue: 0,
-    tags: ["Component", "Crafting"],
+    tags: ["Component", "Crafting"]
   },
   knife: {
     id: "knife",
@@ -141,7 +141,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
       "Ataque cuerpo a cuerpo que inflige 4 puntos de vida al objetivo.",
     sellValue: 2,
     recipes: ["Manipular: Madera + 2 Pinchos"],
-    tags: ["Melee"],
+    tags: ["Melee"]
   },
   bat: {
     id: "bat",
@@ -155,7 +155,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
       "Golpea a todos los personajes de la localización causando 5 puntos de vida.",
     sellValue: 3,
     recipes: ["Manipular: 4 Madera"],
-    tags: ["Melee", "Area"],
+    tags: ["Melee", "Area"]
   },
   nail_bat: {
     id: "nail_bat",
@@ -169,7 +169,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
       "Versión reforzada que inflige 7 puntos de vida a todos los presentes en la localización.",
     sellValue: 5,
     recipes: ["Manipular: Bate + 2 Clavos"],
-    tags: ["Melee", "Area"],
+    tags: ["Melee", "Area"]
   },
   axe: {
     id: "axe",
@@ -183,7 +183,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
       "Arma cuerpo a cuerpo que reduce 8 puntos de vida al objetivo.",
     sellValue: 4,
     recipes: ["Manipular: 3 Madera + 2 Pinchos"],
-    tags: ["Melee"],
+    tags: ["Melee"]
   },
   chainsaw: {
     id: "chainsaw",
@@ -197,7 +197,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
       "Mata al objetivo al atacar. Debe arrancarse gastando combustible y suena en la localización.",
     sellValue: 5,
     notes: ["Requiere combustible para permanecer encendida durante 5 turnos."],
-    tags: ["Melee"],
+    tags: ["Melee"]
   },
   molotov: {
     id: "molotov",
@@ -211,7 +211,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
       "Cóctel incendiario que inflige 4 puntos de vida al impactar y puede lanzar fuego a distancia.",
     sellValue: 2,
     recipes: ["Manipular: Botella + Combustible"],
-    tags: ["Fire", "Explosive"],
+    tags: ["Fire", "Explosive"]
   },
   pistol: {
     id: "pistol",
@@ -224,7 +224,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Arma de fuego que inflige 10 puntos de vida a un objetivo en la misma localización o adyacente. Requiere balas y hace ruido a 1 casilla.",
     sellValue: 2,
-    tags: ["Ranged"],
+    tags: ["Ranged"]
   },
   silencer: {
     id: "silencer",
@@ -237,7 +237,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Accesorio que permite crear una pistola con silenciador al manipular una pistola.",
     sellValue: 2,
-    tags: ["Tool", "Component"],
+    tags: ["Tool", "Component"]
   },
   suppressed_pistol: {
     id: "suppressed_pistol",
@@ -251,7 +251,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
       "Pistola modificada que inflige 10 puntos de vida sin generar ruido. Requiere balas para disparar.",
     sellValue: 7,
     recipes: ["Manipular: Pistola + Silenciador"],
-    tags: ["Ranged"],
+    tags: ["Ranged"]
   },
   bullet: {
     id: "bullet",
@@ -264,7 +264,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Munición necesaria para disparar una pistola. Se consume automáticamente al disparar.",
     sellValue: 2,
-    tags: ["Ammo"],
+    tags: ["Ammo"]
   },
   harpoon: {
     id: "harpoon",
@@ -277,7 +277,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Dispara a un objetivo infligiendo 7 puntos de vida en la misma localización o 6 a una adyacente sin generar ruido. Requiere flechas.",
     sellValue: 4,
-    tags: ["Ranged"],
+    tags: ["Ranged"]
   },
   arrow: {
     id: "arrow",
@@ -291,7 +291,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
       "Munición para el arpón. Se utiliza de manera automática al disparar.",
     sellValue: 1,
     recipes: ["Manipular: Madera + Pincho"],
-    tags: ["Ammo", "Crafting"],
+    tags: ["Ammo", "Crafting"]
   },
   chemical_weapon: {
     id: "chemical_weapon",
@@ -304,7 +304,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Dispositivo químico que reduce 9 puntos de vida a todos los presentes o 11 a un único objetivo y no puede ser esquivado.",
     sellValue: 10,
-    tags: ["Explosive", "Status"],
+    tags: ["Explosive", "Status"]
   },
   rocket_launcher: {
     id: "rocket_launcher",
@@ -317,7 +317,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Arma pesada de un solo uso que inflige 20 puntos de vida en la localización objetivo y destruye sus objetos. La explosión es visible desde toda la ciudad.",
     sellValue: 10,
-    tags: ["Explosive", "Ranged"],
+    tags: ["Explosive", "Ranged"]
   },
   trap: {
     id: "trap",
@@ -330,7 +330,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Dispositivo que causa 7 puntos de vida al primer personaje que entra o sale por la entrada vigilada de la localización.",
     sellValue: 3,
-    tags: ["Trap"],
+    tags: ["Trap"]
   },
   c4: {
     id: "c4",
@@ -344,7 +344,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
       "Carga explosiva que debe colocarse antes de detonarse a distancia, infligiendo 12 puntos de vida a todos los presentes.",
     sellValue: 5,
     notes: ["La detonación se escucha a dos localizaciones."],
-    tags: ["Explosive"],
+    tags: ["Explosive"]
   },
   detonator: {
     id: "detonator",
@@ -356,7 +356,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     weight: 2,
     description:
       "Control remoto necesario para activar un explosivo C4 ya colocado.",
-    tags: ["Tool", "Explosive"],
+    tags: ["Tool", "Explosive"]
   },
   fuel: {
     id: "fuel",
@@ -369,7 +369,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Recurso versátil para arrancar motosierras, crear incendios con dos o tres unidades o combinarse con una botella para producir un molotov.",
     sellValue: 2,
-    tags: ["Component", "Fire"],
+    tags: ["Component", "Fire"]
   },
   nails: {
     id: "nails",
@@ -382,7 +382,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Conjunto de clavos utilizado para reforzar armas o sabotear bicicletas al lanzarlos en una localización.",
     sellValue: 1,
-    tags: ["Component", "Crafting"],
+    tags: ["Component", "Crafting"]
   },
   poison: {
     id: "poison",
@@ -395,7 +395,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Permite envenenar alimentos o armas cuerpo a cuerpo, causando pérdida de vida progresiva y recompensas económicas cuando no es pactado.",
     sellValue: 1,
-    tags: ["Status", "Poison"],
+    tags: ["Status", "Poison"]
   },
   virus: {
     id: "virus",
@@ -408,20 +408,20 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Infecta a un personaje de forma discreta. Cada final de turno los presentes no vacunados pierden 1 punto de vida.",
     sellValue: 3,
-    tags: ["Status", "Infection"],
+    tags: ["Status", "Infection"]
   },
   vaccine: {
     id: "vaccine",
     name: "Vacuna",
     category: ItemCategory.Medical,
-    sprite: "Board Game Icons/flask_half.png",
+    sprite: "Items/vaccine.png",
     weapon: false,
     consumable: true,
     weight: 1,
     description:
       "Evita la pérdida de vida al estar en contacto con personajes infectados por virus.",
     sellValue: 3,
-    tags: ["Healing", "Status"],
+    tags: ["Healing", "Status"]
   },
   lockpick: {
     id: "lockpick",
@@ -434,7 +434,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Reduce en un turno el tiempo necesario para forzar una caja fuerte.",
     sellValue: 2,
-    tags: ["Tool"],
+    tags: ["Tool"]
   },
   binoculars: {
     id: "binoculars",
@@ -447,7 +447,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Permite ver a los personajes visibles en una localización adyacente y condicionar acciones a distancia.",
     sellValue: 2,
-    tags: ["Detection", "Tool"],
+    tags: ["Detection", "Tool"]
   },
   walkie_talkie: {
     id: "walkie_talkie",
@@ -460,7 +460,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Dispositivo de comunicación que comparte información de aliados autorizados sobre objetos y personajes detectados.",
     sellValue: 2,
-    tags: ["Communication", "Tool"],
+    tags: ["Communication", "Tool"]
   },
   tracker: {
     id: "tracker",
@@ -473,7 +473,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Transmisor que informa durante seis turnos de la posición de un personaje objetivo, incluso a distancia con apoyo de walkies.",
     sellValue: 1,
-    tags: ["Detection", "Tool"],
+    tags: ["Detection", "Tool"]
   },
   zarkans: {
     id: "zarkans",
@@ -486,7 +486,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     weight: 0,
     description:
       "Moneda oficial de Zarka utilizada para contratar mercenarios, comprar objetos o realizar transferencias. No puede ser robada.",
-    tags: ["Currency"],
+    tags: ["Currency"]
   },
   bicycle: {
     id: "bicycle",
@@ -500,9 +500,9 @@ export const ItemLibrary: ItemLibraryDefinition = {
       "Medio de transporte localizado en ciertas casillas que reduce el esfuerzo de desplazamiento a 1 por casilla.",
     notes: [
       "No puede recogerse ni almacenarse.",
-      "Se inutiliza si pisa clavos o trampas.",
+      "Se inutiliza si pisa clavos o trampas."
     ],
-    tags: ["Movement"],
+    tags: ["Movement"]
   },
   locker: {
     id: "locker",
@@ -515,9 +515,9 @@ export const ItemLibrary: ItemLibraryDefinition = {
     description:
       "Almacenamiento seguro presente en todos los edificios donde dejar objetos para su venta en turnos múltiplos de cinco.",
     notes: [
-      "El alcalde recoge los objetos y entrega los zarkans cada cinco turnos.",
+      "El alcalde recoge los objetos y entrega los zarkans cada cinco turnos."
     ],
-    tags: ["Storage", "Structure"],
+    tags: ["Storage", "Structure"]
   },
   safe: {
     id: "safe",
@@ -529,7 +529,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     weight: 0,
     description:
       "Contenedor con botín oculto en cada edificio. Requiere ser buscada y forzada para acceder a su contenido.",
-    tags: ["Storage", "Structure"],
+    tags: ["Storage", "Structure"]
   },
   corpse: {
     id: "corpse",
@@ -543,8 +543,8 @@ export const ItemLibrary: ItemLibraryDefinition = {
       "Restos de un jugador fallecido que conservan sus objetos y contienen hasta cuatro raciones comestibles para caníbales o hambrientos.",
     notes: [
       "No se detecta desde otras localizaciones.",
-      "Otorga 20 de esfuerzo y resta 1 de vida al consumirse cada ración.",
+      "Otorga 20 de esfuerzo y resta 1 de vida al consumirse cada ración."
     ],
-    tags: ["Corpse", "Storage"],
-  },
+    tags: ["Corpse", "Storage"]
+  }
 };
