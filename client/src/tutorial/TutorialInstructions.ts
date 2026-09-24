@@ -66,17 +66,17 @@ export const TUTORIAL_INSTRUCTIONS: Record<
   },
   plan_axe_attack: {
     instruction:
-      "Plan an Axe attack against the bot. Your attack is planned now, but it resolves later.",
+      "He is lying, he is not on your team! Plan an Axe attack against him.",
     hint: "Axe Attack is prepared. Select Tutorial Bot as the target, then press Ready."
   },
   resolve_bot_scare: {
     instruction:
-      "Watch the order: the bot’s Scare moves you before your planned Axe attack resolves.",
-    hint: "Press Ready to submit the plan. The Log will show why the attack misses."
+      "He is lying, he is not on your team! Attack him with the axe.",
+    hint: "Press Ready to submit your attack."
   },
   return_to_bot: {
     instruction:
-      "Move back toward the bot. The map is about to become dangerous.",
+      "Actions resolve by priority order: the bot’s Scare pushed you away before your Axe attack could resolve! Now move back toward the bot.",
     hint: "Move is prepared. Select the bot’s cell, then press Ready."
   },
   observe_destruction_warning: {

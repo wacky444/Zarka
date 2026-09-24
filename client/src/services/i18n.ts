@@ -282,14 +282,22 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
     "Abre Registro y selecciona el turno actual si el resultado aún no aparece.",
   "Plan an Axe attack against the bot. Your attack is planned now, but it resolves later.":
     "Planea un ataque con hacha contra el bot. El ataque queda planeado y se resuelve después.",
+  "He is lying, he is not on your team! Plan an Axe attack against him.":
+    "¡Está mintiendo, no está en tu equipo! Planea un ataque con hacha contra él.",
   "Axe Attack is prepared. Select Tutorial Bot as the target, then press Ready.":
     "Atacar con hacha está preparado. Selecciona Tutorial Bot como objetivo y pulsa Listo.",
   "Watch the order: the bot’s Scare moves you before your planned Axe attack resolves.":
     "Observa el orden: el Asustar del bot te mueve antes de que se resuelva tu ataque con hacha.",
+  "He is lying, he is not on your team! Attack him with the axe.":
+    "¡Está mintiendo, no está en tu equipo! Atácale con el hacha.",
+  "Press Ready to submit your attack.":
+    "Pulsa Listo para enviar tu ataque.",
   "Press Ready to submit the plan. The Log will show why the attack misses.":
     "Pulsa Listo para enviar el plan. El Registro mostrará por qué falla el ataque.",
   "Move back toward the bot. The map is about to become dangerous.":
     "Vuelve a acercarte al bot. El mapa pronto será peligroso.",
+  "Actions resolve by priority order: the bot’s Scare pushed you away before your Axe attack could resolve! Now move back toward the bot.":
+    "Las acciones se resuelven por orden de prioridad: ¡el Asustar del bot te empujó antes de que se resolviera tu ataque con hacha! Ahora vuelve a acercarte al bot.",
   "Move is prepared. Select the bot’s cell, then press Ready.":
     "Desplazarse está preparado. Selecciona la casilla del bot y pulsa Listo.",
   "Notice the skull warning: this cell will be destroyed on the next turn.":

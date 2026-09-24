@@ -4477,6 +4477,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.mainActionTargetPlayerId = null;
     }
     if (
+      !this.mainActionTargetPlayerId &&
+      mainOptions.length === 1 &&
+      this.selectedActionSupportsSingleTarget()
+    ) {
+      this.mainActionTargetPlayerId = mainOptions[0].id;
+    }
+    if (
       this.secondaryActionTargetPlayerId &&
       !secondaryOptions.some(
         (option) => option.id === this.secondaryActionTargetPlayerId

@@ -395,6 +395,15 @@ test("tutorial bot only executes the scripted feed and scare plans", () => {
     getTutorialBotPlan("resolve_bot_scare", playerId)
   );
 
+  player.actionPlan = {
+    main: { actionId: "axe_attack" }
+  };
+  planTutorialBotActions(match);
+  assert.deepEqual(
+    bot.actionPlan?.main,
+    getTutorialBotPlan("resolve_bot_scare", playerId)
+  );
+
   player.actionPlan = undefined;
   planTutorialBotActions(match);
   assert.equal(bot.actionPlan, undefined);

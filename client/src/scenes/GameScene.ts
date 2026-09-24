@@ -1690,7 +1690,9 @@ export class GameScene extends Phaser.Scene {
     const mainPlan = player.actionPlan?.main;
     if (
       mainPlan?.actionId === "axe_attack" &&
-      mainPlan.targetPlayerIds?.indexOf(TUTORIAL_BOT_ID) !== -1
+      (!mainPlan.targetPlayerIds ||
+        mainPlan.targetPlayerIds.length === 0 ||
+        mainPlan.targetPlayerIds.indexOf(TUTORIAL_BOT_ID) !== -1)
     ) {
       this.recordTutorialGameplay("plan_axe_attack");
     }

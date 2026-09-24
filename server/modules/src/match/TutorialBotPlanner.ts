@@ -7,8 +7,19 @@ import type { MatchRecord } from "../models/types";
 import { getTutorialBotPlan } from "./TutorialScenario";
 
 function sharesTile(left: PlayerCharacter, right: PlayerCharacter): boolean {
-  const tileId = left.position?.tileId;
-  return typeof tileId === "string" && tileId === right.position?.tileId;
+  if (
+    typeof left.position?.tileId === "string" &&
+    left.position.tileId === right.position?.tileId
+  ) {
+    return true;
+  }
+  if (left.position?.coord && right.position?.coord) {
+    return (
+      left.position.coord.q === right.position.coord.q &&
+      left.position.coord.r === right.position.coord.r
+    );
+  }
+  return false;
 }
 
 export function planTutorialBotActions(match: MatchRecord): void {
@@ -16,10 +27,16 @@ export function planTutorialBotActions(match: MatchRecord): void {
     return;
   }
 
-  const playerId = match.players[0];
+  let playerId: string | undefined;
+  for (const candidateId of match.players) {
+    if (candidateId !== TUTORIAL_BOT_ID) {
+      playerId = candidateId;
+      break;
+    }
+  }
   const player = playerId ? match.playerCharacters[playerId] : undefined;
   const bot = match.playerCharacters[TUTORIAL_BOT_ID];
-  if (!playerId || playerId === TUTORIAL_BOT_ID || !player || !bot) {
+  if (!playerId || !player || !bot) {
     return;
   }
 
@@ -48,11 +65,13 @@ export function planTutorialBotActions(match: MatchRecord): void {
   }
 
   const axePlan = player.actionPlan?.main;
-  if (
+  const axePlanned =
     axePlan?.actionId === "axe_attack" &&
-    (axePlan.targetPlayerIds?.indexOf(TUTORIAL_BOT_ID) ?? -1) !== -1 &&
-    sharesTile(player, bot)
-  ) {
+    (!axePlan.targetPlayerIds ||
+      axePlan.targetPlayerIds.length === 0 ||
+      axePlan.targetPlayerIds.indexOf(TUTORIAL_BOT_ID) !== -1);
+
+  if (axePlanned && sharesTile(player, bot)) {
     const plan = getTutorialBotPlan("resolve_bot_scare", playerId);
     if (plan) {
       bot.actionPlan = { main: plan };

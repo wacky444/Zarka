@@ -247,14 +247,25 @@ export function updateMainActionRpc(
   }
   storage.writeMatch(match, read.version);
   const bot = match.playerCharacters[TUTORIAL_BOT_ID];
+  const mainPlan = character.actionPlan?.main;
+  const isAxeAttackOnBot =
+    mainPlan?.actionId === "axe_attack" &&
+    (!mainPlan.targetPlayerIds ||
+      mainPlan.targetPlayerIds.length === 0 ||
+      mainPlan.targetPlayerIds.indexOf(TUTORIAL_BOT_ID) !== -1);
+  const sharesTileWithBot =
+    bot &&
+    (character.position?.tileId === bot.position?.tileId ||
+      (character.position?.coord?.q === bot.position?.coord?.q &&
+        character.position?.coord?.r === bot.position?.coord?.r));
+
   if (
     match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] &&
-    character.actionPlan?.main?.actionId === "axe_attack" &&
+    isAxeAttackOnBot &&
     character.inventory.carriedItems.some(
       (item) => item.itemId === "axe" && item.quantity > 0
     ) &&
-    character.actionPlan.main.targetPlayerIds?.indexOf(TUTORIAL_BOT_ID) !== -1 &&
-    character.position?.tileId === bot?.position?.tileId
+    sharesTileWithBot
   ) {
     sendTutorialBotMessage(match, "axe_ordering", nk, _logger);
   }
