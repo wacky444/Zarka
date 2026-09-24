@@ -28,10 +28,6 @@ test("tutorial progress is ordered and repeated events are idempotent", () => {
   assert.equal(controller.currentStep, "inspect_current_cell");
   assert.equal(controller.recordPresentation("map_pan"), false);
   assert.equal(controller.recordPresentation("inspect_current_cell"), true);
-  assert.equal(controller.currentStep, "search");
-  assert.equal(controller.hasObservedGameplayStep("search"), true);
-  assert.equal(controller.recordGameplay("search"), false);
-  assert.equal(controller.recordPresentation("search"), true);
   assert.equal(controller.isComplete, true);
   assert.equal(controller.recordGameplay("search"), false);
   assert.equal(controller.recordPresentation("search"), false);
@@ -40,8 +36,7 @@ test("tutorial progress is ordered and repeated events are idempotent", () => {
   gameplayController.recordPresentation("map_pan");
   gameplayController.recordPresentation("inspect_current_cell");
   assert.equal(gameplayController.currentStep, "search");
-  assert.equal(gameplayController.recordGameplay("search"), false);
-  assert.equal(gameplayController.recordPresentation("search"), true);
+  assert.equal(gameplayController.recordGameplay("search"), true);
   assert.equal(gameplayController.isComplete, true);
 });
 
@@ -70,8 +65,6 @@ test("restored gameplay events wait for presentation steps, then resume in order
   controller.recordPresentation("map_pan");
   controller.recordPresentation("inspect_current_cell");
   controller.recordPresentation("inspect_nearby_cell");
-  assert.equal(controller.currentStep, "search");
-  controller.recordPresentation("search");
   assert.equal(controller.currentStep, "open_chat");
 });
 

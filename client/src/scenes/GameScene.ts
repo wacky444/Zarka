@@ -1735,11 +1735,6 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (
-      currentStep === "search" &&
-      this.hasDiscoveredTutorialItemAt(coord)
-    ) {
-      this.recordTutorialPresentation("search");
-    } else if (
       currentStep === "inspect_current_cell" &&
       coord.q === currentCoord.q &&
       coord.r === currentCoord.r
@@ -1751,22 +1746,6 @@ export class GameScene extends Phaser.Scene {
     ) {
       this.recordTutorialPresentation("inspect_nearby_cell");
     }
-  }
-
-  private hasDiscoveredTutorialItemAt(coord: Axial): boolean {
-    const player =
-      this.currentUserId && this.currentMatch?.playerCharacters
-        ? this.currentMatch.playerCharacters[this.currentUserId]
-        : undefined;
-    const tile = this.currentMatch?.map?.tiles.find(
-      (candidate) =>
-        candidate.coord.q === coord.q && candidate.coord.r === coord.r
-    );
-    return (
-      tile?.itemIds.some((itemId) =>
-        player?.discoveredItemIds?.includes(itemId)
-      ) ?? false
-    );
   }
 
   private handleTutorialTurn(

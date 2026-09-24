@@ -7,7 +7,7 @@ const PRESENTATION_ONLY_STEP_IDS: readonly TutorialStepId[] = [
   "read_detective_result",
   "open_chat"
 ];
-const PRESENTATION_AND_GAMEPLAY_STEP_IDS: readonly TutorialStepId[] = ["search"];
+const PRESENTATION_AND_GAMEPLAY_STEP_IDS: readonly TutorialStepId[] = [];
 
 export class TutorialProgressController {
   private readonly observedGameplaySteps = new Set<TutorialStepId>();
