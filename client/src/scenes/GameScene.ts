@@ -10,6 +10,7 @@ import {
 import { GameBoardRenderer } from "./GameBoardRenderer";
 import { ActionPlanSynchronizer } from "./ActionPlanSynchronizer";
 import { TutorialProgressController } from "../tutorial/TutorialProgressController";
+import { getTutorialUiPolicy } from "../tutorial/TutorialUiPolicy";
 import type { TurnService } from "../services/turnService";
 import { MatchChatService } from "../services/chatService";
 import {
@@ -65,6 +66,7 @@ import {
 import { assetPath } from "../utils/assetPath";
 import { AccountService } from "../services/AccountService";
 import { VictoryOverlay } from "../ui/VictoryOverlay";
+import { TutorialInstructionView } from "../ui/TutorialInstructionView";
 import { isAdminViewEnabled } from "../services/adminView";
 import { t } from "../services/i18n";
 import { THEME } from "../ui/ColorPalette";
@@ -151,6 +153,7 @@ export class GameScene extends Phaser.Scene {
   private playerSkinMap = new Map<string, import("@shared").Skin>();
   private accountService: AccountService | null = null;
   private victoryOverlay: VictoryOverlay | null = null;
+  private tutorialInstructionView: TutorialInstructionView | null = null;
   private reportTransitionStarted = false;
   private loadingOverlay: Phaser.GameObjects.Container | null = null;
   private loadingTrack: Phaser.GameObjects.Rectangle | null = null;
@@ -634,6 +637,8 @@ export class GameScene extends Phaser.Scene {
     this.victoryOverlay = new VictoryOverlay(this, {
       onTransitionComplete: () => this.openEndGameReport(),
     });
+    this.tutorialInstructionView = new TutorialInstructionView(this);
+    this.cam.ignore(this.tutorialInstructionView.getContainer());
     if (this.uiCam) {
       this.victoryOverlay.ignoreCamera(this.cam);
     }
@@ -733,6 +738,7 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.layoutUI();
+    this.updateTutorialGuidance();
     this.hideLoadingOverlay();
     this.scale.on("resize", this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -828,6 +834,8 @@ export class GameScene extends Phaser.Scene {
       this.topBanner = null;
       this.victoryOverlay?.destroy();
       this.victoryOverlay = null;
+      this.tutorialInstructionView?.destroy();
+      this.tutorialInstructionView = null;
 
       if (this.autoAdvanceTimer) {
         this.autoAdvanceTimer.remove(false);
@@ -1159,6 +1167,7 @@ export class GameScene extends Phaser.Scene {
       winnerName,
       winnerId: payload.winnerId,
       turns,
+      tutorial: !!this.currentMatch?.metadata?.[TUTORIAL_MATCH_METADATA_KEY],
     });
     this.animateEndGameCamera(payload.winnerId);
   }
@@ -1402,6 +1411,7 @@ export class GameScene extends Phaser.Scene {
       this.menuButton?.height ?? 32
     );
     this.victoryOverlay?.layout(width, height);
+    this.tutorialInstructionView?.layout(width, height);
   }
 
   private isMobileViewport(width: number): boolean {
@@ -1443,6 +1453,7 @@ export class GameScene extends Phaser.Scene {
     this.cam.setSize(width, height);
     this.uiCam.setSize(width, height);
     this.layoutUI();
+    this.updateTutorialGuidance();
   }
 
   private updateCharacterPanel(match: MatchRecord | null) {
@@ -1467,6 +1478,26 @@ export class GameScene extends Phaser.Scene {
     this.tutorialController = match?.metadata?.[TUTORIAL_MATCH_METADATA_KEY]
       ? new TutorialProgressController(TUTORIAL_STEP_IDS)
       : null;
+    this.updateTutorialGuidance();
+  }
+
+  private updateTutorialGuidance(): void {
+    const isTutorial = this.tutorialController !== null;
+    const currentStep = this.tutorialController?.currentStep ?? null;
+    if (isTutorial && this.mobileLayout) {
+      const policy = getTutorialUiPolicy(currentStep);
+      const targetView = policy.mapRequired
+        ? "map"
+        : policy.highlightedTab
+          ? "sidebar"
+          : null;
+      if (targetView && this.mobileViewMode !== targetView) {
+        this.mobileViewMode = targetView;
+        this.layoutUI();
+      }
+    }
+    this.tutorialInstructionView?.setStep(currentStep);
+    this.characterPanel?.setTutorialStep(currentStep, isTutorial);
   }
 
   private recordTutorialPresentation(stepId: TutorialStepId): void {
@@ -1506,8 +1537,10 @@ export class GameScene extends Phaser.Scene {
         currentStep = controller.currentStep;
         continue;
       }
+      this.updateTutorialGuidance();
       return;
     }
+    this.updateTutorialGuidance();
   }
 
   private hasTutorialDetectiveReveal(): boolean {
@@ -2618,7 +2651,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private isPointerOverUI(pointer: Phaser.Input.Pointer) {
-    if (this.cellContentsPanel?.isOpen) {
+    if (
+      this.tutorialInstructionView?.containsPoint(pointer.x, pointer.y) ||
+      this.cellContentsPanel?.isOpen
+    ) {
       return true;
     }
     if (this.viewModeButton?.visible) {

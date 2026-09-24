@@ -18,7 +18,8 @@ import {
   getSkillEffectTotal,
   LocalizationType,
   type HexTileSnapshot,
-  type ShopId
+  type ShopId,
+  type TutorialStepId
 } from "@shared";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
 import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
@@ -49,6 +50,10 @@ import { CharacterPanelPlayerListView } from "./CharacterPanelPlayerListView";
 import { Subtabs } from "./Subtabs";
 import { CharacterPanelSkillsView } from "./CharacterPanelSkillsView";
 import { CharacterPanelShopView } from "./CharacterPanelShopView";
+import {
+  getTutorialUiPolicy,
+  type TutorialControlHighlight
+} from "../tutorial/TutorialUiPolicy";
 import { t } from "../services/i18n";
 
 export type CharacterSubTabKey = "status" | "skills";
@@ -209,6 +214,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private playersElements: Phaser.GameObjects.GameObject[] = [];
   private chatElements: Phaser.GameObjects.GameObject[] = [];
   private tabsController!: CharacterPanelTabs;
+  private tutorialStepId: TutorialStepId | null = null;
+  private tutorialActive = false;
+  private tutorialAllowedMainActionIds: ReadonlySet<ActionId> | null = null;
+  private tutorialAllowedSecondaryActionIds: ReadonlySet<ActionId> | null = null;
+  private tutorialActionEditingEnabled = true;
+  private tutorialReadyEnabled = true;
   private logView!: CharacterPanelLogView;
   private chatView!: CharacterPanelChatView;
   private portrait: SkinContainer;
@@ -2091,6 +2102,98 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     return this;
   }
 
+  setTutorialStep(
+    stepId: TutorialStepId | null,
+    active: boolean
+  ): void {
+    if (this.tutorialStepId === stepId && this.tutorialActive === active) {
+      return;
+    }
+    this.tutorialStepId = stepId;
+    this.tutorialActive = active;
+    const policy = getTutorialUiPolicy(stepId);
+    this.tutorialAllowedMainActionIds = active
+      ? new Set(policy.primaryActionIds)
+      : null;
+    this.tutorialAllowedSecondaryActionIds = active
+      ? new Set(policy.secondaryActionIds)
+      : null;
+    this.tutorialActionEditingEnabled =
+      !active || policy.actionEditingEnabled;
+    this.tutorialReadyEnabled = !active || policy.readyEnabled;
+    this.closeCurrentGridSelect();
+    this.tabsController.setHighlightedTab(
+      active ? policy.highlightedTab : null
+    );
+    if (active && policy.highlightedTab) {
+      this.revealTab(policy.highlightedTab);
+    }
+    const isHighlighted = (control: TutorialControlHighlight): boolean =>
+      active && policy.highlightedControls.includes(control);
+    this.characterSubtabs.setHighlightedKey(
+      active ? policy.highlightedCharacterSubtab : null
+    );
+    if (
+      active &&
+      policy.autoSelectCharacterSubtab &&
+      policy.highlightedCharacterSubtab
+    ) {
+      this.characterSubtabs.setActiveKey(
+        policy.highlightedCharacterSubtab,
+        false
+      );
+      this.updateCharacterSubtabVisibility();
+    }
+    this.mainActionDropdown.setTutorialHighlight(
+      isHighlighted("main_action")
+    );
+    this.secondaryActionDropdown.setTutorialHighlight(
+      isHighlighted("secondary_action")
+    );
+    this.extraExecutionSelector.setTutorialHighlight(
+      isHighlighted("extra_execution")
+    );
+    this.playerSelector.setTutorialHighlight(isHighlighted("player_target"));
+    this.locationSelector.setTutorialHighlight(
+      isHighlighted("location_target")
+    );
+    this.readyToggle.setColor(
+      isHighlighted("ready") ? "#fbbf24" : "#ffffff"
+    );
+    this.skillsView.setAllowedSkillIds(active ? policy.skillIds : null);
+    this.shopView.setTutorialShopPolicy(
+      active ? policy.shopIds : null,
+      isHighlighted("detective") ? "detective" : null
+    );
+    this.updateFromMatch(this.currentMatch, this.currentUserId, this.lastUserMap);
+    if (active && policy.actionEditingEnabled) {
+      this.syncTutorialActionSelection(policy);
+    }
+  }
+
+  private syncTutorialActionSelection(
+    policy: ReturnType<typeof getTutorialUiPolicy>
+  ): void {
+    if (policy.primaryActionIds.length === 1 && this.currentUserId) {
+      const actionId = policy.primaryActionIds[0];
+      const serverActionId =
+        this.currentMatch?.playerCharacters?.[this.currentUserId]?.actionPlan
+          ?.main?.actionId ?? null;
+      if (serverActionId !== actionId) {
+        this.mainActionDropdown.setValue(actionId, true);
+      }
+    }
+    if (policy.secondaryActionIds.length === 1 && this.currentUserId) {
+      const actionId = policy.secondaryActionIds[0];
+      const serverActionId =
+        this.currentMatch?.playerCharacters?.[this.currentUserId]?.actionPlan
+          ?.secondary?.actionId ?? null;
+      if (serverActionId !== actionId) {
+        this.secondaryActionDropdown.setValue(actionId, true);
+      }
+    }
+  }
+
   setMobileTabNavigation(enabled: boolean): void {
     const modeChanged = this.mobileTabNavigation !== enabled;
     this.mobileTabNavigation = enabled;
@@ -2470,6 +2573,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (!match || !currentUserId) {
       this.currentTurn = 0;
       this.applyCharacter(null, null, false);
+      this.applyTutorialActionEditingState();
       this.setLogTurnInfo(0);
       return;
     }
@@ -2486,6 +2590,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const name = accountDisplayName ?? userMap[currentUserId] ?? null;
     const ready = match.readyStates?.[currentUserId] ?? false;
     this.applyCharacter(character, name, ready);
+    this.applyTutorialActionEditingState();
   }
 
   private applyCharacter(
@@ -2938,6 +3043,31 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     return this.readyState;
   }
 
+  private applyTutorialActionEditingState(): void {
+    if (!this.tutorialActive || this.tutorialActionEditingEnabled) {
+      return;
+    }
+    this.closeCurrentGridSelect();
+    this.mainActionDropdown.setEnabled(false);
+    this.secondaryActionDropdown.setEnabled(false);
+    this.extraSecondaryActionDropdown.setEnabled(false);
+    this.extraExecutionSelector.setEnabled(false);
+    this.secondaryExtraExecutionSelector.setEnabled(false);
+    this.extraSecondaryExtraExecutionSelector.setEnabled(false);
+    this.locationSelector.setEnabled(false);
+    this.secondLocationSelector.setEnabled(false);
+    this.playerSelector.setEnabled(false);
+    this.scareSecondPlayerSelector.setEnabled(false);
+    this.itemSelector.setEnabled(false);
+    this.secondaryLocationSelector.setEnabled(false);
+    this.secondaryPlayerSelector.setEnabled(false);
+    this.secondaryInspectSecondPlayerSelector.setEnabled(false);
+    this.secondaryItemSelector.setEnabled(false);
+    this.extraSecondaryLocationSelector.setEnabled(false);
+    this.extraSecondaryPlayerSelector.setEnabled(false);
+    this.extraSecondaryItemSelector.setEnabled(false);
+  }
+
   private setReadyEnabled(enabled: boolean) {
     this.readyEnabled = enabled;
     if (!this.readyToggle) {
@@ -2948,7 +3078,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const isStatusActive =
       !this.characterSubtabs ||
       this.characterSubtabs.getActiveKey() === "status";
-    const showReady = enabled && isCharacterActive && isStatusActive;
+    const showReady =
+      enabled &&
+      (!this.tutorialActive || this.tutorialReadyEnabled) &&
+      isCharacterActive &&
+      isStatusActive;
     if (showReady) {
       this.readyToggle.setAlpha(1);
       this.readyToggle.setInteractive({ useHandCursor: true });
@@ -2970,6 +3104,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.currentTurn
     );
     this.mainActionDropdown.setItems(items);
+    this.mainActionDropdown.setEnabled(
+      !this.tutorialActive ||
+        (this.tutorialActionEditingEnabled &&
+          (this.tutorialAllowedMainActionIds?.size ?? 0) > 0)
+    );
     if (preferredId) {
       this.mainActionDropdown.setValue(preferredId, false);
       if (!this.mainActionDropdown.getValue() && items[0]) {
@@ -3007,6 +3146,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       "Already chosen as extra secondary action"
     );
     this.secondaryActionDropdown.setItems(items);
+    this.secondaryActionDropdown.setEnabled(
+      !this.tutorialActive ||
+        (this.tutorialActionEditingEnabled &&
+          (this.tutorialAllowedSecondaryActionIds?.size ?? 0) > 0)
+    );
     if (preferredId) {
       this.secondaryActionDropdown.setValue(preferredId, false);
       if (!this.secondaryActionDropdown.getSelectedItem()) {
@@ -3042,7 +3186,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     storedExtraExecutions = 0,
     disabledActionId: string | null = null
   ) {
-    const available = this.hasExtraSecondaryAction();
+    const available =
+      !this.tutorialActive && this.hasExtraSecondaryAction();
     this.extraSecondaryActionBox.setVisible(available);
     this.extraSecondaryActionLabel.setVisible(available);
     this.extraSecondaryActionDropdown.setVisible(available);
@@ -3145,10 +3290,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     currentTurn: number
   ): GridSelectItem[] {
     const cooldowns = this.buildActionCooldownMap(character, currentTurn);
-    const baseList: (ActionId | string)[] = PRIMARY_ACTION_IDS;
+    const baseList: ActionId[] = PRIMARY_ACTION_IDS.filter(
+      (id) =>
+        this.tutorialAllowedMainActionIds === null ||
+        this.tutorialAllowedMainActionIds.has(id)
+    );
+    const availableActions = actionIds.filter(
+      (id) =>
+        this.tutorialAllowedMainActionIds === null ||
+        this.tutorialAllowedMainActionIds.has(id)
+    );
     const sourceIds =
-      actionIds.length > 0
-        ? Array.from(new Set([...actionIds, ...baseList]))
+      availableActions.length > 0
+        ? Array.from(new Set([...availableActions, ...baseList]))
         : baseList;
     const seen = new Set<string>();
     const items: GridSelectItem[] = [];
@@ -3173,10 +3327,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     disabledReason?: string
   ): GridSelectItem[] {
     const cooldowns = this.buildActionCooldownMap(character, currentTurn);
-    const baseList: (ActionId | string)[] = SECONDARY_ACTION_IDS;
+    const baseList: ActionId[] = SECONDARY_ACTION_IDS.filter(
+      (id) =>
+        this.tutorialAllowedSecondaryActionIds === null ||
+        this.tutorialAllowedSecondaryActionIds.has(id)
+    );
+    const availableActions = actionIds.filter(
+      (id) =>
+        this.tutorialAllowedSecondaryActionIds === null ||
+        this.tutorialAllowedSecondaryActionIds.has(id)
+    );
     const sourceIds =
-      actionIds.length > 0
-        ? Array.from(new Set([...actionIds, ...baseList]))
+      availableActions.length > 0
+        ? Array.from(new Set([...availableActions, ...baseList]))
         : baseList;
     const seen = new Set<string>();
     const items: GridSelectItem[] = [];

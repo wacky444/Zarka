@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { TutorialProgressController } from "../src/tutorial/TutorialProgressController.ts";
-import type { TutorialStepId } from "@shared";
+import { getTutorialUiPolicy } from "../src/tutorial/TutorialUiPolicy.ts";
+import { TUTORIAL_INSTRUCTIONS } from "../src/tutorial/TutorialInstructions.ts";
+import { TUTORIAL_STEP_IDS, type TutorialStepId } from "@shared";
 
 test("tutorial progress is ordered and repeated events are idempotent", () => {
   const steps: readonly TutorialStepId[] = [
@@ -35,4 +37,42 @@ test("tutorial progress is ordered and repeated events are idempotent", () => {
   assert.equal(gameplayController.recordGameplay("search"), false);
   assert.equal(gameplayController.recordPresentation("search"), true);
   assert.equal(gameplayController.isComplete, true);
+});
+
+test("tutorial UI policy exposes only the actions and items for the current lesson", () => {
+  const inspect = getTutorialUiPolicy("inspect_current_cell");
+  assert.deepEqual(inspect.primaryActionIds, []);
+  assert.deepEqual(inspect.secondaryActionIds, []);
+  assert.equal(inspect.readyEnabled, false);
+
+  const skills = getTutorialUiPolicy("choose_skills");
+  assert.deepEqual(skills.skillIds, ["vitality", "strength2"]);
+  assert.equal(skills.highlightedCharacterSubtab, "skills");
+  assert.equal(skills.autoSelectCharacterSubtab, false);
+
+  const search = getTutorialUiPolicy("search");
+  assert.equal(search.highlightedCharacterSubtab, "status");
+  assert.equal(search.autoSelectCharacterSubtab, true);
+
+  const detective = getTutorialUiPolicy("buy_detective");
+  assert.deepEqual(detective.shopIds, ["detective"]);
+  assert.equal(detective.highlightedTab, "shop");
+
+  const finalScare = getTutorialUiPolicy("scare_bot_to_doomed_cell");
+  assert.deepEqual(finalScare.primaryActionIds, ["scare"]);
+  assert.equal(finalScare.readyEnabled, true);
+  assert.ok(finalScare.highlightedControls.includes("extra_execution"));
+  assert.ok(finalScare.highlightedControls.includes("location_target"));
+
+  const resolveScare = getTutorialUiPolicy("resolve_bot_scare");
+  assert.equal(resolveScare.actionEditingEnabled, false);
+  assert.equal(resolveScare.readyEnabled, true);
+});
+
+test("every ordered tutorial step has an instruction and optional hint", () => {
+  for (const stepId of TUTORIAL_STEP_IDS) {
+    const copy = TUTORIAL_INSTRUCTIONS[stepId];
+    assert.ok(copy.instruction.length > 0, `missing instruction: ${stepId}`);
+    assert.ok(copy.hint.length > 0, `missing hint: ${stepId}`);
+  }
 });

@@ -229,6 +229,85 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "A prestigious hitman with a chainsaw and bulletproof vest.": "Un sicario prestigioso con una motosierra y un chaleco antibalas.",
   "20 + 5 per person": "20 + 5 por persona",
   "Match Chat": "Chat de partida",
+  Tutorial: "Tutorial",
+  Step: "Paso",
+  "Show hint": "Mostrar pista",
+  "Hide hint": "Ocultar pista",
+  "Tutorial complete": "Tutorial completado",
+  "You learned to inspect, prepare, verify, and plan ahead.":
+    "Aprendiste a inspeccionar, prepararte, verificar y planificar.",
+  "Look around first. Drag the map to see the whole 2×2 board before choosing an action.":
+    "Primero, observa el mapa. Arrástralo para ver todo el tablero de 2×2 antes de elegir una acción.",
+  "Press or touch an empty part of the map, then drag in any direction.":
+    "Pulsa o toca una parte vacía del mapa y arrastra en cualquier dirección.",
+  "Open the information for the cell your character is standing on.":
+    "Abre la información de la casilla donde está tu personaje.",
+  "Select your current cell on the map to open its information panel.":
+    "Selecciona tu casilla actual en el mapa para abrir su panel de información.",
+  "Now inspect one nearby cell. Knowing where you can move helps you plan safely.":
+    "Ahora inspecciona una casilla cercana. Saber adónde puedes moverte te ayuda a planificar con seguridad.",
+  "Choose any cell directly next to your current one.":
+    "Elige cualquier casilla junto a la actual.",
+  "Choose Vitality for more HP and Strength 2 to make axe attacks cost less energy.":
+    "Elige Vitalidad para tener más PV y Fuerza 2 para reducir la energía de los ataques con hacha.",
+  "Open Character → Skills. Buy both skills; you can switch between Offensive and Defense.":
+    "Abre Personaje → Habilidades. Compra ambas habilidades; puedes cambiar entre Ataque y Defensa.",
+  "Search this cell to reveal objects that are hidden from you.":
+    "Busca en esta casilla para revelar los objetos ocultos.",
+  "Search is the only available secondary action. Submit the turn with Ready.":
+    "Buscar es la única acción secundaria disponible. Envía el turno con Listo.",
+  "Pick up the visible bandage, axe, and food so you can use them later.":
+    "Recoge la venda, el hacha y la comida visibles para usarlos más tarde.",
+  "Pick Up is the only available main action. The visible objects are on your cell.":
+    "Coger es la única acción principal disponible. Los objetos visibles están en tu casilla.",
+  "Use Feed on yourself. It restores energy, and your planned turn will bring the bot to your cell.":
+    "Usa Alimentar contigo. Recuperarás energía y el bot llegará a tu casilla durante el turno.",
+  "Feed is the only available secondary action. Submit the turn with Ready.":
+    "Alimentar es la única acción secundaria disponible. Envía el turno con Listo.",
+  "The bot has entered your cell and sent a message. Open Chat to read it.":
+    "El bot ha entrado en tu casilla y ha enviado un mensaje. Abre Chat para leerlo.",
+  "The orange marker means Chat has an unread message.":
+    "El indicador naranja señala que hay un mensaje sin leer en Chat.",
+  "Read the bot’s claim in Chat. Do not trust a team claim until you verify it.":
+    "Lee en Chat lo que afirma el bot. No confíes en su equipo hasta comprobarlo.",
+  "Open the Chat tab. Its unread marker clears when the tab is opened.":
+    "Abre la pestaña Chat. El indicador desaparece al abrirla.",
+  "Use the Detective shop item to check the bot’s team instead of trusting its claim.":
+    "Usa el Detective de la tienda para comprobar el equipo del bot en vez de confiar en lo que dice.",
+  "Open Shop, choose Detective, select the bot, then confirm the purchase.":
+    "Abre Tienda, elige Detective, selecciona al bot y confirma la compra.",
+  "Read the private Detective result in the Log to learn the bot’s real team.":
+    "Lee el resultado privado del Detective en el Registro para conocer el equipo real del bot.",
+  "Open Log and select the current turn if the result is not already shown.":
+    "Abre Registro y selecciona el turno actual si el resultado aún no aparece.",
+  "Plan an Axe attack against the bot. Your attack is planned now, but it resolves later.":
+    "Planea un ataque con hacha contra el bot. El ataque queda planeado y se resuelve después.",
+  "Axe Attack is prepared. Select Tutorial Bot as the target, then press Ready.":
+    "Atacar con hacha está preparado. Selecciona Tutorial Bot como objetivo y pulsa Listo.",
+  "Watch the order: the bot’s Scare moves you before your planned Axe attack resolves.":
+    "Observa el orden: el Asustar del bot te mueve antes de que se resuelva tu ataque con hacha.",
+  "Press Ready to submit the plan. The Log will show why the attack misses.":
+    "Pulsa Listo para enviar el plan. El Registro mostrará por qué falla el ataque.",
+  "Move back toward the bot. The map is about to become dangerous.":
+    "Vuelve a acercarte al bot. El mapa pronto será peligroso.",
+  "Move is prepared. Select the bot’s cell, then press Ready.":
+    "Desplazarse está preparado. Selecciona la casilla del bot y pulsa Listo.",
+  "Notice the skull warning: this cell will be destroyed on the next turn.":
+    "Observa la calavera: esta casilla será destruida en el próximo turno.",
+  "The warning and Log show how many turns remain before destruction.":
+    "El aviso y el Registro muestran cuántos turnos faltan para la destrucción.",
+  "Use Scare with one extra execution to choose the bot’s destination: the doomed cell.":
+    "Usa Asustar con una ejecución adicional para elegir el destino del bot: la casilla condenada.",
+  "Scare is prepared. Set Extra Power to 1, target the bot, and select the skull-marked cell.":
+    "Asustar está preparado. Establece Potencia adicional en 1, selecciona al bot y elige la casilla marcada con la calavera.",
+  "Submit the final plan. The bot will be moved onto the doomed cell and normal destruction will resolve.":
+    "Envía el plan final. El bot llegará a la casilla condenada y se resolverá la destrucción normal.",
+  "Press Ready and watch the map warning, damage, and victory flow.":
+    "Pulsa Listo y observa el aviso del mapa, el daño y el flujo de victoria.",
+  "You won by combining information, preparation, positioning, and timing.":
+    "Ganaste al combinar información, preparación, posicionamiento y tiempo.",
+  "The victory screen recaps the lessons before opening the normal match report.":
+    "La pantalla de victoria resume las lecciones antes de abrir el informe normal de la partida.",
   "I am on your team. You can trust me.":
     "Estoy en tu equipo. Puedes confiar en mí.",
   "You checked instead of trusting me. Information can be more valuable than an attack.":

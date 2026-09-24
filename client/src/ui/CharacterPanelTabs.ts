@@ -44,6 +44,7 @@ interface CharacterPanelTabsOptions {
 
 export class CharacterPanelTabs {
   private activeKey: TabKey;
+  private highlightedKey: TabKey | null = null;
   private readonly unreadTabs = new Set<TabKey>();
 
   constructor(private readonly options: CharacterPanelTabsOptions) {
@@ -60,6 +61,14 @@ export class CharacterPanelTabs {
 
   isTabUnread(key: TabKey): boolean {
     return this.unreadTabs.has(key) && !this.isActive(key);
+  }
+
+  setHighlightedTab(key: TabKey | null): void {
+    if (this.highlightedKey === key) {
+      return;
+    }
+    this.highlightedKey = key;
+    this.updateStyles();
   }
 
   setTabUnread(key: TabKey, unread: boolean): void {
@@ -103,9 +112,12 @@ export class CharacterPanelTabs {
   private updateStyles(): void {
     for (const tab of this.options.tabs) {
       const active = tab.key === this.activeKey;
+      const highlighted = tab.key === this.highlightedKey;
       const unread = !active && this.unreadTabs.has(tab.key);
-      tab.rect.setFillStyle(active ? 0x253055 : 0x1c233f);
-      tab.text.setAlpha(active ? 1 : 0.7);
+      tab.rect
+        .setFillStyle(active ? 0x253055 : 0x1c233f)
+        .setStrokeStyle(highlighted ? 3 : 1, highlighted ? 0xfbbf24 : 0x253055, 1);
+      tab.text.setAlpha(active || highlighted ? 1 : 0.7);
       if (tab.badge) {
         tab.badge.setVisible(unread);
       }

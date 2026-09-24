@@ -145,6 +145,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private gridTableMaskShape: Phaser.GameObjects.Rectangle | null = null;
   private tooltip: HoverTooltip | null = null;
   private enabled = true;
+  private tutorialHighlighted = false;
   private readonly labelActiveColor: string;
   private readonly iconTextGap: number;
   private currentWidth: number;
@@ -272,15 +273,15 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.hitAreaZone.on(Phaser.Input.Events.POINTER_OVER, () => {
       if (!this.enabled) {
         this.scene.input.setDefaultCursor("default");
-        this.background.setStrokeStyle?.(2, THEME.colors.collapsedBorder, 1);
+        this.updateCollapsedBorder();
         return;
       }
       this.scene.input.setDefaultCursor("pointer");
-      this.background.setStrokeStyle?.(2, 0x3b82f6, 1);
+      this.updateCollapsedBorder();
     });
     this.hitAreaZone.on(Phaser.Input.Events.POINTER_OUT, () => {
       this.scene.input.setDefaultCursor("default");
-      this.background.setStrokeStyle?.(2, THEME.colors.collapsedBorder, 1);
+      this.updateCollapsedBorder();
     });
 
     this.applyEnabledState();
@@ -388,6 +389,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
     if (!this.selectedItem) {
       this.label.setText(text);
     }
+    return this;
+  }
+
+  setTutorialHighlight(highlighted: boolean): this {
+    this.tutorialHighlighted = highlighted;
+    this.updateCollapsedBorder();
     return this;
   }
 
@@ -1560,7 +1567,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       setAlpha?: (value: number) => unknown;
     };
     bg.setAlpha?.(this.enabled ? 1 : 0.75);
-    this.background.setStrokeStyle?.(2, THEME.colors.collapsedBorder, 1);
+    this.updateCollapsedBorder();
     this.icon.setAlpha(this.enabled ? 1 : 0.6);
     this.label.setColor(
       this.enabled ? this.labelActiveColor : THEME.colors.textDisabled
@@ -1568,6 +1575,13 @@ export class GridSelect extends Phaser.GameObjects.Container {
     if (!this.enabled) {
       this.scene.input.setDefaultCursor("default");
     }
+  }
+
+  private updateCollapsedBorder(): void {
+    const color = this.tutorialHighlighted
+      ? 0xfbbf24
+      : THEME.colors.collapsedBorder;
+    this.background.setStrokeStyle?.(this.tutorialHighlighted ? 3 : 2, color, 1);
   }
 
   private syncTextFont(target: Phaser.GameObjects.Text) {

@@ -37,6 +37,7 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
 
 type ShopCardItem = {
   definition: ShopDefinition;
+  background: Phaser.GameObjects.Rectangle;
   statusBadge: Phaser.GameObjects.Text;
 };
 
@@ -59,6 +60,9 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
   private readonly scrollMask: Phaser.Display.Masks.GeometryMask;
   private readonly cards: ShopCardItem[] = [];
   private currentCharacter: PlayerCharacter | null = null;
+  private allowedShopIds: ReadonlySet<ShopId> | null = null;
+  private highlightedShopId: ShopId | null = null;
+  private shopCardWidth = 0;
   private visible = false;
   private droneLocations = new Map<string, Axial>();
   private locationSelectionShopId:
@@ -259,6 +263,25 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
 
   getElements(): Phaser.GameObjects.GameObject[] {
     return this.elements;
+  }
+
+  setTutorialShopPolicy(
+    allowedShopIds: readonly ShopId[] | null,
+    highlightedShopId: ShopId | null
+  ): void {
+    const next = allowedShopIds ? new Set(allowedShopIds) : null;
+    const allowedChanged =
+      this.allowedShopIds?.size !== next?.size ||
+      (this.allowedShopIds !== null &&
+        ![...this.allowedShopIds].every((id) => next?.has(id)));
+    const highlightChanged = this.highlightedShopId !== highlightedShopId;
+    this.allowedShopIds = next;
+    this.highlightedShopId = highlightedShopId;
+    if (allowedChanged) {
+      this.rebuildShopList();
+    } else if (highlightChanged) {
+      this.refreshShopHighlights();
+    }
   }
 
   update(
@@ -465,8 +488,13 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
   }
 
   private buildShopList(cardWidth: number): void {
+    this.shopCardWidth = cardWidth;
     let currentY = 0;
-    for (const definition of Object.values(ShopLibrary)) {
+    const definitions = Object.values(ShopLibrary).filter(
+      (definition) =>
+        !this.allowedShopIds || this.allowedShopIds.has(definition.id)
+    );
+    for (const definition of definitions) {
       currentY += this.createShopCard(definition, currentY, cardWidth) + CARD_SPACING;
     }
     this.scrollContent.setSize(cardWidth, currentY);
@@ -583,8 +611,33 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
       this.scrollContent.add(buyText);
       this.scrollContent.bringToTop(buyText);
     }
-    this.cards.push({ definition, statusBadge: status });
+    this.cards.push({ definition, background: card, statusBadge: status });
+    card.setStrokeStyle(
+      this.highlightedShopId === definition.id ? 3 : 1,
+      this.highlightedShopId === definition.id ? 0xfbbf24 : 0x2f3a5d,
+      1
+    );
     return cardHeight;
+  }
+
+  private rebuildShopList(): void {
+    for (const child of [...this.scrollContent.list]) {
+      child.destroy();
+    }
+    this.scrollContent.removeAll(false);
+    this.cards.length = 0;
+    this.buildShopList(this.shopCardWidth);
+  }
+
+  private refreshShopHighlights(): void {
+    for (const card of this.cards) {
+      const highlighted = card.definition.id === this.highlightedShopId;
+      card.background.setStrokeStyle(
+        highlighted ? 3 : 1,
+        highlighted ? 0xfbbf24 : 0x2f3a5d,
+        1
+      );
+    }
   }
 
   private beginShopPurchase(shopId: ShopId): void {
