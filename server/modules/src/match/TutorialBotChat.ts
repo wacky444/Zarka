@@ -56,12 +56,22 @@ export function getTutorialBotMessageKeyForTurn(
     return null;
   }
 
-  const feedResolved = events.some(
-    (event) =>
-      event.kind === "player" &&
-      event.actorId === playerId &&
-      event.action.actionId === "feed"
-  );
+  const hasCarriedFood =
+    player.inventory?.carriedItems?.some(
+      (item) => item.itemId === "food" && item.quantity > 0
+    ) ?? false;
+  const hasPickedUpAxe =
+    player.inventory?.carriedItems?.some(
+      (item) => item.itemId === "axe" && item.quantity > 0
+    ) ?? false;
+  const feedResolved =
+    events.some(
+      (event) =>
+        event.kind === "player" &&
+        event.actorId === playerId &&
+        event.action.actionId === "feed"
+    ) ||
+    (hasPickedUpAxe && !hasCarriedFood);
   const botMovedIntoPlayerCell = events.some(
     (event) =>
       event.kind === "player" &&

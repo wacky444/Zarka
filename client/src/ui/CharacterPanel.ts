@@ -393,6 +393,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.setSecondaryActionTargetPlayer(null, false);
       this.setSecondaryInspectSecondTargetPlayer(null, false);
       this.setSecondaryActionPriorityItems([], false);
+    } else if (
+      this.secondaryActionSelection === "feed" &&
+      this.currentUserId &&
+      !this.secondaryActionTargetPlayerId
+    ) {
+      this.setSecondaryActionTargetPlayer(this.currentUserId, false);
     }
     if (
       this.hasExtraSecondaryAction() &&

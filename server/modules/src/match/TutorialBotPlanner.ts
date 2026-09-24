@@ -24,11 +24,22 @@ export function planTutorialBotActions(match: MatchRecord): void {
   }
 
   const feedPlan = player.actionPlan?.secondary;
-  if (
+  const feedPlanned =
     feedPlan?.actionId === "feed" &&
-    (feedPlan.targetPlayerIds?.indexOf(playerId) ?? -1) !== -1 &&
-    !sharesTile(player, bot)
-  ) {
+    (!feedPlan.targetPlayerIds ||
+      feedPlan.targetPlayerIds.length === 0 ||
+      feedPlan.targetPlayerIds.indexOf(playerId) !== -1);
+  const hasCarriedFood =
+    player.inventory?.carriedItems?.some(
+      (item) => item.itemId === "food" && item.quantity > 0
+    ) ?? false;
+  const hasPickedUpAxe =
+    player.inventory?.carriedItems?.some(
+      (item) => item.itemId === "axe" && item.quantity > 0
+    ) ?? false;
+  const foodConsumed = hasPickedUpAxe && !hasCarriedFood;
+
+  if ((feedPlanned || foodConsumed) && !sharesTile(player, bot)) {
     const plan = getTutorialBotPlan("feed_bot", playerId);
     if (plan) {
       bot.actionPlan = { main: plan };

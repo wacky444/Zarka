@@ -1676,6 +1676,13 @@ export class GameScene extends Phaser.Scene {
     if (hasItem("bandage") && hasItem("axe") && hasItem("food")) {
       this.recordTutorialGameplay("pickup_items");
     }
+    const hasConsumedFood = hasItem("axe") && !hasItem("food");
+    const sharesTileWithBot =
+      typeof bot?.position?.tileId === "string" &&
+      bot.position.tileId === player.position?.tileId;
+    if (hasConsumedFood && sharesTileWithBot) {
+      this.recordTutorialGameplay("feed_bot");
+    }
     if (this.hasTutorialDetectiveReveal()) {
       this.recordTutorialGameplay("buy_detective");
     }
@@ -1794,12 +1801,20 @@ export class GameScene extends Phaser.Scene {
       this.recordTutorialGameplay("buy_detective");
     }
 
-    const feedResolved = events.some(
-      (event) =>
-        event.kind === "player" &&
-        event.actorId === userId &&
-        event.action.actionId === "feed"
+    const hasCarriedFood = player.inventory.carriedItems.some(
+      (item) => item.itemId === "food" && item.quantity > 0
     );
+    const hasCarriedAxe = player.inventory.carriedItems.some(
+      (item) => item.itemId === "axe" && item.quantity > 0
+    );
+    const feedResolved =
+      events.some(
+        (event) =>
+          event.kind === "player" &&
+          event.actorId === userId &&
+          event.action.actionId === "feed"
+      ) ||
+      (hasCarriedAxe && !hasCarriedFood);
     const botMovedIntoPlayerCell = events.some(
       (event) =>
         event.kind === "player" &&
@@ -1808,7 +1823,8 @@ export class GameScene extends Phaser.Scene {
     );
     if (
       feedResolved &&
-      botMovedIntoPlayerCell &&
+      (botMovedIntoPlayerCell ||
+        bot.position?.tileId === player.position?.tileId) &&
       bot.position?.tileId === player.position?.tileId
     ) {
       this.recordTutorialGameplay("feed_bot");
