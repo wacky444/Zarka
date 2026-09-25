@@ -43,6 +43,8 @@ interface ScrollablePanel extends Phaser.GameObjects.GameObject {
   setOrigin: (x: number, y: number) => ScrollablePanel;
   setPosition: (x: number, y: number) => ScrollablePanel;
   setSize?: (width: number, height: number) => ScrollablePanel;
+  scrollToBottom?: () => ScrollablePanel;
+  t?: number;
 }
 
 export class AdminServerScene extends Phaser.Scene {
@@ -117,7 +119,7 @@ export class AdminServerScene extends Phaser.Scene {
       await this.refreshLogs();
     }).setOrigin(0.5, 0);
 
-    this.updateButton = makeButton(this, 0, 0, "Update", async () => {
+    this.updateButton = makeButton(this, 0, 0, "Pull", async () => {
       await this.updateServer();
     }).setOrigin(0.5, 0);
 
@@ -210,6 +212,17 @@ export class AdminServerScene extends Phaser.Scene {
     );
   }
 
+  private scrollToBottom(): void {
+    if (!this.scrollPanel) {
+      return;
+    }
+    if (this.scrollPanel.scrollToBottom) {
+      this.scrollPanel.scrollToBottom();
+    } else if (this.scrollPanel.t !== undefined) {
+      this.scrollPanel.t = 1;
+    }
+  }
+
   private updateErrorOnlyLabel(): void {
     if (!this.errorOnlyText) {
       return;
@@ -231,6 +244,7 @@ export class AdminServerScene extends Phaser.Scene {
       this.logsText.setText(logs || t("No logs returned."));
       this.updateLogsContentSize(this.scale.width, this.getScrollViewportHeight());
       this.scrollPanel.layout?.();
+      this.scrollToBottom();
       this.statusText.setText(t("Logs loaded."));
     } catch (error) {
       this.showRequestError(error);
@@ -265,6 +279,7 @@ export class AdminServerScene extends Phaser.Scene {
         this.statusText.setText(t("Update completed."));
         this.updateLogsContentSize(this.scale.width, this.getScrollViewportHeight());
         this.scrollPanel.layout?.();
+        this.scrollToBottom();
       } catch {
         this.statusText.setText(
           t("Update completed, but logs could not be refreshed."),
@@ -301,6 +316,7 @@ export class AdminServerScene extends Phaser.Scene {
         this.logsText.setText(error.details);
         this.updateLogsContentSize(this.scale.width, this.getScrollViewportHeight());
         this.scrollPanel.layout?.();
+        this.scrollToBottom();
       }
       if (error.message === "invalid_password") {
         this.adminPassword = "";
@@ -421,6 +437,7 @@ export class AdminServerScene extends Phaser.Scene {
       this.statusText.setText(t("Logs loaded."));
       this.removePasswordPrompt();
       this.layout();
+      this.scrollToBottom();
     } catch (error) {
       if (
         error instanceof AdminServerApiError &&
@@ -433,6 +450,7 @@ export class AdminServerScene extends Phaser.Scene {
         }
         this.removePasswordPrompt();
         this.layout();
+        this.scrollToBottom();
         return;
       }
       errorLabel.textContent = getAdminErrorMessage(error);

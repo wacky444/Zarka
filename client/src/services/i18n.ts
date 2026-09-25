@@ -40,7 +40,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Report: "Informe",
   "Account Settings": "Configuración de la cuenta",
   "Nakama Server Logs": "Registros del servidor Nakama",
-  "Enter the Nakama console password to continue.": "Introduce la contraseña de consola de Nakama para continuar.",
+  "Enter the Nakama console password to continue.":
+    "Introduce la contraseña de consola de Nakama para continuar.",
   "Admin authentication": "Autenticación de administrador",
   "Console password": "Contraseña de consola",
   "Console password is required.": "La contraseña de consola es obligatoria.",
@@ -49,27 +50,44 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Loading Nakama logs...": "Cargando registros de Nakama...",
   "No logs returned.": "No se recibieron registros.",
   "Logs loaded.": "Registros cargados.",
-  "Pull changes and rebuild Nakama?": "¿Descargar los cambios y reconstruir Nakama?",
-  "Pulling changes and rebuilding Nakama...": "Descargando cambios y reconstruyendo Nakama...",
-  "Update in progress. Please keep this page open.": "Actualización en curso. Mantén esta página abierta.",
+  "Pull changes and rebuild Nakama?":
+    "¿Descargar los cambios y reconstruir Nakama?",
+  "Pulling changes and rebuilding Nakama...":
+    "Descargando cambios y reconstruyendo Nakama...",
+  "Update in progress. Please keep this page open.":
+    "Actualización en curso. Mantén esta página abierta.",
   "Update completed.": "Actualización completada.",
-  "Update completed. Refreshing logs...": "Actualización completada. Actualizando registros...",
-  "Update completed, but logs could not be refreshed.": "Actualización completada, pero no se pudieron actualizar los registros.",
+  "Update completed. Refreshing logs...":
+    "Actualización completada. Actualizando registros...",
+  "Update completed, but logs could not be refreshed.":
+    "Actualización completada, pero no se pudieron actualizar los registros.",
   "Admin operation failed.": "La operación de administración falló.",
   "Invalid console password.": "La contraseña de consola no es válida.",
-  "Too many failed password attempts. Try again later.": "Demasiados intentos fallidos. Inténtalo más tarde.",
-  "The repository has local changes. Commit or discard them before updating.": "El repositorio tiene cambios locales. Confírmalos o descártalos antes de actualizar.",
-  "The server checkout is not on the main branch.": "El servidor no está en la rama main.",
+  "Too many failed password attempts. Try again later.":
+    "Demasiados intentos fallidos. Inténtalo más tarde.",
+  "The repository has local changes. Commit or discard them before updating.":
+    "El repositorio tiene cambios locales. Confírmalos o descártalos antes de actualizar.",
+  "The server checkout is not on the main branch.":
+    "El servidor no está en la rama main.",
   "An update is already in progress.": "Ya hay una actualización en curso.",
-  "Nakama logs are unavailable.": "Los registros de Nakama no están disponibles.",
-  "Admin API is unreachable.": "No se puede acceder a la API de administración.",
-  "Update failed while checking the repository.": "La actualización falló al comprobar el repositorio.",
-  "Update failed while pulling changes.": "La actualización falló al descargar los cambios.",
-  "Update failed while installing dependencies.": "La actualización falló al instalar dependencias.",
-  "Update failed while building the module.": "La actualización falló al compilar el módulo.",
-  "Update failed while restarting Nakama.": "La actualización falló al reiniciar Nakama.",
-  "The host repository path could not be resolved from Docker.": "No se pudo obtener de Docker la ruta del repositorio del servidor.",
-  "Unable to inspect the Docker repository mount.": "No se pudo inspeccionar el montaje del repositorio en Docker.",
+  "Nakama logs are unavailable.":
+    "Los registros de Nakama no están disponibles.",
+  "Admin API is unreachable.":
+    "No se puede acceder a la API de administración.",
+  "Update failed while checking the repository.":
+    "La actualización falló al comprobar el repositorio.",
+  "Update failed while pulling changes.":
+    "La actualización falló al descargar los cambios.",
+  "Update failed while installing dependencies.":
+    "La actualización falló al instalar dependencias.",
+  "Update failed while building the module.":
+    "La actualización falló al compilar el módulo.",
+  "Update failed while restarting Nakama.":
+    "La actualización falló al reiniciar Nakama.",
+  "The host repository path could not be resolved from Docker.":
+    "No se pudo obtener de Docker la ruta del repositorio del servidor.",
+  "Unable to inspect the Docker repository mount.":
+    "No se pudo inspeccionar el montaje del repositorio en Docker.",
   "Player Stats": "Estadísticas del jugador",
   "Skin Customization": "Personalización de apariencia",
   "Facebook Account": "Cuenta de Facebook",
@@ -83,23 +101,32 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Preview: "Vista previa",
   "Skin saved!": "¡Apariencia guardada!",
   "Stats unavailable": "Estadísticas no disponibles",
-  "Error loading account information": "Error al cargar la información de la cuenta",
+  "Error loading account information":
+    "Error al cargar la información de la cuenta",
   "Linking Facebook account...": "Vinculando la cuenta de Facebook...",
   "Facebook SDK not available": "El SDK de Facebook no está disponible",
-  "Facebook SDK not available. Please check your internet connection.": "El SDK de Facebook no está disponible. Comprueba tu conexión a internet.",
+  "Facebook SDK not available. Please check your internet connection.":
+    "El SDK de Facebook no está disponible. Comprueba tu conexión a internet.",
   "Facebook login cancelled": "Inicio de sesión de Facebook cancelado",
-  "Facebook account linked successfully!": "¡Cuenta de Facebook vinculada correctamente!",
-  "Failed to link Facebook account": "No se pudo vincular la cuenta de Facebook",
+  "Facebook account linked successfully!":
+    "¡Cuenta de Facebook vinculada correctamente!",
+  "Failed to link Facebook account":
+    "No se pudo vincular la cuenta de Facebook",
   "Unlinking Facebook account...": "Desvinculando la cuenta de Facebook...",
-  "Facebook account unlinked successfully!": "¡Cuenta de Facebook desvinculada correctamente!",
+  "Facebook account unlinked successfully!":
+    "¡Cuenta de Facebook desvinculada correctamente!",
   "Facebook account is linked": "La cuenta de Facebook está vinculada",
   "Facebook account is not linked": "La cuenta de Facebook no está vinculada",
-  "Failed to unlink Facebook account": "No se pudo desvincular la cuenta de Facebook",
-  "Display name must be 128 characters or less": "El nombre visible debe tener 128 caracteres o menos",
+  "Failed to unlink Facebook account":
+    "No se pudo desvincular la cuenta de Facebook",
+  "Display name must be 128 characters or less":
+    "El nombre visible debe tener 128 caracteres o menos",
   "Enter new display name:": "Escribe el nuevo nombre visible:",
   "Match name": "Nombre de la partida",
-  "Are you sure you want to start the match? Players will no longer be able to join.": "¿Seguro que quieres comenzar la partida? Los jugadores ya no podrán unirse.",
-  "Are you sure you want to remove this match? This action cannot be undone.": "¿Seguro que quieres eliminar esta partida? Esta acción no se puede deshacer.",
+  "Are you sure you want to start the match? Players will no longer be able to join.":
+    "¿Seguro que quieres comenzar la partida? Los jugadores ya no podrán unirse.",
+  "Are you sure you want to remove this match? This action cannot be undone.":
+    "¿Seguro que quieres eliminar esta partida? Esta acción no se puede deshacer.",
   "Updating display name...": "Actualizando el nombre visible...",
   "Display name updated!": "¡Nombre visible actualizado!",
   "Failed to update display name": "No se pudo actualizar el nombre visible",
@@ -127,23 +154,28 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Map: "Mapa",
   Panel: "Panel",
   "Settings sync:": "Sincronización de ajustes:",
-  "Authenticated. Use the buttons below.": "Autenticado. Usa los botones de abajo.",
+  "Authenticated. Use the buttons below.":
+    "Autenticado. Usa los botones de abajo.",
   "Left match.": "Has abandonado la partida.",
-  "Back to main menu (still in match).": "Volver al menú principal (sigues en la partida).",
+  "Back to main menu (still in match).":
+    "Volver al menú principal (sigues en la partida).",
   "Match was already started.": "La partida ya había comenzado.",
   "Match started.": "Partida comenzada.",
   "Failed to update settings": "No se pudieron actualizar los ajustes",
   "Match removed successfully.": "Partida eliminada correctamente.",
-  "Failed to remove match (see console).": "No se pudo eliminar la partida (consulta la consola).",
-  "Maximum of 3 matches per user reached": "Has alcanzado el máximo de 3 partidas por usuario",
-  "Failed to create match (see console).": "No se pudo crear la partida (consulta la consola).",
+  "Failed to remove match (see console).":
+    "No se pudo eliminar la partida (consulta la consola).",
+  "Maximum of 3 matches per user reached":
+    "Has alcanzado el máximo de 3 partidas por usuario",
+  "Failed to create match (see console).":
+    "No se pudo crear la partida (consulta la consola).",
   "List Matches": "Lista de partidas",
   "My Matches": "Mis partidas",
   "Create Match": "Crear partida",
   Logout: "Cerrar sesión",
   "Match Lobby": "Sala de partida",
   "Waiting for players...": "Esperando a los jugadores...",
-  "Waiting": "Esperando",
+  Waiting: "Esperando",
   "In Progress": "En curso",
   "Carried items:": "Objetos transportados:",
   "Return to Game": "Volver al juego",
@@ -153,12 +185,12 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Start Match": "Comenzar partida",
   "Remove Match": "Eliminar partida",
   Rename: "Cambiar nombre",
-  "Players": "Jugadores",
-  "Teams": "Equipos",
-  "Matches": "Partidas",
+  Players: "Jugadores",
+  Teams: "Equipos",
+  Matches: "Partidas",
   "Fetching...": "Cargando...",
   Refresh: "Actualizar",
-  Update: "Actualizar",
+  Pull: "Pull",
   Continue: "Continuar",
   Back: "Atrás",
   View: "Ver",
@@ -177,30 +209,44 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Username:": "Nombre de usuario:",
   "Email or Username:": "Correo o nombre de usuario:",
   "Click to enter email...": "Pulsa para escribir el correo...",
-  "Click to enter email or username...": "Pulsa para escribir el correo o usuario...",
+  "Click to enter email or username...":
+    "Pulsa para escribir el correo o usuario...",
   "Click to enter password...": "Pulsa para escribir la contraseña...",
   "Click to enter username...": "Pulsa para escribir el nombre de usuario...",
   "Create your account": "Crea tu cuenta",
   "Login with username or email": "Inicia sesión con usuario o correo",
-  "Initializing Facebook login...": "Inicializando el inicio de sesión de Facebook...",
-  "Please complete Facebook login...": "Completa el inicio de sesión de Facebook...",
-  "Facebook login was cancelled or failed.": "El inicio de sesión de Facebook se canceló o falló.",
-  "Authenticating with game server...": "Autenticando con el servidor del juego...",
-  "Initializing Google login...": "Inicializando el inicio de sesión de Google...",
-  "Please complete Google login...": "Completa el inicio de sesión de Google...",
-  "Google login was cancelled or failed.": "El inicio de sesión de Google se canceló o falló.",
-  "Google login is not configured. Please use another login method.": "El inicio de sesión de Google no está configurado. Usa otro método.",
-  "Google login is unavailable. Please check your internet connection.": "El inicio de sesión de Google no está disponible. Comprueba tu conexión.",
+  "Initializing Facebook login...":
+    "Inicializando el inicio de sesión de Facebook...",
+  "Please complete Facebook login...":
+    "Completa el inicio de sesión de Facebook...",
+  "Facebook login was cancelled or failed.":
+    "El inicio de sesión de Facebook se canceló o falló.",
+  "Authenticating with game server...":
+    "Autenticando con el servidor del juego...",
+  "Initializing Google login...":
+    "Inicializando el inicio de sesión de Google...",
+  "Please complete Google login...":
+    "Completa el inicio de sesión de Google...",
+  "Google login was cancelled or failed.":
+    "El inicio de sesión de Google se canceló o falló.",
+  "Google login is not configured. Please use another login method.":
+    "El inicio de sesión de Google no está configurado. Usa otro método.",
+  "Google login is unavailable. Please check your internet connection.":
+    "El inicio de sesión de Google no está disponible. Comprueba tu conexión.",
   "Logging in...": "Iniciando sesión...",
-  "Please enter username/email and password.": "Escribe el usuario/correo y la contraseña.",
+  "Please enter username/email and password.":
+    "Escribe el usuario/correo y la contraseña.",
   "Please enter a username.": "Escribe un nombre de usuario.",
   "Please enter both email and password.": "Escribe el correo y la contraseña.",
-  "Password must be at least 8 characters long.": "La contraseña debe tener al menos 8 caracteres.",
+  "Password must be at least 8 characters long.":
+    "La contraseña debe tener al menos 8 caracteres.",
   "Creating account...": "Creando cuenta...",
   "Account created successfully!": "¡Cuenta creada correctamente!",
   "Logging in as guest...": "Iniciando sesión como invitado...",
-  "Guest login failed. Please try again.": "El inicio de sesión como invitado falló. Inténtalo de nuevo.",
-  "Login successful! Starting game...": "¡Inicio de sesión correcto! Iniciando el juego...",
+  "Guest login failed. Please try again.":
+    "El inicio de sesión como invitado falló. Inténtalo de nuevo.",
+  "Login successful! Starting game...":
+    "¡Inicio de sesión correcto! Iniciando el juego...",
   "Main Action": "Acción principal",
   "Secondary Action": "Acción secundaria",
   "Extra Secondary Action": "Acción secundaria adicional",
@@ -258,29 +304,50 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Bomber: "Bombardero",
   Hitman: "Sicario",
   Cocoman: "Cocoman",
-  "The trafficker delivers an arrow at the end of the turn.": "El traficante entrega una flecha al final del turno.",
-  "The trafficker delivers an antidote at the end of the turn.": "El traficante entrega un antídoto al final del turno.",
-  "The trafficker delivers a bullet at the end of the turn.": "El traficante entrega una bala al final del turno.",
-  "The trafficker delivers food at the end of the turn.": "El traficante entrega comida al final del turno.",
-  "The trafficker delivers a bandage at the end of the turn.": "El traficante entrega una venda al final del turno.",
-  "The trafficker delivers a harpoon at the end of the turn.": "El traficante entrega un arpón al final del turno.",
-  "The trafficker delivers a trap at the end of the turn.": "El traficante entrega una trampa al final del turno.",
-  "The trafficker delivers a pistol at the end of the turn.": "El traficante entrega una pistola al final del turno.",
-  "The trafficker delivers a C4 explosive at the end of the turn.": "El traficante entrega un explosivo C4 al final del turno.",
-  "The trafficker delivers a bulletproof vest at the end of the turn.": "El traficante entrega un chaleco antibalas al final del turno.",
-  "The trafficker delivers a rocket launcher at the end of the turn.": "El traficante entrega un lanzacohetes al final del turno.",
-  "Reports the characters visible in the security room that turn.": "Informa de los personajes visibles en la sala de seguridad durante ese turno.",
-  "Reports the players visible in a chosen location that turn.": "Informa de los jugadores visibles en una ubicación elegida durante ese turno.",
-  "Reports the investigated player's team immediately.": "Informa inmediatamente del equipo del jugador investigado.",
-  "Reports the number of traps or C4 one location away.": "Informa del número de trampas o C4 a una ubicación de distancia.",
-  "Transports up to four consenting people between locations.": "Transporta hasta cuatro personas que acepten entre ubicaciones.",
-  "Intoxicates every character in a location.": "Intoxica a todos los personajes de una ubicación.",
-  "Creates a three-turn fire in a location.": "Crea un incendio de tres turnos en una ubicación.",
+  "The trafficker delivers an arrow at the end of the turn.":
+    "El traficante entrega una flecha al final del turno.",
+  "The trafficker delivers an antidote at the end of the turn.":
+    "El traficante entrega un antídoto al final del turno.",
+  "The trafficker delivers a bullet at the end of the turn.":
+    "El traficante entrega una bala al final del turno.",
+  "The trafficker delivers food at the end of the turn.":
+    "El traficante entrega comida al final del turno.",
+  "The trafficker delivers a bandage at the end of the turn.":
+    "El traficante entrega una venda al final del turno.",
+  "The trafficker delivers a harpoon at the end of the turn.":
+    "El traficante entrega un arpón al final del turno.",
+  "The trafficker delivers a trap at the end of the turn.":
+    "El traficante entrega una trampa al final del turno.",
+  "The trafficker delivers a pistol at the end of the turn.":
+    "El traficante entrega una pistola al final del turno.",
+  "The trafficker delivers a C4 explosive at the end of the turn.":
+    "El traficante entrega un explosivo C4 al final del turno.",
+  "The trafficker delivers a bulletproof vest at the end of the turn.":
+    "El traficante entrega un chaleco antibalas al final del turno.",
+  "The trafficker delivers a rocket launcher at the end of the turn.":
+    "El traficante entrega un lanzacohetes al final del turno.",
+  "Reports the characters visible in the security room that turn.":
+    "Informa de los personajes visibles en la sala de seguridad durante ese turno.",
+  "Reports the players visible in a chosen location that turn.":
+    "Informa de los jugadores visibles en una ubicación elegida durante ese turno.",
+  "Reports the investigated player's team immediately.":
+    "Informa inmediatamente del equipo del jugador investigado.",
+  "Reports the number of traps or C4 one location away.":
+    "Informa del número de trampas o C4 a una ubicación de distancia.",
+  "Transports up to four consenting people between locations.":
+    "Transporta hasta cuatro personas que acepten entre ubicaciones.",
+  "Intoxicates every character in a location.":
+    "Intoxica a todos los personajes de una ubicación.",
+  "Creates a three-turn fire in a location.":
+    "Crea un incendio de tres turnos en una ubicación.",
   "hired a pyromaniac": "contrató un pirómano",
   "hired a bomber": "contrató un bombardero",
-  "Deals five unavoidable damage to every player in a location.": "Inflige cinco puntos de daño inevitable a todos los jugadores de una ubicación.",
-  "A mercenary that attacks the assigned target team.": "Un mercenario que ataca al equipo objetivo asignado.",
-  "A prestigious hitman with a chainsaw and bulletproof vest.": "Un sicario prestigioso con una motosierra y un chaleco antibalas.",
+  "Deals five unavoidable damage to every player in a location.":
+    "Inflige cinco puntos de daño inevitable a todos los jugadores de una ubicación.",
+  "A mercenary that attacks the assigned target team.":
+    "Un mercenario que ataca al equipo objetivo asignado.",
+  "A prestigious hitman with a chainsaw and bulletproof vest.":
+    "Un sicario prestigioso con una motosierra y un chaleco antibalas.",
   "20 + 5 per person": "20 + 5 por persona",
   "Match Chat": "Chat de partida",
   Tutorial: "Tutorial",
@@ -345,8 +412,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
     "Observa el orden: el Asustar del bot te mueve antes de que se resuelva tu ataque con hacha.",
   "He is lying, he is not on your team! Attack him with the axe.":
     "¡Está mintiendo, no está en tu equipo! Atácale con el hacha.",
-  "Press Ready to submit your attack.":
-    "Pulsa Listo para enviar tu ataque.",
+  "Press Ready to submit your attack.": "Pulsa Listo para enviar tu ataque.",
   "Press Ready to submit the plan. The Log will show why the attack misses.":
     "Pulsa Listo para enviar el plan. El Registro mostrará por qué falla el ataque.",
   "Move back toward the bot. The map is about to become dangerous.":
@@ -410,7 +476,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Chat is not connected": "El chat no está conectado",
   "Chat unavailable": "Chat no disponible",
   "Chat unavailable.": "Chat no disponible.",
-  "Already chosen as extra secondary action": "Ya elegida como acción secundaria adicional",
+  "Already chosen as extra secondary action":
+    "Ya elegida como acción secundaria adicional",
   "Already chosen as secondary action": "Ya elegida como acción secundaria",
   "No action": "Sin acción",
   "Action failed": "Acción fallida",
@@ -486,8 +553,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "picked up": "recogió",
   sold: "vendió",
   "at the black market for": "en el mercado negro por",
-  "sold nothing at the black market":
-    "no vendió nada en el mercado negro",
+  "sold nothing at the black market": "no vendió nada en el mercado negro",
   for: "por",
   dropped: "soltó",
   throws: "lanza",
@@ -525,7 +591,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Missing 2 units of fuel": "Faltan 2 unidades de combustible",
   "Not visible": "No visible",
   "Not available in this build.": "No disponible en esta versión.",
-  "[ ] Ready":  "[ ] Listo",
+  "[ ] Ready": "[ ] Listo",
   "[x] Ready": "[x] Listo",
   "[ ] Prioritize food/drink": "[ ] Priorizar comida/bebida",
   "[x] Prioritize food/drink": "[x] Priorizar comida/bebida",
@@ -552,21 +618,26 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Selecting...": "Seleccionando...",
   "Add priority item": "Añadir objeto prioritario",
   "Removes every prioritized item.": "Elimina todos los objetos prioritarios.",
-  "Removes the current priority target.": "Elimina el objetivo prioritario actual.",
-  "Removes the extra secondary action.": "Elimina la acción secundaria adicional.",
-  "Removes the planned secondary action.": "Elimina la acción secundaria planificada.",
+  "Removes the current priority target.":
+    "Elimina el objetivo prioritario actual.",
+  "Removes the extra secondary action.":
+    "Elimina la acción secundaria adicional.",
+  "Removes the planned secondary action.":
+    "Elimina la acción secundaria planificada.",
   "Replay not available.": "Repetición no disponible.",
   "No events recorded.": "No hay eventos registrados.",
   "Skip Time": "Saltar tiempo",
   "Starting...": "Comenzando...",
   "Match Started": "Partida comenzada",
   "Starting Match": "Comenzando partida",
-  "Server unavailable. Please check your connection or try again later.": "Servidor no disponible. Comprueba tu conexión e inténtalo de nuevo.",
-  "Your session has expired. Please log in again.": "Tu sesión ha caducado. Inicia sesión de nuevo.",
+  "Server unavailable. Please check your connection or try again later.":
+    "Servidor no disponible. Comprueba tu conexión e inténtalo de nuevo.",
+  "Your session has expired. Please log in again.":
+    "Tu sesión ha caducado. Inicia sesión de nuevo.",
   "Unsupported payload type: ": "Tipo de respuesta no compatible: ",
   "Select Extra Secondary Action": "Seleccionar acción secundaria adicional",
   "No extra secondary action": "Sin acción secundaria adicional",
-  "Upgrade": "Mejorar",
+  Upgrade: "Mejorar",
   "+ Upgrade": "+ Mejorar",
   "Available Skill: 0": "Puntos disponibles: 0",
   "Description coming soon.": "Descripción próximamente.",
@@ -623,12 +694,12 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   Robar: "Steal",
   Fabricar: "Craft",
   "Traficar en el mercado negro": "Black market trade",
-  "Debe realizarse en el mercado negro.": "Must be performed at the black market.",
+  "Debe realizarse en el mercado negro.":
+    "Must be performed at the black market.",
   "Permite vender hasta 4 objetos obteniendo 1 zarkan adicional por cada uno.":
     "Allows selling up to 4 items, receiving 1 additional zarkan for each one.",
   "Permite vender objetos adicionales.": "Allows selling additional items.",
-  "Debe encontrarse en una casa o farmacia.":
-    "Must be in a house or pharmacy.",
+  "Debe encontrarse en una casa o farmacia.": "Must be in a house or pharmacy.",
   "Permite ver a los personajes visibles de una localización adyacente.":
     "Allows viewing visible characters in an adjacent location.",
   "Revela los personajes visibles de una localización adyacente.":
@@ -747,7 +818,10 @@ const PREFIX_TRANSLATIONS: Array<[RegExp, string]> = [
   [/^Save failed:\s*/, "Error al guardar: "],
   [/^Error:\s*/, "Error: "],
   [/^Found (\d+) matches:/, "Se encontraron $1 partidas:"],
-  [/^Found (\d+) matches you've joined:/, "Se encontraron $1 partidas en las que participas:"],
+  [
+    /^Found (\d+) matches you've joined:/,
+    "Se encontraron $1 partidas en las que participas:"
+  ],
   [/^Auto-advance in\s*/, "Avance automático en "],
   [/^Match created:\s*/, "Partida creada: "],
   [/^Turn submitted\. Turn #:\s*/, "Turno enviado. Turno n.º: "],
@@ -773,7 +847,12 @@ let installed = false;
 const localizedTexts = new Set<Phaser.GameObjects.Text>();
 const hookedTexts = new WeakSet<Phaser.GameObjects.Text>();
 const sourceTexts = new WeakMap<Phaser.GameObjects.Text, TextValue>();
-let originalSetText: ((this: Phaser.GameObjects.Text, value: TextValue) => Phaser.GameObjects.Text) | null = null;
+let originalSetText:
+  | ((
+      this: Phaser.GameObjects.Text,
+      value: TextValue
+    ) => Phaser.GameObjects.Text)
+  | null = null;
 
 function readInitialLocale(): Locale {
   if (typeof localStorage !== "undefined") {
@@ -782,7 +861,10 @@ function readInitialLocale(): Locale {
       return stored;
     }
   }
-  if (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("es")) {
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.language.toLowerCase().startsWith("es")
+  ) {
     return "es";
   }
   return "en";
@@ -798,8 +880,10 @@ function translateValue(value: string): string {
   }
   // Preserve BBCode generated for rich action descriptions. Treating a
   // `[color=...]...[/color]` value as a bracket label corrupts its tags.
-  if (/\[(?:color|bgcolor)=[^\]]+\]/i.test(value) ||
-      /\[\/(?:color|bgcolor)\]/i.test(value)) {
+  if (
+    /\[(?:color|bgcolor)=[^\]]+\]/i.test(value) ||
+    /\[\/(?:color|bgcolor)\]/i.test(value)
+  ) {
     return value;
   }
   const bracketMatch = value.match(/^\[\s*(.*?)\s*\]$/);
@@ -816,7 +900,9 @@ function translateValue(value: string): string {
 }
 
 function translateTextValue(value: TextValue): TextValue {
-  return Array.isArray(value) ? value.map((entry) => translateValue(entry)) : translateValue(value);
+  return Array.isArray(value)
+    ? value.map((entry) => translateValue(entry))
+    : translateValue(value);
 }
 
 export function t(value: string): string {
