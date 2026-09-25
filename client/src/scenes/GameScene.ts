@@ -97,6 +97,7 @@ type CachedReplay = {
 };
 
 const MOBILE_LAYOUT_BREAKPOINT = 760;
+const TUTORIAL_VICTORY_DELAY_MS = 3000;
 
 export class GameScene extends Phaser.Scene {
   private cam!: Phaser.Cameras.Scene2D.Camera;
@@ -173,6 +174,8 @@ export class GameScene extends Phaser.Scene {
   private pendingMatchEndPayload:
     | import("@shared").MatchEndedMessagePayload
     | null = null;
+  private tutorialVictoryDelayTimer: Phaser.Time.TimerEvent | null = null;
+  private tutorialVictoryDelayElapsed = false;
   private adminViewEnabled = false;
   private pinchActive = false;
   private pinchGestureInProgress = false;
@@ -487,6 +490,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   async create() {
+    this.tutorialVictoryDelayTimer?.remove(false);
+    this.tutorialVictoryDelayTimer = null;
+    this.pendingMatchEndPayload = null;
+    this.tutorialVictoryDelayElapsed = false;
     applyStoredVolume(this);
     this.cam = this.cameras.main;
     this.uiCam = this.cameras.add(0, 0, this.cam.width, this.cam.height);
@@ -766,6 +773,10 @@ export class GameScene extends Phaser.Scene {
       this.actionPlanSynchronizer?.destroy();
       this.actionPlanSynchronizer = null;
       this.tutorialController = null;
+      this.tutorialVictoryDelayTimer?.remove(false);
+      this.tutorialVictoryDelayTimer = null;
+      this.pendingMatchEndPayload = null;
+      this.tutorialVictoryDelayElapsed = false;
       this.scale.off("resize", this.handleResize, this);
       this.hideLoadingOverlay();
       this.input.off(Phaser.Input.Events.POINTER_DOWN, this.pointerDownHandler);
@@ -1192,11 +1203,43 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.recordTutorialGameplay("victory_recap");
+    if (this.currentMatch?.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
+      this.pendingMatchEndPayload = payload;
+      if (
+        !this.tutorialVictoryDelayElapsed &&
+        !this.tutorialVictoryDelayTimer
+      ) {
+        this.tutorialVictoryDelayTimer = this.time.delayedCall(
+          TUTORIAL_VICTORY_DELAY_MS,
+          () => {
+            this.tutorialVictoryDelayTimer = null;
+            this.tutorialVictoryDelayElapsed = true;
+            this.showPendingMatchEndIfReady();
+          }
+        );
+      }
+      return;
+    }
     if (this.replayPlaying) {
       this.pendingMatchEndPayload = payload;
     } else {
       this.triggerVictoryOverlay(payload);
     }
+  }
+
+  private showPendingMatchEndIfReady(): void {
+    const payload = this.pendingMatchEndPayload;
+    if (!payload || this.replayPlaying) {
+      return;
+    }
+    if (
+      this.currentMatch?.metadata?.[TUTORIAL_MATCH_METADATA_KEY] &&
+      !this.tutorialVictoryDelayElapsed
+    ) {
+      return;
+    }
+    this.pendingMatchEndPayload = null;
+    this.triggerVictoryOverlay(payload);
   }
 
   private triggerVictoryOverlay(
@@ -2678,11 +2721,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.replayPlaying = false;
-    if (this.pendingMatchEndPayload) {
-      const payload = this.pendingMatchEndPayload;
-      this.pendingMatchEndPayload = null;
-      this.triggerVictoryOverlay(payload);
-    }
+    this.showPendingMatchEndIfReady();
   }
 
   private createMoveReplayContext(): MoveReplayContext {
