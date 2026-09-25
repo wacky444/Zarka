@@ -51,7 +51,7 @@ export class TutorialInstructionView {
       scene,
       0,
       0,
-      "Show hint",
+      "[ Hint ]",
       () => this.toggleHint(),
       []
     );
@@ -88,7 +88,6 @@ export class TutorialInstructionView {
     this.instructionText.setText(t(copy.instruction));
     this.hintText.setText(t(copy.hint));
     this.hintText.setVisible(false);
-    this.updateHintButtonLabel();
     this.container.setVisible(true);
     this.layout(this.scene.scale.width, this.scene.scale.height);
   }
@@ -102,7 +101,7 @@ export class TutorialInstructionView {
     this.hintText.setWordWrapWidth(this.width - 28);
     this.hintText.setPosition(14, this.height - 54);
     this.hintButton.setPosition(this.width - this.hintButton.width - 12, 6);
-    this.hintButton.setText(`[ ${t(this.hintVisible ? "Hide hint" : "Show hint")} ]`);
+    this.hintButton.setText(`[ ${t("Hint")} ]`);
     this.hintText.setVisible(this.hintVisible);
     if (height < this.height + 60) {
       this.container.setY(Math.max(8, height - this.height - 8));
@@ -122,7 +121,4 @@ export class TutorialInstructionView {
     this.layout(this.scene.scale.width, this.scene.scale.height);
   }
 
-  private updateHintButtonLabel(): void {
-    this.hintButton.setText(`[ ${t(this.hintVisible ? "Hide hint" : "Show hint")} ]`);
-  }
 }

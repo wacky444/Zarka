@@ -4,6 +4,7 @@ import {
   MATCH_CHAT_ROOM_CHANNEL_TYPE,
   MATCH_CHAT_ROOM_PREFIX,
   NAKAMA_SYSTEM_USER_ID,
+  LocalizationType,
   ShopLibrary,
   TUTORIAL_BOT_ID,
   TUTORIAL_BOT_MESSAGES,
@@ -135,6 +136,10 @@ test("tutorial fixture and scripted bot plans are deterministic", () => {
       { q: 0, r: 1 },
       { q: 1, r: 1 }
     ]
+  );
+  assert.equal(
+    first.map?.tiles[1]?.localizationType,
+    LocalizationType.Pharmacy
   );
   assert.deepEqual(
     first.playerCharacters[first.players[0]]?.position?.coord,

@@ -248,6 +248,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Match Chat": "Chat de partida",
   Tutorial: "Tutorial",
   Step: "Paso",
+  Hint: "Pista",
   "Show hint": "Mostrar pista",
   "Hide hint": "Ocultar pista",
   "Tutorial complete": "Tutorial completado",

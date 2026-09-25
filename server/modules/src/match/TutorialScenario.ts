@@ -52,11 +52,12 @@ export interface CreateTutorialMatchOptions {
 function createTutorialTile(
   coord: Axial,
   itemIds: string[] = [],
-  meta?: Record<string, unknown>
+  meta?: Record<string, unknown>,
+  localizationType: LocalizationType = LocalizationType.Path
 ) {
   return new HexTile(
     { q: coord.q, r: coord.r },
-    CellLibrary[LocalizationType.Path],
+    CellLibrary[localizationType],
     {
       id: `hex_${coord.q}_${coord.r}`,
       itemIds,
@@ -90,7 +91,12 @@ function createTutorialMap(matchId: string): {
         TUTORIAL_CELL_COORDS.playerStart,
         itemIdsAt(TUTORIAL_CELL_COORDS.playerStart)
       ),
-      createTutorialTile(TUTORIAL_CELL_COORDS.botStart),
+      createTutorialTile(
+        TUTORIAL_CELL_COORDS.botStart,
+        [],
+        undefined,
+        LocalizationType.Pharmacy
+      ),
       createTutorialTile(TUTORIAL_CELL_COORDS.doomed, [], {
         warningTurn: TUTORIAL_DESTRUCTION_WARNING_TURN,
         destructionTurn: TUTORIAL_DESTRUCTION_TURN
