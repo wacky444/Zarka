@@ -42,12 +42,6 @@
 
 - after changing a selector the gui freezes until the server answers in both pc and mobile
 
-- clicking cell should show posible items
-
-- cel 1,0 should be another type so clicking cell shows other stuff
-
-- tutorial shouldnt allow to click ready until needed
-
 -step 6 should tell abou prioritzen items
 
 
