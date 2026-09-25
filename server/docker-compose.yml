@@ -50,7 +50,7 @@ services:
     container_name: zarka-admin-api
     restart: unless-stopped
     environment:
-      PORT: "8080"
+      PORT: "7354"
       REPOSITORY_DIRECTORY: /workspace
       NAKAMA_LOCAL_CONFIG: /run/nakama/local.yml
       ADMIN_ALLOWED_ORIGINS: "${ADMIN_ALLOWED_ORIGINS:-https://wacky444.github.io}"
@@ -59,7 +59,7 @@ services:
       - ./local.yml:/run/nakama/local.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock
     expose:
-      - "8080"
+      - "7354"
 
   caddy:
     image: caddy

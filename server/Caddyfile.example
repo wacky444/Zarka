@@ -10,7 +10,7 @@
 
 	@adminApi path /admin/logs /admin/update
 	handle @adminApi {
-		reverse_proxy admin-api:8080
+		reverse_proxy admin-api:7354
 	}
 
 	@facebookDataDeletion path /facebook/data-deletion
@@ -39,7 +39,7 @@ https://localhost {
 
 	@adminApi path /admin/logs /admin/update
 	handle @adminApi {
-		reverse_proxy admin-api:8080
+		reverse_proxy admin-api:7354
 	}
 
 	@facebookDataDeletion path /facebook/data-deletion

@@ -5,7 +5,7 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-const port = Number(process.env.PORT ?? 8080);
+const port = Number(process.env.PORT ?? 7354);
 const repositoryDirectory = process.env.REPOSITORY_DIRECTORY ?? "/workspace";
 const serverDirectory = path.join(repositoryDirectory, "server");
 const modulesDirectory = path.join(serverDirectory, "modules");
