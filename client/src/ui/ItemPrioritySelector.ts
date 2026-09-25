@@ -89,14 +89,17 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
       texture: option.texture ?? "hex",
       frame: option.frame,
     }));
-    this.options = normalized;
     const filtered = this.priority.filter((id) =>
       normalized.some((option) => option.id === id && option.disabled !== true)
     );
-    if (filtered.length !== this.priority.length) {
+    const priorityChanged = filtered.length !== this.priority.length;
+    if (this.sameOptions(this.options, normalized) && !priorityChanged) {
+      return;
+    }
+    this.options = normalized;
+    if (priorityChanged) {
       this.priority = filtered;
     }
-    this.grid.setItems(this.buildGridItems());
     this.syncing = true;
     this.grid.setValue(null, false);
     this.syncing = false;
@@ -271,6 +274,30 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
     }
     for (let i = 0; i < a.length; i += 1) {
       if (a[i] !== b[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private sameOptions(
+    a: ItemPriorityOption[],
+    b: ItemPriorityOption[]
+  ): boolean {
+    if (a.length !== b.length) {
+      return false;
+    }
+    for (let i = 0; i < a.length; i += 1) {
+      const optA = a[i];
+      const optB = b[i];
+      if (
+        optA.id !== optB.id ||
+        optA.label !== optB.label ||
+        optA.disabled !== optB.disabled ||
+        optA.texture !== optB.texture ||
+        optA.frame !== optB.frame ||
+        optA.iconScale !== optB.iconScale
+      ) {
         return false;
       }
     }

@@ -3617,12 +3617,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const availableOptions = isInventorySale
       ? this.inventoryItemOptions
       : this.itemOptions;
-    this.extraSecondaryItemSelector.setOptions(availableOptions);
     const supports = this.selectedExtraSecondaryActionSupportsItemPriority();
     const shouldShow = supports && availableOptions.length > 0;
-    this.extraSecondaryItemSelector.setVisible(shouldShow);
-    this.extraSecondaryItemSelector.setActive(shouldShow);
     if (!shouldShow) {
+      this.extraSecondaryItemSelector.setVisible(false);
+      this.extraSecondaryItemSelector.setActive(false);
       this.extraSecondaryActionPriorityItems = [];
       this.extraSecondaryItemSelector.setValue([], false);
       this.extraSecondaryItemSelector.setEnabled(false);
@@ -3631,6 +3630,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.updateScrollLayout();
       return;
     }
+    this.extraSecondaryItemSelector.setOptions(availableOptions);
+    this.extraSecondaryItemSelector.setVisible(true);
+    this.extraSecondaryItemSelector.setActive(true);
     const filtered = this.filterPriorityIds(
       this.extraSecondaryActionPriorityItems,
       availableOptions
@@ -3885,10 +3887,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const options = this.getMainActionItemOptions();
     const hasOptions = options.length > 0;
     const shouldShow = supports && hasOptions;
-    this.itemSelector.setOptions(options);
-    this.itemSelector.setVisible(shouldShow);
-    this.itemSelector.setActive(shouldShow);
     if (!shouldShow) {
+      this.itemSelector.setVisible(false);
+      this.itemSelector.setActive(false);
       if (this.mainActionPriorityItems.length > 0) {
         this.mainActionPriorityItems = [];
       }
@@ -3899,6 +3900,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.updateScrollLayout();
       return;
     }
+    this.itemSelector.setOptions(options);
+    this.itemSelector.setVisible(true);
+    this.itemSelector.setActive(true);
     const hasSelection = this.mainActionSelection !== null;
     this.itemSelector.setEnabled(hasSelection);
     if (!hasSelection) {
@@ -4002,13 +4006,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const availableOptions = isInventorySale
       ? this.inventoryItemOptions
       : this.itemOptions;
-    this.secondaryItemSelector.setOptions(availableOptions);
     const supports = this.selectedSecondaryActionSupportsItemPriority();
     const hasOptions = availableOptions.length > 0;
     const shouldShow = supports && hasOptions;
-    this.secondaryItemSelector.setVisible(shouldShow);
-    this.secondaryItemSelector.setActive(shouldShow);
     if (!shouldShow) {
+      this.secondaryItemSelector.setVisible(false);
+      this.secondaryItemSelector.setActive(false);
       if (this.secondaryActionPriorityItems.length > 0) {
         this.secondaryActionPriorityItems = [];
       }
@@ -4019,6 +4022,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.updateScrollLayout();
       return;
     }
+    this.secondaryItemSelector.setOptions(availableOptions);
+    this.secondaryItemSelector.setVisible(true);
+    this.secondaryItemSelector.setActive(true);
     const filtered = this.filterPriorityIds(
       this.secondaryActionPriorityItems,
       availableOptions
@@ -4805,19 +4811,6 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.inventoryItemOptions = inventoryOptions;
     this.itemOptions = options;
     this.stealItemOptions = stealOptions;
-    this.itemSelector.setOptions(this.getMainActionItemOptions());
-    this.secondaryItemSelector.setOptions(
-      this.secondaryActionSelection === "drop" ||
-      this.secondaryActionSelection === "black_market_trade"
-        ? this.inventoryItemOptions
-        : options
-    );
-    this.extraSecondaryItemSelector.setOptions(
-      this.extraSecondaryActionSelection === "drop" ||
-      this.extraSecondaryActionSelection === "black_market_trade"
-        ? this.inventoryItemOptions
-        : options
-    );
     const normalizedMain = this.filterPriorityIds(
       this.mainActionPriorityItems,
       this.getMainActionItemOptions()

@@ -457,9 +457,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
         this.clearSelection();
       }
     }
-    this.gridTable?.setItems(this.items);
-    this.gridTable?.refresh?.();
-    this.gridTable?.layout?.();
+    if (this.modalVisible && this.gridTable) {
+      this.gridTable.setItems(this.items);
+      this.gridTable.refresh?.();
+      this.gridTable.layout?.();
+    }
     return this;
   }
 
@@ -599,7 +601,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
     if (emit) {
       this.emit("change", item.isEmptyOption ? null : item.id, item);
     }
-    this.gridTable?.refresh?.();
+    if (this.modalVisible) {
+      this.gridTable?.refresh?.();
+    }
   }
 
   private updateCollapsedView(item: GridSelectItem) {
