@@ -128,7 +128,11 @@ function createTutorialCharacter(
     current: TUTORIAL_STARTING_ENERGY,
     max: TUTORIAL_STARTING_ENERGY
   };
-  character.stats.load = { current: 0, max: 25 };
+  character.stats.load = {
+    current: 0,
+    max: 25,
+    bandolierCapacityBonus: 0
+  };
   character.progression.availableSkillPoints = skillPoints;
   character.economy = {
     zarkans,

@@ -23,7 +23,8 @@ export function createDefaultCharacter(userId: string): PlayerCharacter {
       },
       load: {
         current: 0,
-        max: 25
+        max: 25,
+        bandolierCapacityBonus: 0
       },
       speed: 0,
       sympathy: 0,

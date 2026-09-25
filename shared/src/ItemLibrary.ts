@@ -99,7 +99,8 @@ export const ItemLibrary: ItemLibraryDefinition = {
     weapon: false,
     consumable: false,
     weight: 0,
-    description: "Aumenta la capacidad máxima de carga en 5 unidades.",
+    description:
+      "Aumenta la capacidad máxima de carga en 5 unidades mientras está en el inventario. Solo una bandolera puede aportar esta bonificación.",
     sellValue: 4,
     tags: ["Wearable", "Storage"]
   },

@@ -3,6 +3,7 @@
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { MatchRecord } from "../models/types";
+import { syncBandolierLoadCapacity } from "@shared";
 import { tailorMatchForPlayer } from "../utils/matchView";
 import { isAdminUser } from "../utils/admin";
 
@@ -55,6 +56,15 @@ export function getStateRpc(
   const viewerId = ctx?.userId ?? null;
   const viewAll = json.view_all === true && isAdminUser(nk, viewerId);
   const tailoredMatch = tailorMatchForPlayer(match, viewerId, viewAll);
+  const visibleCharacters = tailoredMatch.playerCharacters;
+  if (visibleCharacters) {
+    for (const playerId in visibleCharacters) {
+      if (!Object.prototype.hasOwnProperty.call(visibleCharacters, playerId)) {
+        continue;
+      }
+      syncBandolierLoadCapacity(visibleCharacters[playerId]);
+    }
+  }
 
   const response: import("@shared").GetStatePayload = {
     match: tailoredMatch,

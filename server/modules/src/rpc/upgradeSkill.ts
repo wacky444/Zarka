@@ -166,7 +166,8 @@ export function upgradeSkillRpc(
       if (!character.stats.load) {
         character.stats.load = {
           current: 3,
-          max: 25
+          max: 25,
+          bandolierCapacityBonus: 0
         };
       }
       character.stats.load.max += effect.value;

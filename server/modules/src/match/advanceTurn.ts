@@ -4,6 +4,7 @@ import {
   ActionLibrary,
   getSkillRank,
   isCharacterHidden,
+  syncBandolierLoadCapacity,
   type ActionDefinition,
   type PlayerCharacter,
   type ReplayEvent,
@@ -267,6 +268,11 @@ export function advanceTurn(
   const characters = match.playerCharacters;
   if (Object.keys(characters).length === 0) {
     return { events: [] };
+  }
+  for (const playerId in characters) {
+    if (Object.prototype.hasOwnProperty.call(characters, playerId)) {
+      syncBandolierLoadCapacity(characters[playerId]);
+    }
   }
   const tileLookup = buildTileLookup(match);
   const replayEvents: ReplayEvent[] = [];

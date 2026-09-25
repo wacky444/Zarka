@@ -2,6 +2,7 @@ import type { MatchRecord } from "../../models/types";
 import {
   ActionLibrary,
   ItemLibrary,
+  syncBandolierLoadCapacity,
   type ActionId,
   type ItemId,
   type PlayerCharacter,
@@ -181,6 +182,7 @@ export class BlackMarketTradeAction extends BaseAction {
         soldItems.push({ itemType, zarkans: earned });
       }
 
+      syncBandolierLoadCapacity(participant.character);
       ensureEconomy(participant.character);
       const currentZarkans =
         typeof participant.character.economy.zarkans === "number" &&

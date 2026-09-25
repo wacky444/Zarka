@@ -3,6 +3,7 @@ import {
   ActionLibrary,
   ItemLibrary,
   getSkillRank,
+  syncBandolierLoadCapacity,
   type ActionId,
   type ItemId,
   type PlayerCharacter,
@@ -224,6 +225,8 @@ export class StealAction extends BaseAction {
           addItem(participant.character, itemType, weight);
           stolenItems.push(itemType);
         }
+        syncBandolierLoadCapacity(target.character);
+        syncBandolierLoadCapacity(participant.character);
         match.playerCharacters![target.id] = target.character;
       }
 
