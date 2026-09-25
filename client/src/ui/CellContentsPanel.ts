@@ -1,8 +1,13 @@
 import Phaser from "phaser";
-import { ItemLibrary, type Axial, type ItemId } from "@shared";
+import {
+  CellLibrary,
+  LocalizationType,
+  ItemLibrary,
+  type Axial,
+} from "@shared";
 import { t } from "../services/i18n";
-import { resolveItemTexture } from "./itemIcons";
-import { composeItemDescription, ItemTooltipManager } from "./ItemTooltip";
+import { ItemTooltipManager } from "./ItemTooltip";
+import { createCellItemGrid, type CellItemGridEntry } from "./CellItemGrid";
 import { makeButton, type UIButton } from "./button";
 import { THEME } from "./ColorPalette";
 
@@ -21,10 +26,24 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   clearMask?: (destroyMask?: boolean) => Phaser.GameObjects.GameObject;
 };
 
-export interface CellContentsEntry {
-  itemId: ItemId;
-  quantity: number;
-}
+export type CellContentsEntry = CellItemGridEntry;
+
+const CELL_TYPE_LABELS: Record<LocalizationType, string> = {
+  [LocalizationType.House]: "House",
+  [LocalizationType.Pharmacy]: "Pharmacy",
+  [LocalizationType.PoliceStation]: "Police station",
+  [LocalizationType.Hardware]: "Hardware store",
+  [LocalizationType.Factory]: "Factory",
+  [LocalizationType.Hospital]: "Hospital",
+  [LocalizationType.Workshop]: "Workshop",
+  [LocalizationType.Security]: "Security room",
+  [LocalizationType.GasStation]: "Gas station",
+  [LocalizationType.Market]: "Market",
+  [LocalizationType.Restaurant]: "Restaurant",
+  [LocalizationType.Road]: "Road",
+  [LocalizationType.Path]: "Path",
+  [LocalizationType.Alley]: "Alley",
+};
 
 export class CellContentsPanel {
   private overlay: Phaser.GameObjects.Container | null = null;
@@ -34,6 +53,7 @@ export class CellContentsPanel {
   private scrollMask: Phaser.Display.Masks.GeometryMask | null = null;
   private isVisible = false;
   private coord: Axial = { q: 0, r: 0 };
+  private cellType = LocalizationType.Road;
   private entries: CellContentsEntry[] = [];
   private readonly itemTooltip: ItemTooltipManager;
 
@@ -61,8 +81,13 @@ export class CellContentsPanel {
     return this.isVisible;
   }
 
-  show(coord: Axial, entries: CellContentsEntry[]): void {
+  show(
+    coord: Axial,
+    cellType: LocalizationType,
+    entries: CellContentsEntry[],
+  ): void {
     this.coord = { ...coord };
+    this.cellType = cellType;
     this.entries = [...entries];
     this.isVisible = true;
     this.render();
@@ -197,7 +222,7 @@ export class CellContentsPanel {
       .text(
         width / 2,
         modalY + 56,
-        `(${this.coord.q}, ${this.coord.r})`,
+        `${t(CELL_TYPE_LABELS[this.cellType])} (${this.coord.q}, ${this.coord.r})`,
         {
           fontFamily: "Arial",
           fontSize: "14px",
@@ -209,79 +234,67 @@ export class CellContentsPanel {
 
     const content = this.scene.add.container(0, 0);
     this.content = content;
-    const rowHeight = 60;
-    const entries = this.entries.filter(
-      (entry) => ItemLibrary[entry.itemId] && entry.quantity > 0
+    const rowHeight = Math.max(
+      38,
+      Math.min(52, Math.floor((listWidth / 5) * 0.78)),
     );
-    if (entries.length === 0) {
-      const emptyText = this.scene.add
-        .text(12, 12, t("No visible items"), {
+    const actualEntries = this.entries.filter(
+      (entry) => ItemLibrary[entry.itemId] && entry.quantity > 0,
+    );
+    const possibleEntries = (CellLibrary[this.cellType].startingItems ?? []).filter(
+      (entry) => ItemLibrary[entry.itemId] && entry.quantity > 0,
+    );
+    let contentHeight = 8;
+
+    const addItemSection = (
+      heading: string,
+      entries: CellContentsEntry[],
+      emptyMessage: string,
+    ): void => {
+      const sectionHeading = this.scene.add
+        .text(12, contentHeight, t(heading), {
           fontFamily: "Arial",
-          fontSize: "16px",
-          color: THEME.colors.textMuted
+          fontSize: "15px",
+          fontStyle: "bold",
+          color: THEME.colors.modalHeader,
         })
         .setOrigin(0, 0);
-      content.add(emptyText);
-      content.setSize(listWidth, 48);
-    } else {
-      for (let index = 0; index < entries.length; index += 1) {
-        const entry = entries[index];
-        const definition = ItemLibrary[entry.itemId];
-        const rowY = index * rowHeight;
-        const row = this.scene.add
-          .rectangle(0, rowY, listWidth, rowHeight - 6, THEME.colors.cardBackground, 1)
-          .setOrigin(0, 0)
-          .setStrokeStyle(1, 0x2d3a60, 0.9);
-        const textureInfo = resolveItemTexture(definition);
-        const iconTexture = this.scene.textures.exists(textureInfo.texture)
-          ? textureInfo.texture
-          : "hex";
-        const iconFrame =
-          iconTexture === textureInfo.texture
-            ? textureInfo.frame
-            : "grass_01.png";
-        const icon = this.scene.add.image(
-          30,
-          rowY + (rowHeight - 6) / 2,
-          iconTexture,
-          iconFrame
+      content.add(sectionHeading);
+      contentHeight += 24;
+
+      if (entries.length === 0) {
+        const emptyText = this.scene.add
+          .text(12, contentHeight + 8, t(emptyMessage), {
+            fontFamily: "Arial",
+            fontSize: "14px",
+            color: THEME.colors.textMuted,
+          })
+          .setOrigin(0, 0);
+        content.add(emptyText);
+        contentHeight += rowHeight;
+      } else {
+        const grid = createCellItemGrid(
+          this.scene,
+          this.itemTooltip,
+          entries,
+          0,
+          contentHeight,
+          listWidth,
+          rowHeight,
         );
-        icon.setDisplaySize(34, 34);
-        const showDescription = (pointer: Phaser.Input.Pointer): void => {
-          if ((pointer.button !== 0 && !pointer.wasTouch) || pointer.getDistance() > 15) {
-            return;
-          }
-          this.itemTooltip.show(
-            pointer.x,
-            pointer.y,
-            definition.name,
-            composeItemDescription(definition.description, definition.notes)
-          );
-        };
-        icon.setInteractive({ useHandCursor: true });
-        icon.on(Phaser.Input.Events.POINTER_UP, showDescription);
-        const name = this.scene.add
-          .text(58, rowY + 12, t(definition.name), {
-            fontFamily: "Arial",
-            fontSize: "16px",
-            color: THEME.colors.textPrimary,
-            wordWrap: { width: Math.max(80, listWidth - 144) }
-          })
-          .setOrigin(0, 0)
-          .setInteractive({ useHandCursor: true });
-        name.on(Phaser.Input.Events.POINTER_UP, showDescription);
-        const quantity = this.scene.add
-          .text(listWidth - 14, rowY + (rowHeight - 6) / 2, `×${entry.quantity}`, {
-            fontFamily: "Arial",
-            fontSize: "16px",
-            fontStyle: "bold",
-            color: THEME.colors.energyCost
-          })
-          .setOrigin(1, 0.5);
-        content.add([row, icon, name, quantity]);
+        content.add(grid.container);
+        contentHeight += grid.height;
       }
-      content.setSize(listWidth, entries.length * rowHeight);
-    }
+      contentHeight += 10;
+    };
+
+    addItemSection("Items in cell", actualEntries, "No visible items");
+    addItemSection(
+      "Possible items for this cell",
+      possibleEntries,
+      "No possible items",
+    );
+    content.setSize(listWidth, Math.max(contentHeight, 48));
 
     this.scrollMaskShape = this.scene.add
       .rectangle(

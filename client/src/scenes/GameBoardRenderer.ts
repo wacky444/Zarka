@@ -7,6 +7,7 @@ import {
   type GameMap,
   HexTile,
   ItemLibrary,
+  LocalizationType,
   type ItemId,
   type MatchRecord,
   type ReplaySnapshot,
@@ -527,6 +528,7 @@ export class GameBoardRenderer {
                 }
                 this.showCellContents(
                   snapshot.coord,
+                  snapshot.localizationType,
                   entries.map(([itemId, quantity]) => ({ itemId, quantity })),
                 );
               },
@@ -658,11 +660,15 @@ export class GameBoardRenderer {
     const entries: CellContentsEntry[] = Array.from(quantities.entries()).map(
       ([itemId, quantity]) => ({ itemId, quantity })
     );
-    this.showCellContents(tile.coord, entries);
+    this.showCellContents(tile.coord, tile.cellType.localizationType, entries);
   }
 
-  private showCellContents(coord: Axial, entries: CellContentsEntry[]): void {
-    this.cellContentsPanel.show(coord, entries);
+  private showCellContents(
+    coord: Axial,
+    cellType: LocalizationType,
+    entries: CellContentsEntry[],
+  ): void {
+    this.cellContentsPanel.show(coord, cellType, entries);
     this.callbacks.onCellInfoOpened(coord);
   }
 
