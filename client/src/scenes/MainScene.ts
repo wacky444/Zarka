@@ -11,6 +11,7 @@ import { LobbyView } from "./LobbyView";
 import { applyStoredVolume } from "../animation/soundPlayer";
 import { getLocale, toggleLocale } from "../services/i18n";
 import { TUTORIAL_MATCH_METADATA_KEY } from "@shared";
+import { assetPath } from "../utils/assetPath";
 import {
   clearActiveTutorialMatchId,
   readActiveTutorialMatchId,
@@ -39,7 +40,8 @@ const MAIN_LAYOUT = {
 
 export class MainScene extends Phaser.Scene {
   private mainRoot!: Phaser.GameObjects.Container;
-  private titleText!: Phaser.GameObjects.Text;
+  private titleImage!: Phaser.GameObjects.Image;
+  private titleBottomY = 0;
   private statusText!: Phaser.GameObjects.Text;
   private turnService: TurnService | null = null;
   private accountService: AccountService | null = null;
@@ -188,20 +190,32 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
-  preload() {}
+  preload() {
+    this.load.image(
+      "zarka-main-title",
+      assetPath("assets/images/zarka-icon-512.png"),
+    );
+  }
 
   async create(data?: { client?: Client; session?: Session }) {
     applyStoredVolume(this);
     this.mainRoot = this.add.container(0, 0);
 
-    this.titleText = this.add
+    const titleMetrics = this.add
       .text(0, 0, "Zarka", {
         color: "#ffffff",
         fontSize: "32px",
         fontStyle: "bold"
       })
       .setOrigin(0.5);
-    this.mainRoot.add(this.titleText);
+    this.titleBottomY = MAIN_LAYOUT.titleY + titleMetrics.height / 2;
+    titleMetrics.destroy();
+
+    this.titleImage = this.add
+      .image(0, 0, "zarka-main-title")
+      .setOrigin(0.5, 1)
+      .setDisplaySize(96, 96);
+    this.mainRoot.add(this.titleImage);
 
     this.statusText = this.add
       .text(0, 0, "Connecting...", {
@@ -945,7 +959,7 @@ export class MainScene extends Phaser.Scene {
     );
 
     this.mainRoot.setPosition(viewportWidth / 2, top);
-    this.titleText.setPosition(0, MAIN_LAYOUT.titleY);
+    this.titleImage.setPosition(0, this.titleBottomY);
     this.statusText.setPosition(0, MAIN_LAYOUT.statusY);
 
     this.mainButtons.forEach((button, index) => {
