@@ -100,6 +100,7 @@ export class AccountScene extends Phaser.Scene {
   private displayNameText!: Phaser.GameObjects.Text;
   private changeDisplayNameButton!: UIButton;
   private adminViewToggle!: UIButton;
+  private adminServerButton!: UIButton;
   private isAdmin = false;
   private adminViewEnabled = false;
   private skinSaveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -233,6 +234,17 @@ export class AccountScene extends Phaser.Scene {
     ).setOrigin(0.5, 0);
     this.adminViewToggle.setVisible(false);
     this.accountRoot.add(this.adminViewToggle);
+
+    this.adminServerButton = makeButton(
+      this,
+      0,
+      0,
+      "Nakama Server Logs",
+      () => this.openAdminServerView(),
+      ["account"],
+    ).setOrigin(0.5, 0);
+    this.adminServerButton.setVisible(false);
+    this.accountRoot.add(this.adminServerButton);
 
     this.skinStatsTitle = this.add
       .text(0, 0, "Player Stats", {
@@ -397,6 +409,10 @@ export class AccountScene extends Phaser.Scene {
       cursorY += this.adminViewToggle.height + ACCOUNT_LAYOUT.sectionGap;
     } else {
       cursorY += ACCOUNT_LAYOUT.sectionGap;
+    }
+    if (this.adminServerButton.visible) {
+      this.adminServerButton.setPosition(centerX, cursorY);
+      cursorY += this.adminServerButton.height + ACCOUNT_LAYOUT.sectionGap;
     }
 
     this.skinStatsTitle.setPosition(centerX, cursorY);
@@ -654,6 +670,7 @@ export class AccountScene extends Phaser.Scene {
           this.isAdmin = rpcPayload.account.isAdmin === true;
           this.adminViewEnabled = this.isAdmin && isAdminViewEnabled();
           this.adminViewToggle.setVisible(this.isAdmin);
+          this.adminServerButton.setVisible(this.isAdmin);
           this.updateAdminViewToggle();
         }
       } catch (e) {
@@ -761,6 +778,16 @@ export class AccountScene extends Phaser.Scene {
       console.error("Error unlinking Facebook:", error);
       this.statusText.setText("Failed to unlink Facebook account");
     }
+  }
+
+  private openAdminServerView(): void {
+    if (!this.isAdmin) {
+      return;
+    }
+    this.scene.start("AdminServerScene", {
+      client: this.client,
+      session: this.session,
+    });
   }
 
   private updateAdminViewToggle(): void {

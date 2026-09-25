@@ -8,6 +8,11 @@
 {$CADDY_DOMAIN} {
 	encode gzip
 
+	@adminApi path /admin/logs /admin/update
+	handle @adminApi {
+		reverse_proxy admin-api:8080
+	}
+
 	@facebookDataDeletion path /facebook/data-deletion
 	handle @facebookDataDeletion {
 		rewrite * /v2/rpc/facebook_data_deletion?http_key={$NAKAMA_HTTP_KEY}&unwrap=
@@ -31,6 +36,11 @@
 https://localhost {
 	encode gzip
 	tls internal
+
+	@adminApi path /admin/logs /admin/update
+	handle @adminApi {
+		reverse_proxy admin-api:8080
+	}
 
 	@facebookDataDeletion path /facebook/data-deletion
 	handle @facebookDataDeletion {

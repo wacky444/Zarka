@@ -4,6 +4,7 @@ import { MainScene } from "./scenes/MainScene";
 import { GameScene } from "./scenes/GameScene";
 import { AccountScene } from "./scenes/AccountScene";
 import { EndGameReportScene } from "./scenes/EndGameReportScene";
+import { AdminServerScene } from "./scenes/AdminServerScene";
 import RexUIPlugin from "phaser3-rex-plugins/templates/ui/ui-plugin";
 import { SessionManager } from "./services/sessionManager";
 import { installPhaserLocalization } from "./services/i18n";
@@ -32,7 +33,14 @@ const config: Phaser.Types.Core.GameConfig = {
       }
     ]
   },
-  scene: [LoginScene, MainScene, GameScene, AccountScene, EndGameReportScene],
+  scene: [
+    LoginScene,
+    MainScene,
+    GameScene,
+    AccountScene,
+    EndGameReportScene,
+    AdminServerScene,
+  ],
   scale: {
     mode: isMobile ? Phaser.Scale.RESIZE : Phaser.Scale.RESIZE
   }

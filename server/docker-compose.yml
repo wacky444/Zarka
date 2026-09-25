@@ -43,12 +43,31 @@ services:
       - "7461:7461"
       - "9100:9100"
 
+  admin-api:
+    build:
+      context: ..
+      dockerfile: server/admin-api/Dockerfile
+    container_name: zarka-admin-api
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      REPOSITORY_DIRECTORY: /workspace
+      NAKAMA_LOCAL_CONFIG: /run/nakama/local.yml
+      ADMIN_ALLOWED_ORIGINS: "${ADMIN_ALLOWED_ORIGINS:-https://wacky444.github.io}"
+    volumes:
+      - ..:/workspace
+      - ./local.yml:/run/nakama/local.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    expose:
+      - "8080"
+
   caddy:
     image: caddy
     container_name: caddy
     restart: unless-stopped
     depends_on:
       - nakama
+      - admin-api
     environment:
       - CADDY_DOMAIN=${CADDY_DOMAIN:-}
       - CADDY_EMAIL=${CADDY_EMAIL:-}

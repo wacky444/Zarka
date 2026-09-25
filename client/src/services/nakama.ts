@@ -22,7 +22,19 @@ export function getEnv() {
   const useSSL = (import.meta.env.VITE_NAKAMA_SSL || "false") === "true";
   const serverKey = import.meta.env.VITE_NAKAMA_SERVER_KEY || "defaultkey";
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
-  return { host, port, useSSL, serverKey, googleClientId };
+  const adminApiUrl = import.meta.env.VITE_ADMIN_API_URL || "";
+  return { host, port, useSSL, serverKey, googleClientId, adminApiUrl };
+}
+
+export function getAdminApiBaseUrl(): string {
+  const { host, port, useSSL, adminApiUrl } = getEnv();
+  if (adminApiUrl) {
+    return adminApiUrl.replace(/\/$/, "");
+  }
+  const scheme = useSSL ? "https" : "http";
+  const defaultPort = useSSL ? "443" : "80";
+  const portPart = port === defaultPort ? "" : `:${port}`;
+  return `${scheme}://${host}${portPart}`;
 }
 
 export function getOrCreateDeviceId(): string {
