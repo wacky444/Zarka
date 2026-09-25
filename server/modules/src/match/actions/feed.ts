@@ -4,6 +4,7 @@ import type { MatchRecord } from "../../models/types";
 import {
   getSkillEffectTotal,
   ReplayActionEffect,
+  syncBandolierLoadCapacity,
   type ActionId,
   type ItemId,
   type PlayerCharacter,
@@ -143,6 +144,7 @@ function consumeCorpse(
   if (remaining <= 0 && corpse.inventory) {
     corpse.inventory.carriedItems = [];
     corpse.inventory.stash = [];
+    syncBandolierLoadCapacity(corpse);
   }
   return corpse;
 }

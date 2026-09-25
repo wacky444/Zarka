@@ -73,6 +73,8 @@ export interface PlayerEnergyTrack {
 export interface PlayerLoadTrack {
   current: number;
   max: number;
+  /** Capacity bonus already included in max from carried bandoliers. */
+  bandolierCapacityBonus?: number;
 }
 
 export interface PlayerProgression {

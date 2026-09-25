@@ -6,6 +6,7 @@ export * from "./match";
 export * from "./matchReport";
 export * from "./CellLibrary";
 export * from "./playerCharacter";
+export * from "./inventory";
 export * from "./Action";
 export * from "./ActionLibrary";
 export * from "./Item";

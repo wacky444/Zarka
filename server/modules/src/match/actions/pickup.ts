@@ -4,6 +4,7 @@ import {
   ExtraExecutionEffect,
   getSkillEffectTotal,
   ItemLibrary,
+  syncBandolierLoadCapacity,
   type ActionId,
   type HexTileSnapshot,
   type ItemId,
@@ -77,6 +78,7 @@ function incrementLoad(character: PlayerCharacter, weight: number): void {
     character.stats.load = {
       current: weight,
       max: weight,
+      bandolierCapacityBonus: 0,
     };
     return;
   }
@@ -357,6 +359,7 @@ export class PickUpAction extends BaseAction {
         }
       }
 
+      syncBandolierLoadCapacity(participant.character);
       this.clearPlan(participant);
       if (match.playerCharacters) {
         match.playerCharacters[participant.playerId] = participant.character;

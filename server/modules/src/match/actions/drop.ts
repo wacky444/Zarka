@@ -3,6 +3,7 @@ import {
   ActionLibrary,
   getSkillRank,
   ItemLibrary,
+  syncBandolierLoadCapacity,
   type ActionId,
   type HexTileSnapshot,
   type ItemId,
@@ -270,6 +271,7 @@ export class DropAction extends BaseAction {
         }
       }
 
+      syncBandolierLoadCapacity(participant.character);
       this.clearPlan(participant);
       if (match.playerCharacters) {
         match.playerCharacters[participant.playerId] = participant.character;

@@ -732,6 +732,8 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
     "Reduces damage received by 1, or by 3 when it comes from bullets or arrows, while kept in the inventory. Does not protect against fire, poison, virus, chainsaws, or chemical weapons.",
   "No se puede robar.": "Cannot be stolen.",
   Bandolera: "Bandolier",
+  "Aumenta la capacidad máxima de carga en 5 unidades mientras está en el inventario. Solo una bandolera puede aportar esta bonificación.":
+    "Increases maximum load capacity by 5 while in the inventory. Only one bandolier grants this bonus.",
   Madera: "Wood",
   Pincho: "Spike",
   Cuchillo: "Knife",
