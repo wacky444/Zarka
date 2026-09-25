@@ -63,3 +63,5 @@ Farmacia: venda, medicamento, arma química
 Industria: hay 2 cajas, en cada una arma química, C4, trampa.
 
 En las casas varío un poco, como suelo poner 4 o 5 casas... Pero siempre tienen una única caja fuerte con arma química y los otros dos objetos juego entre medicamento, 3zarkan, Hacha, walkie, comida
+
+- look using window without target should use a random nearby cell, also log should tell what cell is looking

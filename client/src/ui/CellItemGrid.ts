@@ -18,10 +18,10 @@ export function createCellItemGrid(
   x: number,
   y: number,
   width: number,
-  rowHeight: number,
+  rowHeight: number
 ): { container: Phaser.GameObjects.Container; height: number } {
   const validEntries = entries.filter(
-    (entry) => ItemLibrary[entry.itemId] && entry.quantity > 0,
+    (entry) => ItemLibrary[entry.itemId] && entry.quantity > 0
   );
   const container = scene.add.container(x, y);
   const cellWidth = width / GRID_COLUMNS;
@@ -41,7 +41,7 @@ export function createCellItemGrid(
         Math.max(1, cellWidth - 4),
         Math.max(1, rowHeight - 4),
         THEME.colors.cardBackground,
-        1,
+        1
       )
       .setStrokeStyle(1, 0x2d3a60, 0.9);
     const textureInfo = resolveItemTexture(definition);
@@ -49,37 +49,36 @@ export function createCellItemGrid(
       ? textureInfo.texture
       : "hex";
     const iconFrame =
-      iconTexture === textureInfo.texture
-        ? textureInfo.frame
-        : "grass_01.png";
+      iconTexture === textureInfo.texture ? textureInfo.frame : "grass_01.png";
+    const topPadding = Math.max(2, (rowHeight - iconSize - 14) / 2);
     const icon = scene.add.image(
       cellX,
-      cellY + Math.max(1, (rowHeight - iconSize - 14) / 2),
+      cellY + topPadding + iconSize / 2,
       iconTexture,
-      iconFrame,
+      iconFrame
     );
     icon.setDisplaySize(iconSize, iconSize);
     icon.setInteractive({ useHandCursor: true });
-    icon.on(
-      Phaser.Input.Events.POINTER_UP,
-      (pointer: Phaser.Input.Pointer) => {
-        if ((pointer.button !== 0 && !pointer.wasTouch) || pointer.getDistance() > 15) {
-          return;
-        }
-        itemTooltip.show(
-          pointer.x,
-          pointer.y,
-          definition.name,
-          composeItemDescription(definition.description, definition.notes),
-        );
-      },
-    );
+    icon.on(Phaser.Input.Events.POINTER_UP, (pointer: Phaser.Input.Pointer) => {
+      if (
+        (pointer.button !== 0 && !pointer.wasTouch) ||
+        pointer.getDistance() > 15
+      ) {
+        return;
+      }
+      itemTooltip.show(
+        pointer.x,
+        pointer.y,
+        definition.name,
+        composeItemDescription(definition.description, definition.notes)
+      );
+    });
     const quantity = scene.add
       .text(cellX, cellY + rowHeight - 3, `×${entry.quantity}`, {
         fontFamily: "Arial",
         fontSize: "12px",
         fontStyle: "bold",
-        color: THEME.colors.energyCost,
+        color: THEME.colors.energyCost
       })
       .setOrigin(0.5, 1);
     container.add([background, icon, quantity]);
@@ -87,6 +86,6 @@ export function createCellItemGrid(
 
   return {
     container,
-    height: Math.ceil(validEntries.length / GRID_COLUMNS) * rowHeight,
+    height: Math.ceil(validEntries.length / GRID_COLUMNS) * rowHeight
   };
 }
