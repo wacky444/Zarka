@@ -2627,6 +2627,16 @@ export class GameScene extends Phaser.Scene {
     if (!match) {
       return;
     }
+    const eventsFromField = Array.isArray(payload.replay)
+      ? (payload.replay as ReplayEvent[])
+      : [];
+    const alternateEvents = Array.isArray(
+      (payload as { events?: unknown }).events
+    )
+      ? ((payload as { events?: ReplayEvent[] }).events ?? [])
+      : [];
+    const replayEvents =
+      eventsFromField.length > 0 ? eventsFromField : alternateEvents;
     if (typeof payload.turn === "number") {
       match.current_turn = payload.turn;
     }
@@ -2651,23 +2661,17 @@ export class GameScene extends Phaser.Scene {
     }
     if (payload.map) {
       match.map = payload.map;
-      if (!this.replayView) {
+      if (!this.replayView && !this.replayPlaying && replayEvents.length === 0) {
         this.renderMap(payload.map);
       }
-    } else if (match.map && !this.replayView) {
+    } else if (
+      match.map &&
+      !this.replayView &&
+      !this.replayPlaying &&
+      replayEvents.length === 0
+    ) {
       this.renderMap(match.map);
     }
-
-    const eventsFromField = Array.isArray(payload.replay)
-      ? (payload.replay as ReplayEvent[])
-      : [];
-    const alternateEvents = Array.isArray(
-      (payload as { events?: unknown }).events
-    )
-      ? ((payload as { events?: ReplayEvent[] }).events ?? [])
-      : [];
-    const replayEvents =
-      eventsFromField.length > 0 ? eventsFromField : alternateEvents;
     this.handleTutorialTurn(match, replayEvents);
     const turnNumber =
       typeof payload.turn === "number"
@@ -2678,7 +2682,7 @@ export class GameScene extends Phaser.Scene {
       this.logReplayCache.set(turnNumber, { events: replayEvents });
       this.enqueueReplay(replayEvents);
     } else if (payload.playerCharacters) {
-      if (!this.replayView) {
+      if (!this.replayView && !this.replayPlaying) {
         this.renderPlayerCharacters(match);
       }
       this.logReplayCache.set(turnNumber, { events: [] });
@@ -2716,11 +2720,14 @@ export class GameScene extends Phaser.Scene {
         continue;
       }
       await playReplayEvents(this.createMoveReplayContext(), events);
-      if (this.currentMatch && !this.replayView) {
-        this.renderPlayerCharacters(this.currentMatch);
-      }
     }
     this.replayPlaying = false;
+    if (this.currentMatch && !this.replayView) {
+      if (this.currentMatch.map) {
+        this.renderMap(this.currentMatch.map);
+      }
+      this.renderPlayerCharacters(this.currentMatch);
+    }
     this.showPendingMatchEndIfReady();
   }
 
@@ -3109,15 +3116,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   private exitReplayMode(): void {
+    const manualReplayInProgress = this.manualReplayPlaying;
+    const hasQueuedLiveReplays = this.replayQueue.length > 0;
     this.replayModeActive = false;
-    this.replayPlaybackCancelled = true;
+    this.replayPlaybackCancelled = manualReplayInProgress;
     this.replayPaused = false;
     this.resolveReplayResumeWaiters();
-    this.manualReplayPlaying = false;
     this.characterPanel?.setLogPlaybackState(false);
-    this.clearReplaySnapshot();
+    this.clearReplaySnapshot(!hasQueuedLiveReplays && !manualReplayInProgress);
     this.updateReplayControls();
-    if (this.replayQueue.length > 0 && !this.replayPlaying) {
+    if (
+      hasQueuedLiveReplays &&
+      !this.replayPlaying &&
+      !manualReplayInProgress
+    ) {
       void this.flushReplayQueue();
     }
   }
@@ -3164,13 +3176,13 @@ export class GameScene extends Phaser.Scene {
     this.renderPlayerCharacters(replayMatch);
   }
 
-  private clearReplaySnapshot(): void {
+  private clearReplaySnapshot(renderCurrentState = true): void {
     if (!this.replayView) {
       return;
     }
     this.replayView = null;
     this.updateReplayControls();
-    if (this.currentMatch?.map) {
+    if (renderCurrentState && this.currentMatch?.map) {
       this.renderMap(this.currentMatch.map);
       this.renderPlayerCharacters(this.currentMatch);
     }
@@ -3291,7 +3303,10 @@ export class GameScene extends Phaser.Scene {
           this.renderMap(this.replayView.match.map);
         }
         this.renderPlayerCharacters(this.replayView.match);
-      } else if (this.currentMatch) {
+      } else if (this.currentMatch && this.replayQueue.length === 0) {
+        if (this.currentMatch.map) {
+          this.renderMap(this.currentMatch.map);
+        }
         this.renderPlayerCharacters(this.currentMatch);
       }
       if (this.replayQueue.length > 0 && !this.replayPlaying) {
