@@ -15,6 +15,8 @@ export class TutorialInstructionView {
   private hintVisible = false;
   private width = 0;
   private height = 0;
+  private mobileLayout = false;
+  private bottomControlsClearance = 0;
 
   constructor(private readonly scene: Phaser.Scene) {
     this.container = scene.add.container(0, 0).setDepth(1200).setScrollFactor(0);
@@ -92,10 +94,20 @@ export class TutorialInstructionView {
     this.layout(this.scene.scale.width, this.scene.scale.height);
   }
 
-  layout(width: number, height: number): void {
+  layout(
+    width: number,
+    height: number,
+    mobileLayout = this.mobileLayout,
+    bottomControlsClearance = this.bottomControlsClearance
+  ): void {
+    this.mobileLayout = mobileLayout;
+    this.bottomControlsClearance = bottomControlsClearance;
     this.width = Math.max(240, Math.min(420, width - 24));
     this.height = this.hintVisible ? 174 : 110;
-    this.container.setPosition(12, 4);
+    const y = mobileLayout
+      ? Math.max(8, height - this.height - bottomControlsClearance)
+      : 4;
+    this.container.setPosition(12, y);
     this.background.setSize(this.width, this.height);
     this.instructionText.setWordWrapWidth(this.width - 28);
     this.hintText.setWordWrapWidth(this.width - 28);
@@ -103,9 +115,6 @@ export class TutorialInstructionView {
     this.hintButton.setPosition(this.width - this.hintButton.width - 12, 6);
     this.hintButton.setText(`[ ${t("Hint")} ]`);
     this.hintText.setVisible(this.hintVisible);
-    if (height < this.height + 60) {
-      this.container.setY(Math.max(8, height - this.height - 8));
-    }
   }
 
   containsPoint(x: number, y: number): boolean {

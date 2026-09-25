@@ -1486,7 +1486,13 @@ export class GameScene extends Phaser.Scene {
       this.menuButton?.height ?? 32
     );
     this.victoryOverlay?.layout(width, height);
-    this.tutorialInstructionView?.layout(width, height);
+    this.tutorialInstructionView?.layout(
+      width,
+      height,
+      isMobile,
+      Math.max(this.menuButton?.height ?? 0, this.viewModeButton?.height ?? 0) +
+        18
+    );
   }
 
   private isMobileViewport(width: number): boolean {
