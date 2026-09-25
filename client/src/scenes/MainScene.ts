@@ -12,6 +12,7 @@ import { applyStoredVolume } from "../animation/soundPlayer";
 import { getLocale, toggleLocale } from "../services/i18n";
 import { TUTORIAL_MATCH_METADATA_KEY } from "@shared";
 import { assetPath } from "../utils/assetPath";
+import { isMobile } from "../utils/isMobile";
 import {
   clearActiveTutorialMatchId,
   readActiveTutorialMatchId,
@@ -31,9 +32,10 @@ import type {
 const MAIN_LAYOUT = {
   contentWidth: 380,
   horizontalPadding: 32,
-  titleY: -24,
-  statusY: 24,
-  controlsY: 90,
+  desktopIconSize: 256,
+  mobileIconSize: 196,
+  iconToStatusGap: 24,
+  statusToButtonsGap: 46,
   buttonGap: 58,
   minTop: 24
 };
@@ -41,7 +43,6 @@ const MAIN_LAYOUT = {
 export class MainScene extends Phaser.Scene {
   private mainRoot!: Phaser.GameObjects.Container;
   private titleImage!: Phaser.GameObjects.Image;
-  private titleBottomY = 0;
   private statusText!: Phaser.GameObjects.Text;
   private turnService: TurnService | null = null;
   private accountService: AccountService | null = null;
@@ -193,7 +194,7 @@ export class MainScene extends Phaser.Scene {
   preload() {
     this.load.image(
       "zarka-main-title",
-      assetPath("assets/images/zarka-icon-512.png"),
+      assetPath("assets/images/zarka-icon-hexagon.png")
     );
   }
 
@@ -201,20 +202,10 @@ export class MainScene extends Phaser.Scene {
     applyStoredVolume(this);
     this.mainRoot = this.add.container(0, 0);
 
-    const titleMetrics = this.add
-      .text(0, 0, "Zarka", {
-        color: "#ffffff",
-        fontSize: "32px",
-        fontStyle: "bold"
-      })
-      .setOrigin(0.5);
-    this.titleBottomY = MAIN_LAYOUT.titleY + titleMetrics.height / 2;
-    titleMetrics.destroy();
-
     this.titleImage = this.add
       .image(0, 0, "zarka-main-title")
-      .setOrigin(0.5, 1)
-      .setDisplaySize(96, 96);
+      .setOrigin(0.5, 0)
+      .setDisplaySize(256, 256);
     this.mainRoot.add(this.titleImage);
 
     this.statusText = this.add
@@ -311,7 +302,9 @@ export class MainScene extends Phaser.Scene {
         if (this.scene.isActive("EndGameReportScene")) {
           return;
         }
-        const gameScene = this.scene.get("GameScene") as import("./GameScene").GameScene | undefined;
+        const gameScene = this.scene.get("GameScene") as
+          | import("./GameScene").GameScene
+          | undefined;
         if (gameScene && gameScene.isVictoryOverlayActive()) {
           return;
         }
@@ -582,7 +575,11 @@ export class MainScene extends Phaser.Scene {
   }
 
   private async startTutorial(): Promise<void> {
-    if (!this.turnService || !this.currentUserId || this.tutorialLaunchInProgress) {
+    if (
+      !this.turnService ||
+      !this.currentUserId ||
+      this.tutorialLaunchInProgress
+    ) {
       return;
     }
     this.tutorialLaunchInProgress = true;
@@ -670,7 +667,9 @@ export class MainScene extends Phaser.Scene {
       match = payload.match;
     } catch (error) {
       console.warn("Failed to load tutorial match", error);
-      this.statusText.setText("Could not reconnect to the tutorial. Try again.");
+      this.statusText.setText(
+        "Could not reconnect to the tutorial. Try again."
+      );
       return "retry";
     }
 
@@ -719,7 +718,9 @@ export class MainScene extends Phaser.Scene {
       return this.currentMatchId === matchId ? "opened" : "retry";
     } catch (error) {
       console.warn("Failed to join tutorial match", error);
-      this.statusText.setText("Could not reconnect to the tutorial. Try again.");
+      this.statusText.setText(
+        "Could not reconnect to the tutorial. Try again."
+      );
       return "retry";
     }
   }
@@ -860,9 +861,13 @@ export class MainScene extends Phaser.Scene {
           }
 
           if (code === 8) {
-            this.statusText.setText(msg || "Maximum of 3 matches per user reached");
+            this.statusText.setText(
+              msg || "Maximum of 3 matches per user reached"
+            );
           } else {
-            this.statusText.setText(msg ? `Error: ${msg}` : "Failed to create match (see console).");
+            this.statusText.setText(
+              msg ? `Error: ${msg}` : "Failed to create match (see console)."
+            );
           }
         }
       },
@@ -949,24 +954,30 @@ export class MainScene extends Phaser.Scene {
   private layoutMain(): void {
     const viewportWidth = this.scale.width;
     const viewportHeight = this.scale.height;
+    const iconSize = isMobile(viewportWidth)
+      ? MAIN_LAYOUT.mobileIconSize
+      : MAIN_LAYOUT.desktopIconSize;
+    if (this.titleImage) {
+      this.titleImage.setDisplaySize(iconSize, iconSize);
+    }
+    const iconHeight = this.titleImage ? this.titleImage.displayHeight : 0;
+    const statusY = iconHeight + MAIN_LAYOUT.iconToStatusGap;
+    const controlsY = statusY + MAIN_LAYOUT.statusToButtonsGap;
     const contentHeight =
-      MAIN_LAYOUT.controlsY +
+      controlsY +
       Math.max(0, this.mainButtons.length - 1) * MAIN_LAYOUT.buttonGap +
-      32;
+      16;
     const top = Math.max(
       MAIN_LAYOUT.minTop,
       (viewportHeight - contentHeight) / 2
     );
 
     this.mainRoot.setPosition(viewportWidth / 2, top);
-    this.titleImage.setPosition(0, this.titleBottomY);
-    this.statusText.setPosition(0, MAIN_LAYOUT.statusY);
+    this.titleImage.setPosition(0, 0);
+    this.statusText.setPosition(0, statusY);
 
     this.mainButtons.forEach((button, index) => {
-      button.setPosition(
-        0,
-        MAIN_LAYOUT.controlsY + index * MAIN_LAYOUT.buttonGap
-      );
+      button.setPosition(0, controlsY + index * MAIN_LAYOUT.buttonGap);
     });
   }
 
@@ -975,7 +986,10 @@ export class MainScene extends Phaser.Scene {
   }
 
   private logout(message?: string) {
-    if (this.scene.isActive("GameScene") || this.scene.isSleeping("GameScene")) {
+    if (
+      this.scene.isActive("GameScene") ||
+      this.scene.isSleeping("GameScene")
+    ) {
       this.scene.stop("GameScene");
     }
 

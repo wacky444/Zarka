@@ -9,10 +9,7 @@ import RexUIPlugin from "phaser3-rex-plugins/templates/ui/ui-plugin";
 import { SessionManager } from "./services/sessionManager";
 import { installPhaserLocalization } from "./services/i18n";
 
-const isMobile =
-  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  );
+import { isMobile } from "./utils/isMobile";
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -42,7 +39,7 @@ const config: Phaser.Types.Core.GameConfig = {
     AdminServerScene,
   ],
   scale: {
-    mode: isMobile ? Phaser.Scale.RESIZE : Phaser.Scale.RESIZE
+    mode: isMobile() ? Phaser.Scale.RESIZE : Phaser.Scale.RESIZE
   }
 };
 

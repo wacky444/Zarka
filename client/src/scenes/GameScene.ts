@@ -68,6 +68,7 @@ import {
   applyStoredVolume
 } from "../animation/soundPlayer";
 import { assetPath } from "../utils/assetPath";
+import { isMobile } from "../utils/isMobile";
 import { AccountService } from "../services/AccountService";
 import { VictoryOverlay } from "../ui/VictoryOverlay";
 import { TutorialInstructionView } from "../ui/TutorialInstructionView";
@@ -96,7 +97,6 @@ type CachedReplay = {
   snapshot?: ReplaySnapshot;
 };
 
-const MOBILE_LAYOUT_BREAKPOINT = 760;
 const TUTORIAL_VICTORY_DELAY_MS = 3000;
 
 export class GameScene extends Phaser.Scene {
@@ -1471,18 +1471,18 @@ export class GameScene extends Phaser.Scene {
   private layoutUI() {
     const width = this.uiCam ? this.uiCam.width : this.scale.width;
     const height = this.uiCam ? this.uiCam.height : this.scale.height;
-    const isMobile = this.isMobileViewport(width);
+    const isMobileView = isMobile(width);
 
-    if (isMobile !== this.mobileLayout) {
-      this.mobileLayout = isMobile;
-      if (isMobile) {
+    if (isMobileView !== this.mobileLayout) {
+      this.mobileLayout = isMobileView;
+      if (isMobileView) {
         this.mobileViewMode = "sidebar";
       }
     }
 
     if (this.characterPanel) {
-      this.characterPanel.setMobileTabNavigation(isMobile);
-      if (isMobile) {
+      this.characterPanel.setMobileTabNavigation(isMobileView);
+      if (isMobileView) {
         const showSidebar = this.mobileViewMode === "sidebar";
         this.characterPanel.setPosition(0, 0);
         this.characterPanel.setPanelSize(width, height);
@@ -1506,7 +1506,7 @@ export class GameScene extends Phaser.Scene {
       this.menuButton.setPosition(10, height - this.menuButton.height - 10);
     }
     if (this.viewModeButton) {
-      const showModeButton = isMobile;
+      const showModeButton = isMobileView;
       this.viewModeButton.setVisible(showModeButton);
       this.viewModeButton.setActive(showModeButton);
       if (showModeButton) {
@@ -1532,21 +1532,9 @@ export class GameScene extends Phaser.Scene {
     this.tutorialInstructionView?.layout(
       width,
       height,
-      isMobile,
+      isMobileView,
       Math.max(this.menuButton?.height ?? 0, this.viewModeButton?.height ?? 0) +
         18
-    );
-  }
-
-  private isMobileViewport(width: number): boolean {
-    if (width <= MOBILE_LAYOUT_BREAKPOINT) {
-      return true;
-    }
-    if (typeof navigator === "undefined") {
-      return false;
-    }
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent
     );
   }
 

@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { t } from "../services/i18n";
 import { HoverTooltip } from "./HoverTooltip";
 import { THEME } from "./ColorPalette";
+import { isMobile } from "../utils/isMobile";
 
 const ACTION_DESCRIPTION_TAG_PATTERN =
   /\[(health-damage|energy-damage|energy-recover|health-recover)\]([\s\S]*?)\[\/\1\]/g;
@@ -648,17 +649,6 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.applyEnabledState();
   }
 
-  private isMobileModal(): boolean {
-    const userAgent =
-      typeof navigator === "undefined" ? "" : navigator.userAgent;
-    return (
-      this.scene.scale.width <= 600 ||
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        userAgent
-      )
-    );
-  }
-
   private openModal() {
     if (!this.enabled || this.items.length === 0) {
       return;
@@ -684,7 +674,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     }
     const scene = this.scene;
     const { width, height } = scene.scale;
-    const mobile = this.isMobileModal();
+    const mobile = isMobile(width);
     this.modalWidth = mobile ? width : this.defaultModalWidth;
     this.modalHeight = mobile ? height : this.defaultModalHeight;
 
