@@ -3,13 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <title>ZARKA</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#202030" />
     <link rel="icon" type="image/png" href="/favicon.ico" />
     <style>
+      html,
       body {
+        width: 100%;
+        height: 100%;
         margin: 0;
         padding: 0;
         overflow: hidden;
+        background-color: #202030;
+      }
+
+      body {
+        min-height: 100vh;
+        min-height: 100dvh;
+      }
+
+      #game {
+        width: 100%;
+        height: 100%;
+        background-color: #202030;
+        overscroll-behavior: none;
+      }
+
+      #game canvas {
+        display: block;
       }
     </style>
   </head>
