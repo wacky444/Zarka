@@ -4711,6 +4711,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
           }
           const record = lookup.get(rawId);
           const itemType = record?.item_type;
+          if (itemType && ItemLibrary[itemType]?.canBePickedUp === false) {
+            continue;
+          }
           let label = rawId;
           let description: string | undefined;
           let texture = "hex";

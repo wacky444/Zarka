@@ -279,6 +279,7 @@ export class PickUpAction extends BaseAction {
       );
       const picked: PickupItem[] = [];
       const skippedByLoad: PickupItem[] = [];
+      let zarkansCollected = 0;
       const missingPriorityLookup: Record<string, true> = {};
       const attempted: string[] = [];
       let visibleBefore: string[] = [];
@@ -319,10 +320,30 @@ export class PickUpAction extends BaseAction {
                 continue;
               }
               const itemType = record.item_type;
-              const weight = resolveItemWeight(itemType);
-              // TODO check for exceeding load capacity to reduce health
-              addItemToInventory(participant.character, itemType, weight);
-              incrementLoad(participant.character, weight);
+              if (ItemLibrary[itemType]?.canBePickedUp === false) {
+                continue;
+              }
+              if (itemType === "zarkan3") {
+                if (!participant.character.economy) {
+                  participant.character.economy = {
+                    zarkans: 0,
+                    pendingZarkans: 0,
+                    incomeInterval: 1,
+                  };
+                }
+                const balance =
+                  typeof participant.character.economy.zarkans === "number" &&
+                  isFinite(participant.character.economy.zarkans)
+                    ? participant.character.economy.zarkans
+                    : 0;
+                participant.character.economy.zarkans = balance + 3;
+                zarkansCollected += 3;
+              } else {
+                const weight = resolveItemWeight(itemType);
+                // TODO check for exceeding load capacity to reduce health
+                addItemToInventory(participant.character, itemType, weight);
+                incrementLoad(participant.character, weight);
+              }
               removeItemFromTile(tile, itemId);
               removeItemFromMatch(match, itemId);
               delete itemLookup[itemId];
@@ -347,6 +368,9 @@ export class PickUpAction extends BaseAction {
         pickedCount: picked.length,
         extraExecutions: extraReps,
       };
+      if (zarkansCollected > 0) {
+        metadata.zarkansCollected = zarkansCollected;
+      }
       if (picked.length > 0) {
         metadata.pickedItemIds = picked.map((entry) => entry.id);
         metadata.pickedItems = picked.map((entry) => ({

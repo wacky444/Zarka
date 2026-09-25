@@ -47,6 +47,7 @@ export type ItemId =
   | "walkie_talkie"
   | "tracker"
   | "zarkans"
+  | "zarkan3"
   | "bicycle"
   | "locker"
   | "safe"
@@ -86,6 +87,7 @@ export interface ItemDefinition {
   weapon: boolean;
   consumable: boolean;
   canBeStolen?: boolean;
+  canBePickedUp?: boolean;
   weight: number;
   description: string;
   sellValue?: number;

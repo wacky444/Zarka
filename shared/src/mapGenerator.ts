@@ -4,9 +4,11 @@ import {
   axialDistance,
   type Axial,
   type CellLibraryDefinition,
+  type CellSafeDefinition,
   type CellType,
   type GameMap,
 } from "./hexTile";
+import type { ItemId } from "./Item";
 import type { MatchItemRecord } from "./match";
 
 export const DEFAULT_MAP_COLS = 5;
@@ -44,6 +46,27 @@ function shuffleInPlace<T>(values: T[], rng: () => number): void {
   }
 }
 
+function generateSafeContents(
+  definition: CellSafeDefinition,
+  rng: () => number
+): ItemId[] {
+  const contents = definition.contents.slice();
+  const randomContents = definition.randomContents;
+  if (!randomContents || randomContents.count <= 0) {
+    return contents;
+  }
+  const candidates = randomContents.candidates.slice();
+  shuffleInPlace(candidates, rng);
+  const count = Math.min(
+    candidates.length,
+    Math.max(0, Math.floor(randomContents.count))
+  );
+  for (let index = 0; index < count; index += 1) {
+    contents.push(candidates[index]);
+  }
+  return contents;
+}
+
 function nextType(
   entries: Array<[LocalizationType, CellType]>,
   counts: Record<string, number>,
@@ -67,9 +90,16 @@ function nextType(
   return chosen[0];
 }
 
+export interface GeneratedSafeContainer {
+  safeItemId: string;
+  tileId: string;
+  contents: ItemId[];
+}
+
 export interface GeneratedGameMap {
   map: GameMap;
   items: MatchItemRecord[];
+  safeContainers: GeneratedSafeContainer[];
 }
 
 export function assignShrinkScheduleToMap(
@@ -203,6 +233,7 @@ export function generateGameMap(
 
   const tiles = [];
   const items: MatchItemRecord[] = [];
+  const safeContainers: GeneratedSafeContainer[] = [];
   let itemSequence = 0;
   let index = 0;
   for (let r = 0; r < height; r += 1) {
@@ -226,6 +257,17 @@ export function generateGameMap(
           tileItemIds.push(itemId);
         }
       }
+      for (const safeDefinition of base.safes ?? []) {
+        const safeItemId = `itm_${finalSeed}_${itemSequence.toString(36)}`;
+        itemSequence += 1;
+        items.push({ item_id: safeItemId, item_type: "safe" });
+        tileItemIds.push(safeItemId);
+        safeContainers.push({
+          safeItemId,
+          tileId,
+          contents: generateSafeContents(safeDefinition, rng),
+        });
+      }
       const tile = new HexTile({ q: c, r }, base, {
         id: tileId,
         frame: base.sprite,
@@ -248,5 +290,6 @@ export function generateGameMap(
   return {
     map: mapResult,
     items,
+    safeContainers,
   };
 }

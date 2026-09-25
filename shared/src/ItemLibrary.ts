@@ -488,6 +488,19 @@ export const ItemLibrary: ItemLibraryDefinition = {
       "Moneda oficial de Zarka utilizada para contratar mercenarios, comprar objetos o realizar transferencias. No puede ser robada.",
     tags: ["Currency"]
   },
+  zarkan3: {
+    id: "zarkan3",
+    name: "Moneda de 3 zarkans",
+    category: ItemCategory.Special,
+    sprite: "Items/zarkan.png",
+    weapon: false,
+    consumable: false,
+    canBeStolen: false,
+    weight: 0,
+    description:
+      "Moneda con valor de 3 zarkans. Al recogerla se añaden 3 zarkans al saldo.",
+    tags: ["Currency"]
+  },
   bicycle: {
     id: "bicycle",
     name: "Bicicleta",
@@ -523,9 +536,11 @@ export const ItemLibrary: ItemLibraryDefinition = {
     id: "safe",
     name: "Caja fuerte",
     category: ItemCategory.Special,
-    sprite: "Board Game Icons/lock_closed.png",
+    sprite: "Items/safe.png",
     weapon: false,
     consumable: false,
+    canBeStolen: false,
+    canBePickedUp: false,
     weight: 0,
     description:
       "Contenedor con botín oculto en cada edificio. Requiere ser buscada y forzada para acceder a su contenido.",

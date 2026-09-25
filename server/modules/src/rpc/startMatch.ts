@@ -85,6 +85,7 @@ export function startMatchRpc(
     match.cols = generated.map.cols;
     match.rows = generated.map.rows;
     match.items = generated.items;
+    match.safeContainers = generated.safeContainers;
     mapUpdated = true;
   }
 

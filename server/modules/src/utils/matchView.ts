@@ -267,6 +267,7 @@ export function tailorMatchForPlayer(
   }
   const publicMatch = { ...match };
   delete publicMatch.reportProgress;
+  delete publicMatch.safeContainers;
   return {
     ...publicMatch,
     playerCharacters: playerCharacters ?? {},

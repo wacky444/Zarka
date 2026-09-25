@@ -659,6 +659,9 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   Bicicleta: "Bicycle",
   Taquilla: "Locker",
   "Caja fuerte": "Safe",
+  "Moneda de 3 zarkans": "3-Zarkan coin",
+  "Moneda con valor de 3 zarkans. Al recogerla se añaden 3 zarkans al saldo.":
+    "A coin worth 3 zarkans. Picking it up adds 3 zarkans to your balance.",
   Cadáver: "Corpse",
   Vitalidad: "Vitality",
   "Fuerza 1": "Strength 1",

@@ -9,6 +9,15 @@ export const CellLibrary: CellLibraryDefinition = {
     walkable: true,
     numberMin: 0,
     numberMax: 4,
+    safes: [
+      {
+        contents: ["chemical_weapon"],
+        randomContents: {
+          candidates: ["medicine", "zarkan3", "axe", "walkie_talkie", "food"],
+          count: 2,
+        },
+      },
+    ],
     startingItems: [
       { itemId: "drink", quantity: 4 },
       { itemId: "food", quantity: 3 },
@@ -36,6 +45,7 @@ export const CellLibrary: CellLibraryDefinition = {
     walkable: true,
     numberMin: 1,
     numberMax: 1,
+    safes: [{ contents: ["bandage", "medicine", "chemical_weapon"] }],
     startingItems: [
       { itemId: "drink", quantity: 4 },
       { itemId: "food", quantity: 1 },
@@ -56,6 +66,10 @@ export const CellLibrary: CellLibraryDefinition = {
     walkable: true,
     numberMin: 1,
     numberMax: 1,
+    safes: [
+      { contents: ["bulletproof_vest", "pistol", "c4"] },
+      { contents: ["bulletproof_vest", "pistol", "c4"] },
+    ],
     startingItems: [
       { itemId: "drink", quantity: 1 },
       { itemId: "bandage", quantity: 1 },
@@ -75,6 +89,7 @@ export const CellLibrary: CellLibraryDefinition = {
     walkable: true,
     numberMin: 1,
     numberMax: 1,
+    safes: [{ contents: ["axe", "chainsaw", "zarkan3"] }],
     startingItems: [
       { itemId: "wood", quantity: 4 },
       { itemId: "spike", quantity: 5 },
@@ -95,6 +110,10 @@ export const CellLibrary: CellLibraryDefinition = {
     walkable: true,
     numberMin: 1,
     numberMax: 1,
+    safes: [
+      { contents: ["chemical_weapon", "c4", "trap"] },
+      { contents: ["chemical_weapon", "c4", "trap"] },
+    ],
     startingItems: [
       { itemId: "drink", quantity: 1 },
       { itemId: "bulletproof_vest", quantity: 1 },
@@ -122,6 +141,7 @@ export const CellLibrary: CellLibraryDefinition = {
     walkable: true,
     numberMin: 1,
     numberMax: 1,
+    safes: [{ contents: ["medicine", "chemical_weapon", "virus"] }],
     startingItems: [
       { itemId: "food", quantity: 4 },
       { itemId: "drink", quantity: 2 },
@@ -144,6 +164,7 @@ export const CellLibrary: CellLibraryDefinition = {
     walkable: true,
     numberMin: 1,
     numberMax: 1,
+    safes: [{ contents: ["bat", "chainsaw", "zarkan3"] }],
     startingItems: [
       { itemId: "wood", quantity: 6 },
       { itemId: "spike", quantity: 6 },
@@ -163,6 +184,7 @@ export const CellLibrary: CellLibraryDefinition = {
     walkable: true,
     numberMin: 1,
     numberMax: 1,
+    safes: [{ contents: ["bulletproof_vest", "pistol", "silencer"] }],
     startingItems: [
       { itemId: "drink", quantity: 2 },
       { itemId: "bulletproof_vest", quantity: 1 },
@@ -183,6 +205,7 @@ export const CellLibrary: CellLibraryDefinition = {
     walkable: true,
     numberMin: 1,
     numberMax: 1,
+    safes: [{ contents: ["food", "chainsaw", "zarkan3"] }],
     startingItems: [
       { itemId: "drink", quantity: 5 },
       { itemId: "food", quantity: 1 },
@@ -203,6 +226,10 @@ export const CellLibrary: CellLibraryDefinition = {
     walkable: true,
     numberMin: 1,
     numberMax: 1,
+    safes: [
+      { contents: ["medicine", "pistol", "chemical_weapon"] },
+      { contents: ["medicine", "pistol", "chemical_weapon"] },
+    ],
     startingItems: [
       { itemId: "drink", quantity: 1 },
       { itemId: "medicine", quantity: 2 },
@@ -230,6 +257,7 @@ export const CellLibrary: CellLibraryDefinition = {
     walkable: true,
     numberMin: 1,
     numberMax: 1,
+    safes: [{ contents: ["food", "bat", "zarkan3"] }],
     startingItems: [
       { itemId: "drink", quantity: 7 },
       { itemId: "food", quantity: 7 },

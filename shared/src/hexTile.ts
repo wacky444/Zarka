@@ -43,11 +43,20 @@ export interface CellType {
   numberMin: number; // Minimum number of this cell type per map
   numberMax: number;
   startingItems?: CellItemStock[];
+  safes?: CellSafeDefinition[];
 }
 
 export interface CellItemStock {
   itemId: ItemId;
   quantity: number;
+}
+
+export interface CellSafeDefinition {
+  contents: ItemId[];
+  randomContents?: {
+    candidates: ItemId[];
+    count: number;
+  };
 }
 
 export interface HexTileOptions {

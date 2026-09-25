@@ -108,6 +108,7 @@ export function joinMatchRpc(
     match.cols = generated.map.cols;
     match.rows = generated.map.rows;
     match.items = generated.items;
+    match.safeContainers = generated.safeContainers;
     return true;
   };
 

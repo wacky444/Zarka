@@ -2,6 +2,7 @@
 
 import type {
   GameMap,
+  GeneratedSafeContainer,
   MatchRecord as SharedMatchRecord,
   PlayerCharacter,
   TurnRecord as SharedTurnRecord
@@ -9,6 +10,7 @@ import type {
 
 export type MatchRecord = Omit<SharedMatchRecord, "playerCharacters"> & {
   playerCharacters: Record<string, PlayerCharacter>;
+  safeContainers?: GeneratedSafeContainer[];
 };
 export type TurnRecord = SharedTurnRecord;
 

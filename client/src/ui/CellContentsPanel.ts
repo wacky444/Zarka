@@ -241,9 +241,14 @@ export class CellContentsPanel {
     const actualEntries = this.entries.filter(
       (entry) => ItemLibrary[entry.itemId] && entry.quantity > 0,
     );
-    const possibleEntries = (CellLibrary[this.cellType].startingItems ?? []).filter(
-      (entry) => ItemLibrary[entry.itemId] && entry.quantity > 0,
-    );
+    const cellDefinition = CellLibrary[this.cellType];
+    const possibleEntries: CellContentsEntry[] = (
+      cellDefinition.startingItems ?? []
+    ).filter((entry) => ItemLibrary[entry.itemId] && entry.quantity > 0);
+    const safeCount = cellDefinition.safes?.length ?? 0;
+    if (safeCount > 0) {
+      possibleEntries.push({ itemId: "safe", quantity: safeCount });
+    }
     let contentHeight = 8;
 
     const addItemSection = (
