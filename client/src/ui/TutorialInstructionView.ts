@@ -99,7 +99,7 @@ export class TutorialInstructionView {
     this.container.setPosition(12, 4);
     this.background.setSize(this.width, this.height);
     this.instructionText.setWordWrapWidth(this.width - 28);
-    this.hintText.setWordWrapWidth(Math.max(110, this.width - 164));
+    this.hintText.setWordWrapWidth(this.width - 28);
     this.hintText.setPosition(14, this.height - 54);
     this.hintButton.setPosition(this.width - this.hintButton.width - 12, 6);
     this.hintButton.setText(`[ ${t(this.hintVisible ? "Hide hint" : "Show hint")} ]`);
