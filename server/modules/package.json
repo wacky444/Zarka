@@ -8,10 +8,7 @@
     "restart:nakama": "cd .. && docker compose restart nakama",
     "build:server": "npm run build && npm run restart:nakama && npm run test:rpc",
     "test:rpc": "node ./scripts/smoke-rpc.mjs",
-    "test": "node ./test/test_skill_library_effects.mjs",
-    "test:tutorial-scenario": "node ./scripts/test-tutorial-scenario.mjs",
-    "test:tutorial-profile-gate": "node ./scripts/test-tutorial-profile-gate.mjs",
-    "test:tutorial-integration": "node ./scripts/test-tutorial-integration.mjs"
+    "test": "node ./scripts/test-all.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.23.0",

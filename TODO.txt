@@ -38,24 +38,8 @@
 
 - ending screen says bot2 won, not team?
 
-- in mobile there is very bad performance when the selectors are open
-
-- after changing a selector the gui freezes until the server answers in both pc and mobile
+- in mobile there is bad performance when the selectors are open
 
 -step 6 should tell abou prioritzen items
-
-
-  - Mercado: hay dos cajas fuertes, en cada una de ellas hay medicamento, pistola y arma química 
-Restaurante: comida, bate, 3Zarkan
-Gasolinera: comida, motosierra, 3Zarkan
-Sala seguridad: chaleco, pistola, silenciador
-Taller: bate, motosierra, 3zarkan
-Hospital: medicamento, arma química, virus
-Ferretería: Hacha, motosierra, 3Zarkan
-Comisaría: hay 2 cajas, en cada una chaleco, pistola, C4
-Farmacia: venda, medicamento, arma química 
-Industria: hay 2 cajas, en cada una arma química, C4, trampa.
-
-En las casas varío un poco, como suelo poner 4 o 5 casas... Pero siempre tienen una única caja fuerte con arma química y los otros dos objetos juego entre medicamento, 3zarkan, Hacha, walkie, comida
 
 - look using window without target should use a random nearby cell, also log should tell what cell is looking

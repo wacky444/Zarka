@@ -8,6 +8,7 @@
     "removeComments": true,
     "module": "commonjs",
     "outDir": "./build",
+    "rootDir": "../../",
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["../../shared/src/*"],
@@ -17,6 +18,6 @@
     "types": ["nakama-runtime"]
   },
   "files": ["./node_modules/nakama-runtime/index.d.ts"],
-  "include": ["./src/**/*.ts"],
+  "include": ["./src/**/*.ts", "../../shared/src/**/*.ts"],
   "exclude": ["node_modules", "build"]
 }

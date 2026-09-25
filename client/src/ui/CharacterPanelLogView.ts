@@ -563,6 +563,46 @@ export class CharacterPanelLogView {
           lines.push(this.buildFailedActionLine(actor, event.action.metadata));
           continue;
         }
+        if (actionId === "look_through_window") {
+          const targetLocation =
+            event.action.targetLocation ??
+            readAxialMetadata(
+              (event.action.metadata as { observedLocation?: unknown })
+                ?.observedLocation
+            );
+          if (targetLocation) {
+            lines.push(
+              `${actor} ${t("looked through the window at")} (${targetLocation.q}, ${targetLocation.r})`
+            );
+          } else {
+            lines.push(`${actor} ${t("looked through the window")}`);
+          }
+          continue;
+        }
+        if (actionId === "use_binoculars") {
+          const targetLocation =
+            event.action.targetLocation ??
+            readAxialMetadata(
+              (event.action.metadata as { observedLocation?: unknown })
+                ?.observedLocation
+            );
+          const extraExecutions =
+            typeof (event.action.metadata as { extraExecutions?: unknown })
+              ?.extraExecutions === "number"
+              ? ((event.action.metadata as { extraExecutions: number })
+                  .extraExecutions ?? 0)
+              : 0;
+          const extraLabel =
+            extraExecutions > 0 ? ` (+${extraExecutions} ${t("extra")})` : "";
+          if (targetLocation) {
+            lines.push(
+              `${actor} ${t("used binoculars at")} (${targetLocation.q}, ${targetLocation.r})${extraLabel}`
+            );
+          } else {
+            lines.push(`${actor} ${t("used binoculars")}${extraLabel}`);
+          }
+          continue;
+        }
         const actionMetadata = event.action.metadata as
           | { testament?: unknown }
           | undefined;

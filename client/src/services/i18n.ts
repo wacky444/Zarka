@@ -503,6 +503,10 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "from a detective": "de un detective",
   "fled to": "huyó a",
   "activated the cameras": "activó las cámaras",
+  "looked through the window at": "miró por la ventana en",
+  "looked through the window": "miró por la ventana",
+  "used binoculars at": "usó prismáticos en",
+  "used binoculars": "usó prismáticos",
   "used the security camera app and saw":
     "usó la aplicación de cámaras de seguridad y vio",
   characters: "personajes",

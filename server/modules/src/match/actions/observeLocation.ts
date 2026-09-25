@@ -64,7 +64,23 @@ export class ObserveLocationAction extends BaseAction {
             )
           : 0;
       const origin = participant.character.position?.coord;
-      const target = participant.plan.targetLocationId;
+      let target = participant.plan.targetLocationId;
+      if (
+        actionId === "look_through_window" &&
+        (!target || typeof target.q !== "number" || typeof target.r !== "number") &&
+        origin
+      ) {
+        const candidateTiles = mapTiles.filter(
+          (tile) =>
+            !tile.meta?.destroyed &&
+            axialDistance(origin, tile.coord) === 1
+        );
+        if (candidateTiles.length > 0) {
+          const chosenTile =
+            candidateTiles[Math.floor(Math.random() * candidateTiles.length)];
+          target = chosenTile.coord;
+        }
+      }
       let targetTile: (typeof mapTiles)[number] | undefined;
       if (target) {
         for (const tile of mapTiles) {
