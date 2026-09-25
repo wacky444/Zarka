@@ -293,20 +293,27 @@ async function updateServer() {
         )
       : undefined;
     const hostRepositoryPath = repositoryMount?.Source;
+    const isWindowsHostPath =
+      typeof hostRepositoryPath === "string" &&
+      (/^[a-zA-Z]:[\\/]/.test(hostRepositoryPath) ||
+        hostRepositoryPath.startsWith("\\\\") ||
+        hostRepositoryPath.startsWith("//"));
+    const hostPath = isWindowsHostPath ? path.win32 : path.posix;
     if (
       typeof hostRepositoryPath !== "string" ||
-      !path.isAbsolute(hostRepositoryPath)
+      !hostPath.isAbsolute(hostRepositoryPath)
     ) {
       throw new HttpError(500, "host_repository_path_unavailable");
     }
-    const hostRepositoryDirectory = path.resolve(hostRepositoryPath);
-    if (hostRepositoryDirectory === path.parse(hostRepositoryDirectory).root) {
+    const hostRepositoryDirectory = hostPath.resolve(hostRepositoryPath);
+    if (hostRepositoryDirectory === hostPath.parse(hostRepositoryDirectory).root) {
       throw new HttpError(500, "host_repository_path_unavailable");
     }
+    const gitExtraArgs = isWindowsHostPath ? ["-c", "core.autocrlf=true"] : [];
     const status = await requireSuccessfulCommand(
       "git_status",
       "git",
-      ["status", "--porcelain"],
+      [...gitExtraArgs, "status", "--porcelain"],
       repositoryDirectory,
       10_000,
     );
@@ -327,7 +334,7 @@ async function updateServer() {
       await requireSuccessfulCommand(
         "git_pull",
         "git",
-        ["pull", "--ff-only"],
+        [...gitExtraArgs, "pull", "--ff-only"],
         repositoryDirectory,
         120_000,
       ),
@@ -361,8 +368,8 @@ async function updateServer() {
           "services:",
           "  nakama:",
           "    volumes:",
-          `      - ${quoteYaml(`${path.join(hostRepositoryDirectory, "server", "modules")}:/nakama/data/modules`)}`,
-          `      - ${quoteYaml(`${path.join(hostRepositoryDirectory, "server", "local.yml")}:/nakama/data/local.yml:ro`)}`,
+          `      - ${quoteYaml(`${hostPath.join(hostRepositoryDirectory, "server", "modules")}:/nakama/data/modules`)}`,
+          `      - ${quoteYaml(`${hostPath.join(hostRepositoryDirectory, "server", "local.yml")}:/nakama/data/local.yml:ro`)}`,
           "",
         ].join("\n"),
         { encoding: "utf8", mode: 0o600 },
