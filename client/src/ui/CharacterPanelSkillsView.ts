@@ -108,7 +108,7 @@ export class CharacterPanelSkillsView {
 
     this.unspentPointsLabel = scene.add
       .text(
-        layout.margin + 24,
+        layout.margin + 12,
         headerY + HEADER_HEIGHT / 2,
         "Available Skill: 0",
         {
@@ -557,7 +557,7 @@ export class CharacterPanelSkillsView {
     this.headerBox.setDisplaySize(headerWidth, HEADER_HEIGHT);
 
     this.unspentPointsLabel.setPosition(
-      options.margin + 24,
+      options.margin + 12,
       headerY + HEADER_HEIGHT / 2
     );
 
