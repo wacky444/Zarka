@@ -43,6 +43,7 @@ function stripActionDescriptionMarkup(content: string): string {
 export interface GridSelectItem {
   id: string;
   name: string;
+  shortName?: string;
   labelColor?: string;
   description?: string | null;
   texture: string;
@@ -208,6 +209,7 @@ interface GridSelectConfig {
   confirmLabel?: string;
   iconTextGap?: number;
   mobileCellContent?: MobileGridCellContent;
+  mobileImageLabels?: boolean;
   prebuildMobileCells?: boolean;
 }
 
@@ -275,6 +277,7 @@ interface StaticGridCell {
   item: GridSelectItem;
   background: Phaser.GameObjects.Rectangle;
   label: Phaser.GameObjects.Text;
+  energy?: Phaser.GameObjects.Text;
 }
 
 export class GridSelect extends Phaser.GameObjects.Container {
@@ -294,6 +297,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private modalHeight: number;
   private readonly cellHeight: number;
   private readonly mobileCellContent: MobileGridCellContent;
+  private readonly mobileImageLabels: boolean;
   private readonly prebuildMobileCells: boolean;
   private readonly hitAreaZone: Phaser.GameObjects.Zone;
   private readonly emptyOptionItem: GridSelectItem | null;
@@ -345,6 +349,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.iconTargetSize = Math.min(this.collapsedHeight - 12, 48);
     this.cellHeight = Math.max(96, config.cellHeight ?? 240);
     this.mobileCellContent = config.mobileCellContent ?? "name";
+    this.mobileImageLabels = config.mobileImageLabels === true;
     this.prebuildMobileCells = config.prebuildMobileCells === true;
     this.autoSelectFirst = config.autoSelectFirst !== false;
     this.confirmSelection = config.confirmSelection === true;
@@ -1162,7 +1167,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         .setOrigin(0, 0)
         .setStrokeStyle(1, 0x2d3a60, 0.9);
       const label = this.scene.add
-        .text(x + cellWidth / 2, y + this.cellHeight / 2, item.name, {
+        .text(x + cellWidth / 2, y, item.name, {
           fontSize: "15px",
           color: item.disabled
             ? THEME.colors.textDisabled
@@ -1171,6 +1176,32 @@ export class GridSelect extends Phaser.GameObjects.Container {
           wordWrap: { width: Math.max(1, cellWidth - 16) }
         })
         .setOrigin(0.5);
+      const hasEnergyCost =
+        item.isEmptyOption !== true &&
+        typeof item.energyCost === "number" &&
+        Number.isFinite(item.energyCost);
+      const energy = hasEnergyCost
+        ? this.scene.add
+            .text(
+              x + cellWidth / 2,
+              y,
+              `${t("Energy")}: ${item.energyCost}`,
+              {
+                fontSize: "12px",
+                color: item.disabled
+                  ? THEME.colors.textDisabled
+                  : THEME.colors.energyCost,
+                align: "center"
+              }
+            )
+            .setOrigin(0.5)
+        : undefined;
+      const groupHeight = label.height + (energy ? energy.height + 4 : 0);
+      const groupTop = y + this.cellHeight / 2 - groupHeight / 2;
+      label.setY(groupTop + label.height / 2);
+      if (energy) {
+        energy.setY(groupTop + label.height + 4 + energy.height / 2);
+      }
       background.setInteractive({ useHandCursor: !item.disabled });
 
       let pointerDownPosition: {
@@ -1229,7 +1260,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
       });
 
       content.add([background, label]);
-      this.mobileGridCells.push({ item, background, label });
+      if (energy) {
+        content.add(energy);
+        this.mobileGridCells.push({ item, background, label, energy });
+      } else {
+        this.mobileGridCells.push({ item, background, label });
+      }
     });
 
     content.setSize(
@@ -1247,6 +1283,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
         cell.item.disabled
           ? THEME.colors.textDisabled
           : cell.item.labelColor ?? THEME.colors.textPrimary
+      );
+      cell.energy?.setColor(
+        cell.item.disabled
+          ? THEME.colors.textDisabled
+          : THEME.colors.energyCost
       );
     }
   }
@@ -1436,6 +1477,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
     let icon = container.getData("mobileIcon") as
       | Phaser.GameObjects.Image
       | undefined;
+    let label = container.getData("mobileLabel") as
+      | Phaser.GameObjects.Text
+      | undefined;
     if (canShowImage) {
       if (!icon) {
         icon = scene.add.image(0, 0, item.texture, item.frame);
@@ -1455,15 +1499,48 @@ export class GridSelect extends Phaser.GameObjects.Container {
           this.resolveMaxIconDimension(cell.height)
         )
       );
-      icon.setPosition(cell.width / 2, cell.height / 2);
+      const showLabel = this.mobileImageLabels;
+      let labelHeight = 0;
+      if (showLabel) {
+        if (!label) {
+          label = scene.add
+            .text(0, 0, "", {
+              fontSize: "11px",
+              color: THEME.colors.textPrimary,
+              align: "center",
+              wordWrap: { width: Math.max(1, cell.width - 4) }
+            })
+            .setOrigin(0.5);
+          container.add(label);
+          container.setData("mobileLabel", label);
+        }
+        label.setText(item.shortName ?? item.name);
+        label.setWordWrapWidth(Math.max(1, cell.width - 4), true);
+        label.setColor(
+          item.disabled
+            ? THEME.colors.textDisabled
+            : item.labelColor ?? THEME.colors.textPrimary
+        );
+        label.setVisible(true);
+        labelHeight = label.height;
+      } else {
+        label?.setVisible(false);
+      }
+      const labelGap = labelHeight > 0 ? 3 : 0;
+      const contentHeight = iconSize + labelGap + labelHeight;
+      const contentTop = (cell.height - contentHeight) / 2;
+      icon.setPosition(cell.width / 2, contentTop + iconSize / 2);
       icon.setDisplaySize(iconSize, iconSize);
       icon.setAlpha(item.disabled ? 0.5 : 1);
       icon.setVisible(true);
+      if (showLabel && label) {
+        label.setPosition(
+          cell.width / 2,
+          contentTop + iconSize + labelGap + labelHeight / 2
+        );
+      }
     } else {
       icon?.setVisible(false);
-      let label = container.getData("mobileLabel") as
-        | Phaser.GameObjects.Text
-        | undefined;
       if (!label) {
         label = scene.add
           .text(cell.width / 2, cell.height / 2, item.name, {

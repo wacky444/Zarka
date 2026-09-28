@@ -36,9 +36,14 @@ function buildSkinItems(category: SkinCategory): GridSelectItem[] {
   const options = SKIN_OPTIONS[category];
   return options.map((frame) => {
     const name = frame.replace(/\.png$/, "").replace(/_/g, " ");
+    const shortName = frame
+      .replace(/^[^_]+_/, "")
+      .replace(/\.png$/, "")
+      .replace(/_/g, " ");
     return {
       id: frame,
       name,
+      shortName,
       texture: "char",
       frame,
       iconScale: 2,
@@ -574,7 +579,8 @@ export class AccountScene extends Phaser.Scene {
         modalWidth: 500,
         modalHeight: 380,
         autoSelectFirst: false,
-        mobileCellContent: "image"
+        mobileCellContent: "image",
+        mobileImageLabels: true
       });
 
       const items = buildSkinItems(cat);
