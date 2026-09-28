@@ -45,6 +45,10 @@ const CELL_TYPE_LABELS: Record<LocalizationType, string> = {
   [LocalizationType.Alley]: "Alley",
 };
 
+export function getCellTypeLabel(cellType: LocalizationType): string {
+  return t(CELL_TYPE_LABELS[cellType]);
+}
+
 export class CellContentsPanel {
   private overlay: Phaser.GameObjects.Container | null = null;
   private content: Phaser.GameObjects.Container | null = null;
@@ -243,7 +247,7 @@ export class CellContentsPanel {
       .text(
         width / 2,
         modalY + 56,
-        `${t(CELL_TYPE_LABELS[this.cellType])} (${this.coord.q}, ${this.coord.r})`,
+        `${getCellTypeLabel(this.cellType)} (${this.coord.q}, ${this.coord.r})`,
         {
           fontFamily: "Arial",
           fontSize: "14px",

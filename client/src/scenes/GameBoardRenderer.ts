@@ -29,6 +29,7 @@ import {
 } from "../ui/ItemTooltip";
 import {
   CellContentsPanel,
+  getCellTypeLabel,
   type CellContentsEntry
 } from "../ui/CellContentsPanel";
 import { HoverTooltip } from "../ui/HoverTooltip";
@@ -1257,7 +1258,7 @@ export class GameBoardRenderer {
     }
     const { tile, image } = entry;
     this.locationSelectionHoverText.setText(
-      `${tile.cellType.localizationType}\n(${tile.coord.q}, ${tile.coord.r})`,
+      `${getCellTypeLabel(tile.cellType.localizationType)}\n(${tile.coord.q}, ${tile.coord.r})`,
     );
     this.locationSelectionHoverText.setPosition(
       image.x - this.locationSelectionHoverText.width / 2,
