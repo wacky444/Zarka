@@ -55,6 +55,8 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
       columns: 3,
       cellHeight: 128,
       autoSelectFirst: false,
+      mobileCellContent: "image",
+      mobileImageLabels: true,
     });
     this.grid.setPosition(0, this.label.height + 6);
     this.grid.on("change", this.handleSelection);
