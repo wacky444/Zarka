@@ -278,6 +278,7 @@ interface StaticGridCell {
   background: Phaser.GameObjects.Rectangle;
   label: Phaser.GameObjects.Text;
   energy?: Phaser.GameObjects.Text;
+  description?: Phaser.GameObjects.Text;
 }
 
 export class GridSelect extends Phaser.GameObjects.Container {
@@ -1196,11 +1197,36 @@ export class GridSelect extends Phaser.GameObjects.Container {
             )
             .setOrigin(0.5)
         : undefined;
-      const groupHeight = label.height + (energy ? energy.height + 4 : 0);
-      const groupTop = y + this.cellHeight / 2 - groupHeight / 2;
-      label.setY(groupTop + label.height / 2);
-      if (energy) {
-        energy.setY(groupTop + label.height + 4 + energy.height / 2);
+      const descriptionContent =
+        typeof item.description === "string" ? item.description.trim() : "";
+      const description = descriptionContent
+        ? (this.scene.rexUI.add.BBCodeText(
+            x + cellWidth / 2,
+            y,
+            parseActionDescription(descriptionContent),
+            {
+              fontSize: "12px",
+              color: THEME.colors.modalText,
+              align: "center",
+              wrap: {
+                mode: "word",
+                width: Math.max(1, cellWidth - 16)
+              },
+              maxLines: this.resolveMaxDescriptionLines(this.cellHeight)
+            }
+          ) as Phaser.GameObjects.Text).setOrigin(0.5)
+        : undefined;
+      const textParts = [label, energy, description].filter(
+        (part): part is Phaser.GameObjects.Text => part !== undefined
+      );
+      const partGap = 4;
+      const groupHeight =
+        textParts.reduce((height, part) => height + part.height, 0) +
+        Math.max(0, textParts.length - 1) * partGap;
+      let nextTextY = y + this.cellHeight / 2 - groupHeight / 2;
+      for (const part of textParts) {
+        part.setY(nextTextY + part.height / 2);
+        nextTextY += part.height + partGap;
       }
       background.setInteractive({ useHandCursor: !item.disabled });
 
@@ -1262,10 +1288,17 @@ export class GridSelect extends Phaser.GameObjects.Container {
       content.add([background, label]);
       if (energy) {
         content.add(energy);
-        this.mobileGridCells.push({ item, background, label, energy });
-      } else {
-        this.mobileGridCells.push({ item, background, label });
       }
+      if (description) {
+        content.add(description);
+      }
+      this.mobileGridCells.push({
+        item,
+        background,
+        label,
+        ...(energy ? { energy } : {}),
+        ...(description ? { description } : {})
+      });
     });
 
     content.setSize(
@@ -1288,6 +1321,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
         cell.item.disabled
           ? THEME.colors.textDisabled
           : THEME.colors.energyCost
+      );
+      cell.description?.setColor(
+        cell.item.disabled ? THEME.colors.textDisabled : THEME.colors.modalText
       );
     }
   }
