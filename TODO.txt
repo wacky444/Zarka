@@ -8,15 +8,11 @@
 
 - crafting
 
-- shop
-
-- ground
+- improve ground visuals, check kenney hexagon pack examples
 
 - train and experience
 
 - placin the trap didnt work
-
-- the victory report, "informe no disponible":
 
 - y diría q cuando seleccionas una skill q necesita un objetivo, debería cambiar directamente a seleccionarlo
 
@@ -40,6 +36,18 @@
 
 - in mobile there is bad performance when the selectors are open
 
--step 6 should tell abou prioritzen items
+- tutorial step 6 should teach about prioritize items
 
 - look using window without target should use a random nearby cell, also log should tell what cell is looking
+
+- cant picke only one item
+
+- no hay log por recibir daño por peso
+
+- in mobile, add the player sprites in the target selector, and item sprites in item selector
+
+- pressing on a cell shows the name of the cell type but its not translated
+
+- using bombard or fire should show the icon of the cell types in mobile
+
+- bombard has animation? it should have it similar to cell destroyed

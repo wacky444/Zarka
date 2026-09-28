@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import {
+  CellLibrary,
   ShopLibrary,
   type Axial,
   type MatchRecord,
@@ -9,6 +10,7 @@ import {
 } from "@shared";
 import { PlayerSelector, type PlayerOption } from "./PlayerSelector";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
+import { getCellTypeLabel } from "./CellContentsPanel";
 import { t } from "../services/i18n";
 
 export interface CharacterPanelShopViewLayout {
@@ -154,6 +156,8 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
       columns: 2,
       cellHeight: 96,
       autoSelectFirst: false,
+      mobileCellContent: "image",
+      mobileImageLabels: true,
       confirmSelection: true,
       confirmLabel: t("Confirm")
     });
@@ -669,12 +673,13 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
         q: tile.coord.q,
         r: tile.coord.r
       });
+      const cellTypeLabel = getCellTypeLabel(tile.localizationType);
       items.push({
         id,
-        name: `${t("Location")} (${tile.coord.q}, ${tile.coord.r})`,
-        description: tile.localizationType,
+        name: `${cellTypeLabel} (${tile.coord.q}, ${tile.coord.r})`,
+        description: cellTypeLabel,
         texture: "hex",
-        frame: "grass_01.png"
+        frame: tile.frame ?? CellLibrary[tile.localizationType].sprite
       });
     }
     this.droneLocationSelector.setItems(items);
