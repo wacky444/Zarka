@@ -39,6 +39,7 @@ import {
 
 const TILE_WIDTH = 128;
 const TILE_HEIGHT = 118;
+const CELL_INFO_LONG_PRESS_MS = 500;
 
 export type BoardReplayView = {
   turn: number;
@@ -88,6 +89,7 @@ export class GameBoardRenderer {
     image: Phaser.GameObjects.Image;
     skullImage?: Phaser.GameObjects.Image;
     skullShiverTween?: Phaser.Tweens.Tween;
+    cellInfoLongPressTimer: Phaser.Time.TimerEvent | null;
   }> = [];
   private trapVisuals: Phaser.GameObjects.Graphics[] = [];
   private fireTileAnimations = new Map<string, FireTileAnimation>();
@@ -95,6 +97,7 @@ export class GameBoardRenderer {
   private playerNameLabels = new Map<string, Phaser.GameObjects.Text>();
   private playerDizzyStars = new Map<string, Phaser.GameObjects.Container>();
   private tileItemContainers = new Map<string, Phaser.GameObjects.Container>();
+  private tileItemEntries = new Map<string, CellContentsEntry[]>();
   private playerCoordForTinting: Axial | null = null;
   private playerViewRange = 0;
   private mapRenderingPaused = false;
@@ -124,6 +127,7 @@ export class GameBoardRenderer {
       container.destroy(true);
     }
     this.tileItemContainers.clear();
+    this.tileItemEntries.clear();
     for (const sprite of this.playerSprites.values()) {
       sprite.destroy();
     }
@@ -225,6 +229,80 @@ export class GameBoardRenderer {
 
       this.updateTileTintState(img, tile);
       img.setInteractive({ useHandCursor: false });
+      const tileSpriteEntry = {
+        tile,
+        image: img,
+        skullImage,
+        skullShiverTween,
+        cellInfoLongPressTimer: null as Phaser.Time.TimerEvent | null
+      };
+      let cellInfoPointerDown: {
+        id: number;
+        x: number;
+        y: number;
+      } | null = null;
+      let cellInfoLongPressTriggered = false;
+      const cancelCellInfoLongPress = (): void => {
+        if (tileSpriteEntry.cellInfoLongPressTimer) {
+          this.scene.time.removeEvent(tileSpriteEntry.cellInfoLongPressTimer);
+          tileSpriteEntry.cellInfoLongPressTimer = null;
+        }
+        cellInfoPointerDown = null;
+        cellInfoLongPressTriggered = false;
+      };
+      img.on(
+        Phaser.Input.Events.POINTER_DOWN,
+        (pointer: Phaser.Input.Pointer) => {
+          cancelCellInfoLongPress();
+          if (!pointer.wasTouch) {
+            return;
+          }
+          cellInfoPointerDown = {
+            id: pointer.id,
+            x: pointer.x,
+            y: pointer.y
+          };
+          tileSpriteEntry.cellInfoLongPressTimer = this.scene.time.delayedCall(
+            CELL_INFO_LONG_PRESS_MS,
+            () => {
+              tileSpriteEntry.cellInfoLongPressTimer = null;
+              if (
+                !cellInfoPointerDown ||
+                cellInfoPointerDown.id !== pointer.id ||
+                !pointer.isDown ||
+                this.callbacks.isPinchGestureInProgress() ||
+                Phaser.Math.Distance.Between(
+                  cellInfoPointerDown.x,
+                  cellInfoPointerDown.y,
+                  pointer.x,
+                  pointer.y
+                ) > 10
+              ) {
+                return;
+              }
+              cellInfoLongPressTriggered = true;
+            }
+          );
+        }
+      );
+      img.on(
+        Phaser.Input.Events.POINTER_MOVE,
+        (pointer: Phaser.Input.Pointer) => {
+          if (
+            !cellInfoPointerDown ||
+            cellInfoPointerDown.id !== pointer.id ||
+            Phaser.Math.Distance.Between(
+              cellInfoPointerDown.x,
+              cellInfoPointerDown.y,
+              pointer.x,
+              pointer.y
+            ) <= 10
+          ) {
+            return;
+          }
+          cancelCellInfoLongPress();
+        }
+      );
       img.on(
         Phaser.Input.Events.POINTER_OVER,
         (pointer: Phaser.Input.Pointer) => {
@@ -238,27 +316,43 @@ export class GameBoardRenderer {
           }
         },
       );
-      img.on(Phaser.Input.Events.POINTER_OUT, () => {
-        this.hoverTooltip.hide();
-        if (
-          this.callbacks.getLocationSelection().hoveredTileId === tile.id
-        ) {
-          this.callbacks.onTileHover(null);
+      img.on(
+        Phaser.Input.Events.POINTER_OUT,
+        (pointer?: Phaser.Input.Pointer) => {
+          if (pointer?.id === cellInfoPointerDown?.id) {
+            cancelCellInfoLongPress();
+          }
+          this.hoverTooltip.hide();
+          if (
+            this.callbacks.getLocationSelection().hoveredTileId === tile.id
+          ) {
+            this.callbacks.onTileHover(null);
+          }
         }
-      });
+      );
       img.on(
         Phaser.Input.Events.POINTER_UP,
         (pointer: Phaser.Input.Pointer) => {
+          const wasCellInfoLongPress =
+            cellInfoLongPressTriggered &&
+            cellInfoPointerDown?.id === pointer.id;
+          if (cellInfoPointerDown?.id === pointer.id) {
+            cancelCellInfoLongPress();
+          }
+          const tileData = img.getData("tile") as HexTile | undefined;
+          if (!tileData) {
+            return;
+          }
+          if (wasCellInfoLongPress) {
+            this.showCellInfoForTile(tileData);
+            return;
+          }
           const selection = this.callbacks.getLocationSelection();
           if (
             this.callbacks.isPinchGestureInProgress() ||
             pointer.button !== 0 ||
             pointer.getDistance() > 15
           ) {
-            return;
-          }
-          const tileData = img.getData("tile") as HexTile | undefined;
-          if (!tileData) {
             return;
           }
           if (selection.active) {
@@ -275,12 +369,12 @@ export class GameBoardRenderer {
               TUTORIAL_MATCH_METADATA_KEY
             ]
           ) {
-            this.showTutorialCellInfo(tileData);
+            this.showCellInfoForTile(tileData);
           }
         },
       );
       sprites.push(img);
-      this.mapTileSprites.push({ tile, image: img, skullImage, skullShiverTween });
+      this.mapTileSprites.push(tileSpriteEntry);
       this.tilePositions[tile.id] = { x, y };
     }
 
@@ -427,6 +521,7 @@ export class GameBoardRenderer {
       container.destroy(true);
     }
     this.tileItemContainers.clear();
+    this.tileItemEntries.clear();
 
     if (!Array.isArray(map.tiles) || map.tiles.length === 0) {
       this.applyMapRenderingState();
@@ -483,6 +578,11 @@ export class GameBoardRenderer {
         }
         return b[1] - a[1];
       });
+      const cellEntries = entries.map(([itemId, quantity]) => ({
+        itemId,
+        quantity
+      }));
+      this.tileItemEntries.set(snapshot.id, cellEntries);
       const hasMoreItemTypes = entries.length > maxIcons;
       const visibleEntries = entries.slice(
         0,
@@ -541,7 +641,7 @@ export class GameBoardRenderer {
                 this.showCellContents(
                   snapshot.coord,
                   snapshot.localizationType,
-                  entries.map(([itemId, quantity]) => ({ itemId, quantity })),
+                  cellEntries,
                 );
               },
             );
@@ -657,23 +757,12 @@ export class GameBoardRenderer {
     this.applyMapRenderingState();
   }
 
-  private showTutorialCellInfo(tile: HexTile): void {
-    const itemTypeById = new Map<string, ItemId>();
-    for (const item of this.callbacks.getCurrentMatch()?.items ?? []) {
-      itemTypeById.set(item.item_id, item.item_type);
-    }
-
-    const quantities = new Map<ItemId, number>();
-    for (const itemId of tile.itemIds) {
-      const itemType = itemTypeById.get(itemId);
-      if (itemType) {
-        quantities.set(itemType, (quantities.get(itemType) ?? 0) + 1);
-      }
-    }
-    const entries: CellContentsEntry[] = Array.from(quantities.entries()).map(
-      ([itemId, quantity]) => ({ itemId, quantity })
+  private showCellInfoForTile(tile: HexTile): void {
+    this.showCellContents(
+      tile.coord,
+      tile.cellType.localizationType,
+      this.tileItemEntries.get(tile.id) ?? []
     );
-    this.showCellContents(tile.coord, tile.cellType.localizationType, entries);
   }
 
   private showCellContents(
@@ -1000,6 +1089,9 @@ export class GameBoardRenderer {
 
   private clearMapTileSprites(): void {
     for (const entry of this.mapTileSprites) {
+      if (entry.cellInfoLongPressTimer) {
+        this.scene.time.removeEvent(entry.cellInfoLongPressTimer);
+      }
       entry.skullShiverTween?.remove();
       entry.image.destroy();
       entry.skullImage?.destroy();
