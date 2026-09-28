@@ -8,6 +8,7 @@ import {
   type SkillId
 } from "@shared";
 import { Subtabs } from "./Subtabs";
+import { THEME } from "./ColorPalette";
 
 export interface CharacterPanelSkillsViewLayout {
   margin: number;
@@ -18,6 +19,7 @@ export interface CharacterPanelSkillsViewLayout {
 
 interface SkillCardItem {
   skill: SkillDefinition;
+  cardBg: Phaser.GameObjects.Rectangle;
   rankText: Phaser.GameObjects.Text;
   statusBadge: Phaser.GameObjects.Text;
   upgradeBtnBg: Phaser.GameObjects.Rectangle;
@@ -478,6 +480,16 @@ export class CharacterPanelSkillsView {
     const committedAbilities = this.currentCharacter?.abilities ?? [];
 
     for (const item of this.cardItems) {
+      const committedRank = committedAbilities.filter(
+        (id) => id === item.skill.id
+      ).length;
+      const hasInvestedRank = committedRank > 0;
+      item.cardBg.setStrokeStyle(
+        hasInvestedRank ? 2 : 1,
+        hasInvestedRank ? THEME.colors.healthAccent : 0x2f3a5d,
+        hasInvestedRank ? 1 : 0.9
+      );
+
       if (!item.skill.implemented) {
         item.statusBadge.setText(t("Not Implemented"));
         item.statusBadge.setColor("#f87171");
@@ -492,9 +504,6 @@ export class CharacterPanelSkillsView {
         continue;
       }
 
-      const committedRank = committedAbilities.filter(
-        (id) => id === item.skill.id
-      ).length;
       const pendingRank = this.pendingUpgrades.filter(
         (id) => id === item.skill.id
       ).length;
@@ -849,6 +858,7 @@ export class CharacterPanelSkillsView {
 
     this.cardItems.push({
       skill,
+      cardBg,
       rankText,
       statusBadge,
       upgradeBtnBg,
