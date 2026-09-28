@@ -20,9 +20,14 @@ type MobileGridCellContent = "name" | "image";
 
 function shouldShowGridSelectImages(
   scene: Phaser.Scene,
-  mobileCellContent: MobileGridCellContent
+  mobileCellContent: MobileGridCellContent,
+  mobileCellIcons = false
 ): boolean {
-  return !isMobile(scene.scale.width) || mobileCellContent === "image";
+  return (
+    !isMobile(scene.scale.width) ||
+    mobileCellContent === "image" ||
+    mobileCellIcons
+  );
 }
 
 export function parseActionDescription(content: string): string {
@@ -209,6 +214,7 @@ interface GridSelectConfig {
   confirmLabel?: string;
   iconTextGap?: number;
   mobileCellContent?: MobileGridCellContent;
+  mobileCellIcons?: boolean;
   mobileImageLabels?: boolean;
   prebuildMobileCells?: boolean;
 }
@@ -277,10 +283,12 @@ interface StaticGridCell {
   item: GridSelectItem;
   background: Phaser.GameObjects.Rectangle;
   label: Phaser.GameObjects.Text;
+  icon?: Phaser.GameObjects.Image;
   energy?: Phaser.GameObjects.Text;
   cooldown?: Phaser.GameObjects.Text;
   warning?: Phaser.GameObjects.Text;
   description?: Phaser.GameObjects.Text;
+  descriptionTruncated: boolean;
 }
 
 export class GridSelect extends Phaser.GameObjects.Container {
@@ -300,6 +308,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private modalHeight: number;
   private readonly cellHeight: number;
   private readonly mobileCellContent: MobileGridCellContent;
+  private readonly mobileCellIcons: boolean;
   private readonly mobileImageLabels: boolean;
   private readonly prebuildMobileCells: boolean;
   private readonly hitAreaZone: Phaser.GameObjects.Zone;
@@ -352,6 +361,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.iconTargetSize = Math.min(this.collapsedHeight - 12, 48);
     this.cellHeight = Math.max(96, config.cellHeight ?? 240);
     this.mobileCellContent = config.mobileCellContent ?? "name";
+    this.mobileCellIcons = config.mobileCellIcons === true;
     this.mobileImageLabels = config.mobileImageLabels === true;
     this.prebuildMobileCells = config.prebuildMobileCells === true;
     this.autoSelectFirst = config.autoSelectFirst !== false;
@@ -393,7 +403,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.background.setOrigin?.(0, 0);
     this.background.setStrokeStyle?.(2, THEME.colors.collapsedBorder, 1);
 
-    this.icon = shouldShowGridSelectImages(scene, this.mobileCellContent)
+    this.icon = shouldShowGridSelectImages(
+      scene,
+      this.mobileCellContent,
+      this.mobileCellIcons
+    )
       ? scene.add.image(
           COLLAPSED_ICON_LEFT,
           this.collapsedHeight / 2,
@@ -1169,6 +1183,29 @@ export class GridSelect extends Phaser.GameObjects.Container {
         )
         .setOrigin(0, 0)
         .setStrokeStyle(1, 0x2d3a60, 0.9);
+      const hasActionIcon =
+        this.mobileCellIcons &&
+        item.isEmptyOption !== true &&
+        this.scene.textures.exists(item.texture) &&
+        (!item.frame || this.scene.textures.get(item.texture).has(item.frame));
+      const iconScale = Phaser.Math.Clamp(item.iconScale ?? 1, 0.1, 4);
+      const iconSize = hasActionIcon
+        ? Math.max(
+            1,
+            Math.min(
+              this.resolveIconSize(this.cellHeight) * iconScale,
+              this.resolveMaxIconDimension(this.cellHeight),
+              cellWidth - 20,
+              54
+            )
+          )
+        : 0;
+      const icon = hasActionIcon
+        ? this.scene.add
+            .image(x + cellWidth / 2, y + 10 + iconSize / 2, item.texture, item.frame)
+            .setDisplaySize(iconSize, iconSize)
+            .setAlpha(item.disabled ? 0.5 : 1)
+        : undefined;
       const label = this.scene.add
         .text(x + cellWidth / 2, y, item.name, {
           fontSize: "15px",
@@ -1231,11 +1268,14 @@ export class GridSelect extends Phaser.GameObjects.Container {
         : undefined;
       const descriptionContent =
         typeof item.description === "string" ? item.description.trim() : "";
+      const descriptionMaxLines = icon
+        ? Math.min(6, this.resolveMaxDescriptionLines(this.cellHeight))
+        : this.resolveMaxDescriptionLines(this.cellHeight);
       const description = descriptionContent
         ? (this.scene.rexUI.add.BBCodeText(
             x + cellWidth / 2,
             y,
-            parseActionDescription(descriptionContent),
+            "",
             {
               fontSize: "12px",
               color: THEME.colors.modalText,
@@ -1244,10 +1284,18 @@ export class GridSelect extends Phaser.GameObjects.Container {
                 mode: "word",
                 width: Math.max(1, cellWidth - 16)
               },
-              maxLines: this.resolveMaxDescriptionLines(this.cellHeight)
+              maxLines: descriptionMaxLines
             }
           ) as Phaser.GameObjects.Text).setOrigin(0.5)
         : undefined;
+      const descriptionTruncated = description
+        ? this.applyDescriptionText(
+            description,
+            descriptionContent,
+            Math.max(1, cellWidth - 16),
+            descriptionMaxLines
+          )
+        : false;
       const textParts = [
         label,
         energy,
@@ -1259,7 +1307,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
       const groupHeight =
         textParts.reduce((height, part) => height + part.height, 0) +
         Math.max(0, textParts.length - 1) * partGap;
-      let nextTextY = y + this.cellHeight / 2 - groupHeight / 2;
+      const textAreaTop = icon ? y + iconSize + 18 : y + 10;
+      const textAreaHeight = this.cellHeight - (icon ? iconSize + 28 : 20);
+      let nextTextY =
+        textAreaTop + Math.max(0, textAreaHeight - groupHeight) / 2;
       for (const part of textParts) {
         part.setY(nextTextY + part.height / 2);
         nextTextY += part.height + partGap;
@@ -1312,16 +1363,39 @@ export class GridSelect extends Phaser.GameObjects.Container {
           }
         }
       );
-      background.on(Phaser.Input.Events.POINTER_OVER, () => {
-        if (!item.disabled) {
-          this.scene.input.setDefaultCursor("pointer");
+      background.on(
+        Phaser.Input.Events.POINTER_OVER,
+        (pointer: Phaser.Input.Pointer) => {
+          if (!item.disabled) {
+            this.scene.input.setDefaultCursor("pointer");
+          }
+          if (!descriptionTruncated || pointer.wasTouch) {
+            return;
+          }
+          this.ensureTooltip();
+          const tooltip = this.tooltip;
+          if (!tooltip) {
+            return;
+          }
+          const tooltipGO = tooltip.getGameObject();
+          tooltipGO.setDepth(10002);
+          this.scene.children.bringToTop(tooltipGO);
+          tooltip.show(pointer.worldX, pointer.worldY, {
+            title: item.name,
+            body: stripActionDescriptionMarkup(descriptionContent)
+          });
         }
-      });
+      );
       background.on(Phaser.Input.Events.POINTER_OUT, () => {
         this.scene.input.setDefaultCursor("default");
+        this.tooltip?.hide();
       });
 
-      content.add([background, label]);
+      content.add(background);
+      if (icon) {
+        content.add(icon);
+      }
+      content.add(label);
       if (energy) {
         content.add(energy);
       }
@@ -1338,10 +1412,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
         item,
         background,
         label,
+        ...(icon ? { icon } : {}),
         ...(energy ? { energy } : {}),
         ...(cooldown ? { cooldown } : {}),
         ...(warning ? { warning } : {}),
-        ...(description ? { description } : {})
+        ...(description ? { description } : {}),
+        descriptionTruncated
       });
     });
 
@@ -1359,8 +1435,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
       cell.label.setColor(
         cell.item.disabled
           ? THEME.colors.textDisabled
-          : cell.item.labelColor ?? THEME.colors.textPrimary
+          : cell.item.highlighted
+            ? THEME.colors.healthRecover
+            : cell.item.labelColor ?? THEME.colors.textPrimary
       );
+      cell.icon?.setAlpha(cell.item.disabled ? 0.5 : 1);
       cell.energy?.setColor(
         cell.item.disabled
           ? THEME.colors.textDisabled
@@ -1708,7 +1787,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
       const icon = shouldShowGridSelectImages(
         scene,
-        this.mobileCellContent
+        this.mobileCellContent,
+        this.mobileCellIcons
       )
         ? scene.add.image(0, 0, item.texture, item.frame).setOrigin(0.5, 0.5)
         : null;
