@@ -57,6 +57,8 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   setSize?: (width: number, height: number) => void;
   setPosition?: (x: number, y: number) => void;
   setOrigin?: (x: number, y?: number) => void;
+  setScrollerEnable?: (enabled: boolean) => void;
+  scrollerEnable?: boolean;
   setMouseWheelScrollerEnable?: (enabled: boolean) => void;
   mouseWheelScrollerEnable?: boolean;
 };
@@ -586,9 +588,11 @@ export class AccountScene extends Phaser.Scene {
         }
       });
       selector.on("modal-open", () => {
+        this.accountScrollPanel?.setScrollerEnable?.(false);
         this.accountScrollPanel?.setMouseWheelScrollerEnable?.(false);
       });
       selector.on("modal-close", () => {
+        this.accountScrollPanel?.setScrollerEnable?.(true);
         this.accountScrollPanel?.setMouseWheelScrollerEnable?.(true);
       });
 
