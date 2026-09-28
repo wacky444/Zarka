@@ -573,7 +573,8 @@ export class AccountScene extends Phaser.Scene {
         cellHeight: 96,
         modalWidth: 500,
         modalHeight: 380,
-        autoSelectFirst: false
+        autoSelectFirst: false,
+        mobileCellContent: "image"
       });
 
       const items = buildSkinItems(cat);

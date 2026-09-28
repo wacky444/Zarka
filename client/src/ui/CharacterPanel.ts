@@ -958,7 +958,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       placeholder: "Choose action",
       emptyLabel: "Unknown",
       columns: 3,
-      cellHeight: 260
+      cellHeight: 260,
+      prebuildMobileCells: true
     });
     this.scrollContent.add(this.mainActionDropdown);
     this.mainActionDropdown.on("change", this.handleMainActionSelection);
@@ -1073,7 +1074,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       cellHeight: 260,
       includeEmptyOption: true,
       emptyOptionLabel: "No secondary action",
-      emptyOptionDescription: "Removes the planned secondary action."
+      emptyOptionDescription: "Removes the planned secondary action.",
+      prebuildMobileCells: true
     });
     this.scrollContent.add(this.secondaryActionDropdown);
     this.secondaryActionDropdown.on(
@@ -1247,7 +1249,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       cellHeight: 260,
       includeEmptyOption: true,
       emptyOptionLabel: "No extra secondary action",
-      emptyOptionDescription: "Removes the extra secondary action."
+      emptyOptionDescription: "Removes the extra secondary action.",
+      prebuildMobileCells: true
     });
     this.extraSecondaryActionDropdown.setVisible(false);
     this.scrollContent.add(this.extraSecondaryActionDropdown);
