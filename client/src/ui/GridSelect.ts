@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { t } from "../services/i18n";
-import { HoverTooltip } from "./HoverTooltip";
+import { ItemTooltipManager } from "./ItemTooltip";
 import { THEME } from "./ColorPalette";
 import { isMobile } from "../utils/isMobile";
 
@@ -15,6 +15,7 @@ const ACTION_DESCRIPTION_TAG_COLORS: Record<string, string> = {
 };
 
 const COLLAPSED_ICON_LEFT = 12;
+const ACTION_DESCRIPTION_LONG_PRESS_MS = 500;
 
 type MobileGridCellContent = "name" | "image";
 
@@ -326,15 +327,21 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private mobileGridPanel: RexScrollablePanel | null = null;
   private mobileGridContent: Phaser.GameObjects.Container | null = null;
   private mobileGridCells: StaticGridCell[] = [];
+  private readonly longPressTimers = new Set<Phaser.Time.TimerEvent>();
   private gridTableMask: Phaser.Display.Masks.GeometryMask | null = null;
   private gridTableMaskShape: Phaser.GameObjects.Rectangle | null = null;
-  private tooltip: HoverTooltip | null = null;
+  private tooltip: ItemTooltipManager | null = null;
   private enabled = true;
   private tutorialHighlighted = false;
   private readonly labelActiveColor: string;
   private readonly iconTextGap: number;
   private currentWidth: number;
   private modalVisible = false;
+  private readonly handleTooltipPointerDown = (): void => {
+    if (this.modalVisible) {
+      this.tooltip?.hide();
+    }
+  };
 
   constructor(
     scene: Phaser.Scene,
@@ -344,6 +351,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
   ) {
     super(scene, x, y);
     scene.add.existing(this);
+    scene.input.on(
+      Phaser.Input.Events.POINTER_DOWN,
+      this.handleTooltipPointerDown,
+      this
+    );
 
     this.collapsedHeight = config.height ?? 64;
     this.columns = Math.max(1, config.columns ?? 3);
@@ -485,6 +497,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
   }
 
   override destroy(fromScene?: boolean) {
+    this.scene.input.off(
+      Phaser.Input.Events.POINTER_DOWN,
+      this.handleTooltipPointerDown,
+      this
+    );
     this.closeModal(true);
     this.tooltip?.destroy();
     this.tooltip = null;
@@ -782,6 +799,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       ) => {
         pointerDownOnCover = true;
         event.stopPropagation();
+        this.tooltip?.hide();
       }
     );
     cover.on(
@@ -855,6 +873,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         event: Phaser.Types.Input.EventData
       ) => {
         event.stopPropagation();
+        this.tooltip?.hide();
       }
     );
     backgroundGO.on(
@@ -1057,7 +1076,15 @@ export class GridSelect extends Phaser.GameObjects.Container {
     return button;
   }
 
+  private clearLongPressTimers(): void {
+    for (const timer of this.longPressTimers) {
+      this.scene.time.removeEvent(timer);
+    }
+    this.longPressTimers.clear();
+  }
+
   private closeModal(forceDestroy = false) {
+    this.clearLongPressTimers();
     const wasVisible = this.modalVisible;
     if (!this.overlay) {
       if (wasVisible) {
@@ -1158,6 +1185,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
     if (!content) {
       return;
     }
+    this.clearLongPressTimers();
+    this.tooltip?.hide();
     content.removeAll(true);
     this.mobileGridCells = [];
 
@@ -1322,14 +1351,90 @@ export class GridSelect extends Phaser.GameObjects.Container {
         x: number;
         y: number;
       } | null = null;
+      let longPressTimer: Phaser.Time.TimerEvent | null = null;
+      let longPressTriggered = false;
+      const cancelLongPress = (): void => {
+        if (!longPressTimer) {
+          return;
+        }
+        this.scene.time.removeEvent(longPressTimer);
+        this.longPressTimers.delete(longPressTimer);
+        longPressTimer = null;
+      };
+      const showActionDescription = (pointer: Phaser.Input.Pointer): void => {
+        if (!descriptionContent) {
+          return;
+        }
+        this.ensureTooltip();
+        this.tooltip?.show(
+          pointer.x,
+          pointer.y,
+          item.name,
+          stripActionDescriptionMarkup(descriptionContent)
+        );
+      };
       background.on(
         Phaser.Input.Events.POINTER_DOWN,
         (pointer: Phaser.Input.Pointer) => {
+          this.tooltip?.hide();
+          cancelLongPress();
+          longPressTriggered = false;
           pointerDownPosition = {
             id: pointer.id,
             x: pointer.x,
             y: pointer.y
           };
+          if (!descriptionContent) {
+            return;
+          }
+          const timer = this.scene.time.delayedCall(
+            ACTION_DESCRIPTION_LONG_PRESS_MS,
+            () => {
+              this.longPressTimers.delete(timer);
+              if (longPressTimer === timer) {
+                longPressTimer = null;
+              }
+              const down = pointerDownPosition;
+              if (
+                !down ||
+                down.id !== pointer.id ||
+                Phaser.Math.Distance.Between(
+                  down.x,
+                  down.y,
+                  pointer.x,
+                  pointer.y
+                ) > 10
+              ) {
+                return;
+              }
+              longPressTriggered = true;
+              showActionDescription(pointer);
+            }
+          );
+          longPressTimer = timer;
+          this.longPressTimers.add(timer);
+        }
+      );
+      background.on(
+        Phaser.Input.Events.POINTER_MOVE,
+        (pointer: Phaser.Input.Pointer) => {
+          const down = pointerDownPosition;
+          if (
+            down &&
+            down.id === pointer.id &&
+            Phaser.Math.Distance.Between(
+              down.x,
+              down.y,
+              pointer.x,
+              pointer.y
+            ) > 10
+          ) {
+            cancelLongPress();
+            if (longPressTriggered) {
+              longPressTriggered = false;
+              this.tooltip?.hide();
+            }
+          }
         }
       );
       background.on(
@@ -1341,8 +1446,13 @@ export class GridSelect extends Phaser.GameObjects.Container {
           event: Phaser.Types.Input.EventData
         ) => {
           event.stopPropagation();
+          const wasLongPress = longPressTriggered;
+          cancelLongPress();
           const down = pointerDownPosition;
           pointerDownPosition = null;
+          if (wasLongPress) {
+            return;
+          }
           if (
             !down ||
             down.id !== pointer.id ||
@@ -1372,23 +1482,15 @@ export class GridSelect extends Phaser.GameObjects.Container {
           if (!descriptionTruncated || pointer.wasTouch) {
             return;
           }
-          this.ensureTooltip();
-          const tooltip = this.tooltip;
-          if (!tooltip) {
-            return;
-          }
-          const tooltipGO = tooltip.getGameObject();
-          tooltipGO.setDepth(10002);
-          this.scene.children.bringToTop(tooltipGO);
-          tooltip.show(pointer.worldX, pointer.worldY, {
-            title: item.name,
-            body: stripActionDescriptionMarkup(descriptionContent)
-          });
+          showActionDescription(pointer);
         }
       );
       background.on(Phaser.Input.Events.POINTER_OUT, () => {
+        cancelLongPress();
         this.scene.input.setDefaultCursor("default");
-        this.tooltip?.hide();
+        if (!longPressTriggered) {
+          this.tooltip?.hide();
+        }
       });
 
       content.add(background);
@@ -1575,13 +1677,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
           tooltipInstance.hide();
           return;
         }
-        const tooltipGO = tooltipInstance.getGameObject();
-        tooltipGO.setDepth(10002);
-        this.scene.children.bringToTop(tooltipGO);
-        tooltipInstance.show(pointer.worldX, pointer.worldY, {
-          title: tooltipTitle,
-          body: tooltipBody
-        });
+        tooltipInstance.show(
+          pointer.x,
+          pointer.y,
+          tooltipTitle ?? "",
+          tooltipBody ?? ""
+        );
       },
       this
     );
@@ -2320,11 +2421,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
   private ensureTooltip() {
     if (!this.tooltip) {
-      this.tooltip = new HoverTooltip(this.scene);
+      this.tooltip = new ItemTooltipManager(this.scene);
     }
-    const tooltipGO = this.tooltip.getGameObject();
-    tooltipGO.setDepth(10002);
-    this.scene.children.bringToTop(tooltipGO);
     this.tooltip.hide();
   }
 
