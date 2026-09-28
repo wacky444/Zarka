@@ -14,9 +14,17 @@ const ACTION_DESCRIPTION_TAG_COLORS: Record<string, string> = {
   "health-recover": THEME.colors.healthRecover
 };
 
-// Temporary A/B test: set true to restore selector images and opaque-pixel reads.
-const SHOW_GRID_SELECT_IMAGES = false;
+// Diagnostic mode keeps the mobile grid and scroller but removes cell content.
+const SIMPLE_GRID_SELECT_CELLS_FOR_PERF_TEST = true;
+// Set true to restore mobile selector images for comparison.
+const SHOW_GRID_SELECT_IMAGES_FOR_PERF_TEST = false;
 const COLLAPSED_ICON_LEFT = 12;
+
+function shouldShowGridSelectImages(scene: Phaser.Scene): boolean {
+  return (
+    !isMobile(scene.scale.width) || SHOW_GRID_SELECT_IMAGES_FOR_PERF_TEST
+  );
+}
 
 export function parseActionDescription(content: string): string {
   return content.replace(
@@ -118,7 +126,7 @@ function getOpaqueCenterOffset(
   displayHeight: number
 ): { x: number; y: number } {
   if (
-    !SHOW_GRID_SELECT_IMAGES ||
+    !shouldShowGridSelectImages(scene) ||
     !item.centerOpaquePixels ||
     !item.frame ||
     !scene.textures.exists(item.texture)
@@ -251,7 +259,7 @@ type RexRoundRectangle = Phaser.GameObjects.GameObject & {
 
 export class GridSelect extends Phaser.GameObjects.Container {
   private readonly background: RexRoundRectangle;
-  private readonly icon: Phaser.GameObjects.Image;
+  private readonly icon: Phaser.GameObjects.Image | null;
   private readonly label: Phaser.GameObjects.Text;
   private readonly collapsedHeight: number;
   private readonly modalTitle: string;
@@ -350,14 +358,16 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.background.setOrigin?.(0, 0);
     this.background.setStrokeStyle?.(2, THEME.colors.collapsedBorder, 1);
 
-    this.icon = scene.add.image(
-      COLLAPSED_ICON_LEFT,
-      this.collapsedHeight / 2,
-      "hex",
-      "grass_01.png"
-    );
-    this.icon.setOrigin(0, 0.5);
-    this.icon.setDisplaySize(this.iconTargetSize, this.iconTargetSize);
+    this.icon = shouldShowGridSelectImages(scene)
+      ? scene.add.image(
+          COLLAPSED_ICON_LEFT,
+          this.collapsedHeight / 2,
+          "hex",
+          "grass_01.png"
+        )
+      : null;
+    this.icon?.setOrigin(0, 0.5);
+    this.icon?.setDisplaySize(this.iconTargetSize, this.iconTargetSize);
 
     this.label = scene.add
       .text(16, this.collapsedHeight / 2, this.placeholder, {
@@ -367,11 +377,13 @@ export class GridSelect extends Phaser.GameObjects.Container {
       .setOrigin(0, 0.5);
 
     this.add(this.background);
-    this.add(this.icon);
+    if (this.icon) {
+      this.add(this.icon);
+    }
     this.add(this.label);
     this.add(this.hitAreaZone);
 
-    this.icon.setVisible(false);
+    this.icon?.setVisible(false);
     this.updateLabelPosition();
 
     let pointerDownPos: { x: number; y: number } | null = null;
@@ -571,7 +583,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
   private clearSelection() {
     this.selectedItem = null;
-    this.icon.setVisible(false);
+    this.icon?.setVisible(false);
     this.label.setText(this.placeholder);
     this.updateLabelPosition();
     this.updateConfirmButton();
@@ -612,42 +624,43 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
   private updateCollapsedView(item: GridSelectItem) {
     if (item.isEmptyOption) {
-      this.icon.setVisible(false);
+      this.icon?.setVisible(false);
       this.label.setText(item.name.length > 0 ? item.name : this.emptyLabel);
       this.updateLabelPosition();
       return;
     }
-    const textureManager = this.scene.textures;
-    const hasTexture = textureManager.exists(item.texture);
-    const texture = hasTexture ? textureManager.get(item.texture) : null;
-    const hasFrame = item.frame ? texture?.has(item.frame) : true;
+    const icon = this.icon;
+    if (icon) {
+      const textureManager = this.scene.textures;
+      const hasTexture = textureManager.exists(item.texture);
+      const texture = hasTexture ? textureManager.get(item.texture) : null;
+      const hasFrame = item.frame ? texture?.has(item.frame) : true;
 
-    if (hasTexture && hasFrame) {
-      if (item.frame) {
-        this.icon.setTexture(item.texture, item.frame);
+      if (hasTexture && hasFrame) {
+        if (item.frame) {
+          icon.setTexture(item.texture, item.frame);
+        } else {
+          icon.setTexture(item.texture);
+        }
+        const scale = Phaser.Math.Clamp(item.iconScale ?? 1, 0.1, 4);
+        icon.setDisplaySize(
+          this.iconTargetSize * scale,
+          this.iconTargetSize * scale
+        );
+        const offset = getOpaqueCenterOffset(
+          this.scene,
+          item,
+          icon.displayWidth,
+          icon.displayHeight
+        );
+        icon.setPosition(
+          COLLAPSED_ICON_LEFT + offset.x,
+          this.collapsedHeight / 2 + offset.y
+        );
+        icon.setVisible(true);
       } else {
-        this.icon.setTexture(item.texture);
+        icon.setVisible(false);
       }
-      const scale = Phaser.Math.Clamp(item.iconScale ?? 1, 0.1, 4);
-      this.icon.setDisplaySize(
-        this.iconTargetSize * scale,
-        this.iconTargetSize * scale
-      );
-      const offset = SHOW_GRID_SELECT_IMAGES
-        ? getOpaqueCenterOffset(
-            this.scene,
-            item,
-            this.icon.displayWidth,
-            this.icon.displayHeight
-          )
-        : { x: 0, y: 0 };
-      this.icon.setPosition(
-        COLLAPSED_ICON_LEFT + offset.x,
-        this.collapsedHeight / 2 + offset.y
-      );
-      this.icon.setVisible(SHOW_GRID_SELECT_IMAGES);
-    } else {
-      this.icon.setVisible(false);
     }
     this.label.setText(item.name.length > 0 ? item.name : this.emptyLabel);
     this.updateLabelPosition();
@@ -1177,6 +1190,30 @@ export class GridSelect extends Phaser.GameObjects.Container {
   ) {
     const scene = this.scene;
     const item = cell.item;
+    if (
+      SIMPLE_GRID_SELECT_CELLS_FOR_PERF_TEST &&
+      isMobile(scene.scale.width)
+    ) {
+      const background =
+        existing instanceof Phaser.GameObjects.Rectangle
+          ? existing
+          : scene.add
+              .rectangle(
+                0,
+                0,
+                cell.width,
+                cell.height,
+                THEME.colors.cardBackground
+              )
+              .setOrigin(0, 0);
+      background.setPosition(0, 0);
+      background.setSize(cell.width, cell.height);
+      background.setFillStyle(THEME.colors.cardBackground, 1);
+      background.setStrokeStyle(1, 0x2d3a60, 0.9);
+      background.setData("id", item.id);
+      background.setData("showTooltip", false);
+      return background;
+    }
     let container = existing as unknown as RexSizer | undefined;
     const cellWidth = cell.width;
     const cellHeight = cell.height;
@@ -1209,36 +1246,38 @@ export class GridSelect extends Phaser.GameObjects.Container {
       bg.setDisplaySize?.(cellWidth, cellHeight);
       container.addBackground(bg);
 
-      const icon = scene.add
-        .image(0, 0, item.texture, item.frame)
-        .setOrigin(0.5, 0.5)
-        .setVisible(SHOW_GRID_SELECT_IMAGES);
-      const iconSlot = item.centerOpaquePixels
+      const icon = shouldShowGridSelectImages(scene)
+        ? scene.add.image(0, 0, item.texture, item.frame).setOrigin(0.5, 0.5)
+        : null;
+      const iconSlot = item.centerOpaquePixels && icon
         ? scene.add.container(0, 0)
         : null;
+      const iconSpacer = icon ? null : scene.add.zone(0, 0, 0, 0).setOrigin(0.5);
       let resolvedIconSize = 0;
       if (item.isEmptyOption) {
-        icon.setVisible(false);
-        icon.setActive(false);
-        icon.setDisplaySize(0, 0);
+        icon?.setVisible(false);
+        icon?.setActive(false);
+        icon?.setDisplaySize(0, 0);
+        iconSpacer?.setSize(0, 0);
       } else {
         const baseIconSize = this.resolveIconSize(cellHeight);
         const iconScale = Phaser.Math.Clamp(item.iconScale ?? 1, 0.1, 4);
         const maxIconSize = this.resolveMaxIconDimension(cellHeight);
         resolvedIconSize = Math.min(baseIconSize * iconScale, maxIconSize);
-        icon.setDisplaySize(resolvedIconSize, resolvedIconSize);
-        const offset = SHOW_GRID_SELECT_IMAGES
-          ? getOpaqueCenterOffset(
-              scene,
-              item,
-              resolvedIconSize,
-              resolvedIconSize
-            )
-          : { x: 0, y: 0 };
-        icon.setPosition(offset.x, offset.y);
-        icon.setActive(true);
+        icon?.setDisplaySize(resolvedIconSize, resolvedIconSize);
+        if (icon) {
+          const offset = getOpaqueCenterOffset(
+            scene,
+            item,
+            resolvedIconSize,
+            resolvedIconSize
+          );
+          icon.setPosition(offset.x, offset.y);
+          icon.setActive(true);
+        }
+        iconSpacer?.setSize(resolvedIconSize, resolvedIconSize);
       }
-      if (iconSlot) {
+      if (iconSlot && icon) {
         iconSlot.setSize(resolvedIconSize, resolvedIconSize);
         iconSlot.add(icon);
       }
@@ -1334,13 +1373,16 @@ export class GridSelect extends Phaser.GameObjects.Container {
       );
 
       const iconMarginBottom = item.isEmptyOption ? 0 : layoutSpace.iconGap;
-      container.add(
-        iconSlot ?? icon,
-        0,
-        "center",
-        { bottom: iconMarginBottom },
-        false
-      );
+      const iconLayoutChild = iconSlot ?? icon ?? iconSpacer;
+      if (iconLayoutChild) {
+        container.add(
+          iconLayoutChild,
+          0,
+          "center",
+          { bottom: iconMarginBottom },
+          false
+        );
+      }
       container.add(
         nameText,
         0,
@@ -1373,6 +1415,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
       (container as unknown as Phaser.GameObjects.GameObject).setData(
         "iconSlot",
         iconSlot
+      );
+      (container as unknown as Phaser.GameObjects.GameObject).setData(
+        "iconSpacer",
+        iconSpacer
       );
       (container as unknown as Phaser.GameObjects.GameObject).setData(
         "name",
@@ -1428,9 +1474,13 @@ export class GridSelect extends Phaser.GameObjects.Container {
     const bg = containerGO.getData("bg") as RexRoundRectangle | undefined;
     const icon = containerGO.getData("icon") as
       | Phaser.GameObjects.Image
+      | null
       | undefined;
     const iconSlot = containerGO.getData("iconSlot") as
       | Phaser.GameObjects.Container
+      | undefined;
+    const iconSpacer = containerGO.getData("iconSpacer") as
+      | Phaser.GameObjects.Zone
       | undefined;
     const nameText = containerGO.getData("name") as
       | Phaser.GameObjects.Text
@@ -1449,13 +1499,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
       | undefined;
 
     const layoutSpaceExisting = this.resolveLayoutSpace(cellHeight);
-
+    let iconMarginBottom = 0;
     if (icon) {
       const textureManager = scene.textures;
       const hasTexture = textureManager.exists(item.texture);
       const texture = hasTexture ? textureManager.get(item.texture) : null;
       const hasFrame = item.frame ? texture?.has(item.frame) : true;
-      let iconMarginBottom = 0;
       if (item.isEmptyOption) {
         icon.setVisible(false);
         icon.setActive(false);
@@ -1474,17 +1523,15 @@ export class GridSelect extends Phaser.GameObjects.Container {
         icon.setDisplaySize(resolvedIconSize, resolvedIconSize);
         if (iconSlot) {
           iconSlot.setSize(resolvedIconSize, resolvedIconSize);
-          const offset = SHOW_GRID_SELECT_IMAGES
-            ? getOpaqueCenterOffset(
-                scene,
-                item,
-                resolvedIconSize,
-                resolvedIconSize
-              )
-            : { x: 0, y: 0 };
+          const offset = getOpaqueCenterOffset(
+            scene,
+            item,
+            resolvedIconSize,
+            resolvedIconSize
+          );
           icon.setPosition(offset.x, offset.y);
         }
-        icon.setVisible(SHOW_GRID_SELECT_IMAGES);
+        icon.setVisible(true);
         icon.setActive(true);
         iconMarginBottom = layoutSpaceExisting.iconGap;
       } else {
@@ -1493,16 +1540,25 @@ export class GridSelect extends Phaser.GameObjects.Container {
         icon.setDisplaySize(0, 0);
         iconSlot?.setSize(0, 0);
       }
-      const iconLayoutChild = iconSlot ?? icon;
-      const iconSizerConfig = (
-        iconLayoutChild as unknown as {
-          sizerConfig?: { margin?: { bottom?: number } };
-        }
-      ).sizerConfig;
-      if (iconSizerConfig) {
-        iconSizerConfig.margin = iconSizerConfig.margin ?? {};
-        iconSizerConfig.margin.bottom = iconMarginBottom;
-      }
+    } else if (iconSpacer) {
+      const iconScale = Phaser.Math.Clamp(item.iconScale ?? 1, 0.1, 4);
+      const baseIconSize = this.resolveIconSize(cellHeight);
+      const maxIconSize = this.resolveMaxIconDimension(cellHeight);
+      const spacerSize = item.isEmptyOption
+        ? 0
+        : Math.min(baseIconSize * iconScale, maxIconSize);
+      iconSpacer.setSize(spacerSize, spacerSize);
+      iconMarginBottom = spacerSize > 0 ? layoutSpaceExisting.iconGap : 0;
+    }
+    const iconLayoutChild = iconSlot ?? icon ?? iconSpacer;
+    const iconSizerConfig = (
+      iconLayoutChild as unknown as {
+        sizerConfig?: { margin?: { bottom?: number } };
+      } | null
+    )?.sizerConfig;
+    if (iconSizerConfig) {
+      iconSizerConfig.margin = iconSizerConfig.margin ?? {};
+      iconSizerConfig.margin.bottom = iconMarginBottom;
     }
     const nameTruncated = nameText
       ? this.applySingleLineText(nameText, item.name, usableTextWidth)
@@ -1550,7 +1606,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     config: {
       item: GridSelectItem;
       bg?: RexRoundRectangle;
-      icon?: Phaser.GameObjects.Image;
+      icon?: Phaser.GameObjects.Image | null;
       nameText?: Phaser.GameObjects.Text;
       descText?: Phaser.GameObjects.Text;
       energyText?: Phaser.GameObjects.Text;
@@ -1787,7 +1843,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     };
     bg.setAlpha?.(this.enabled ? 1 : 0.75);
     this.updateCollapsedBorder();
-    this.icon.setAlpha(this.enabled ? 1 : 0.6);
+    this.icon?.setAlpha(this.enabled ? 1 : 0.6);
     this.label.setColor(
       this.enabled ? this.labelActiveColor : THEME.colors.textDisabled
     );
