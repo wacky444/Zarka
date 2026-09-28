@@ -292,6 +292,15 @@ interface StaticGridCell {
   descriptionTruncated: boolean;
 }
 
+interface MobileGridPointerInteraction {
+  cell: StaticGridCell;
+  pointerId: number;
+  startX: number;
+  startY: number;
+  timer: Phaser.Time.TimerEvent | null;
+  longPressTriggered: boolean;
+}
+
 export class GridSelect extends Phaser.GameObjects.Container {
   private readonly background: RexRoundRectangle;
   private readonly icon: Phaser.GameObjects.Image | null;
@@ -327,7 +336,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private mobileGridPanel: RexScrollablePanel | null = null;
   private mobileGridContent: Phaser.GameObjects.Container | null = null;
   private mobileGridCells: StaticGridCell[] = [];
-  private readonly longPressTimers = new Set<Phaser.Time.TimerEvent>();
+  private mobileGridInteraction: MobileGridPointerInteraction | null = null;
+  private mobileGridHoverCell: StaticGridCell | null = null;
+  private mobileGridPointerHandlersEnabled = false;
   private gridTableMask: Phaser.Display.Masks.GeometryMask | null = null;
   private gridTableMaskShape: Phaser.GameObjects.Rectangle | null = null;
   private tooltip: ItemTooltipManager | null = null;
@@ -337,10 +348,23 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private readonly iconTextGap: number;
   private currentWidth: number;
   private modalVisible = false;
-  private readonly handleTooltipPointerDown = (): void => {
+  private readonly handleMobileGridPointerDown = (
+    pointer: Phaser.Input.Pointer
+  ): void => {
     if (this.modalVisible) {
       this.tooltip?.hide();
     }
+    this.beginMobileGridInteraction(pointer);
+  };
+  private readonly handleMobileGridPointerMove = (
+    pointer: Phaser.Input.Pointer
+  ): void => {
+    this.updateMobileGridPointerInteraction(pointer);
+  };
+  private readonly handleMobileGridPointerUp = (
+    pointer: Phaser.Input.Pointer
+  ): void => {
+    this.finishMobileGridPointerInteraction(pointer);
   };
 
   constructor(
@@ -351,11 +375,6 @@ export class GridSelect extends Phaser.GameObjects.Container {
   ) {
     super(scene, x, y);
     scene.add.existing(this);
-    scene.input.on(
-      Phaser.Input.Events.POINTER_DOWN,
-      this.handleTooltipPointerDown,
-      this
-    );
 
     this.collapsedHeight = config.height ?? 64;
     this.columns = Math.max(1, config.columns ?? 3);
@@ -497,11 +516,6 @@ export class GridSelect extends Phaser.GameObjects.Container {
   }
 
   override destroy(fromScene?: boolean) {
-    this.scene.input.off(
-      Phaser.Input.Events.POINTER_DOWN,
-      this.handleTooltipPointerDown,
-      this
-    );
     this.closeModal(true);
     this.tooltip?.destroy();
     this.tooltip = null;
@@ -761,6 +775,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.gridTable?.layout?.();
       if (this.mobileGridPanel) {
         this.rebuildMobileGridContent();
+        this.enableMobileGridPointerHandlers();
         this.mobileGridPanel.setScrollerEnable?.(true);
         this.mobileGridPanel.setMouseWheelScrollerEnable?.(true);
         this.mobileGridPanel.layout?.();
@@ -973,6 +988,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.mobileGridPanel = useStaticMobileGrid
       ? (gridView as RexScrollablePanel)
       : null;
+    if (this.mobileGridPanel) {
+      this.enableMobileGridPointerHandlers();
+    }
     this.updateConfirmButton();
     scene.time.delayedCall(0, () => {
       this.gridTable?.refresh?.();
@@ -1076,14 +1094,233 @@ export class GridSelect extends Phaser.GameObjects.Container {
     return button;
   }
 
-  private clearLongPressTimers(): void {
-    for (const timer of this.longPressTimers) {
-      this.scene.time.removeEvent(timer);
+  private enableMobileGridPointerHandlers(): void {
+    if (this.mobileGridPointerHandlersEnabled) {
+      return;
     }
-    this.longPressTimers.clear();
+    this.scene.input.on(
+      Phaser.Input.Events.POINTER_DOWN,
+      this.handleMobileGridPointerDown,
+      this
+    );
+    this.scene.input.on(
+      Phaser.Input.Events.POINTER_MOVE,
+      this.handleMobileGridPointerMove,
+      this
+    );
+    this.scene.input.on(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleMobileGridPointerUp,
+      this
+    );
+    this.mobileGridPointerHandlersEnabled = true;
+  }
+
+  private disableMobileGridPointerHandlers(): void {
+    if (!this.mobileGridPointerHandlersEnabled) {
+      return;
+    }
+    this.scene.input.off(
+      Phaser.Input.Events.POINTER_DOWN,
+      this.handleMobileGridPointerDown,
+      this
+    );
+    this.scene.input.off(
+      Phaser.Input.Events.POINTER_MOVE,
+      this.handleMobileGridPointerMove,
+      this
+    );
+    this.scene.input.off(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleMobileGridPointerUp,
+      this
+    );
+    this.mobileGridPointerHandlersEnabled = false;
+  }
+
+  private clearLongPressTimers(): void {
+    const interaction = this.mobileGridInteraction;
+    if (interaction?.timer) {
+      this.scene.time.removeEvent(interaction.timer);
+    }
+    this.mobileGridInteraction = null;
+    this.mobileGridHoverCell = null;
+  }
+
+  private getMobileGridCellAtPointer(
+    pointer: Phaser.Input.Pointer
+  ): StaticGridCell | null {
+    const panelBounds = this.mobileGridPanel?.getBounds?.();
+    if (
+      !this.mobileGridPanel ||
+      (panelBounds &&
+        !Phaser.Geom.Rectangle.Contains(panelBounds, pointer.x, pointer.y))
+    ) {
+      return null;
+    }
+    return (
+      this.mobileGridCells.find((cell) =>
+        Phaser.Geom.Rectangle.Contains(
+          cell.background.getBounds(),
+          pointer.x,
+          pointer.y
+        )
+      ) ?? null
+    );
+  }
+
+  private beginMobileGridInteraction(pointer: Phaser.Input.Pointer): void {
+    this.clearLongPressTimers();
+    if (!this.modalVisible || !this.mobileGridPanel) {
+      return;
+    }
+    const cell = this.getMobileGridCellAtPointer(pointer);
+    if (!cell) {
+      return;
+    }
+    const interaction: MobileGridPointerInteraction = {
+      cell,
+      pointerId: pointer.id,
+      startX: pointer.x,
+      startY: pointer.y,
+      timer: null,
+      longPressTriggered: false
+    };
+    this.mobileGridInteraction = interaction;
+
+    const description =
+      typeof cell.item.description === "string"
+        ? cell.item.description.trim()
+        : "";
+    if (!description) {
+      return;
+    }
+    interaction.timer = this.scene.time.delayedCall(
+      ACTION_DESCRIPTION_LONG_PRESS_MS,
+      () => {
+        if (this.mobileGridInteraction !== interaction) {
+          return;
+        }
+        interaction.timer = null;
+        if (
+          Phaser.Math.Distance.Between(
+            interaction.startX,
+            interaction.startY,
+            pointer.x,
+            pointer.y
+          ) > 10
+        ) {
+          return;
+        }
+        interaction.longPressTriggered = true;
+        this.showActionDescription(cell.item, pointer.x, pointer.y);
+      }
+    );
+  }
+
+  private updateMobileGridPointerInteraction(
+    pointer: Phaser.Input.Pointer
+  ): void {
+    const interaction = this.mobileGridInteraction;
+    if (interaction) {
+      if (interaction.pointerId === pointer.id) {
+        const moved =
+          Phaser.Math.Distance.Between(
+            interaction.startX,
+            interaction.startY,
+            pointer.x,
+            pointer.y
+          ) > 10;
+        if (moved && interaction.timer) {
+          this.scene.time.removeEvent(interaction.timer);
+          interaction.timer = null;
+        }
+        if (moved && interaction.longPressTriggered) {
+          interaction.longPressTriggered = false;
+          this.tooltip?.hide();
+        }
+      }
+      return;
+    }
+    if (!this.modalVisible || !this.mobileGridPanel || pointer.wasTouch) {
+      return;
+    }
+    const cell = this.getMobileGridCellAtPointer(pointer);
+    this.scene.input.setDefaultCursor(
+      cell && !cell.item.disabled ? "pointer" : "default"
+    );
+    if (cell === this.mobileGridHoverCell) {
+      return;
+    }
+    this.mobileGridHoverCell = cell;
+    if (cell?.descriptionTruncated) {
+      this.showActionDescription(cell.item, pointer.x, pointer.y);
+    } else {
+      this.tooltip?.hide();
+    }
+  }
+
+  private finishMobileGridPointerInteraction(
+    pointer: Phaser.Input.Pointer
+  ): void {
+    const interaction = this.mobileGridInteraction;
+    if (!interaction || interaction.pointerId !== pointer.id) {
+      return;
+    }
+    if (interaction.timer) {
+      this.scene.time.removeEvent(interaction.timer);
+      interaction.timer = null;
+    }
+    this.mobileGridInteraction = null;
+
+    if (
+      interaction.longPressTriggered ||
+      (pointer.button !== 0 && !pointer.wasTouch) ||
+      Phaser.Math.Distance.Between(
+        interaction.startX,
+        interaction.startY,
+        pointer.x,
+        pointer.y
+      ) > 10 ||
+      interaction.cell.item.disabled ||
+      this.getMobileGridCellAtPointer(pointer) !== interaction.cell
+    ) {
+      return;
+    }
+
+    const panel = this.mobileGridPanel;
+    this.scene.time.delayedCall(0, () => {
+      if (!this.modalVisible || this.mobileGridPanel !== panel) {
+        return;
+      }
+      this.applySelection(interaction.cell.item, !this.confirmSelection);
+      if (!this.confirmSelection) {
+        this.closeModal();
+      }
+    });
+  }
+
+  private showActionDescription(
+    item: GridSelectItem,
+    x: number,
+    y: number
+  ): void {
+    const description =
+      typeof item.description === "string" ? item.description.trim() : "";
+    if (!description) {
+      return;
+    }
+    this.ensureTooltip();
+    this.tooltip?.show(
+      x,
+      y,
+      item.name,
+      stripActionDescriptionMarkup(description)
+    );
   }
 
   private closeModal(forceDestroy = false) {
+    this.disableMobileGridPointerHandlers();
     this.clearLongPressTimers();
     const wasVisible = this.modalVisible;
     if (!this.overlay) {
@@ -1150,6 +1387,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.rebuildMobileGridContent();
 
     const panel = scene.rexUI.add.scrollablePanel({
+      scrollDetectionMode: 1,
       width: this.modalWidth - 48,
       height: this.modalHeight - (this.confirmSelection ? 190 : 140),
       scrollMode: 0,
@@ -1344,155 +1582,6 @@ export class GridSelect extends Phaser.GameObjects.Container {
         part.setY(nextTextY + part.height / 2);
         nextTextY += part.height + partGap;
       }
-      background.setInteractive({ useHandCursor: !item.disabled });
-
-      let pointerDownPosition: {
-        id: number;
-        x: number;
-        y: number;
-      } | null = null;
-      let longPressTimer: Phaser.Time.TimerEvent | null = null;
-      let longPressTriggered = false;
-      const cancelLongPress = (): void => {
-        if (!longPressTimer) {
-          return;
-        }
-        this.scene.time.removeEvent(longPressTimer);
-        this.longPressTimers.delete(longPressTimer);
-        longPressTimer = null;
-      };
-      const showActionDescription = (pointer: Phaser.Input.Pointer): void => {
-        if (!descriptionContent) {
-          return;
-        }
-        this.ensureTooltip();
-        this.tooltip?.show(
-          pointer.x,
-          pointer.y,
-          item.name,
-          stripActionDescriptionMarkup(descriptionContent)
-        );
-      };
-      background.on(
-        Phaser.Input.Events.POINTER_DOWN,
-        (pointer: Phaser.Input.Pointer) => {
-          this.tooltip?.hide();
-          cancelLongPress();
-          longPressTriggered = false;
-          pointerDownPosition = {
-            id: pointer.id,
-            x: pointer.x,
-            y: pointer.y
-          };
-          if (!descriptionContent) {
-            return;
-          }
-          const timer = this.scene.time.delayedCall(
-            ACTION_DESCRIPTION_LONG_PRESS_MS,
-            () => {
-              this.longPressTimers.delete(timer);
-              if (longPressTimer === timer) {
-                longPressTimer = null;
-              }
-              const down = pointerDownPosition;
-              if (
-                !down ||
-                down.id !== pointer.id ||
-                Phaser.Math.Distance.Between(
-                  down.x,
-                  down.y,
-                  pointer.x,
-                  pointer.y
-                ) > 10
-              ) {
-                return;
-              }
-              longPressTriggered = true;
-              showActionDescription(pointer);
-            }
-          );
-          longPressTimer = timer;
-          this.longPressTimers.add(timer);
-        }
-      );
-      background.on(
-        Phaser.Input.Events.POINTER_MOVE,
-        (pointer: Phaser.Input.Pointer) => {
-          const down = pointerDownPosition;
-          if (
-            down &&
-            down.id === pointer.id &&
-            Phaser.Math.Distance.Between(
-              down.x,
-              down.y,
-              pointer.x,
-              pointer.y
-            ) > 10
-          ) {
-            cancelLongPress();
-            if (longPressTriggered) {
-              longPressTriggered = false;
-              this.tooltip?.hide();
-            }
-          }
-        }
-      );
-      background.on(
-        Phaser.Input.Events.POINTER_UP,
-        (
-          pointer: Phaser.Input.Pointer,
-          _localX: number,
-          _localY: number,
-          event: Phaser.Types.Input.EventData
-        ) => {
-          event.stopPropagation();
-          const wasLongPress = longPressTriggered;
-          cancelLongPress();
-          const down = pointerDownPosition;
-          pointerDownPosition = null;
-          if (wasLongPress) {
-            return;
-          }
-          if (
-            !down ||
-            down.id !== pointer.id ||
-            pointer.button !== 0 ||
-            Phaser.Math.Distance.Between(
-              down.x,
-              down.y,
-              pointer.x,
-              pointer.y
-            ) > 10 ||
-            item.disabled
-          ) {
-            return;
-          }
-          this.applySelection(item, !this.confirmSelection);
-          if (!this.confirmSelection) {
-            this.closeModal();
-          }
-        }
-      );
-      background.on(
-        Phaser.Input.Events.POINTER_OVER,
-        (pointer: Phaser.Input.Pointer) => {
-          if (!item.disabled) {
-            this.scene.input.setDefaultCursor("pointer");
-          }
-          if (!descriptionTruncated || pointer.wasTouch) {
-            return;
-          }
-          showActionDescription(pointer);
-        }
-      );
-      background.on(Phaser.Input.Events.POINTER_OUT, () => {
-        cancelLongPress();
-        this.scene.input.setDefaultCursor("default");
-        if (!longPressTriggered) {
-          this.tooltip?.hide();
-        }
-      });
-
       content.add(background);
       if (icon) {
         content.add(icon);
