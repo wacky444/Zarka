@@ -12,7 +12,7 @@ import {
   type PlayerCharacter,
   type PlayerPlannedAction
 } from "@shared";
-import { MatchRecord } from "src/models/types";
+import { MatchRecord } from "../models/types";
 import { hasFeedConsumable } from "./actions/feed";
 import {
   isActionOnCooldown,
