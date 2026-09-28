@@ -55,11 +55,17 @@ export class CellContentsPanel {
   private coord: Axial = { q: 0, r: 0 };
   private cellType = LocalizationType.Road;
   private entries: CellContentsEntry[] = [];
+  private openingPointerId: number | null = null;
   private readonly itemTooltip: ItemTooltipManager;
 
   private readonly handlePointerDown = (): void => {
     if (this.isVisible) {
       this.itemTooltip.hide();
+    }
+  };
+  private readonly handlePointerUp = (pointer: Phaser.Input.Pointer): void => {
+    if (pointer.id === this.openingPointerId) {
+      this.openingPointerId = null;
     }
   };
 
@@ -68,6 +74,11 @@ export class CellContentsPanel {
     this.scene.input.on(
       Phaser.Input.Events.POINTER_DOWN,
       this.handlePointerDown,
+      this
+    );
+    this.scene.input.on(
+      Phaser.Input.Events.POINTER_UP,
+      this.handlePointerUp,
       this
     );
     this.scene.scale.on(
@@ -85,10 +96,12 @@ export class CellContentsPanel {
     coord: Axial,
     cellType: LocalizationType,
     entries: CellContentsEntry[],
+    openingPointerId?: number,
   ): void {
     this.coord = { ...coord };
     this.cellType = cellType;
     this.entries = [...entries];
+    this.openingPointerId = openingPointerId ?? null;
     this.isVisible = true;
     this.render();
   }
@@ -98,6 +111,7 @@ export class CellContentsPanel {
       return;
     }
     this.isVisible = false;
+    this.openingPointerId = null;
     this.itemTooltip.hide();
     this.destroyOverlay();
   }
@@ -108,12 +122,18 @@ export class CellContentsPanel {
       this.handlePointerDown,
       this
     );
+    this.scene.input.off(
+      Phaser.Input.Events.POINTER_UP,
+      this.handlePointerUp,
+      this
+    );
     this.scene.scale.off(
       Phaser.Scale.Events.RESIZE,
       this.handleResize,
       this
     );
     this.isVisible = false;
+    this.openingPointerId = null;
     this.itemTooltip.destroy();
     this.destroyOverlay();
   }
@@ -176,11 +196,12 @@ export class CellContentsPanel {
         _y: number,
         event: Phaser.Types.Input.EventData
       ) => {
-        event.stopPropagation();
-        if (pointerDownOnCover) {
-          pointerDownOnCover = false;
-          this.close();
+        if (!pointerDownOnCover) {
+          return;
         }
+        event.stopPropagation();
+        pointerDownOnCover = false;
+        this.close();
       }
     );
     cover.on(
@@ -286,6 +307,7 @@ export class CellContentsPanel {
           contentHeight,
           listWidth,
           rowHeight,
+          (pointer) => pointer.id === this.openingPointerId,
         );
         content.add(grid.container);
         contentHeight += grid.height;

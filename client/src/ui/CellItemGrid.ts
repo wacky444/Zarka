@@ -18,7 +18,8 @@ export function createCellItemGrid(
   x: number,
   y: number,
   width: number,
-  rowHeight: number
+  rowHeight: number,
+  shouldIgnorePointerUp?: (pointer: Phaser.Input.Pointer) => boolean
 ): { container: Phaser.GameObjects.Container; height: number } {
   const validEntries = entries.filter(
     (entry) => ItemLibrary[entry.itemId] && entry.quantity > 0
@@ -60,6 +61,9 @@ export function createCellItemGrid(
     icon.setDisplaySize(iconSize, iconSize);
     icon.setInteractive({ useHandCursor: true });
     icon.on(Phaser.Input.Events.POINTER_UP, (pointer: Phaser.Input.Pointer) => {
+      if (shouldIgnorePointerUp?.(pointer)) {
+        return;
+      }
       if (
         (pointer.button !== 0 && !pointer.wasTouch) ||
         pointer.getDistance() > 15

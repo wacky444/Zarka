@@ -71,10 +71,10 @@ export function makeButton(
         _localY: number,
         event?: Phaser.Types.Input.EventData
       ) => {
-        event?.stopPropagation();
         if (downPointerId === null || downPointerId !== pointer.id) {
           return;
         }
+        event?.stopPropagation();
         downPointerId = null;
         try {
           await onClick();

@@ -242,18 +242,21 @@ export class GameBoardRenderer {
         y: number;
       } | null = null;
       let cellInfoLongPressTriggered = false;
-      const cancelCellInfoLongPress = (): void => {
+      const clearCellInfoLongPressTimer = (): void => {
         if (tileSpriteEntry.cellInfoLongPressTimer) {
           this.scene.time.removeEvent(tileSpriteEntry.cellInfoLongPressTimer);
           tileSpriteEntry.cellInfoLongPressTimer = null;
         }
+      };
+      const resetCellInfoPress = (): void => {
+        clearCellInfoLongPressTimer();
         cellInfoPointerDown = null;
         cellInfoLongPressTriggered = false;
       };
       img.on(
         Phaser.Input.Events.POINTER_DOWN,
         (pointer: Phaser.Input.Pointer) => {
-          cancelCellInfoLongPress();
+          resetCellInfoPress();
           if (!pointer.wasTouch) {
             return;
           }
@@ -281,6 +284,7 @@ export class GameBoardRenderer {
                 return;
               }
               cellInfoLongPressTriggered = true;
+              this.showCellInfoForTile(tile, pointer.id);
             }
           );
         }
@@ -300,7 +304,9 @@ export class GameBoardRenderer {
           ) {
             return;
           }
-          cancelCellInfoLongPress();
+          if (!cellInfoLongPressTriggered) {
+            resetCellInfoPress();
+          }
         }
       );
       img.on(
@@ -319,8 +325,11 @@ export class GameBoardRenderer {
       img.on(
         Phaser.Input.Events.POINTER_OUT,
         (pointer?: Phaser.Input.Pointer) => {
-          if (pointer?.id === cellInfoPointerDown?.id) {
-            cancelCellInfoLongPress();
+          if (
+            pointer?.id === cellInfoPointerDown?.id &&
+            !cellInfoLongPressTriggered
+          ) {
+            resetCellInfoPress();
           }
           this.hoverTooltip.hide();
           if (
@@ -337,14 +346,13 @@ export class GameBoardRenderer {
             cellInfoLongPressTriggered &&
             cellInfoPointerDown?.id === pointer.id;
           if (cellInfoPointerDown?.id === pointer.id) {
-            cancelCellInfoLongPress();
+            resetCellInfoPress();
           }
           const tileData = img.getData("tile") as HexTile | undefined;
           if (!tileData) {
             return;
           }
           if (wasCellInfoLongPress) {
-            this.showCellInfoForTile(tileData);
             return;
           }
           const selection = this.callbacks.getLocationSelection();
@@ -757,12 +765,17 @@ export class GameBoardRenderer {
     this.applyMapRenderingState();
   }
 
-  private showCellInfoForTile(tile: HexTile): void {
-    this.showCellContents(
+  private showCellInfoForTile(
+    tile: HexTile,
+    openingPointerId?: number
+  ): void {
+    this.cellContentsPanel.show(
       tile.coord,
       tile.cellType.localizationType,
-      this.tileItemEntries.get(tile.id) ?? []
+      this.tileItemEntries.get(tile.id) ?? [],
+      openingPointerId
     );
+    this.callbacks.onCellInfoOpened(tile.coord);
   }
 
   private showCellContents(
