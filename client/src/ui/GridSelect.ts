@@ -278,6 +278,8 @@ interface StaticGridCell {
   background: Phaser.GameObjects.Rectangle;
   label: Phaser.GameObjects.Text;
   energy?: Phaser.GameObjects.Text;
+  cooldown?: Phaser.GameObjects.Text;
+  warning?: Phaser.GameObjects.Text;
   description?: Phaser.GameObjects.Text;
 }
 
@@ -1197,6 +1199,36 @@ export class GridSelect extends Phaser.GameObjects.Container {
             )
             .setOrigin(0.5)
         : undefined;
+      const cooldownRemaining = item.cooldownRemaining ?? 0;
+      const cooldown = cooldownRemaining > 0
+        ? (this.scene.rexUI.add.BBCodeText(
+            x + cellWidth / 2,
+            y,
+            `[color=${THEME.colors.cooldown}]CD: ${cooldownRemaining}[/color]`,
+            {
+              fontSize: "11px",
+              color: THEME.colors.cooldown,
+              align: "center",
+              wrap: { mode: "word", width: Math.max(1, cellWidth - 16) },
+              maxLines: 1
+            }
+          ) as Phaser.GameObjects.Text).setOrigin(0.5)
+        : undefined;
+      const missingRequirement = item.missingRequirement?.trim();
+      const warning = missingRequirement
+        ? (this.scene.rexUI.add.BBCodeText(
+            x + cellWidth / 2,
+            y,
+            `[color=${THEME.colors.warning}]${missingRequirement}[/color]`,
+            {
+              fontSize: "11px",
+              color: THEME.colors.warning,
+              align: "center",
+              wrap: { mode: "word", width: Math.max(1, cellWidth - 16) },
+              maxLines: 2
+            }
+          ) as Phaser.GameObjects.Text).setOrigin(0.5)
+        : undefined;
       const descriptionContent =
         typeof item.description === "string" ? item.description.trim() : "";
       const description = descriptionContent
@@ -1216,9 +1248,13 @@ export class GridSelect extends Phaser.GameObjects.Container {
             }
           ) as Phaser.GameObjects.Text).setOrigin(0.5)
         : undefined;
-      const textParts = [label, energy, description].filter(
-        (part): part is Phaser.GameObjects.Text => part !== undefined
-      );
+      const textParts = [
+        label,
+        energy,
+        cooldown,
+        warning,
+        description
+      ].filter((part): part is Phaser.GameObjects.Text => part !== undefined);
       const partGap = 4;
       const groupHeight =
         textParts.reduce((height, part) => height + part.height, 0) +
@@ -1289,6 +1325,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
       if (energy) {
         content.add(energy);
       }
+      if (cooldown) {
+        content.add(cooldown);
+      }
+      if (warning) {
+        content.add(warning);
+      }
       if (description) {
         content.add(description);
       }
@@ -1297,6 +1339,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
         background,
         label,
         ...(energy ? { energy } : {}),
+        ...(cooldown ? { cooldown } : {}),
+        ...(warning ? { warning } : {}),
         ...(description ? { description } : {})
       });
     });
@@ -1321,6 +1365,16 @@ export class GridSelect extends Phaser.GameObjects.Container {
         cell.item.disabled
           ? THEME.colors.textDisabled
           : THEME.colors.energyCost
+      );
+      cell.cooldown?.setColor(
+        cell.item.disabled
+          ? THEME.colors.textDisabled
+          : THEME.colors.cooldown
+      );
+      cell.warning?.setColor(
+        cell.item.disabled
+          ? THEME.colors.textDisabled
+          : THEME.colors.warning
       );
       cell.description?.setColor(
         cell.item.disabled ? THEME.colors.textDisabled : THEME.colors.modalText
