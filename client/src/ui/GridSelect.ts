@@ -14,6 +14,8 @@ const ACTION_DESCRIPTION_TAG_COLORS: Record<string, string> = {
   "health-recover": THEME.colors.healthRecover
 };
 
+// Temporary A/B test: set true to restore selector images and opaque-pixel reads.
+const SHOW_GRID_SELECT_IMAGES = false;
 const COLLAPSED_ICON_LEFT = 12;
 
 export function parseActionDescription(content: string): string {
@@ -116,6 +118,7 @@ function getOpaqueCenterOffset(
   displayHeight: number
 ): { x: number; y: number } {
   if (
+    !SHOW_GRID_SELECT_IMAGES ||
     !item.centerOpaquePixels ||
     !item.frame ||
     !scene.textures.exists(item.texture)
@@ -630,17 +633,19 @@ export class GridSelect extends Phaser.GameObjects.Container {
         this.iconTargetSize * scale,
         this.iconTargetSize * scale
       );
-      const offset = getOpaqueCenterOffset(
-        this.scene,
-        item,
-        this.icon.displayWidth,
-        this.icon.displayHeight
-      );
+      const offset = SHOW_GRID_SELECT_IMAGES
+        ? getOpaqueCenterOffset(
+            this.scene,
+            item,
+            this.icon.displayWidth,
+            this.icon.displayHeight
+          )
+        : { x: 0, y: 0 };
       this.icon.setPosition(
         COLLAPSED_ICON_LEFT + offset.x,
         this.collapsedHeight / 2 + offset.y
       );
-      this.icon.setVisible(true);
+      this.icon.setVisible(SHOW_GRID_SELECT_IMAGES);
     } else {
       this.icon.setVisible(false);
     }
@@ -1206,7 +1211,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
       const icon = scene.add
         .image(0, 0, item.texture, item.frame)
-        .setOrigin(0.5, 0.5);
+        .setOrigin(0.5, 0.5)
+        .setVisible(SHOW_GRID_SELECT_IMAGES);
       const iconSlot = item.centerOpaquePixels
         ? scene.add.container(0, 0)
         : null;
@@ -1221,12 +1227,14 @@ export class GridSelect extends Phaser.GameObjects.Container {
         const maxIconSize = this.resolveMaxIconDimension(cellHeight);
         resolvedIconSize = Math.min(baseIconSize * iconScale, maxIconSize);
         icon.setDisplaySize(resolvedIconSize, resolvedIconSize);
-        const offset = getOpaqueCenterOffset(
-          scene,
-          item,
-          resolvedIconSize,
-          resolvedIconSize
-        );
+        const offset = SHOW_GRID_SELECT_IMAGES
+          ? getOpaqueCenterOffset(
+              scene,
+              item,
+              resolvedIconSize,
+              resolvedIconSize
+            )
+          : { x: 0, y: 0 };
         icon.setPosition(offset.x, offset.y);
         icon.setActive(true);
       }
@@ -1466,15 +1474,17 @@ export class GridSelect extends Phaser.GameObjects.Container {
         icon.setDisplaySize(resolvedIconSize, resolvedIconSize);
         if (iconSlot) {
           iconSlot.setSize(resolvedIconSize, resolvedIconSize);
-          const offset = getOpaqueCenterOffset(
-            scene,
-            item,
-            resolvedIconSize,
-            resolvedIconSize
-          );
+          const offset = SHOW_GRID_SELECT_IMAGES
+            ? getOpaqueCenterOffset(
+                scene,
+                item,
+                resolvedIconSize,
+                resolvedIconSize
+              )
+            : { x: 0, y: 0 };
           icon.setPosition(offset.x, offset.y);
         }
-        icon.setVisible(true);
+        icon.setVisible(SHOW_GRID_SELECT_IMAGES);
         icon.setActive(true);
         iconMarginBottom = layoutSpaceExisting.iconGap;
       } else {

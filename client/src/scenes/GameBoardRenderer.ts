@@ -97,6 +97,7 @@ export class GameBoardRenderer {
   private tileItemContainers = new Map<string, Phaser.GameObjects.Container>();
   private playerCoordForTinting: Axial | null = null;
   private playerViewRange = 0;
+  private mapRenderingPaused = false;
   private locationSelectionHoverText: Phaser.GameObjects.Text | null = null;
 
   constructor(
@@ -138,6 +139,14 @@ export class GameBoardRenderer {
     this.locationSelectionHoverText?.destroy();
     this.locationSelectionHoverText = null;
     this.tilePositions = {};
+  }
+
+  setMapRenderingPaused(paused: boolean): void {
+    if (this.mapRenderingPaused === paused) {
+      return;
+    }
+    this.mapRenderingPaused = paused;
+    this.applyMapRenderingState();
   }
 
   renderMap(map: GameMap): void {
@@ -293,6 +302,7 @@ export class GameBoardRenderer {
     this.renderTraps(
       replayView?.snapshot.traps ?? this.callbacks.getCurrentMatch()?.traps,
     );
+    this.applyMapRenderingState();
   }
 
   renderPlayerCharacters(match: MatchRecord): void {
@@ -407,6 +417,7 @@ export class GameBoardRenderer {
       }
     }
     this.refreshAllTileTints();
+    this.applyMapRenderingState();
   }
 
   renderItems(map: GameMap): void {
@@ -418,6 +429,7 @@ export class GameBoardRenderer {
     this.tileItemContainers.clear();
 
     if (!Array.isArray(map.tiles) || map.tiles.length === 0) {
+      this.applyMapRenderingState();
       return;
     }
 
@@ -642,6 +654,7 @@ export class GameBoardRenderer {
       this.uiCamera.ignore(container);
       this.tileItemContainers.set(snapshot.id, container);
     }
+    this.applyMapRenderingState();
   }
 
   private showTutorialCellInfo(tile: HexTile): void {
@@ -695,6 +708,7 @@ export class GameBoardRenderer {
       this.uiCamera.ignore(visual);
       this.trapVisuals.push(visual);
     }
+    this.applyMapRenderingState();
   }
 
   refreshTileVisuals(): void {
@@ -770,7 +784,7 @@ export class GameBoardRenderer {
       this.playerSprites.set(playerId, sprite);
     }
     sprite.setPosition(world.x, world.y);
-    sprite.setVisible(true);
+    sprite.setVisible(!this.mapRenderingPaused);
     sprite.setDepth(5 + world.y / 1000);
 
     let label = this.playerNameLabels.get(playerId);
@@ -793,7 +807,7 @@ export class GameBoardRenderer {
     }
     label.setText(name);
     label.setPosition(world.x, world.y);
-    label.setVisible(true);
+    label.setVisible(!this.mapRenderingPaused);
     this.positionLabel(label, sprite);
 
     return sprite;
@@ -857,7 +871,7 @@ export class GameBoardRenderer {
         repeat: -1,
       });
     }
-    effect.setVisible(true);
+    effect.setVisible(!this.mapRenderingPaused);
     this.positionDizzyStars(playerId, sprite);
   }
 
@@ -1048,6 +1062,7 @@ export class GameBoardRenderer {
       this.uiCamera.ignore(animation.container);
       this.fireTileAnimations.set(snapshot.id, animation);
     }
+    this.applyMapRenderingState();
   }
 
   private clearTrapVisuals(): void {
@@ -1146,6 +1161,33 @@ export class GameBoardRenderer {
         this.locationSelectionHoverText.height -
         8,
     );
-    this.locationSelectionHoverText.setVisible(true);
+    this.locationSelectionHoverText.setVisible(!this.mapRenderingPaused);
+  }
+
+  private applyMapRenderingState(): void {
+    const visible = !this.mapRenderingPaused;
+    for (const { image, skullImage } of this.mapTileSprites) {
+      image.setVisible(visible);
+      skullImage?.setVisible(visible);
+    }
+    for (const visual of this.trapVisuals) {
+      visual.setVisible(visible);
+    }
+    for (const animation of this.fireTileAnimations.values()) {
+      animation.container.setVisible(visible);
+    }
+    for (const sprite of this.playerSprites.values()) {
+      sprite.setVisible(visible);
+    }
+    for (const label of this.playerNameLabels.values()) {
+      label.setVisible(visible);
+    }
+    for (const effect of this.playerDizzyStars.values()) {
+      effect.setVisible(visible);
+    }
+    for (const container of this.tileItemContainers.values()) {
+      container.setVisible(visible);
+    }
+    this.locationSelectionHoverText?.setVisible(visible);
   }
 }

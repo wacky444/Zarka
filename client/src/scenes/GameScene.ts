@@ -237,9 +237,11 @@ export class GameScene extends Phaser.Scene {
   };
   private readonly gridModalOpenHandler = () => {
     this.gridModalActive = true;
+    this.syncMapRenderingPauseForGridModal();
   };
   private readonly gridModalCloseHandler = () => {
     this.gridModalActive = false;
+    this.syncMapRenderingPauseForGridModal();
   };
   private readonly escapeKeyHandler = (event: KeyboardEvent) => {
     if (event.key !== "Escape") {
@@ -1472,6 +1474,7 @@ export class GameScene extends Phaser.Scene {
     const width = this.uiCam ? this.uiCam.width : this.scale.width;
     const height = this.uiCam ? this.uiCam.height : this.scale.height;
     const isMobileView = isMobile(width);
+    this.syncMapRenderingPauseForGridModal();
 
     if (isMobileView !== this.mobileLayout) {
       this.mobileLayout = isMobileView;
@@ -1535,6 +1538,13 @@ export class GameScene extends Phaser.Scene {
       isMobileView,
       Math.max(this.menuButton?.height ?? 0, this.viewModeButton?.height ?? 0) +
         18
+    );
+  }
+
+  private syncMapRenderingPauseForGridModal(): void {
+    const width = this.uiCam?.width ?? this.scale.width;
+    this.boardRenderer?.setMapRenderingPaused(
+      this.gridModalActive && isMobile(width)
     );
   }
 
