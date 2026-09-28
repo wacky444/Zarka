@@ -161,7 +161,9 @@ export class PlaceTrapAction extends BaseAction {
         ActionLibrary.place_trap,
       );
       const placements = 1 + extraExecutions;
-      match.traps = match.traps ?? [];
+      if (!Array.isArray(match.traps)) {
+        match.traps = [];
+      }
       logger?.debug(
         "place_trap attempt match=%s player=%s turn=%d inventory=%d placements=%d traps_before=%d origin=%s target=%s",
         match.match_id,
@@ -202,7 +204,10 @@ export class PlaceTrapAction extends BaseAction {
           damage: TRAP_DAMAGE,
           placedTurn: (match.current_turn ?? 0) + 1,
         };
-        match.traps.push(trap);
+        const currentTraps: TrapRecord[] = Array.isArray(match.traps)
+          ? match.traps
+          : [];
+        match.traps = [...currentTraps, trap];
         logger?.debug(
           "place_trap added match=%s trap=%s owner=%s traps_after=%d",
           match.match_id,
