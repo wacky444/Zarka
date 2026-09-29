@@ -96,9 +96,17 @@ test("direct target collection applies dead-character policy without self-fallba
   );
 });
 
-test("Feed still finds corpse only when corpse is available", () => {
+test("Feed ignores temporary energy but still requires an available corpse", () => {
   const { actor, corpse, match } = createScenario();
   actor.inventory.carriedItems = [];
+  actor.stats.energy.current = 1;
+  const energy = actor.stats.energy as typeof actor.stats.energy & {
+    activeTemporary?: number;
+  };
+  energy.activeTemporary = 6;
+  energy.temporary = 4;
+  assert.equal(canFeedParticipant(actor, match), false);
+
   actor.stats.energy.current = 0;
   assert.equal(canFeedParticipant(actor, match), true);
 

@@ -18,7 +18,6 @@ import {
   mergeCharacterState,
   type PlannedActionParticipant
 } from "./utils";
-import { getAvailableEnergy } from "../../utils/energy";
 import { collectTargets } from "./targeting";
 import { BaseAction } from "./classes/BaseAction";
 
@@ -83,7 +82,12 @@ function canEatCorpse(character: PlayerCharacter, match: MatchRecord): boolean {
   }
   const hasCannibalSkill =
     getSkillEffectTotal(character, "corpse_consumption") > 0;
-  return hasCannibalSkill || getAvailableEnergy(character) <= 0;
+  const currentEnergy = character.stats?.energy?.current;
+  const hasCurrentEnergy =
+    typeof currentEnergy === "number" &&
+    isFinite(currentEnergy) &&
+    currentEnergy > 0;
+  return hasCannibalSkill || !hasCurrentEnergy;
 }
 
 export function canFeedParticipant(
