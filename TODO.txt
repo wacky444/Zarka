@@ -51,3 +51,5 @@
 - using bombard or fire should show the icon of the cell types in mobile
 
 - bombard has animation? it should have it similar to cell destroyed
+
+- pantalla de ayuda con el orden de acciones

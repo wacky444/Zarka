@@ -626,7 +626,26 @@ export class CharacterPanelLogView {
         const actionName = definition
           ? t(definition.name)
           : t(this.options.formatActionName(actionId));
-        if (actionId === "throw_object") {
+        const trapMetadata =
+          actionId === "place_trap"
+            ? (event.action.metadata as
+                | { placed?: unknown; triggered?: unknown }
+                | undefined)
+            : undefined;
+        if (actionId === "place_trap" && trapMetadata?.triggered === true) {
+          const triggererId = event.targets?.[0]?.targetId;
+          const triggerer = triggererId
+            ? this.resolvePlayerName(triggererId)
+            : actor;
+          lines.push(
+            `${triggerer} ${t("triggered a trap set by")} ${actor}`
+          );
+        } else if (
+          actionId === "place_trap" &&
+          trapMetadata?.placed === true
+        ) {
+          lines.push(`${actor} ${t("placed a trap")}`);
+        } else if (actionId === "throw_object") {
           const thrownItems = this.extractThrownItems(event.action.metadata);
           if (thrownItems.length > 0) {
             if (getLocale() === "es") {
