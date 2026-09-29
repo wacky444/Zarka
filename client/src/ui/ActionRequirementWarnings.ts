@@ -104,12 +104,12 @@ export function getMissingRequirement(
         const locName =
           LOCATION_DISPLAY_NAMES[requiredLocations[0]] ??
           requiredLocations[0].toLowerCase();
-        return `Not in ${locName}`;
+        return t(`Not in ${locName}`);
       }
       const names = requiredLocations
         .map((type) => LOCATION_DISPLAY_NAMES[type] ?? type.toLowerCase())
         .join(" or ");
-      return `Not in ${names}`;
+      return t(`Not in ${names}`);
     }
   }
 
