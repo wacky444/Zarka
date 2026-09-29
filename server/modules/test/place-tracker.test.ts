@@ -140,6 +140,31 @@ test("placing a tracker consumes it and reports known target position for six tu
   assert.equal(targetView.playerCharacters[actor.id]?.trackerViews, undefined);
 });
 
+test("placing a tracker replaces the tracker array while preserving existing records", () => {
+  const actor = createCharacter("actor", 0, 1);
+  const target = createCharacter("target", 0);
+  const match = createMatch([actor, target], 0);
+  match.trackers = [
+    {
+      id: "existing-tracker",
+      ownerId: "another-owner",
+      targetId: target.id,
+      targetIdKnownToOwner: true,
+      placedTurn: 0,
+      expiresTurn: 5,
+    },
+  ];
+  const previousTrackers = match.trackers;
+  planTracker(actor, [target.id]);
+
+  resolveTrackerAction(match, 1);
+
+  assert.notEqual(match.trackers, previousTrackers);
+  assert.equal(match.trackers?.length, 2);
+  assert.equal(match.trackers?.[0]?.id, "existing-tracker");
+  assert.equal(match.trackers?.[1]?.targetId, target.id);
+});
+
 test("placing a tracker without a target randomly selects a co-located player", () => {
   const actor = createCharacter("actor", 0, 1);
   const firstTarget = createCharacter("first-target", 0);

@@ -234,7 +234,7 @@ export class PlaceTrackerAction extends BaseAction {
       const targetLocations: Axial[] = [];
       const trackedTargets: Array<{ targetPlayerId?: string; coord: Axial }> = [];
       let placedCount = 0;
-      const trackers = Array.isArray(match.trackers) ? match.trackers : [];
+      let trackers = Array.isArray(match.trackers) ? match.trackers : [];
       match.trackers = trackers;
 
       for (let index = 0; index < placementCount; index += 1) {
@@ -259,7 +259,8 @@ export class PlaceTrackerAction extends BaseAction {
           placedTurn: resolvedTurn,
           expiresTurn: resolvedTurn + TRACKER_DURATION_TURNS - 1,
         };
-        trackers.push(tracker);
+        trackers = [...trackers, tracker];
+        match.trackers = trackers;
         targetLocations.push(target.coord);
         trackedTargets.push({
           ...(target.targetIdKnownToOwner
