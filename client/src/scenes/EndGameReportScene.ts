@@ -201,7 +201,7 @@ export class EndGameReportScene extends Phaser.Scene {
 
     y = this.addSectionTitle(width, y + 12, t("Player Statistics"));
     for (const player of report.players) {
-      const playerText = `${player.player_name} · ${player.character_name}\n${t("Damage")}: ${player.damage_dealt}   ${t("Received")}: ${player.damage_received}   ${t("Kills")}: ${player.players_killed}\n${t("Actions")}: ${player.actions_used}   ${t("Items")}: ${player.items_collected}   ${t("Average weight")}: ${player.average_weight_carried.toFixed(1)}   ${player.alive ? t("Alive") : t("Eliminated")}`;
+      const playerText = `${player.player_name}\n${t("Damage")}: ${player.damage_dealt}   ${t("Received")}: ${player.damage_received}   ${t("Kills")}: ${player.players_killed}\n${t("Actions")}: ${player.actions_used}   ${t("Items")}: ${player.items_collected}   ${t("Average weight")}: ${player.average_weight_carried.toFixed(1)}   ${player.alive ? t("Alive") : t("Eliminated")}`;
       y = this.addCard(width, y, playerText, player.alive ? "#14532d" : "#3f1d2e");
     }
 
@@ -278,7 +278,7 @@ export class EndGameReportScene extends Phaser.Scene {
       const sprite = createSkinContainer(this, x, rowHeight / 2 - 8, skin, 3);
       row.add(sprite);
       const label = this.add
-        .text(x, rowHeight - 12, player.character_name, {
+        .text(x, rowHeight - 12, player.player_name, {
           color: "#fef3c7",
           fontSize: "12px",
           align: "center",
