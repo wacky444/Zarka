@@ -26,6 +26,7 @@ import {
   clearExpiredFires,
 } from "./turnFire";
 import { applyScheduledDestruction } from "./turnDestruction";
+import { refreshTrackerViews } from "./trackerState";
 
 function sortedActions(): ActionDefinition[] {
   const keys = Object.keys(ActionLibrary) as Array<keyof typeof ActionLibrary>;
@@ -337,6 +338,7 @@ export function advanceTurn(
   // removeProtectedState(match);
 
   applyTestaments(match, replayEvents);
+  refreshTrackerViews(match, resolvedTurn);
   appendHiddenStatusEvents(match, resolvedTurn, replayEvents);
   recordMatchReportProgress(match);
   if (nk) {

@@ -31,6 +31,7 @@ import { executeUseBandageAction } from "./actions/useBandage";
 import { executeUseMedicineAction } from "./actions/useMedicine";
 import { executeUseChemicalWeaponAction } from "./actions/UseChemicalWeapon";
 import { executeSearchAction } from "./actions/search";
+import { executePlaceTrackerAction } from "./actions/placeTracker";
 import { executeInspectAction } from "./actions/inspect";
 import { executeInjectVirusAction } from "./actions/injectVirus";
 import {
@@ -766,6 +767,30 @@ export function executeAction(
         logger,
       );
       const actionEvents = executeSearchAction(participants, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.place_tracker.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = executePlaceTrackerAction(participants, match);
       eventsForAction = energyEvents.length
         ? [...energyEvents, ...actionEvents]
         : actionEvents;

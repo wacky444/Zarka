@@ -27,6 +27,17 @@ export interface TrapRecord {
   placedTurn: number;
 }
 
+export interface MatchTrackerRecord {
+  id: string;
+  ownerId: string;
+  targetId: string;
+  targetIdKnownToOwner: boolean;
+  /** Target discovered the attached device through Inspect. */
+  discoveredByTarget?: boolean;
+  placedTurn: number;
+  expiresTurn: number;
+}
+
 export interface MatchRecord {
   /** Stable logical game identifier used by storage and client RPCs. */
   match_id: string;
@@ -53,6 +64,8 @@ export interface MatchRecord {
   map?: GameMap;
   items?: MatchItemRecord[];
   traps?: TrapRecord[];
+  /** Server-private tracker placements; omitted from normal player views. */
+  trackers?: MatchTrackerRecord[];
   teams?: string[];
   teamCounts?: Record<string, number>;
   /** Team identities revealed to the viewing player by Detective purchases. */

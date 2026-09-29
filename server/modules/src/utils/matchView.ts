@@ -10,6 +10,7 @@ import type { MatchRecord } from "../models/types";
 import { axialDistance } from "./location";
 import { isCharacterDead } from "./playerCharacter";
 import { canCharacterDetectFire } from "./fireVisibility";
+import { canReceiveTrackerSignal } from "../match/trackerState";
 
 type DiscoveredItemLookup = Record<string, true>;
 
@@ -153,8 +154,20 @@ export function tailorPlayerCharactersForViewer(
       remoteView.r === candidateCoord.r;
     const isInCameraView =
       !!cameraView && cameraView.indexOf(id) !== -1;
+    const isInRadioView = Object.entries(playerCharacters).some(
+      ([radioPartnerId, radioPartner]) => {
+        const radioCoord = radioPartner.position?.coord;
+        return (
+          radioPartnerId !== viewerKey &&
+          !!radioCoord &&
+          radioCoord.q === candidateCoord.q &&
+          radioCoord.r === candidateCoord.r &&
+          canReceiveTrackerSignal(viewerKey, radioPartnerId, playerCharacters)
+        );
+      },
+    );
     const revealedTeamId = viewer.revealedTeamIdsByPlayerId?.[id];
-    if (isInNormalView || isInRemoteView || isInCameraView) {
+    if (isInNormalView || isInRemoteView || isInCameraView || isInRadioView) {
       const isDead =
         isCharacterDead(candidate) ||
         (typeof candidate.stats?.health?.current === "number" &&
@@ -169,6 +182,7 @@ export function tailorPlayerCharactersForViewer(
       delete sanitized.actionPlan;
       delete sanitized.remoteView;
       delete sanitized.cameraView;
+      delete sanitized.trackerViews;
       if (typeof revealedTeamId === "string" && revealedTeamId.length > 0) {
         sanitized.teamId = revealedTeamId;
       } else if (
@@ -270,6 +284,7 @@ export function tailorMatchForPlayer(
   const publicMatch = { ...match };
   delete publicMatch.reportProgress;
   delete publicMatch.safeContainers;
+  delete publicMatch.trackers;
   return {
     ...publicMatch,
     playerCharacters: playerCharacters ?? {},

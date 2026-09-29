@@ -93,6 +93,9 @@ export class GameBoardRenderer {
     cellInfoLongPressTimer: Phaser.Time.TimerEvent | null;
   }> = [];
   private trapVisuals: Phaser.GameObjects.Graphics[] = [];
+  private trackerMarkers: Array<
+    Phaser.GameObjects.Graphics | Phaser.GameObjects.Text
+  > = [];
   private fireTileAnimations = new Map<string, FireTileAnimation>();
   private playerSprites = new Map<string, SkinContainer>();
   private playerNameLabels = new Map<string, Phaser.GameObjects.Text>();
@@ -409,7 +412,9 @@ export class GameBoardRenderer {
   }
 
   renderPlayerCharacters(match: MatchRecord): void {
+    this.clearTrackerMarkers();
     if (!this.scene.textures.exists("char")) {
+      this.renderTrackerMarkers(match);
       return;
     }
 
@@ -521,6 +526,7 @@ export class GameBoardRenderer {
         this.removeDizzyStars(playerId);
       }
     }
+    this.renderTrackerMarkers(match);
     this.refreshAllTileTints();
     this.applyMapRenderingState();
   }
@@ -1009,6 +1015,91 @@ export class GameBoardRenderer {
       : 0;
   }
 
+  private getCurrentTrackerViews() {
+    const match = this.getDisplayedMatch();
+    const currentUserId = this.callbacks.getCurrentUserId();
+    if (!match || !currentUserId) {
+      return [];
+    }
+    const currentTurn = this.getCurrentTurn();
+    return (match.playerCharacters?.[currentUserId]?.trackerViews ?? []).filter(
+      (view) =>
+        Number.isFinite(view.coord?.q) &&
+        Number.isFinite(view.coord?.r) &&
+        Number.isFinite(view.expiresTurn) &&
+        view.expiresTurn >= currentTurn,
+    );
+  }
+
+  private renderTrackerMarkers(match: MatchRecord): void {
+    const currentUserId = this.callbacks.getCurrentUserId();
+    if (!currentUserId) {
+      return;
+    }
+    const currentTurn = this.getCurrentTurn();
+    const views = match.playerCharacters?.[currentUserId]?.trackerViews ?? [];
+    const markersByCoord = new Map<
+      string,
+      { coord: Axial; targetIds: Set<string> }
+    >();
+    for (const view of views) {
+      if (
+        !Number.isFinite(view.coord?.q) ||
+        !Number.isFinite(view.coord?.r) ||
+        !Number.isFinite(view.expiresTurn) ||
+        view.expiresTurn < currentTurn
+      ) {
+        continue;
+      }
+      const key = `${view.coord.q}:${view.coord.r}`;
+      let marker = markersByCoord.get(key);
+      if (!marker) {
+        marker = { coord: view.coord, targetIds: new Set<string>() };
+        markersByCoord.set(key, marker);
+      }
+      if (typeof view.targetPlayerId === "string") {
+        marker.targetIds.add(view.targetPlayerId);
+      }
+    }
+
+    for (const { coord, targetIds } of markersByCoord.values()) {
+      const world = this.axialToWorld(coord);
+      const ring = this.scene.add.graphics();
+      ring.lineStyle(3, 0x22d3ee, 0.95);
+      ring.strokeCircle(0, 0, 23);
+      ring.setPosition(world.x, world.y);
+      ring.setDepth(4.5 + world.y / 1000);
+      ring.setVisible(!this.mapRenderingPaused);
+      this.uiCamera.ignore(ring);
+      this.trackerMarkers.push(ring);
+
+      const label = [...targetIds]
+        .map((playerId) => this.callbacks.getPlayerName(playerId))
+        .filter((name) => name.length > 0)
+        .join(", ") || "?";
+      const text = this.scene.add.text(world.x, world.y - 24, label, {
+        fontFamily: "Arial",
+        fontSize: "10px",
+        color: "#67e8f9",
+        stroke: "#000000",
+        strokeThickness: 3,
+        resolution: 2,
+      });
+      text.setOrigin(0.5, 1);
+      text.setDepth(7 + world.y / 1000);
+      text.setVisible(!this.mapRenderingPaused);
+      this.uiCamera.ignore(text);
+      this.trackerMarkers.push(text);
+    }
+  }
+
+  private clearTrackerMarkers(): void {
+    for (const marker of this.trackerMarkers) {
+      marker.destroy();
+    }
+    this.trackerMarkers = [];
+  }
+
   private getCurrentRemoteViewCoord(): Axial | null {
     const replayView = this.callbacks.getReplayView();
     const match = this.callbacks.getCurrentMatch();
@@ -1040,6 +1131,13 @@ export class GameBoardRenderer {
   private isOutOfViewRange(coord: Axial): boolean {
     const remoteView = this.getCurrentRemoteViewCoord();
     if (remoteView && remoteView.q === coord.q && remoteView.r === coord.r) {
+      return false;
+    }
+    if (
+      this.getCurrentTrackerViews().some(
+        (view) => view.coord.q === coord.q && view.coord.r === coord.r,
+      )
+    ) {
       return false;
     }
     if (!this.playerCoordForTinting) {
@@ -1104,6 +1202,7 @@ export class GameBoardRenderer {
   }
 
   private clearMapTileSprites(): void {
+    this.clearTrackerMarkers();
     for (const entry of this.mapTileSprites) {
       if (entry.cellInfoLongPressTimer) {
         this.scene.time.removeEvent(entry.cellInfoLongPressTimer);
@@ -1280,6 +1379,9 @@ export class GameBoardRenderer {
     }
     for (const visual of this.trapVisuals) {
       visual.setVisible(visible);
+    }
+    for (const marker of this.trackerMarkers) {
+      marker.setVisible(visible);
     }
     for (const animation of this.fireTileAnimations.values()) {
       animation.container.setVisible(visible);

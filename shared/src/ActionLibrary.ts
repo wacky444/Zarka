@@ -200,6 +200,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 1,
     cooldown: 3,
+    developed: true,
     range: [0, 1],
     requiredItems: ["tracker"],
     requirements: [
@@ -211,13 +212,19 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Otorga visibilidad durante 6 turnos de la posición del objetivo; puede colocarse en una localización adyacente con visión o enlaces de walkie talkie."
+          "Informa de la posición del objetivo durante 6 turnos; un jugador autorizado también puede recibir la señal si ambos tienen walkie talkie."
       }
     ],
     extraExecution: {
       cost: 1,
-      description: "Permite colocar un segundo localizador en el mismo turno."
+      maxRepetitions: 1,
+      description:
+        "Permite colocar un segundo localizador en el mismo personaje o en otro."
     },
+    notes: [
+      "Puede colocarse en la localización actual o en una adyacente.",
+      "En una localización adyacente, sin prismáticos o un aliado con walkie talkie, se desconoce la identidad del objetivo."
+    ],
     texture: "Board Game Icons",
     frame: "token.png",
     actionOrder: 2,

@@ -2744,8 +2744,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     );
     this.setSecondaryActionTargetPlayer(secondaryServerTargetPlayerId, false);
     this.secondaryInspectAdditionalTarget =
-      secondaryId === "inspect" &&
-      character.actionPlan?.secondary?.inspectAdditionalTarget === true;
+      (secondaryId === "inspect" &&
+        character.actionPlan?.secondary?.inspectAdditionalTarget === true) ||
+      (secondaryId === "place_tracker" &&
+        secondaryExtraExecutions > 0 &&
+        Array.isArray(secondaryTargetPlayers) &&
+        secondaryTargetPlayers.length > 1);
     const secondarySecondTargetPlayerId = this.normalizePlayerId(
       Array.isArray(secondaryTargetPlayers) && secondaryTargetPlayers.length > 1
         ? secondaryTargetPlayers[1]
@@ -3968,18 +3972,33 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.updateScrollLayout();
   }
 
+  private supportsSecondaryAdditionalTargetSelection(): boolean {
+    return (
+      this.secondaryExtraExecutions > 0 &&
+      (this.secondaryActionSelection === "inspect" ||
+        this.secondaryActionSelection === "place_tracker")
+    );
+  }
+
   private updateInspectAdditionalTargetToggleText(): void {
+    const label =
+      this.secondaryActionSelection === "place_tracker"
+        ? "Place second tracker on another player"
+        : "Inspect another player";
     this.secondaryInspectAdditionalTargetToggle.setText(
       this.secondaryInspectAdditionalTarget
-        ? "[x] Inspect another player"
-        : "[ ] Inspect another player"
+        ? `[x] ${label}`
+        : `[ ] ${label}`
+    );
+    this.secondaryInspectSecondPlayerSelector.setLabel(
+      this.secondaryActionSelection === "place_tracker"
+        ? "Second tracker target player"
+        : "Additional inspected player"
     );
   }
 
   private refreshSecondaryInspectAdditionalTargetState(): void {
-    const visible =
-      this.secondaryActionSelection === "inspect" &&
-      this.secondaryExtraExecutions > 0;
+    const visible = this.supportsSecondaryAdditionalTargetSelection();
     this.secondaryInspectAdditionalTargetToggle.setVisible(visible);
     this.secondaryInspectAdditionalTargetToggle.setActive(visible);
     if (!visible) {
@@ -3993,8 +4012,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private refreshSecondaryInspectSecondPlayerSelectorState(): void {
     const visible =
-      this.secondaryActionSelection === "inspect" &&
-      this.secondaryExtraExecutions > 0 &&
+      this.supportsSecondaryAdditionalTargetSelection() &&
       this.secondaryInspectAdditionalTarget;
     this.secondaryInspectSecondPlayerSelector.setVisible(visible);
     this.secondaryInspectSecondPlayerSelector.setActive(visible);
@@ -4343,8 +4361,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     emit = false
   ): boolean {
     const supports =
-      this.secondaryActionSelection === "inspect" &&
-      this.secondaryExtraExecutions > 0 &&
+      this.supportsSecondaryAdditionalTargetSelection() &&
       this.secondaryInspectAdditionalTarget;
     if (!supports) {
       const changed = this.secondaryInspectSecondTargetPlayerId !== null;
@@ -5104,11 +5121,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const supportsPlayer = this.selectedSecondaryActionSupportsSingleTarget();
     const supportsItems = this.selectedSecondaryActionSupportsItemPriority();
     const supportsExtra = this.selectedSecondaryActionSupportsExtraExecution();
-    const isAdditionalInspectTarget =
-      this.secondaryActionSelection === "inspect" &&
-      this.secondaryExtraExecutions > 0 &&
+    const hasAdditionalTarget =
+      this.supportsSecondaryAdditionalTargetSelection() &&
       this.secondaryInspectAdditionalTarget &&
       this.secondaryInspectSecondTargetPlayerId !== null;
+    const isAdditionalInspectTarget =
+      this.secondaryActionSelection === "inspect" && hasAdditionalTarget;
     const payload: SecondaryActionSelection = {
       actionId: this.secondaryActionSelection,
       prioritizeFoodDrink:
@@ -5132,7 +5150,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       targetPlayerIds: supportsPlayer
         ? [
             this.secondaryActionTargetPlayerId,
-            isAdditionalInspectTarget
+            hasAdditionalTarget
               ? this.secondaryInspectSecondTargetPlayerId
               : null
           ].filter((id): id is string => id !== null)
@@ -5531,11 +5549,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const supportsLocation = this.selectedSecondaryActionSupportsLocation();
     const supportsPlayer = this.selectedSecondaryActionSupportsSingleTarget();
     const supportsExtra = this.selectedSecondaryActionSupportsExtraExecution();
-    const isAdditionalInspectTarget =
-      this.secondaryActionSelection === "inspect" &&
-      this.secondaryExtraExecutions > 0 &&
+    const hasAdditionalTarget =
+      this.supportsSecondaryAdditionalTargetSelection() &&
       this.secondaryInspectAdditionalTarget &&
       this.secondaryInspectSecondTargetPlayerId !== null;
+    const isAdditionalInspectTarget =
+      this.secondaryActionSelection === "inspect" && hasAdditionalTarget;
     return {
       actionId: this.secondaryActionSelection,
       prioritizeFoodDrink:
@@ -5556,7 +5575,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       targetPlayerIds: supportsPlayer
         ? [
             this.secondaryActionTargetPlayerId,
-            isAdditionalInspectTarget
+            hasAdditionalTarget
               ? this.secondaryInspectSecondTargetPlayerId
               : null
           ].filter((id): id is string => id !== null)

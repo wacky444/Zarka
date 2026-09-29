@@ -29,6 +29,8 @@ export interface PlayerCharacter {
   remoteView?: PlayerRemoteView;
   /** Character positions revealed by activated cameras for one turn. */
   cameraView?: PlayerCameraView;
+  /** Current locations reported by trackers available to this character. */
+  trackerViews?: PlayerTrackerView[];
   /** Turn in which a coward character became visible by acting. */
   cowardRevealedTurn?: number;
 }
@@ -41,6 +43,13 @@ export interface PlayerRemoteView {
 export interface PlayerCameraView {
   playerIds: string[];
   turn: number;
+}
+
+export interface PlayerTrackerView {
+  trackerId: string;
+  coord: Axial;
+  targetPlayerId?: string;
+  expiresTurn: number;
 }
 
 export interface PlayerCharacterUnknown {

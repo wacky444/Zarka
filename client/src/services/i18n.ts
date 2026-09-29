@@ -143,6 +143,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Target Location": "Ubicación objetivo",
   "Target Player": "Jugador objetivo",
   "Second Target Player": "Segundo jugador objetivo",
+  "Second tracker target player": "Jugador objetivo del segundo localizador",
+  "Additional inspected player": "Jugador inspeccionado adicional",
   "Second Shot Target Player": "Objetivo del segundo disparo",
   "Second Shot Destination": "Destino del segundo disparo",
   "None selected": "Ninguno seleccionado",
@@ -591,6 +593,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Missing pistol, bullet": "Faltan la pistola y la bala",
   "Missing bandage": "Falta la venda",
   "Missing medicine": "Falta el medicamento",
+  "Missing tracker": "Falta el localizador",
   "Missing throwable item": "Falta un objeto para lanzar",
   "Missing 2 units of fuel": "Faltan 2 unidades de combustible",
   "Not visible": "No visible",
@@ -604,6 +607,10 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "[ ] Single target (Area)": "[ ] Objetivo único (área)",
   "[x] Single target": "[x] Objetivo único",
   "[x] Single target (Area)": "[x] Objetivo único (área)",
+  "[ ] Place second tracker on another player":
+    "[ ] Poner segundo localizador a otro jugador",
+  "[x] Place second tracker on another player":
+    "[x] Poner segundo localizador a otro jugador",
   "No replays yet.": "Todavía no hay repeticiones.",
   Play: "Reproducir",
   "Not Implemented": "No implementado",
@@ -668,6 +675,15 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   "Usar medicamento": "Use medicine",
   Hablar: "Talk",
   "Poner localizador": "Place tracker",
+  "Requiere disponer de un localizador.": "Requires a tracker.",
+  "Informa de la posición del objetivo durante 6 turnos; un jugador autorizado también puede recibir la señal si ambos tienen walkie talkie.":
+    "Reports the target's position for six turns; an authorized player also receives the signal if both have walkie-talkies.",
+  "Permite colocar un segundo localizador en el mismo personaje o en otro.":
+    "Allows placing a second tracker on the same or a different character.",
+  "Puede colocarse en la localización actual o en una adyacente.":
+    "Can be placed on a character in the current or an adjacent location.",
+  "En una localización adyacente, sin prismáticos o un aliado con walkie talkie, se desconoce la identidad del objetivo.":
+    "At an adjacent location, the target's identity remains unknown unless you have binoculars or an ally there with a walkie-talkie.",
   "Colocar C4": "Place C4",
   "Colocar trampa": "Place trap",
   Proteger: "Protect",

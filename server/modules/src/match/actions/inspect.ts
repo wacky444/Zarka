@@ -50,6 +50,37 @@ function getCarriedItemTypes(character: PlayerCharacter): string[] {
   return types;
 }
 
+function recoverAttachedTracker(
+  target: PlayerCharacter,
+  match: MatchRecord,
+): boolean {
+  const tracker = match.trackers?.find(
+    (entry) =>
+      entry.targetId === target.id && entry.discoveredByTarget !== true,
+  );
+  if (!tracker) {
+    return false;
+  }
+  target.inventory = target.inventory ?? { carriedItems: [] };
+  target.inventory.carriedItems = Array.isArray(target.inventory.carriedItems)
+    ? target.inventory.carriedItems
+    : [];
+  const carriedTracker = target.inventory.carriedItems.find(
+    (item) => item.itemId === "tracker",
+  );
+  if (carriedTracker) {
+    carriedTracker.quantity += 1;
+  } else {
+    target.inventory.carriedItems.push({
+      itemId: "tracker",
+      quantity: 1,
+      weight: 0,
+    });
+  }
+  tracker.discoveredByTarget = true;
+  return true;
+}
+
 function revealItems(
   inspector: PlayerCharacter,
   targetId: string,
@@ -116,6 +147,7 @@ export class InspectAction extends BaseAction {
         newlyRevealed: string[];
         carriedItemTypes: string[];
       }> = [];
+      let foundTracker = false;
       for (const target of targets) {
         const revealed = revealItems(
           participant.character,
@@ -123,6 +155,15 @@ export class InspectAction extends BaseAction {
           target.character,
           itemLimit,
         );
+        if (
+          target.id === participant.playerId &&
+          recoverAttachedTracker(target.character, match)
+        ) {
+          foundTracker = true;
+          if (!revealed.newlyRevealed.includes("tracker")) {
+            revealed.newlyRevealed.push("tracker");
+          }
+        }
         revealedByTarget.push({
           targetId: target.id,
           newlyRevealed: revealed.newlyRevealed,
@@ -144,6 +185,9 @@ export class InspectAction extends BaseAction {
       }
       metadata.revealedItemTypes = allNewlyRevealed;
       metadata.revealedCount = allNewlyRevealed.length;
+      if (foundTracker) {
+        metadata.trackerFound = true;
+      }
       metadata.inspectAdditionalTarget = inspectAdditionalTarget;
       if (revealedByTarget.length > 0) {
         metadata.targetPlayerIds = revealedByTarget.map((entry) => entry.targetId);
