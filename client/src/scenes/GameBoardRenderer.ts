@@ -815,11 +815,29 @@ export class GameBoardRenderer {
         x: (from.x + to.x) / 2,
         y: (from.y + to.y) / 2,
       };
+      const deltaX = to.x - from.x;
+      const deltaY = to.y - from.y;
+      const centerDistance = Math.hypot(deltaX, deltaY);
+      if (!Number.isFinite(centerDistance) || centerDistance === 0) {
+        continue;
+      }
+      // Adjacent hex centers are √3 times one hex side apart.
+      const halfWallLength = centerDistance / (2 * Math.sqrt(3));
+      const perpendicularX = -deltaY / centerDistance;
+      const perpendicularY = deltaX / centerDistance;
+      const wallStart = {
+        x: midpoint.x - perpendicularX * halfWallLength,
+        y: midpoint.y - perpendicularY * halfWallLength,
+      };
+      const wallEnd = {
+        x: midpoint.x + perpendicularX * halfWallLength,
+        y: midpoint.y + perpendicularY * halfWallLength,
+      };
       const visual = this.scene.add.graphics();
       visual.lineStyle(7, 0xd65858, 0.9);
       visual.beginPath();
-      visual.moveTo(from.x, from.y);
-      visual.lineTo(to.x, to.y);
+      visual.moveTo(wallStart.x, wallStart.y);
+      visual.lineTo(wallEnd.x, wallEnd.y);
       visual.strokePath();
       visual.fillStyle(0xf97373, 1);
       visual.fillCircle(midpoint.x, midpoint.y, 7);
