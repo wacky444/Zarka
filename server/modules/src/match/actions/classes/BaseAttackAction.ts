@@ -89,6 +89,7 @@ export abstract class BaseAttackAction extends BaseAction {
       }
       const definition = actionId ? ActionLibrary[actionId] : undefined;
       const targets = collectTargets(actionId, participant, match, {
+        deadCharacterPolicy: "exclude",
         allowMultiple: definition?.tags?.indexOf("Area") !== -1,
       });
       const targetEntries: ReplayActionTarget[] = [];

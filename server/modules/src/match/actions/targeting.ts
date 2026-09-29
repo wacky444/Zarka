@@ -7,7 +7,11 @@ import {
 } from "@shared";
 import { axialDistance } from "../../utils/location";
 import type { MatchRecord } from "../../models/types";
-import type { PlannedActionParticipant } from "./utils";
+import {
+  matchesDeadCharacterPolicy,
+  type DeadCharacterTargetPolicy,
+  type PlannedActionParticipant,
+} from "./utils";
 
 export interface TargetCandidate {
   id: string;
@@ -17,6 +21,7 @@ export interface TargetCandidate {
 }
 
 export interface CollectTargetsOptions {
+  deadCharacterPolicy: DeadCharacterTargetPolicy;
   filter?: (candidate: TargetCandidate) => boolean;
   allowMultiple?: boolean;
   includeSelf?: boolean;
@@ -55,7 +60,7 @@ export function collectTargets(
   actionId: ActionId,
   participant: PlannedActionParticipant,
   match: MatchRecord,
-  options: CollectTargetsOptions = {}
+  options: CollectTargetsOptions
 ): TargetCandidate[] {
   const definition = ActionLibrary[actionId];
   let allowed =
@@ -91,9 +96,12 @@ export function collectTargets(
   if (candidates.length === 0) {
     return [];
   }
+  const deadPolicyCandidates = candidates.filter((candidate) =>
+    matchesDeadCharacterPolicy(candidate.character, options.deadCharacterPolicy)
+  );
   let filtered = options.filter
-    ? candidates.filter((candidate) => options.filter!(candidate))
-    : candidates.slice();
+    ? deadPolicyCandidates.filter((candidate) => options.filter!(candidate))
+    : deadPolicyCandidates;
   if (filtered.length === 0) {
     return [];
   }

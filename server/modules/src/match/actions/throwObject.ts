@@ -18,7 +18,6 @@ import {
 } from "@shared";
 import type { MatchRecord } from "../../models/types";
 import { getUsableExtraExecutions } from "../../utils/energy";
-import { isCharacterDead } from "../../utils/playerCharacter";
 import { collectTargets } from "./targeting";
 import {
   applyHealthDelta,
@@ -238,9 +237,9 @@ export class ThrowObjectAction extends BaseAction {
         participant,
         match,
         {
+          deadCharacterPolicy: "exclude",
           allowMultiple: true,
           filter: (candidate) =>
-            !isCharacterDead(candidate.character) &&
             candidate.coord.q === targetCoord.q &&
             candidate.coord.r === targetCoord.r,
         }

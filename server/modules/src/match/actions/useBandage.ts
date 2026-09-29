@@ -42,7 +42,9 @@ export class UseBandageAction extends BaseAction {
         }
         continue;
       }
-      const targets = collectPlanTargetIds(participant, match);
+      const targets = collectPlanTargetIds(participant, match, {
+        deadCharacterPolicy: "exclude",
+      });
       const appliedTargets: ReplayActionTarget[] = [];
       for (const targetId of targets) {
         const target = match.playerCharacters?.[targetId];

@@ -69,7 +69,9 @@ export class UseMedicineAction extends BaseAction {
       }
 
       const healedPerTarget = MEDICINE_HEAL_AMOUNT * medicinesConsumed;
-      const targets = collectPlanTargetIds(participant, match);
+      const targets = collectPlanTargetIds(participant, match, {
+        deadCharacterPolicy: "exclude",
+      });
       const appliedTargets: ReplayActionTarget[] = [];
       for (const targetId of targets) {
         const target = match.playerCharacters?.[targetId];

@@ -20,6 +20,7 @@ import type { MatchRecord } from "../../models/types";
 import { isCharacterDead } from "../../utils/playerCharacter";
 
 export type PlannedActionKey = "main" | "secondary" | "extraSecondary";
+export type DeadCharacterTargetPolicy = "include" | "exclude" | "onlyDead";
 
 const INJURED_MAX_HP = 5;
 
@@ -149,6 +150,7 @@ export function sortParticipantsBySpeed<T extends PlannedActionParticipant>(
 }
 
 export interface PlanTargetOptions {
+  deadCharacterPolicy: DeadCharacterTargetPolicy;
   fallbackToSelf?: boolean;
 }
 
@@ -157,10 +159,18 @@ export interface PlanDestination {
   coord: Axial;
 }
 
+export function matchesDeadCharacterPolicy(
+  character: PlayerCharacter,
+  policy: DeadCharacterTargetPolicy
+): boolean {
+  const isDead = isCharacterDead(character);
+  return policy === "include" || (policy === "onlyDead" ? isDead : !isDead);
+}
+
 export function collectPlanTargetIds(
   participant: PlannedActionParticipant,
   match: MatchRecord,
-  options?: PlanTargetOptions
+  options: PlanTargetOptions
 ): string[] {
   const characters = match.playerCharacters ?? {};
   const requested = participant.plan.targetPlayerIds ?? [];
@@ -169,14 +179,25 @@ export function collectPlanTargetIds(
     if (typeof candidate !== "string" || candidate.trim().length === 0) {
       continue;
     }
-    if (!characters[candidate]) {
+    const character = characters[candidate];
+    if (
+      !character ||
+      !matchesDeadCharacterPolicy(character, options.deadCharacterPolicy)
+    ) {
       continue;
     }
     if (targets.indexOf(candidate) === -1) {
       targets.push(candidate);
     }
   }
-  if (targets.length === 0 && options?.fallbackToSelf !== false) {
+  if (
+    requested.length === 0 &&
+    options.fallbackToSelf !== false &&
+    matchesDeadCharacterPolicy(
+      participant.character,
+      options.deadCharacterPolicy
+    )
+  ) {
     targets.push(participant.playerId);
   }
   return targets;

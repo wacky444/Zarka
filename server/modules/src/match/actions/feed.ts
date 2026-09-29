@@ -19,6 +19,7 @@ import {
   type PlannedActionParticipant
 } from "./utils";
 import { getAvailableEnergy } from "../../utils/energy";
+import { collectTargets } from "./targeting";
 import { BaseAction } from "./classes/BaseAction";
 
 const FEED_ITEM_PRIORITY: ItemId[] = ["food", "drink"];
@@ -56,25 +57,23 @@ function findCorpse(
   match: MatchRecord
 ): PlayerCharacter | null {
   const tileId = character.position?.tileId;
-  if (!tileId || !match.playerCharacters) {
+  if (!tileId) {
     return null;
   }
-  for (const playerId in match.playerCharacters) {
-    if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, playerId)) {
-      continue;
-    }
-    const corpse = match.playerCharacters[playerId];
-    if (
-      corpse.id !== character.id &&
-      corpse.position?.tileId === tileId &&
-      Array.isArray(corpse.statuses?.conditions) &&
-      corpse.statuses.conditions.indexOf("dead") !== -1 &&
-      getCorpseRations(corpse) > 0
-    ) {
-      return corpse;
-    }
-  }
-  return null;
+  const participant: PlannedActionParticipant = {
+    playerId: character.id,
+    character,
+    plan: { actionId: "feed" },
+    planKey: "secondary",
+  };
+  const candidate = collectTargets("feed", participant, match, {
+    deadCharacterPolicy: "onlyDead",
+    allowMultiple: false,
+    filter: (target) =>
+      target.character.position?.tileId === tileId &&
+      getCorpseRations(target.character) > 0,
+  })[0];
+  return candidate?.character ?? null;
 }
 
 function canEatCorpse(character: PlayerCharacter, match: MatchRecord): boolean {

@@ -109,8 +109,8 @@ export class ShootPistolAction extends BaseAction {
           shotParticipant,
           match,
           {
+            deadCharacterPolicy: "exclude",
             allowMultiple: false,
-            filter: (candidate) => !isCharacterDead(candidate.character),
           }
         )[0];
         if (!targetCandidate) {

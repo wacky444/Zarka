@@ -107,6 +107,7 @@ export class InspectAction extends BaseAction {
         ? ITEMS_PER_INSPECTION
         : ITEMS_PER_INSPECTION * (1 + extraExecutions);
       const targets = collectTargets(actionId, participant, match, {
+        deadCharacterPolicy: "include",
         allowMultiple: inspectAdditionalTarget,
         includeSelf: true,
       });

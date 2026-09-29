@@ -50,6 +50,7 @@ export class ChemicalWeaponAction extends BaseAction {
 
       const baseDamage = isSingleTarget ? DAMAGE_SINGLE_TARGET : DAMAGE_AREA;
       const targets = collectTargets(actionId, participant, match, {
+        deadCharacterPolicy: "exclude",
         allowMultiple: !isSingleTarget,
         filter: (candidate) => candidate.distance === 0,
       });

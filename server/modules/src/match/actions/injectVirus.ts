@@ -14,7 +14,6 @@ import {
   type PlannedActionParticipant,
 } from "./utils";
 import { BaseAction } from "./classes/BaseAction";
-import { isCharacterDead } from "../../utils/playerCharacter";
 
 function ensureVirusCondition(
   character: PlannedActionParticipant["character"],
@@ -54,7 +53,9 @@ export class InjectVirusAction extends BaseAction {
         continue;
       }
 
-      const targetIds = collectPlanTargetIds(participant, match);
+      const targetIds = collectPlanTargetIds(participant, match, {
+        deadCharacterPolicy: "exclude",
+      });
       const targetId = targetIds[0];
       const target = targetId
         ? match.playerCharacters?.[targetId]
@@ -64,7 +65,6 @@ export class InjectVirusAction extends BaseAction {
       const sameLocation =
         !!origin &&
         !!targetCoord &&
-        !isCharacterDead(target) &&
         origin.q === targetCoord.q &&
         origin.r === targetCoord.r;
       const consumed = consumeCarriedItem(participant.character, "virus");

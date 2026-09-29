@@ -79,6 +79,7 @@ export class ScareAction extends BaseAction {
         true
       );
       const selection = collectTargets(actionId, participant, match, {
+        deadCharacterPolicy: "exclude",
         allowMultiple: extraExecutions > 0,
         filter: (candidate) =>
           !isTargetProtected(candidate.character) &&

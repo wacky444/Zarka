@@ -55,7 +55,9 @@ export class ProtectAction extends BaseAction {
         this.clearPlan(participant);
         continue;
       }
-      const targets = collectPlanTargetIds(participant, match);
+      const targets = collectPlanTargetIds(participant, match, {
+        deadCharacterPolicy: "exclude",
+      });
       const appliedTargets: ReplayActionTarget[] = [];
       for (const targetId of targets) {
         const target = match.playerCharacters?.[targetId];

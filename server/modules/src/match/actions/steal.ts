@@ -179,6 +179,7 @@ export class StealAction extends BaseAction {
       }
 
       const targetCandidate = collectTargets(actionId, participant, match, {
+        deadCharacterPolicy: "include",
         allowMultiple: false,
       })[0];
       const target =

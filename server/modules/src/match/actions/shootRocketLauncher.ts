@@ -20,6 +20,7 @@ import {
   buildGuardedEffectMask,
   consumeCarriedItem,
   isTargetProtected,
+  matchesDeadCharacterPolicy,
   mergeCharacterState,
   getInventoryDamageReduction,
   resolveGuardedDamage,
@@ -89,6 +90,7 @@ export class ShootRocketLauncherAction extends BaseAction {
         const character = characters[targetId];
         const characterCoord = character.position?.coord;
         if (
+          !matchesDeadCharacterPolicy(character, "exclude") &&
           characterCoord?.q === target.q &&
           characterCoord.r === target.r &&
           !isCharacterHidden(character, currentTurn)
@@ -103,6 +105,7 @@ export class ShootRocketLauncherAction extends BaseAction {
         const character = characters[targetId];
         const characterCoord = character.position?.coord;
         if (
+          matchesDeadCharacterPolicy(character, "exclude") ||
           !characterCoord ||
           characterCoord.q !== target.q ||
           characterCoord.r !== target.r ||

@@ -73,6 +73,7 @@ export class ShootHarpoonAction extends BaseAction {
       consumeCarriedItem(participant.character, "arrow", arrowsConsumed);
 
       const targets = collectTargets(actionId, participant, match, {
+        deadCharacterPolicy: "exclude",
         allowMultiple: false,
       });
 

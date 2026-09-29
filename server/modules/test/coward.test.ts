@@ -165,6 +165,7 @@ test("single-target attacks skip a hidden player when a visible target is availa
   };
 
   const targets = collectTargets(ActionLibrary.punch.id, participant, match, {
+    deadCharacterPolicy: "exclude",
     allowMultiple: false,
   });
 
@@ -190,7 +191,7 @@ test("bat attacks include hidden players and hidden-only locations can still be 
     ActionLibrary.bat_attack.id,
     batParticipant,
     match,
-    { allowMultiple: true }
+    { deadCharacterPolicy: "exclude", allowMultiple: true }
   );
 
   assert.deepEqual(
@@ -212,7 +213,7 @@ test("bat attacks include hidden players and hidden-only locations can still be 
     ActionLibrary.punch.id,
     punchParticipant,
     hiddenOnlyMatch,
-    { allowMultiple: false }
+    { deadCharacterPolicy: "exclude", allowMultiple: false }
   );
   assert.deepEqual(hiddenOnlyTargets.map((target) => target.id), ["coward"]);
 });

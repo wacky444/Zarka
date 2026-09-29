@@ -109,6 +109,19 @@ test("extra pistol execution is a second shot and retargets if the first target 
   );
 });
 
+test("pistol skips an explicitly selected dead character and retargets a living one", () => {
+  const { firstTarget, secondTarget, match, participant } = createMatch();
+  firstTarget.stats.health.current = 0;
+  firstTarget.statuses.conditions.push("dead");
+  participant.plan.extraExecutions = 0;
+
+  const event = pistolEvent(executeShootPistolAction([participant], match));
+
+  assert.deepEqual(event.targets?.map((target) => target.targetId), [secondTarget.id]);
+  assert.equal(event.targets?.[0]?.damageTaken, 10);
+  assert.equal(isCharacterDead(firstTarget), true);
+});
+
 test("two pistol shots may target the same player while they remain alive", () => {
   const { firstTarget, match, participant } = createMatch(20);
   firstTarget.stats.health.max = 20;
