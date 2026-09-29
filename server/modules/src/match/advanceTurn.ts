@@ -338,7 +338,7 @@ export function advanceTurn(
   // removeProtectedState(match);
 
   applyTestaments(match, replayEvents);
-  refreshTrackerViews(match, resolvedTurn);
+  refreshTrackerViews(match, resolvedTurn, logger);
   appendHiddenStatusEvents(match, resolvedTurn, replayEvents);
   recordMatchReportProgress(match);
   if (nk) {

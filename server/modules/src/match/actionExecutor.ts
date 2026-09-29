@@ -790,7 +790,7 @@ export function executeAction(
         match,
         logger,
       );
-      const actionEvents = executePlaceTrackerAction(participants, match);
+      const actionEvents = executePlaceTrackerAction(participants, match, logger);
       eventsForAction = energyEvents.length
         ? [...energyEvents, ...actionEvents]
         : actionEvents;

@@ -302,6 +302,41 @@ export function updateReadyStateRpc(
     }
   }
 
+  const tailoredPlayerCharacters = tailorPlayerCharactersForViewer(
+    match.playerCharacters,
+    ctx.userId,
+    viewAll,
+    match.current_turn,
+  );
+  const trackerViews =
+    tailoredPlayerCharacters?.[ctx.userId]?.trackerViews ?? [];
+  logger.debug(
+    "update_ready_state tracker payload match=%s viewer=%s turn=%d advanced=%s trackers=%s views=%s visible_positions=%s",
+    matchId,
+    ctx.userId,
+    match.current_turn ?? 0,
+    advanced,
+    JSON.stringify(
+      (match.trackers ?? []).map((tracker) => ({
+        id: tracker.id,
+        ownerId: tracker.ownerId,
+        targetId: tracker.targetId,
+        placedTurn: tracker.placedTurn,
+        expiresTurn: tracker.expiresTurn,
+      })),
+    ),
+    JSON.stringify(trackerViews),
+    JSON.stringify(
+      Object.fromEntries(
+        Object.entries(tailoredPlayerCharacters ?? {}).map(
+          ([playerId, character]) => [
+            playerId,
+            character.position?.coord ?? null,
+          ],
+        ),
+      ),
+    ),
+  );
   const response: import("@shared").UpdateReadyStatePayload = {
     ok: true,
     match_id: matchId,
@@ -312,12 +347,7 @@ export function updateReadyStateRpc(
     deadCharacters: match.deadCharacters,
     advanced,
     lastAutoAdvanceAt: match.lastAutoAdvanceAt,
-    playerCharacters: tailorPlayerCharactersForViewer(
-      match.playerCharacters,
-      ctx.userId,
-      viewAll,
-      match.current_turn,
-    ),
+    playerCharacters: tailoredPlayerCharacters,
     map: viewAll ? match.map : tailorMapForCharacter(match.map, viewerCharacter),
     items: viewAll
       ? match.items

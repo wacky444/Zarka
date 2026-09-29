@@ -183,7 +183,7 @@ export class PlaceTrackerAction extends BaseAction {
   protected processRoster(
     roster: PlannedActionParticipant[],
     match: MatchRecord,
-    _logger?: nkruntime.Logger,
+    logger?: nkruntime.Logger,
   ): ReplayPlayerEvent[] {
     const events: ReplayPlayerEvent[] = [];
     const resolvedTurn = (match.current_turn ?? 0) + 1;
@@ -194,6 +194,12 @@ export class PlaceTrackerAction extends BaseAction {
         continue;
       }
       if (!hasCarriedItem(participant.character, "tracker")) {
+        logger?.debug(
+          "place_tracker failed match=%s turn=%d owner=%s reason=missing_item",
+          match.match_id,
+          resolvedTurn,
+          participant.playerId,
+        );
         this.clearPlan(participant);
         if (match.playerCharacters) {
           match.playerCharacters[participant.playerId] = participant.character;
@@ -264,11 +270,37 @@ export class PlaceTrackerAction extends BaseAction {
         placedCount += 1;
       }
 
+      logger?.debug(
+        "place_tracker resolved match=%s turn=%d owner=%s placed=%d owned_trackers=%s",
+        match.match_id,
+        resolvedTurn,
+        participant.playerId,
+        placedCount,
+        JSON.stringify(
+          trackers
+            .filter((tracker) => tracker.ownerId === participant.playerId)
+            .map((tracker) => ({
+              id: tracker.id,
+              targetId: tracker.targetId,
+              targetIdKnownToOwner: tracker.targetIdKnownToOwner,
+              placedTurn: tracker.placedTurn,
+              expiresTurn: tracker.expiresTurn,
+            })),
+        ),
+      );
       this.clearPlan(participant);
       if (match.playerCharacters) {
         match.playerCharacters[participant.playerId] = participant.character;
       }
       if (placedCount === 0) {
+        logger?.debug(
+          "place_tracker failed match=%s turn=%d owner=%s reason=invalid_target requested_targets=%s requested_location=%s",
+          match.match_id,
+          resolvedTurn,
+          participant.playerId,
+          JSON.stringify(requestedTargetIds),
+          JSON.stringify(requestedLocation ?? null),
+        );
         events.push(
           createPrivateFailureEvent(participant, actionId, "invalid_target"),
         );
@@ -303,6 +335,7 @@ const placeTrackerAction = new PlaceTrackerAction();
 export function executePlaceTrackerAction(
   participants: PlannedActionParticipant[],
   match: MatchRecord,
+  logger?: nkruntime.Logger,
 ): ReplayPlayerEvent[] {
-  return placeTrackerAction.execute(participants, match);
+  return placeTrackerAction.execute(participants, match, logger);
 }

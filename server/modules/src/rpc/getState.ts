@@ -57,6 +57,31 @@ export function getStateRpc(
   const viewAll = json.view_all === true && isAdminUser(nk, viewerId);
   const tailoredMatch = tailorMatchForPlayer(match, viewerId, viewAll);
   const visibleCharacters = tailoredMatch.playerCharacters;
+  const trackerViews = visibleCharacters?.[viewerId ?? ""]?.trackerViews ?? [];
+  logger.debug(
+    "get_state tracker payload match=%s viewer=%s turn=%d stored_trackers=%s viewer_views=%s visible_positions=%s",
+    matchId,
+    viewerId ?? "unknown",
+    match.current_turn ?? 0,
+    JSON.stringify(
+      (match.trackers ?? []).map((tracker) => ({
+        id: tracker.id,
+        ownerId: tracker.ownerId,
+        targetId: tracker.targetId,
+        placedTurn: tracker.placedTurn,
+        expiresTurn: tracker.expiresTurn,
+      })),
+    ),
+    JSON.stringify(trackerViews),
+    JSON.stringify(
+      Object.fromEntries(
+        Object.entries(visibleCharacters ?? {}).map(([playerId, character]) => [
+          playerId,
+          character.position?.coord ?? null,
+        ]),
+      ),
+    ),
+  );
   if (visibleCharacters) {
     for (const playerId in visibleCharacters) {
       if (!Object.prototype.hasOwnProperty.call(visibleCharacters, playerId)) {

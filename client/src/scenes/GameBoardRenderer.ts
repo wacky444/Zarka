@@ -1074,6 +1074,10 @@ export class GameBoardRenderer {
   private renderTrackerMarkers(match: MatchRecord): void {
     const currentUserId = this.callbacks.getCurrentUserId();
     if (!currentUserId) {
+      console.info("[tracker] marker render skipped", {
+        reason: "missing_viewer_id",
+        matchTurn: match.current_turn ?? 0,
+      });
       return;
     }
     const currentTurn = this.getCurrentTurn();
@@ -1102,6 +1106,31 @@ export class GameBoardRenderer {
       }
     }
 
+    console.info("[tracker] map marker render", {
+      viewerId: currentUserId,
+      matchTurn: match.current_turn ?? 0,
+      renderTurn: currentTurn,
+      replayView: this.callbacks.getReplayView() !== null,
+      mapRenderingPaused: this.mapRenderingPaused,
+      views: views.map((view) => ({
+        trackerId: view.trackerId,
+        targetPlayerId: view.targetPlayerId,
+        coord: view.coord,
+        expiresTurn: view.expiresTurn,
+        active:
+          Number.isFinite(view.coord?.q) &&
+          Number.isFinite(view.coord?.r) &&
+          Number.isFinite(view.expiresTurn) &&
+          view.expiresTurn >= currentTurn,
+      })),
+      markers: [...markersByCoord.values()].map(({ coord, targetIds }) => ({
+        coord,
+        targetIds: [...targetIds],
+        names: [...targetIds].map((playerId) =>
+          this.callbacks.getPlayerName(playerId),
+        ),
+      })),
+    });
     for (const { coord, targetIds } of markersByCoord.values()) {
       const world = this.axialToWorld(coord);
       const ring = this.scene.add.graphics();

@@ -8,6 +8,7 @@ import {
   OPCODE_READY_STATE_UPDATE,
   OPCODE_SETTINGS_UPDATE,
   OPCODE_TURN_ADVANCED,
+  type PlayerCharacter,
 } from "@shared";
 import { AsyncTurnState } from "../../models/types";
 import { buildMatchLabel } from "../../utils/label";
@@ -260,18 +261,41 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
                 viewDistance,
                 viewAll,
               );
+              const tailoredPlayerCharacters: Record<
+                string,
+                PlayerCharacter
+              > | undefined = viewAll
+                ? msg.playerCharacters
+                : tailorPlayerCharactersForViewer(
+                    msg.playerCharacters,
+                    playerId,
+                    false,
+                    msg.turn,
+                  );
+              const trackerViews =
+                tailoredPlayerCharacters?.[playerId]?.trackerViews ?? [];
+              logger.debug(
+                "turn_advanced tracker payload match=%s viewer=%s turn=%d views=%s visible_positions=%s",
+                state.game_id,
+                playerId,
+                typeof msg.turn === "number" ? msg.turn : 0,
+                JSON.stringify(trackerViews),
+                JSON.stringify(
+                  Object.fromEntries(
+                    Object.entries(tailoredPlayerCharacters ?? {}).map(
+                      ([visiblePlayerId, character]) => [
+                        visiblePlayerId,
+                        character.position?.coord ?? null,
+                      ],
+                    ),
+                  ),
+                ),
+              );
               const payload = JSON.stringify({
                 ...payloadBase,
                 viewDistance: viewAll ? Number.MAX_VALUE : viewDistance,
                 replay: tailored,
-                playerCharacters: viewAll
-                  ? msg.playerCharacters
-                  : tailorPlayerCharactersForViewer(
-                      msg.playerCharacters,
-                      playerId,
-                      false,
-                      msg.turn,
-                    ),
+                playerCharacters: tailoredPlayerCharacters,
                 map: viewAll
                   ? msg.map
                   : tailorMapForCharacter(
@@ -295,7 +319,14 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
               );
             }
           }
-        } catch {}
+        } catch (error) {
+          logger.warn(
+            "turn_advanced signal failed match=%s turn=%s error=%v",
+            state.game_id,
+            msg.turn,
+            error,
+          );
+        }
       } else if (msg && msg.type === "ready_state_changed") {
         try {
           const payload = JSON.stringify({

@@ -60,14 +60,23 @@ function isValidTrackerRecord(
 export function refreshTrackerViews(
   match: MatchRecord,
   resolvedTurn: number,
+  logger?: nkruntime.Logger,
 ): void {
   const characters = match.playerCharacters;
   if (!characters) {
+    logger?.debug(
+      "tracker_views refresh match=%s turn=%d skipped=no_player_characters trackers=%d",
+      match.match_id,
+      resolvedTurn,
+      match.trackers?.length ?? 0,
+    );
     return;
   }
 
-  const allTrackers = (Array.isArray(match.trackers) ? match.trackers : [])
-    .filter((tracker) => isValidTrackerRecord(tracker, resolvedTurn));
+  const rawTrackers = Array.isArray(match.trackers) ? match.trackers : [];
+  const allTrackers = rawTrackers.filter((tracker) =>
+    isValidTrackerRecord(tracker, resolvedTurn),
+  );
   const retainedTrackers = allTrackers.filter(
     (tracker) =>
       tracker.expiresTurn >= resolvedTurn ||
@@ -117,5 +126,45 @@ export function refreshTrackerViews(
       }
       receiver.trackerViews = [...(receiver.trackerViews ?? []), view];
     }
+  }
+
+  if (logger) {
+    const activeTrackerRecords = new Set(activeTrackers);
+    const trackerDetails = rawTrackers.map((tracker) => {
+      const targetId =
+        typeof tracker?.targetId === "string" ? tracker.targetId : undefined;
+      const targetCoord = targetId
+        ? characters[targetId]?.position?.coord
+        : undefined;
+      return {
+        trackerId: tracker?.id ?? null,
+        ownerId: tracker?.ownerId ?? null,
+        targetId: targetId ?? null,
+        targetIdKnownToOwner: tracker?.targetIdKnownToOwner === true,
+        placedTurn: tracker?.placedTurn ?? null,
+        expiresTurn: tracker?.expiresTurn ?? null,
+        valid: allTrackers.includes(tracker),
+        active: activeTrackerRecords.has(tracker),
+        targetCoord: targetCoord
+          ? { q: targetCoord.q, r: targetCoord.r }
+          : null,
+      };
+    });
+    const receiverViews: Record<string, PlayerTrackerView[]> = {};
+    for (const [receiverId, character] of Object.entries(characters)) {
+      if (character.trackerViews?.length) {
+        receiverViews[receiverId] = character.trackerViews;
+      }
+    }
+    logger.debug(
+      "tracker_views refreshed match=%s turn=%d total=%d valid=%d active=%d trackers=%s receiver_views=%s",
+      match.match_id,
+      resolvedTurn,
+      rawTrackers.length,
+      allTrackers.length,
+      activeTrackers.length,
+      JSON.stringify(trackerDetails),
+      JSON.stringify(receiverViews),
+    );
   }
 }
