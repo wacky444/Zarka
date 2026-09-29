@@ -137,6 +137,52 @@ test("placing a tracker consumes it and reports known target position for six tu
   assert.equal(targetView.playerCharacters[actor.id]?.trackerViews, undefined);
 });
 
+test("placing a tracker without a target randomly selects a co-located player", () => {
+  const actor = createCharacter("actor", 0, 1);
+  const firstTarget = createCharacter("first-target", 0);
+  const secondTarget = createCharacter("second-target", 0);
+  const match = createMatch([actor, firstTarget, secondTarget], 0);
+  planTracker(actor);
+
+  const events = resolveTrackerAction(match, 1);
+
+  assert.equal(match.trackers?.length, 1);
+  assert.ok(
+    [firstTarget.id, secondTarget.id].includes(match.trackers?.[0]?.targetId ?? ""),
+  );
+  assert.equal(match.trackers?.[0]?.targetIdKnownToOwner, true);
+  assert.equal(actor.inventory.carriedItems.length, 0);
+  assert.equal(events.some((event) => event.action.actionId === "failedAction"), false);
+});
+
+test("missing target player falls back to a random co-located player", () => {
+  const actor = createCharacter("actor", 0, 1);
+  const firstTarget = createCharacter("first-target", 0);
+  const secondTarget = createCharacter("second-target", 0);
+  const match = createMatch([actor, firstTarget, secondTarget], 0);
+  planTracker(actor, ["departed-player"]);
+
+  resolveTrackerAction(match, 1);
+
+  assert.equal(match.trackers?.length, 1);
+  assert.ok(
+    [firstTarget.id, secondTarget.id].includes(match.trackers?.[0]?.targetId ?? ""),
+  );
+});
+
+test("target outside requested location falls back to a random player there", () => {
+  const actor = createCharacter("actor", 0, 1);
+  const selectedTarget = createCharacter("selected-target", 1);
+  const presentTarget = createCharacter("present-target", 0);
+  const match = createMatch([actor, selectedTarget, presentTarget], 0);
+  planTracker(actor, [selectedTarget.id], { q: 0, r: 0 });
+
+  resolveTrackerAction(match, 1);
+
+  assert.equal(match.trackers?.length, 1);
+  assert.equal(match.trackers?.[0]?.targetId, presentTarget.id);
+});
+
 test("adjacent location placement reports position without revealing target identity", () => {
   const actor = createCharacter("actor", 0, 1);
   const target = createCharacter("target", 1);
@@ -233,7 +279,7 @@ test("extra execution may place trackers on two different selected targets", () 
   assert.equal(match.trackers?.[1]?.targetIdKnownToOwner, true);
 });
 
-test("missing tracker or inaccessible selected target fails privately", () => {
+test("missing tracker fails privately", () => {
   const actor = createCharacter("actor", 0);
   const target = createCharacter("target", 1);
   const match = createMatch([actor, target], 1);
@@ -249,6 +295,25 @@ test("missing tracker or inaccessible selected target fails privately", () => {
   });
   assert.equal(failure?.action.metadata?.attemptedActionId, "place_tracker");
   assert.equal(failure?.action.metadata?.reason, "missing_item");
+});
+
+test("unreachable target fails privately when no fallback candidate is available", () => {
+  const actor = createCharacter("actor", 0, 1);
+  const target = createCharacter("target", 2);
+  const match = createMatch([actor, target], 1);
+  planTracker(actor, [target.id]);
+
+  const events = resolveTrackerAction(match, 2);
+  const failure = events.find((event) => event.action.actionId === "failedAction");
+
+  assert.deepEqual(match.trackers, []);
+  assert.equal(actor.inventory.carriedItems[0]?.quantity, 1);
+  assert.deepEqual(failure?.visibility, {
+    scope: "limited",
+    playerIds: [actor.id],
+  });
+  assert.equal(failure?.action.metadata?.attemptedActionId, "place_tracker");
+  assert.equal(failure?.action.metadata?.reason, "invalid_target");
 });
 
 test("expired trackers stop signaling but remain discoverable until inspected", () => {

@@ -104,6 +104,9 @@ function findTrackerTarget(
     return undefined;
   }
   const characters = match.playerCharacters ?? {};
+  const fallbackLocation = isValidCoord(requestedLocation)
+    ? requestedLocation
+    : actorCoord;
   const requestedTarget = requestedTargetId
     ? characters[requestedTargetId]
     : undefined;
@@ -130,15 +133,9 @@ function findTrackerTarget(
         targetIdKnownToOwner: true,
       };
     }
-    if (!requestedLocation || !coordsEqual(requestedCoord, requestedLocation)) {
-      return undefined;
-    }
   }
 
-  if (!isValidCoord(requestedLocation)) {
-    return undefined;
-  }
-  if (axialDistance(actorCoord, requestedLocation) > 1) {
+  if (axialDistance(actorCoord, fallbackLocation) > 1) {
     return undefined;
   }
   let candidates = Object.entries(characters).filter(([playerId, character]) => {
@@ -147,10 +144,10 @@ function findTrackerTarget(
       playerId !== participant.playerId &&
       !isCharacterDead(character) &&
       isValidCoord(coord) &&
-      coordsEqual(coord, requestedLocation)
+      coordsEqual(coord, fallbackLocation)
     );
   });
-  const distance = axialDistance(actorCoord, requestedLocation);
+  const distance = axialDistance(actorCoord, fallbackLocation);
   if (distance === 0) {
     candidates = candidates.filter(
       ([, character]) => !isCharacterHidden(character, resolvedTurn),
@@ -165,16 +162,14 @@ function findTrackerTarget(
   if (!isValidCoord(targetCoord)) {
     return undefined;
   }
-  const targetIdKnownToOwner =
-    candidates.length === 1 &&
-    isTargetVisibleToActor(
-      participant.playerId,
-      participant.character,
-      targetId,
-      target,
-      match,
-      resolvedTurn,
-    );
+  const targetIdKnownToOwner = isTargetVisibleToActor(
+    participant.playerId,
+    participant.character,
+    targetId,
+    target,
+    match,
+    resolvedTurn,
+  );
   return {
     targetId,
     coord: { q: targetCoord.q, r: targetCoord.r },
