@@ -3,6 +3,7 @@ import {
   type GameMap,
   type MatchItemRecord,
   type MatchRecord as SharedMatchRecord,
+  type TrapRecord,
   type PlayerCharacter,
   type PlayerCharacterUnknown
 } from "@shared";
@@ -83,6 +84,20 @@ function filterItemsByDiscoveredLookup(
     return [];
   }
   return filtered.map((item) => ({ ...item }));
+}
+
+export function tailorTrapsForViewer(
+  traps: TrapRecord[] | undefined,
+  viewerId: string | undefined | null,
+  viewAll = false,
+): TrapRecord[] | undefined {
+  if (!Array.isArray(traps) || viewAll) {
+    return traps;
+  }
+  if (!viewerId) {
+    return [];
+  }
+  return traps.filter((trap) => trap.ownerId === viewerId);
 }
 
 function computeViewRange(
@@ -230,6 +245,7 @@ export function tailorMatchForPlayer(
   const items = viewAll
     ? match.items
     : filterItemsByDiscoveredLookup(match.items, discovered);
+  const traps = tailorTrapsForViewer(match.traps, playerId, viewAll);
   const playerCharacters = tailorPlayerCharactersForViewer(
     match.playerCharacters,
     playerId,
@@ -294,6 +310,7 @@ export function tailorMatchForPlayer(
     teamCounts,
     ...(revealedTeamsByPlayerId ? { revealedTeamsByPlayerId } : {}),
     map,
-    items
+    items,
+    traps
   };
 }

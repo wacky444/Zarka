@@ -14,6 +14,7 @@ import {
   tailorMapForCharacter,
   tailorMatchItemsForCharacter,
   tailorPlayerCharactersForViewer,
+  tailorTrapsForViewer,
 } from "../utils/matchView";
 import { isAdminUser } from "../utils/admin";
 
@@ -104,6 +105,7 @@ export function getReplayRpc(
               replay.snapshot.items,
               viewerCharacter,
             ),
+            traps: tailorTrapsForViewer(replay.snapshot.traps, ctx.userId),
             playerCharacters: tailorPlayerCharactersForViewer(
               replay.snapshot.playerCharacters,
               ctx.userId,

@@ -526,6 +526,7 @@ export class GameScene extends Phaser.Scene {
         getCurrentMatch: () => this.currentMatch,
         getReplayView: () => this.replayView,
         getCurrentUserId: () => this.currentUserId,
+        isAdminViewEnabled: () => this.adminViewEnabled,
         getPlayerSkin: (playerId) =>
           this.playerSkinMap.get(playerId) ??
           (playerId === this.currentUserId

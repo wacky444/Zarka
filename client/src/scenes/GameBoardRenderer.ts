@@ -60,6 +60,7 @@ export interface GameBoardRendererCallbacks {
   getCurrentMatch(): MatchRecord | null;
   getReplayView(): BoardReplayView | null;
   getCurrentUserId(): string | null;
+  isAdminViewEnabled(): boolean;
   getPlayerSkin(playerId: string): Skin | undefined;
   getPlayerName(playerId: string): string;
   getLocationSelection(): BoardLocationSelection;
@@ -92,7 +93,9 @@ export class GameBoardRenderer {
     skullShiverTween?: Phaser.Tweens.Tween;
     cellInfoLongPressTimer: Phaser.Time.TimerEvent | null;
   }> = [];
-  private trapVisuals: Phaser.GameObjects.Graphics[] = [];
+  private trapVisuals: Array<
+    Phaser.GameObjects.Graphics | Phaser.GameObjects.Image
+  > = [];
   private trackerMarkers: Array<
     Phaser.GameObjects.Graphics | Phaser.GameObjects.Text
   > = [];
@@ -798,7 +801,14 @@ export class GameBoardRenderer {
 
   renderTraps(traps: TrapRecord[] | undefined): void {
     this.clearTrapVisuals();
+    const currentUserId = this.callbacks.getCurrentUserId();
+    const canSeeAllTraps = this.callbacks.isAdminViewEnabled();
+    const trapTexture = resolveItemTexture(ItemLibrary.trap);
+    const hasTrapTexture = this.scene.textures.exists(trapTexture.texture);
     for (const trap of traps ?? []) {
+      if (!canSeeAllTraps && trap.ownerId !== currentUserId) {
+        continue;
+      }
       const from = this.getTileWorldPosition(trap.from.tileId, trap.from.coord);
       const to = this.getTileWorldPosition(trap.to.tileId, trap.to.coord);
       const midpoint = {
@@ -818,6 +828,18 @@ export class GameBoardRenderer {
       visual.setDepth(4);
       this.uiCamera.ignore(visual);
       this.trapVisuals.push(visual);
+      if (hasTrapTexture) {
+        const icon = this.scene.add.image(
+          midpoint.x,
+          midpoint.y,
+          trapTexture.texture,
+          trapTexture.frame,
+        );
+        icon.setDisplaySize(20, 20);
+        icon.setDepth(5);
+        this.uiCamera.ignore(icon);
+        this.trapVisuals.push(icon);
+      }
     }
     this.applyMapRenderingState();
   }

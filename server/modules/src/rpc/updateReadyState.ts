@@ -14,6 +14,7 @@ import {
   tailorMapForCharacter,
   tailorMatchItemsForCharacter,
   tailorPlayerCharactersForViewer,
+  tailorTrapsForViewer,
 } from "../utils/matchView";
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
 import { resolveTurnForMatch } from "../match/turnResolution";
@@ -321,7 +322,7 @@ export function updateReadyStateRpc(
     items: viewAll
       ? match.items
       : tailorMatchItemsForCharacter(match.items, viewerCharacter),
-    traps: match.traps,
+    traps: tailorTrapsForViewer(match.traps, ctx.userId, viewAll),
   };
 
   return JSON.stringify(response);
