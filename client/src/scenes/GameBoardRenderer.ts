@@ -450,7 +450,9 @@ export class GameBoardRenderer {
         const isUnconscious = Array.isArray(conditions)
           ? conditions.indexOf("unconscious") !== -1
           : false;
-        const isHidden = isCharacterHidden(character, match.current_turn);
+        const isHidden =
+          match.current_turn !== 0 &&
+          isCharacterHidden(character, match.current_turn);
         const playerSkin =
           this.callbacks.getPlayerSkin(playerId) ?? DEFAULT_SKIN;
         let sprite = this.playerSprites.get(playerId);

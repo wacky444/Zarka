@@ -116,6 +116,7 @@ export function tailorPlayerCharactersForViewer(
   }
   const viewerCoord = viewer.position?.coord;
   const viewRange = computeViewRange(viewer);
+  const isInitialSpawnTurn = currentTurn === 0;
   const remoteView =
     typeof currentTurn === "number" && viewer.remoteView?.turn === currentTurn
       ? viewer.remoteView.coord
@@ -134,7 +135,7 @@ export function tailorPlayerCharactersForViewer(
       filtered[id] = candidate;
       continue;
     }
-    if (isCharacterHidden(candidate, currentTurn ?? 0)) {
+    if (!isInitialSpawnTurn && isCharacterHidden(candidate, currentTurn ?? 0)) {
       continue;
     }
     if (!viewerCoord) {
@@ -144,7 +145,8 @@ export function tailorPlayerCharactersForViewer(
     if (!candidateCoord) {
       continue;
     }
-    const isInNormalView = axialDistance(viewerCoord, candidateCoord) <= viewRange;
+    const isInNormalView =
+      isInitialSpawnTurn || axialDistance(viewerCoord, candidateCoord) <= viewRange;
     const isInRemoteView =
       !!remoteView &&
       remoteView.q === candidateCoord.q &&

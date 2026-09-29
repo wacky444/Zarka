@@ -218,6 +218,33 @@ test("bat attacks include hidden players and hidden-only locations can still be 
   assert.deepEqual(hiddenOnlyTargets.map((target) => target.id), ["coward"]);
 });
 
+test("all players see spawn positions on initial turn only", () => {
+  const viewer = createCharacter("viewer", 0);
+  viewer.stats.baseViewRange = 0;
+  const distant = createCharacter("distant", 3);
+  const coward = createCharacter("coward", 4);
+  coward.abilities.push("coward");
+  const match = createMatch([viewer, distant, coward], 5);
+
+  const initialView = tailorPlayerCharactersForViewer(
+    match.playerCharacters,
+    viewer.id,
+    false,
+    0
+  );
+  assert.ok(initialView?.distant);
+  assert.ok(initialView?.coward);
+
+  const laterView = tailorPlayerCharactersForViewer(
+    match.playerCharacters,
+    viewer.id,
+    false,
+    1
+  );
+  assert.equal(laterView?.distant, undefined);
+  assert.equal(laterView?.coward, undefined);
+});
+
 test("viewer tailoring hides cowards even when observed remotely, but reveals them after acting", () => {
   const viewer = createCharacter("viewer", 0);
   const coward = createCharacter("coward", 1);
