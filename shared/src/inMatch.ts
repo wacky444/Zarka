@@ -1,3 +1,5 @@
+export const MAX_BOT_PLAYERS = 20;
+
 export type InMatchSettings = {
   players: number;
   cols: number;

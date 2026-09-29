@@ -3,6 +3,7 @@
 import { DEFAULT_MATCH_NAME } from "../../constants";
 import {
   DEFAULT_REPLAY_VIEW_DISTANCE,
+  MAX_BOT_PLAYERS,
   OPCODE_MATCH_REMOVED,
   OPCODE_MATCH_ENDED,
   OPCODE_READY_STATE_UPDATE,
@@ -33,7 +34,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
         const nrt = validateTime(msg.roundTime);
         const nas =
           typeof msg.autoSkip === "boolean" ? msg.autoSkip : undefined;
-        const nbp = clampNumber(msg.botPlayers, 0, 10);
+        const nbp = clampNumber(msg.botPlayers, 0, MAX_BOT_PLAYERS);
         const nn =
           typeof msg.name === "string"
             ? normalizeMatchName(msg.name, state.name ?? DEFAULT_MATCH_NAME)

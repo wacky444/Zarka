@@ -8,7 +8,7 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { normalizeMatchName } from "../utils/normalize";
 import { clampNumber, validateTime } from "../utils/validation";
-import { assignShrinkScheduleToMap } from "@shared";
+import { MAX_BOT_PLAYERS, assignShrinkScheduleToMap } from "@shared";
 
 export function updateSettingsRpc(
   ctx: nkruntime.Context,
@@ -65,7 +65,11 @@ export function updateSettingsRpc(
   const newRoundTime = validateTime(settings.roundTime);
   const newAutoSkip =
     typeof settings.autoSkip === "boolean" ? settings.autoSkip : undefined;
-  const newBotPlayers = clampNumber(settings.botPlayers, 0, 10);
+  const newBotPlayers = clampNumber(
+    settings.botPlayers,
+    0,
+    MAX_BOT_PLAYERS,
+  );
   const newTurnsToBeAt1Tile = clampNumber(settings.turnsToBeAt1Tile, 1, 500);
   const newName =
     typeof settings.name === "string"

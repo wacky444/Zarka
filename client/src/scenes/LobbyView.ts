@@ -9,7 +9,7 @@ import {
   TimeInputHandle,
   UIButton
 } from "../ui/button";
-import { InMatchSettings } from "@shared";
+import { MAX_BOT_PLAYERS, type InMatchSettings } from "@shared";
 import { t } from "../services/i18n";
 
 type FixWidthSizerInstance = Phaser.GameObjects.GameObject & {
@@ -356,10 +356,10 @@ export class LobbyView {
       0,
       "Bots",
       0,
-      10,
+      MAX_BOT_PLAYERS,
       () => this.botPlayers,
       (v) => {
-        this.botPlayers = Phaser.Math.Clamp(v, 0, 10);
+        this.botPlayers = Phaser.Math.Clamp(v, 0, MAX_BOT_PLAYERS);
         this.emitSettings();
       },
       true,
@@ -643,7 +643,11 @@ export class LobbyView {
       this.autoSkipToggle?.setDisplayValue(this.autoSkip);
     }
     if (typeof partial.botPlayers === "number") {
-      this.botPlayers = Phaser.Math.Clamp(partial.botPlayers, 0, 10);
+      this.botPlayers = Phaser.Math.Clamp(
+        partial.botPlayers,
+        0,
+        MAX_BOT_PLAYERS,
+      );
       this.botPlayersStepper?.setDisplayValue(this.botPlayers);
     }
     if (typeof partial.turnsToBeAt1Tile === "number") {
