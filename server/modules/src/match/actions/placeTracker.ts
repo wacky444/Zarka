@@ -226,6 +226,7 @@ export class PlaceTrackerAction extends BaseAction {
       const requestedTargetIds = participant.plan.targetPlayerIds ?? [];
       const requestedLocation = participant.plan.targetLocationId;
       const targetLocations: Axial[] = [];
+      const trackedTargets: Array<{ targetPlayerId?: string; coord: Axial }> = [];
       let placedCount = 0;
       const trackers = Array.isArray(match.trackers) ? match.trackers : [];
       match.trackers = trackers;
@@ -254,6 +255,12 @@ export class PlaceTrackerAction extends BaseAction {
         };
         trackers.push(tracker);
         targetLocations.push(target.coord);
+        trackedTargets.push({
+          ...(target.targetIdKnownToOwner
+            ? { targetPlayerId: target.targetId }
+            : {}),
+          coord: target.coord,
+        });
         placedCount += 1;
       }
 
@@ -277,6 +284,7 @@ export class PlaceTrackerAction extends BaseAction {
           trackersPlaced: placedCount,
           extraExecutions,
           targetLocations,
+          trackedTargets,
         },
       };
       events.push({

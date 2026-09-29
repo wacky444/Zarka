@@ -181,8 +181,22 @@ export function tailorPlayerCharactersForViewer(
         );
       },
     );
+    const isInTrackerView = (viewer.trackerViews ?? []).some(
+      (trackerView) =>
+        trackerView.targetPlayerId === id &&
+        Number.isFinite(trackerView.expiresTurn) &&
+        trackerView.expiresTurn >= (currentTurn ?? 0) &&
+        trackerView.coord.q === candidateCoord.q &&
+        trackerView.coord.r === candidateCoord.r,
+    );
     const revealedTeamId = viewer.revealedTeamIdsByPlayerId?.[id];
-    if (isInNormalView || isInRemoteView || isInCameraView || isInRadioView) {
+    if (
+      isInNormalView ||
+      isInRemoteView ||
+      isInCameraView ||
+      isInRadioView ||
+      isInTrackerView
+    ) {
       const isDead =
         isCharacterDead(candidate) ||
         (typeof candidate.stats?.health?.current === "number" &&

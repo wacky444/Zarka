@@ -626,13 +626,45 @@ export class CharacterPanelLogView {
         const actionName = definition
           ? t(definition.name)
           : t(this.options.formatActionName(actionId));
+        const trackerMetadata =
+          actionId === "place_tracker"
+            ? (event.action.metadata as { trackedTargets?: unknown } | undefined)
+            : undefined;
+        const trackerTargets: string[] = [];
+        if (Array.isArray(trackerMetadata?.trackedTargets)) {
+          for (const entry of trackerMetadata.trackedTargets) {
+            if (!entry || typeof entry !== "object") {
+              continue;
+            }
+            const trackedTarget = entry as {
+              targetPlayerId?: unknown;
+              coord?: unknown;
+            };
+            const coord = readAxialMetadata(trackedTarget.coord);
+            if (typeof trackedTarget.targetPlayerId === "string") {
+              trackerTargets.push(
+                this.resolvePlayerName(trackedTarget.targetPlayerId)
+              );
+            } else if (coord) {
+              trackerTargets.push(
+                `${t("a player at")} (${coord.q}, ${coord.r})`
+              );
+            }
+          }
+        }
         const trapMetadata =
           actionId === "place_trap"
             ? (event.action.metadata as
                 | { placed?: unknown; triggered?: unknown }
                 | undefined)
             : undefined;
-        if (actionId === "place_trap" && trapMetadata?.triggered === true) {
+        if (actionId === "place_tracker" && trackerTargets.length > 0) {
+          lines.push(
+            `${actor} ${t("placed a tracker on")} ${trackerTargets.join(", ")}`
+          );
+        } else if (actionId === "place_tracker") {
+          lines.push(`${actor} ${t("used")} ${actionName}`);
+        } else if (actionId === "place_trap" && trapMetadata?.triggered === true) {
           const triggererId = event.targets?.[0]?.targetId;
           const triggerer = triggererId
             ? this.resolvePlayerName(triggererId)

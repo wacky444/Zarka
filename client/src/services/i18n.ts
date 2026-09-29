@@ -498,6 +498,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Team: "Equipo",
   team: "equipo",
   used: "usó",
+  "placed a tracker on": "colocó un localizador en",
+  "a player at": "un jugador en",
   "placed a trap": "colocó una trampa",
   "triggered a trap set by": "activó una trampa colocada por",
   received: "recibió",

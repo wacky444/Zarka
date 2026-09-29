@@ -110,6 +110,9 @@ test("placing a tracker consumes it and reports known target position for six tu
     scope: "limited",
     playerIds: [actor.id],
   });
+  assert.deepEqual(events[0]?.action.metadata?.trackedTargets, [
+    { targetPlayerId: target.id, coord: { q: 0, r: 0 } },
+  ]);
   assert.equal(events[0]?.targets, undefined);
 
   refreshTrackerViews(match, 1);
@@ -130,7 +133,7 @@ test("placing a tracker consumes it and reports known target position for six tu
     false,
     2,
   );
-  assert.equal(tailored?.[target.id], undefined);
+  assert.equal(tailored?.[target.id]?.position?.coord?.q, 2);
 
   const targetView = tailorMatchForPlayer(match, target.id);
   assert.equal("trackers" in targetView, false);
@@ -189,9 +192,12 @@ test("adjacent location placement reports position without revealing target iden
   const match = createMatch([actor, target], 1);
   planTracker(actor, undefined, { q: 1, r: 0 });
 
-  resolveTrackerAction(match, 2);
+  const events = resolveTrackerAction(match, 2);
   refreshTrackerViews(match, 2);
 
+  assert.deepEqual(events[0]?.action.metadata?.trackedTargets, [
+    { coord: { q: 1, r: 0 } },
+  ]);
   assert.equal(match.trackers?.[0]?.targetId, target.id);
   assert.equal(match.trackers?.[0]?.targetIdKnownToOwner, false);
   assert.deepEqual(actor.trackerViews?.[0]?.coord, { q: 1, r: 0 });
