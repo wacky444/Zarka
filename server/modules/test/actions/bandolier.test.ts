@@ -7,13 +7,13 @@ import {
   type ItemId,
   type PlayerCharacter,
 } from "@shared";
-import type { MatchRecord } from "../src/models/types";
-import { executeBlackMarketTradeAction } from "../src/match/actions/blackMarketTrade";
-import { executeDropAction } from "../src/match/actions/drop";
-import { executePickUpAction } from "../src/match/actions/pickup";
-import { executeStealAction } from "../src/match/actions/steal";
-import type { PlannedActionParticipant } from "../src/match/actions/utils";
-import { createDefaultCharacter } from "../src/utils/playerCharacter";
+import type { MatchRecord } from "../../src/models/types";
+import { executeBlackMarketTradeAction } from "../../src/match/actions/blackMarketTrade";
+import { executeDropAction } from "../../src/match/actions/drop";
+import { executePickUpAction } from "../../src/match/actions/pickup";
+import { executeStealAction } from "../../src/match/actions/steal";
+import type { PlannedActionParticipant } from "../../src/match/actions/utils";
+import { createDefaultCharacter } from "../../src/utils/playerCharacter";
 
 function createMatch(
   character: PlayerCharacter,

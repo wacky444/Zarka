@@ -7,15 +7,29 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const testDir = join(root, "test");
-const testFiles = readdirSync(testDir)
-  .filter((file) => file.endsWith(".test.ts"))
-  .sort();
+
+function findTestFiles(directory, relativeDirectory = "") {
+  return readdirSync(join(directory, relativeDirectory), { withFileTypes: true })
+    .flatMap((entry) => {
+      const relativePath = join(relativeDirectory, entry.name);
+      if (entry.isDirectory()) {
+        return findTestFiles(directory, relativePath);
+      }
+      return entry.isFile() && entry.name.endsWith(".test.ts")
+        ? [relativePath]
+        : [];
+    })
+    .sort();
+}
+
+const testFiles = findTestFiles(testDir);
 
 const temporary = mkdtempSync(join(tmpdir(), "zarka-all-tests-"));
 try {
   buildSync({
     absWorkingDir: root,
     entryPoints: testFiles.map((file) => join("test", file)),
+    outbase: testDir,
     outdir: temporary,
     bundle: true,
     platform: "node",

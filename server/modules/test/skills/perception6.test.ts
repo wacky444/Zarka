@@ -6,9 +6,9 @@ import {
   SkillLibrary,
   type PlayerCharacter
 } from "@shared";
-import { createDefaultCharacter } from "../src/utils/playerCharacter";
-import { tailorPlayerCharactersForViewer } from "../src/utils/matchView";
-import { formatPlayerPerceptionDetails } from "../../../client/src/ui/PlayerPerceptionDetails";
+import { createDefaultCharacter } from "../../src/utils/playerCharacter";
+import { tailorPlayerCharactersForViewer } from "../../src/utils/matchView";
+import { formatPlayerPerceptionDetails } from "../../../../client/src/ui/PlayerPerceptionDetails";
 
 function createCharacters(): { viewer: PlayerCharacter; target: PlayerCharacter } {
   const viewer = createDefaultCharacter("viewer");

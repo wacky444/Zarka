@@ -6,14 +6,14 @@ import {
   type PlayerPlannedAction,
   type ReplayPlayerEvent,
 } from "@shared";
-import type { MatchRecord } from "../src/models/types";
+import type { MatchRecord } from "../../src/models/types";
 import {
   createDefaultCharacter,
   isCharacterDead,
-} from "../src/utils/playerCharacter";
-import { executeShootPistolAction } from "../src/match/actions/shootPistol";
-import { tailorReplayEvents } from "../src/match/replay/tailorReplay";
-import type { PlannedActionParticipant } from "../src/match/actions/utils";
+} from "../../src/utils/playerCharacter";
+import { executeShootPistolAction } from "../../src/match/actions/shootPistol";
+import { tailorReplayEvents } from "../../src/match/replay/tailorReplay";
+import type { PlannedActionParticipant } from "../../src/match/actions/utils";
 
 function createMatch(firstTargetHealth = 10): {
   attacker: PlayerCharacter;

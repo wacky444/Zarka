@@ -1,6 +1,28 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseAxial } from "../src/utils/location";
+import {
+  adjacentDestinationToward,
+  parseAxial,
+} from "../src/utils/location";
+
+test("adjacentDestinationToward selects the closest walkable tile toward the requested location", () => {
+  const origin = { q: 0, r: 0 };
+  const tiles = [
+    { id: "blocked-east", coord: { q: 1, r: 0 }, walkable: false },
+    { id: "north-east", coord: { q: 1, r: -1 }, walkable: true },
+    { id: "east-two", coord: { q: 2, r: 0 }, walkable: true },
+  ].map((tile) => ({
+    ...tile,
+    localizationType: "Road" as const,
+    itemIds: [],
+  }));
+
+  assert.deepEqual(
+    adjacentDestinationToward(tiles, origin, { q: 2, r: 0 }),
+    { tileId: "north-east", coord: { q: 1, r: -1 } },
+  );
+  assert.equal(adjacentDestinationToward(tiles, origin, origin), undefined);
+});
 
 test("parseAxial accepts only finite numeric coordinates by default", () => {
   assert.deepEqual(parseAxial({ q: 2, r: -3 }), { q: 2, r: -3 });

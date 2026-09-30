@@ -5,17 +5,17 @@ import {
   type ActionId,
   type PlayerCharacter,
 } from "@shared";
-import type { MatchRecord } from "../src/models/types";
-import { executeAxeAttackAction } from "../src/match/actions/axeAttack";
-import { canFeedParticipant } from "../src/match/actions/feed";
-import { executeUseChemicalWeaponAction } from "../src/match/actions/UseChemicalWeapon";
-import { collectTargets } from "../src/match/actions/targeting";
+import type { MatchRecord } from "../../src/models/types";
+import { executeAxeAttackAction } from "../../src/match/actions/axeAttack";
+import { canFeedParticipant } from "../../src/match/actions/feed";
+import { executeUseChemicalWeaponAction } from "../../src/match/actions/UseChemicalWeapon";
+import { collectTargets } from "../../src/match/actions/targeting";
 import {
   collectPlanTargetIds,
   type DeadCharacterTargetPolicy,
   type PlannedActionParticipant,
-} from "../src/match/actions/utils";
-import { createDefaultCharacter, isCharacterDead } from "../src/utils/playerCharacter";
+} from "../../src/match/actions/utils";
+import { createDefaultCharacter, isCharacterDead } from "../../src/utils/playerCharacter";
 
 function createScenario(): {
   actor: PlayerCharacter;

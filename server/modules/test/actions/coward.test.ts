@@ -1,4 +1,4 @@
-/// <reference path="../node_modules/nakama-runtime/index.d.ts" />
+/// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -9,11 +9,11 @@ import {
   type PlayerCharacter,
   type ReplayEvent,
 } from "@shared";
-import type { MatchRecord } from "../src/models/types";
-import { advanceTurn } from "../src/match/advanceTurn";
-import { collectTargets } from "../src/match/actions/targeting";
-import { tailorPlayerCharactersForViewer } from "../src/utils/matchView";
-import { createDefaultCharacter } from "../src/utils/playerCharacter";
+import type { MatchRecord } from "../../src/models/types";
+import { advanceTurn } from "../../src/match/advanceTurn";
+import { collectTargets } from "../../src/match/actions/targeting";
+import { tailorPlayerCharactersForViewer } from "../../src/utils/matchView";
+import { createDefaultCharacter } from "../../src/utils/playerCharacter";
 
 const logger = { debug: () => {}, warn: () => {} } as unknown as nkruntime.Logger;
 

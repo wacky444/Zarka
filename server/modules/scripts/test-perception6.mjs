@@ -11,13 +11,17 @@ try {
   const outfile = join(temporary, "perception6.test.cjs");
   buildSync({
     absWorkingDir: root,
-    entryPoints: ["test/perception6.test.ts"],
+    entryPoints: ["test/skills/perception6.test.ts"],
     outfile,
     bundle: true,
     platform: "node",
     format: "cjs",
     target: "node18",
-    alias: { "@shared": resolve(root, "../../shared/src/index.ts") }
+    alias: {
+      "@shared": resolve(root, "../../shared/src/index.ts"),
+      "phaser": resolve(root, "scripts/empty-shim.cjs"),
+      "phaser3spectorjs": resolve(root, "scripts/empty-shim.cjs")
+    }
   });
   const result = spawnSync(process.execPath, ["--test", outfile], {
     stdio: "inherit"

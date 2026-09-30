@@ -11,10 +11,10 @@ import type {
 import { ActionLibrary, getSkillEffectTotal, neighbors } from "@shared";
 import {
   isTargetProtected,
-  resolvePlanDestination,
   type PlannedActionParticipant,
 } from "./utils";
 import { collectTargets } from "./targeting";
+import { adjacentDestinationToward } from "../../utils/location";
 import { getUsableExtraExecutions } from "../../utils/energy";
 import { BaseAction } from "./classes/BaseAction";
 import { triggerTrapsForTransition } from "./placeTrap";
@@ -89,9 +89,17 @@ export class ScareAction extends BaseAction {
       const requestedTargets = participant.plan.targetPlayerIds ?? [];
       const pushingTwoPlayers =
         extraExecutions > 0 && requestedTargets.length > 1;
+      const requestedDestination = participant.plan.targetLocationId;
       const chosenDestination =
-        extraExecutions > 0 && !pushingTwoPlayers
-          ? resolvePlanDestination(match, participant.plan)
+        extraExecutions > 0 &&
+        !pushingTwoPlayers &&
+        origin &&
+        requestedDestination
+          ? adjacentDestinationToward(
+              match.map?.tiles,
+              origin,
+              requestedDestination,
+            )
           : undefined;
       this.clearPlan(participant);
       if (!origin || selection.length === 0) {

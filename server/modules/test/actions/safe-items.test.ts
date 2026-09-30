@@ -8,11 +8,11 @@ import {
   type MatchItemRecord,
   type PlayerCharacter,
 } from "@shared";
-import type { MatchRecord } from "../src/models/types";
-import { executePickUpAction } from "../src/match/actions/pickup";
-import { executeSearchAction } from "../src/match/actions/search";
-import type { PlannedActionParticipant } from "../src/match/actions/utils";
-import { createDefaultCharacter } from "../src/utils/playerCharacter";
+import type { MatchRecord } from "../../src/models/types";
+import { executePickUpAction } from "../../src/match/actions/pickup";
+import { executeSearchAction } from "../../src/match/actions/search";
+import type { PlannedActionParticipant } from "../../src/match/actions/utils";
+import { createDefaultCharacter } from "../../src/utils/playerCharacter";
 
 function createScenario(itemType: MatchItemRecord["item_type"]): {
   character: PlayerCharacter;

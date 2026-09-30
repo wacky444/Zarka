@@ -6,10 +6,10 @@ import {
   axialDistance,
   type PlayerCharacter,
 } from "@shared";
-import type { MatchRecord } from "../src/models/types";
-import { executeLookThroughWindowAction } from "../src/match/actions/observeLocation";
-import type { PlannedActionParticipant } from "../src/match/actions/utils";
-import { createDefaultCharacter } from "../src/utils/playerCharacter";
+import type { MatchRecord } from "../../src/models/types";
+import { executeLookThroughWindowAction } from "../../src/match/actions/observeLocation";
+import type { PlannedActionParticipant } from "../../src/match/actions/utils";
+import { createDefaultCharacter } from "../../src/utils/playerCharacter";
 
 function createLookScenario(options: {
   target?: { q: number; r: number };
