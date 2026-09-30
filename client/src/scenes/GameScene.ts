@@ -2801,7 +2801,8 @@ export class GameScene extends Phaser.Scene {
     if (
       !selection?.actionId ||
       (target === "second" &&
-        (selection.actionId !== "shoot_pistol" ||
+        ((selection.actionId !== "shoot_pistol" &&
+          selection.actionId !== "place_trap") ||
           (selection.extraExecutions ?? 0) <= 0))
     ) {
       return;

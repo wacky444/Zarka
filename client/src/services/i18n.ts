@@ -147,6 +147,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Additional inspected player": "Jugador inspeccionado adicional",
   "Second Shot Target Player": "Objetivo del segundo disparo",
   "Second Shot Destination": "Destino del segundo disparo",
+  "Second Trap Destination": "Destino de la segunda trampa",
   "None selected": "Ninguno seleccionado",
   "Extra power": "Potencia adicional",
   "Priority Items": "Objetos prioritarios",

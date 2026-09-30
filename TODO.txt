@@ -57,3 +57,11 @@
 - i never got hero team
 
 - create a deterministic test with several players doing actions and interacting between them, a full match
+
+phaser.js:120564  GET https://wacky444.github.io/Zarka/assets/images/Board%20Game%20Icons/flag.png 404 (Not Found)
+09:20:44.024 phaser.js:120564  GET https://wacky444.github.io/Zarka/assets/images/Board%20Game%20Icons/coin.png 404 (Not Found)
+
+09:20:44.036 phaser.js:120564  GET https://wacky444.github.io/Zarka/assets/images/Board%20Game%20Icons/magnifying_glass.png 404 (Not Found)
+09:20:44.107 phaser.js:120564  GET https://wacky444.github.io/Zarka/assets/images/Board%20Game%20Icons/camera.png 404 (Not Found)
+
+09:20:44.116 phaser.js:120564  GET https://wacky444.github.io/Zarka/assets/images/Board%20Game%20Icons/drone.png 404 (Not Found)

@@ -148,9 +148,27 @@ export class PlaceTrapAction extends BaseAction {
       const requestedExtraExecutions = getRequestedExtraExecutions(
         participant.plan,
       );
+      const requestedSecondDestination =
+        participant.plan.secondTargetLocationId;
+      const secondDestination = requestedSecondDestination
+        ? resolvePlanDestination(match, {
+            ...participant.plan,
+            targetLocationId: requestedSecondDestination,
+          })
+        : validDestination;
+      const secondDestinationTile = secondDestination
+        ? findTileAtCoord(match, secondDestination.coord)
+        : undefined;
+      const secondDestinationIsValid =
+        !!secondDestination &&
+        !!secondDestinationTile &&
+        secondDestinationTile.walkable !== false &&
+        secondDestinationTile.meta?.destroyed !== true &&
+        axialDistance(validOrigin.coord, secondDestination.coord) === 1;
       const affordableExtraExecutions = Math.min(
         requestedExtraExecutions,
         Math.max(0, trapCount - 1),
+        !requestedSecondDestination || secondDestinationIsValid ? 1 : 0,
       );
       const extraExecutions = getUsableExtraExecutions(
         participant.character,
@@ -161,11 +179,23 @@ export class PlaceTrapAction extends BaseAction {
         ActionLibrary.place_trap,
       );
       const placements = 1 + extraExecutions;
+      const secondPlacementTile =
+        requestedSecondDestination && secondDestinationIsValid
+          ? secondDestinationTile!
+          : validDestinationTile;
+      if (requestedExtraExecutions > 0 && !secondDestinationIsValid) {
+        logger?.debug(
+          "place_trap ignored invalid second destination match=%s player=%s target=%s",
+          match.match_id,
+          participant.playerId,
+          JSON.stringify(requestedSecondDestination ?? null),
+        );
+      }
       if (!Array.isArray(match.traps)) {
         match.traps = [];
       }
       logger?.debug(
-        "place_trap attempt match=%s player=%s turn=%d inventory=%d placements=%d traps_before=%d origin=%s target=%s",
+        "place_trap attempt match=%s player=%s turn=%d inventory=%d placements=%d traps_before=%d origin=%s target=%s second_target=%s",
         match.match_id,
         participant.playerId,
         match.current_turn ?? 0,
@@ -174,6 +204,9 @@ export class PlaceTrapAction extends BaseAction {
         match.traps.length,
         JSON.stringify(validOrigin.coord),
         JSON.stringify(validDestination.coord),
+        JSON.stringify(
+          placements > 1 ? secondPlacementTile.coord : null,
+        ),
       );
 
       for (let index = 0; index < placements; index += 1) {
@@ -186,6 +219,9 @@ export class PlaceTrapAction extends BaseAction {
           );
           break;
         }
+        const placementTile = index === 0
+          ? validDestinationTile
+          : secondPlacementTile;
         const trap: TrapRecord = {
           id: createTrapId(
             match,
@@ -198,8 +234,8 @@ export class PlaceTrapAction extends BaseAction {
             coord: { ...validOrigin.coord },
           },
           to: {
-            tileId: validDestinationTile.id,
-            coord: { ...validDestinationTile.coord },
+            tileId: placementTile.id,
+            coord: { ...placementTile.coord },
           },
           damage: TRAP_DAMAGE,
           placedTurn: (match.current_turn ?? 0) + 1,
@@ -353,25 +389,26 @@ export function triggerTrapsForTransition(
     return [];
   }
 
-  const matchingIds: Record<string, boolean> = {};
-  for (const trap of matchingTraps) {
-    matchingIds[trap.id] = true;
+  const triggeredTrapIndex = existingTraps.findIndex((trap) =>
+    sameEdge(trap, from, to),
+  );
+  const triggeredTrap = existingTraps[triggeredTrapIndex];
+  if (!triggeredTrap) {
+    return [];
   }
-  const remainingTraps: TrapRecord[] = [];
-  for (const trap of match.traps ?? []) {
-    if (matchingIds[trap.id] !== true) {
-      remainingTraps.push(trap);
-    }
-  }
-  match.traps = remainingTraps;
+  match.traps = [
+    ...existingTraps.slice(0, triggeredTrapIndex),
+    ...existingTraps.slice(triggeredTrapIndex + 1),
+  ];
   logger?.debug(
-    "trap triggered match=%s player=%s ids=%s traps_remaining=%d",
+    "trap triggered match=%s player=%s id=%s matching_remaining=%d traps_remaining=%d",
     match.match_id,
     playerId,
-    JSON.stringify(matchingTraps.map((trap) => trap.id)),
+    triggeredTrap.id,
+    Math.max(0, matchingTraps.length - 1),
     match.traps.length,
   );
-  let character = match.playerCharacters?.[playerId];
+  const character = match.playerCharacters?.[playerId];
   if (!character || isCharacterDead(character)) {
     logger?.debug(
       "trap trigger had no living character match=%s player=%s",
@@ -381,42 +418,33 @@ export function triggerTrapsForTransition(
     return [];
   }
 
-  const events: ReplayPlayerEvent[] = [];
-  for (const trap of matchingTraps) {
-    if (isCharacterDead(character)) {
-      break;
-    }
-    const damage = Math.max(
-      0,
-      trap.damage - getInventoryDamageReduction(character, "physical"),
-    );
-    const outcome = applyHealthDelta(
-      character,
-      -damage,
-      false,
-      logger,
-    );
-    character.stats = outcome.character.stats;
-    character.progression = outcome.character.progression;
-    character.economy = outcome.character.economy;
-    character.inventory = outcome.character.inventory;
-    character.abilities = outcome.character.abilities;
-    character.relationships = outcome.character.relationships;
-    character.statuses = outcome.character.statuses;
-    character.actionPlan = outcome.character.actionPlan;
-    character.corpseRations = outcome.character.corpseRations;
-    match.playerCharacters![playerId] = character;
-    const damageTaken = Math.max(0, -outcome.result.delta);
-    events.push({
+  const damage = Math.max(
+    0,
+    triggeredTrap.damage - getInventoryDamageReduction(character, "physical"),
+  );
+  const outcome = applyHealthDelta(character, -damage, false, logger);
+  character.stats = outcome.character.stats;
+  character.progression = outcome.character.progression;
+  character.economy = outcome.character.economy;
+  character.inventory = outcome.character.inventory;
+  character.abilities = outcome.character.abilities;
+  character.relationships = outcome.character.relationships;
+  character.statuses = outcome.character.statuses;
+  character.actionPlan = outcome.character.actionPlan;
+  character.corpseRations = outcome.character.corpseRations;
+  match.playerCharacters![playerId] = character;
+  const damageTaken = Math.max(0, -outcome.result.delta);
+  return [
+    {
       kind: "player",
-      actorId: trap.ownerId,
+      actorId: triggeredTrap.ownerId,
       action: {
         actionId: ActionLibrary.place_trap.id,
         originLocation: from.coord,
         targetLocation: to.coord,
         damageDealt: damageTaken,
         metadata: {
-          trapId: trap.id,
+          trapId: triggeredTrap.id,
           triggered: true,
           damage: damageTaken,
         },
@@ -427,13 +455,12 @@ export function triggerTrapsForTransition(
           damageTaken,
           eliminated: outcome.result.becameDead,
           metadata: {
-            trapId: trap.id,
+            trapId: triggeredTrap.id,
           },
         },
       ],
-    });
-  }
-  return events;
+    },
+  ];
 }
 
 export function triggerTrapsForMovement(

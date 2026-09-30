@@ -275,12 +275,13 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Instala una trampa en una entrada que inflige [health-damage]7[/health-damage] de vida al primer personaje que entre o salga por ella."
+          "Instala una trampa en una entrada que inflige [health-damage]7[/health-damage] de vida al siguiente personaje que la cruce; las trampas apiladas se activan de una en una por movimiento."
       }
     ],
     extraExecution: {
       cost: 2,
-      description: "Permite colocar una trampa adicional."
+      description:
+        "Permite colocar una trampa adicional en la misma entrada o en otra adyacente que se elija."
     },
     texture: "Board Game Icons",
     frame: "puzzle.png",

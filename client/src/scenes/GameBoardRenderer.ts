@@ -95,7 +95,9 @@ export class GameBoardRenderer {
     cellInfoLongPressTimer: Phaser.Time.TimerEvent | null;
   }> = [];
   private trapVisuals: Array<
-    Phaser.GameObjects.Graphics | Phaser.GameObjects.Image
+    | Phaser.GameObjects.Graphics
+    | Phaser.GameObjects.Image
+    | Phaser.GameObjects.Text
   > = [];
   private trackerMarkers: Array<
     Phaser.GameObjects.Graphics | Phaser.GameObjects.Text
@@ -889,12 +891,28 @@ export class GameBoardRenderer {
     this.clearTrapVisuals();
     const currentUserId = this.callbacks.getCurrentUserId();
     const canSeeAllTraps = this.callbacks.isAdminViewEnabled();
+    const visibleTraps = (traps ?? []).filter(
+      (trap) => canSeeAllTraps || trap.ownerId === currentUserId,
+    );
+    const trapsByEdge = new Map<
+      string,
+      { trap: TrapRecord; count: number }
+    >();
+    for (const trap of visibleTraps) {
+      const fromKey = `${trap.from.coord.q}:${trap.from.coord.r}`;
+      const toKey = `${trap.to.coord.q}:${trap.to.coord.r}`;
+      const edgeKey =
+        fromKey < toKey ? `${fromKey}|${toKey}` : `${toKey}|${fromKey}`;
+      const group = trapsByEdge.get(edgeKey);
+      if (group) {
+        group.count += 1;
+      } else {
+        trapsByEdge.set(edgeKey, { trap, count: 1 });
+      }
+    }
     const trapTexture = resolveItemTexture(ItemLibrary.trap);
     const hasTrapTexture = this.scene.textures.exists(trapTexture.texture);
-    for (const trap of traps ?? []) {
-      if (!canSeeAllTraps && trap.ownerId !== currentUserId) {
-        continue;
-      }
+    for (const { trap, count } of trapsByEdge.values()) {
       const from = this.getTileWorldPosition(trap.from.tileId, trap.from.coord);
       const to = this.getTileWorldPosition(trap.to.tileId, trap.to.coord);
       const midpoint = {
@@ -943,6 +961,23 @@ export class GameBoardRenderer {
         icon.setDepth(5);
         this.uiCamera.ignore(icon);
         this.trapVisuals.push(icon);
+      }
+      if (count > 1) {
+        const countLabel = this.scene.add
+          .text(midpoint.x, midpoint.y - 11, String(count), {
+            fontFamily: "Arial",
+            fontSize: "14px",
+            fontStyle: "bold",
+            color: "#ffffff",
+            backgroundColor: "#111827",
+            padding: { x: 3, y: 2 },
+            stroke: "#111827",
+            strokeThickness: 3,
+          })
+          .setOrigin(0.5, 1)
+          .setDepth(6);
+        this.uiCamera.ignore(countLabel);
+        this.trapVisuals.push(countLabel);
       }
     }
     this.applyMapRenderingState();

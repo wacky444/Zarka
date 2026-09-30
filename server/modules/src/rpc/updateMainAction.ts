@@ -146,8 +146,14 @@ export function updateMainActionRpc(
       }
       extraExecutions = clamped > 0 ? clamped : undefined;
     }
-    if (normalizedActionId !== "shoot_pistol" || !extraExecutions) {
+    if (
+      !extraExecutions ||
+      (normalizedActionId !== "shoot_pistol" &&
+        normalizedActionId !== "place_trap")
+    ) {
       secondTargetLocation = undefined;
+    }
+    if (normalizedActionId !== "shoot_pistol" || !extraExecutions) {
       secondTargetPlayerId = undefined;
     }
   }
