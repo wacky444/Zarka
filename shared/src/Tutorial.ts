@@ -20,7 +20,7 @@ export const TUTORIAL_BOT_MESSAGES: Record<TutorialBotMessageKey, string> = {
   detective_result:
     "You checked instead of trusting me. Information can be more valuable than an attack.",
   axe_ordering:
-    "You planned to attack me, but actions resolve in an order. Scare can move you before your attack happens.",
+    "You planned to attack me, but actions resolve in an order. Scare can frighten you away before your attack resolves.",
   destruction_warning:
     "The map itself is dangerous. Watch the warning, then use positioning to survive."
 };

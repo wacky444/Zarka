@@ -76,7 +76,7 @@ export const TUTORIAL_INSTRUCTIONS: Record<
   },
   return_to_bot: {
     instruction:
-      "Actions resolve by priority order: the bot’s Scare pushed you away before your Axe attack could resolve! Now move back toward the bot.",
+      "Actions resolve by priority order: the bot’s Scare scared you away before your Axe attack could resolve! Now move back toward the bot.",
     hint: "Move is prepared. Select the bot’s cell, then press Ready."
   },
   observe_destruction_warning: {

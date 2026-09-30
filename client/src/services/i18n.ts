@@ -411,8 +411,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
     "¡Está mintiendo, no está en tu equipo! Planea un ataque con hacha contra él.",
   "Axe Attack is prepared. Select Tutorial Bot as the target, then press Ready.":
     "Atacar con hacha está preparado. Selecciona Tutorial Bot como objetivo y pulsa Listo.",
-  "Watch the order: the bot’s Scare moves you before your planned Axe attack resolves.":
-    "Observa el orden: el Asustar del bot te mueve antes de que se resuelva tu ataque con hacha.",
+  "Watch the order: the bot’s Scare scares you away before your planned Axe attack resolves.":
+    "Observa el orden: el Asustar del bot te asusta y te aleja antes de que se resuelva tu ataque con hacha.",
   "He is lying, he is not on your team! Attack him with the axe.":
     "¡Está mintiendo, no está en tu equipo! Atácale con el hacha.",
   "Press Ready to submit your attack.": "Pulsa Listo para enviar tu ataque.",
@@ -420,8 +420,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
     "Pulsa Listo para enviar el plan. El Registro mostrará por qué falla el ataque.",
   "Move back toward the bot. The map is about to become dangerous.":
     "Vuelve a acercarte al bot. El mapa pronto será peligroso.",
-  "Actions resolve by priority order: the bot’s Scare pushed you away before your Axe attack could resolve! Now move back toward the bot.":
-    "Las acciones se resuelven por orden de prioridad: ¡el Asustar del bot te empujó antes de que se resolviera tu ataque con hacha! Ahora vuelve a acercarte al bot.",
+  "Actions resolve by priority order: the bot’s Scare scared you away before your Axe attack could resolve! Now move back toward the bot.":
+    "Las acciones se resuelven por orden de prioridad: ¡el Asustar del bot te hizo huir asustado antes de que se resolviera tu ataque con hacha! Ahora vuelve a acercarte al bot.",
   "Move is prepared. Select the bot’s cell, then press Ready.":
     "Desplazarse está preparado. Selecciona la casilla del bot y pulsa Listo.",
   "Notice the skull warning: this cell will be destroyed on the next turn.":
@@ -444,8 +444,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
     "Estoy en tu equipo. Puedes confiar en mí.",
   "You checked instead of trusting me. Information can be more valuable than an attack.":
     "Comprobaste la información en vez de confiar en mí. La información puede valer más que un ataque.",
-  "You planned to attack me, but actions resolve in an order. Scare can move you before your attack happens.":
-    "Planeaste atacarme, pero las acciones se resuelven en orden. Asustar puede moverte antes de que ataques.",
+  "You planned to attack me, but actions resolve in an order. Scare can frighten you away before your attack resolves.":
+    "Planeaste atacarme, pero las acciones se resuelven en orden. Asustar puede hacerte huir asustado antes de que se resuelva tu ataque.",
   "The map itself is dangerous. Watch the warning, then use positioning to survive.":
     "El propio mapa es peligroso. Observa la advertencia y usa el posicionamiento para sobrevivir.",
   "No messages yet.": "Todavía no hay mensajes.",
