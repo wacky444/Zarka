@@ -14,6 +14,10 @@ import {
 } from "../../utils/playerCharacter";
 import { getAliveCharacterIds } from "../checkEndGame";
 import { createReplaySnapshot } from "../replay/snapshot";
+import {
+  createTurnNotificationOutbox,
+  dispatchTurnNotificationOutbox
+} from "../../services/turnPushNotifications";
 
 const AUTO_CHECK_INTERVAL_MS = 60 * 1000;
 const BOT_AUTO_CHECK_INTERVAL_MS = 5 * 1000;
@@ -91,6 +95,14 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
     if (match.started !== true) {
       return { state };
     }
+
+    dispatchTurnNotificationOutbox(
+      match.match_id,
+      match.current_turn,
+      ctx,
+      nk,
+      logger
+    );
 
     const botOnlyAlive = areOnlyBotsAlive(match);
     if (botOnlyAlive) {
@@ -179,9 +191,14 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
     logger.debug("Auto-advancing turn for match %s", runtimeMatchId);
     const timestampSeconds = Math.floor(nowMs / 1000);
     match.lastAutoAdvanceAt = timestampSeconds;
+    const pushOutbox = createTurnNotificationOutbox(match, ctx, nk, logger);
 
     try {
-      storage.writeMatch(match, stored.version);
+      if (pushOutbox) {
+        storage.writeMatchWithPushOutbox(match, pushOutbox, stored.version);
+      } else {
+        storage.writeMatch(match, stored.version);
+      }
       if (trapEvents.length > 0) {
         const persisted = storage.getMatch(match.match_id);
         logger.debug(
@@ -266,6 +283,16 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
           (error as Error).message,
         );
       }
+    }
+
+    if (pushOutbox) {
+      dispatchTurnNotificationOutbox(
+        match.match_id,
+        match.current_turn,
+        ctx,
+        nk,
+        logger
+      );
     }
 
     state.lastAutoAdvanceAt = match.lastAutoAdvanceAt;

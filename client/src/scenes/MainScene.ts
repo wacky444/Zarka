@@ -2,6 +2,10 @@ import Phaser from "phaser";
 import { Client, Session, RpcResponse } from "@heroiclabs/nakama-js";
 import { initNakama } from "../services/nakama";
 import { SessionManager } from "../services/sessionManager";
+import {
+  bindExistingPushSubscription,
+  unregisterPushDeviceAssociation
+} from "../services/pushNotifications";
 import { TurnService } from "../services/turnService";
 import { AccountService } from "../services/AccountService";
 import { makeButton, UIButton } from "../ui/button";
@@ -254,6 +258,9 @@ export class MainScene extends Phaser.Scene {
       });
 
       this.turnService = new TurnService(client, session);
+      void bindExistingPushSubscription(this.turnService).catch((error: unknown) => {
+        console.warn("Failed to bind push subscription to current account:", error);
+      });
       this.registry.set("turnService", this.turnService);
       this.accountService = new AccountService(client, session);
       this.registry.set("accountService", this.accountService);
@@ -519,6 +526,16 @@ export class MainScene extends Phaser.Scene {
 
       // Initialize in main view
       this.applyViewVisibility();
+      const currentUrl = new URL(window.location.href);
+      if (currentUrl.searchParams.get("refreshMatches") === "1") {
+        currentUrl.searchParams.delete("refreshMatches");
+        window.history.replaceState(
+          window.history.state,
+          "",
+          `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`
+        );
+        void this.myMatchesListView.refresh();
+      }
       await this.resumeActiveTutorialMatch();
     } catch (e) {
       console.error(e);
@@ -924,6 +941,11 @@ export class MainScene extends Phaser.Scene {
       () => {
         toggleLocale();
         languageButton.setText(`[ ${this.getLanguageToggleLabel()} ]`);
+        if (this.turnService) {
+          void bindExistingPushSubscription(this.turnService).catch((error: unknown) => {
+            console.warn("Failed to update push notification language:", error);
+          });
+        }
       },
       ["main"]
     ).setOrigin(0.5);
@@ -997,6 +1019,12 @@ export class MainScene extends Phaser.Scene {
       this.scene.isSleeping("GameScene")
     ) {
       this.scene.stop("GameScene");
+    }
+
+    if (this.turnService) {
+      void unregisterPushDeviceAssociation(this.turnService).catch((error: unknown) => {
+        console.warn("Failed to unregister push device from account:", error);
+      });
     }
 
     // Clear the session

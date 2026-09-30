@@ -20,6 +20,9 @@ services:
 
   nakama:
     image: heroiclabs/nakama:3.40.0
+    networks:
+      - default
+      - push_backend
     container_name: nakama
     depends_on:
       postgres:
@@ -61,6 +64,23 @@ services:
     expose:
       - "7354"
 
+  push-dispatcher:
+    build:
+      context: ./push-dispatcher
+      dockerfile: Dockerfile
+    container_name: zarka-push-dispatcher
+    restart: unless-stopped
+    environment:
+      PORT: "7355"
+      PUSH_DISPATCH_SECRET: "${PUSH_DISPATCH_SECRET:-}"
+      WEB_PUSH_VAPID_PUBLIC_KEY: "${WEB_PUSH_VAPID_PUBLIC_KEY:-}"
+      WEB_PUSH_VAPID_PRIVATE_KEY: "${WEB_PUSH_VAPID_PRIVATE_KEY:-}"
+      WEB_PUSH_VAPID_SUBJECT: "${WEB_PUSH_VAPID_SUBJECT:-}"
+    expose:
+      - "7355"
+    networks:
+      - push_backend
+
   caddy:
     image: caddy
     container_name: caddy
@@ -83,3 +103,6 @@ volumes:
   pgdata: {}
   caddy_data: {}
   caddy_config: {}
+networks:
+  push_backend:
+    driver: bridge

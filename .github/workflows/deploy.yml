@@ -55,6 +55,8 @@ jobs:
           # Keep the public client ID in an Actions repository variable named
           # GOOGLE_CLIENT_ID. VITE_GOOGLE_CLIENT_ID is accepted for convenience.
           VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID || vars.VITE_GOOGLE_CLIENT_ID || '' }}
+          # Public VAPID key for Web Push; private key remains server-side.
+          VITE_WEB_PUSH_VAPID_PUBLIC_KEY: ${{ vars.WEB_PUSH_VAPID_PUBLIC_KEY || '' }}
           ROUND_TIME_OFFSET_MINUTES: ${{ vars.ROUND_TIME_OFFSET_MINUTES || '60' }}
 
       - name: List build output (for debugging)

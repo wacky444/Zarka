@@ -10,8 +10,10 @@ import {
   CHAT_KEY_PREFIX,
   MATCH_REPORT_COLLECTION,
   MATCH_REPORT_KEY_PREFIX,
+  PUSH_NOTIFICATION_OUTBOX_COLLECTION,
 } from "../constants";
 import { MatchRecord, TurnRecord } from "../models/types";
+import type { TurnNotificationOutbox } from "../models/pushNotifications";
 import type {
   MatchChatLog,
   MatchChatMessage,
@@ -81,6 +83,32 @@ export class StorageService {
         permissionRead: 2,
         permissionWrite: 0,
         version,
+      },
+    ]);
+  }
+
+  writeMatchWithPushOutbox(
+    match: MatchRecord,
+    outbox: TurnNotificationOutbox,
+    version?: string
+  ): void {
+    this.nk.storageWrite([
+      {
+        collection: MATCH_COLLECTION,
+        key: this.getMatchKey(match.match_id),
+        userId: SERVER_USER_ID,
+        value: match,
+        permissionRead: 2,
+        permissionWrite: 0,
+        version,
+      },
+      {
+        collection: PUSH_NOTIFICATION_OUTBOX_COLLECTION,
+        key: outbox.id,
+        userId: SERVER_USER_ID,
+        value: outbox,
+        permissionRead: 0,
+        permissionWrite: 0,
       },
     ]);
   }

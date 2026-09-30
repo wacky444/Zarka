@@ -5,6 +5,10 @@ export const TURN_COLLECTION = "async_turn_turns";
 export const REPLAY_COLLECTION = "async_turn_replays";
 export const CHAT_COLLECTION = "async_turn_chat";
 export const MATCH_REPORT_COLLECTION = "async_turn_reports";
+export const PUSH_SUBSCRIPTION_COLLECTION = "web_push_subscriptions";
+export const PUSH_SUBSCRIPTION_DEVICE_INDEX_COLLECTION =
+  "web_push_subscription_device_index";
+export const PUSH_NOTIFICATION_OUTBOX_COLLECTION = "web_push_notification_outbox";
 export const MATCH_KEY_PREFIX = "match_";
 export const CHAT_KEY_PREFIX = "chat_";
 export const MATCH_REPORT_KEY_PREFIX = "report_";

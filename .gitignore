@@ -44,6 +44,7 @@ docker-compose.override.yml
 # Nakama JS server (TypeScript runtime)
 server/modules/node_modules/
 server/modules/build/
+server/push-dispatcher/node_modules/
 
 # Local Nakama config
 server/local.yml

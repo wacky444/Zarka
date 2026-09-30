@@ -39,6 +39,28 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Win: "Victoria",
   Report: "Informe",
   "Account Settings": "Configuración de la cuenta",
+  Notifications: "Notificaciones",
+  "Turn reminders can be delayed by Android or browser power management.":
+    "Los recordatorios de turno pueden retrasarse por el ahorro de batería de Android o del navegador.",
+  "Checking notification support...": "Comprobando compatibilidad con notificaciones...",
+  "Enable notifications": "Activar notificaciones",
+  "Disable notifications": "Desactivar notificaciones",
+  "Web Push is not supported by this browser.":
+    "Este navegador no admite notificaciones Web Push.",
+  "Push notifications are not configured for this app.":
+    "Las notificaciones push no están configuradas para esta aplicación.",
+  "Notifications are blocked. Allow them in browser settings.":
+    "Las notificaciones están bloqueadas. Permítelas en la configuración del navegador.",
+  "Notifications are off on this device.":
+    "Las notificaciones están desactivadas en este dispositivo.",
+  "Notifications are on for this device.":
+    "Las notificaciones están activadas en este dispositivo.",
+  "Notification setup failed. Check connection and retry.":
+    "No se pudieron configurar las notificaciones. Comprueba la conexión e inténtalo de nuevo.",
+  "Enabling notifications...": "Activando notificaciones...",
+  "Disabling notifications...": "Desactivando notificaciones...",
+  "Failed to enable notifications.": "No se pudieron activar las notificaciones.",
+  "Failed to disable notifications.": "No se pudieron desactivar las notificaciones.",
   "Nakama Server Logs": "Registros del servidor Nakama",
   "Enter the Nakama console password to continue.":
     "Introduce la contraseña de consola de Nakama para continuar.",

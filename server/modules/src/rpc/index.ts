@@ -25,3 +25,5 @@ export {
   facebookDataDeletionRpc,
   facebookDataDeletionStatusRpc,
 } from "./facebookDataDeletion";
+export { registerPushSubscriptionRpc } from "./registerPushSubscription";
+export { unregisterPushSubscriptionRpc } from "./unregisterPushSubscription";

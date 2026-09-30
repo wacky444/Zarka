@@ -8,6 +8,7 @@ import { AdminServerScene } from "./scenes/AdminServerScene";
 import RexUIPlugin from "phaser3-rex-plugins/templates/ui/ui-plugin";
 import { SessionManager } from "./services/sessionManager";
 import { installPhaserLocalization } from "./services/i18n";
+import { registerPushServiceWorker } from "./services/pushNotifications";
 
 import { isMobile } from "./utils/isMobile";
 
@@ -44,6 +45,9 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 installPhaserLocalization();
+void registerPushServiceWorker().catch((error: unknown) => {
+  console.warn("Failed to register the push service worker:", error);
+});
 
 // Initialize the game and check for existing session
 async function initGame() {

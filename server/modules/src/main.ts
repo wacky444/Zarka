@@ -26,7 +26,9 @@ import {
   buyShopItemRpc,
   setAdminViewRpc,
   facebookDataDeletionRpc,
-  facebookDataDeletionStatusRpc
+  facebookDataDeletionStatusRpc,
+  registerPushSubscriptionRpc,
+  unregisterPushSubscriptionRpc
 } from "./rpc";
 import { asyncTurnMatchHandler } from "./match/async_turn";
 import { restoreMatchesFromStorage } from "./services/matchRestoration";
@@ -240,6 +242,28 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register facebook_data_deletion_status: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc(
+      "register_push_subscription",
+      registerPushSubscriptionRpc
+    );
+  } catch (error) {
+    logger.error(
+      "Failed to register register_push_subscription: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc(
+      "unregister_push_subscription",
+      unregisterPushSubscriptionRpc
+    );
+  } catch (error) {
+    logger.error(
+      "Failed to register unregister_push_subscription: %s",
       (error && (error as Error).message) || String(error)
     );
   }

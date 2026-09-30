@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test:smoke:login": "node ./scripts/smoke-login.mjs",
-    "test:tutorial-ui": "node ./scripts/test-tutorial-ui.mjs"
+    "test:tutorial-ui": "node ./scripts/test-tutorial-ui.mjs",
+    "test:push": "node ./scripts/test-push-notifications.mjs"
   },
   "dependencies": {
     "@heroiclabs/nakama-js": "^2.6.0",

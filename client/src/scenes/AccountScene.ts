@@ -9,7 +9,13 @@ import {
   setAdminViewEnabled
 } from "../services/adminView";
 import type { AccountService } from "../services/AccountService";
-import type { TurnService } from "../services/turnService";
+import { TurnService } from "../services/turnService";
+import {
+  disablePushNotifications,
+  enablePushNotifications,
+  getPushNotificationState,
+  type PushNotificationState
+} from "../services/pushNotifications";
 import { GridSelect, type GridSelectItem } from "../ui/GridSelect";
 import { assetPath } from "../utils/assetPath";
 import type {
@@ -93,6 +99,10 @@ export class AccountScene extends Phaser.Scene {
   private skinStatsTitle!: Phaser.GameObjects.Text;
   private skinTitle!: Phaser.GameObjects.Text;
   private facebookTitle!: Phaser.GameObjects.Text;
+  private pushTitle!: Phaser.GameObjects.Text;
+  private pushDescription!: Phaser.GameObjects.Text;
+  private pushStatusText!: Phaser.GameObjects.Text;
+  private pushButton!: UIButton;
   private audioTitle!: Phaser.GameObjects.Text;
   private volumeLabel!: Phaser.GameObjects.Text;
   private volumeSlider!: SliderInstance;
@@ -103,6 +113,9 @@ export class AccountScene extends Phaser.Scene {
   private statusText!: Phaser.GameObjects.Text;
   private client!: Client;
   private session!: Session;
+  private turnService!: TurnService;
+  private pushState: PushNotificationState = "disabled";
+  private pushBusy = false;
   private userInfoText!: Phaser.GameObjects.Text;
   private displayNameText!: Phaser.GameObjects.Text;
   private changeDisplayNameButton!: UIButton;
@@ -144,6 +157,9 @@ export class AccountScene extends Phaser.Scene {
 
     this.client = data.client;
     this.session = data.session;
+    this.turnService =
+      (this.registry.get("turnService") as TurnService | undefined) ??
+      new TurnService(this.client, this.session);
 
     this.accountRoot = this.add.container(0, 0);
     this.accountScrollPanel = this.rexUI.add.scrollablePanel({
@@ -314,6 +330,50 @@ export class AccountScene extends Phaser.Scene {
     ).setOrigin(0.5, 0);
     this.accountRoot.add(this.unlinkFacebookButton);
 
+    this.pushTitle = this.add
+      .text(0, 0, t("Notifications"), {
+        color: "#ffffff",
+        fontSize: "18px"
+      })
+      .setOrigin(0.5, 0);
+    this.accountRoot.add(this.pushTitle);
+
+    this.pushDescription = this.add
+      .text(
+        0,
+        0,
+        t("Turn reminders can be delayed by Android or browser power management."),
+        {
+          color: "#cccccc",
+          fontSize: "13px",
+          align: "center",
+          wordWrap: { width: 600 }
+        }
+      )
+      .setOrigin(0.5, 0);
+    this.accountRoot.add(this.pushDescription);
+
+    this.pushStatusText = this.add
+      .text(0, 0, t("Checking notification support..."), {
+        color: "#cccccc",
+        fontSize: "13px",
+        align: "center",
+        wordWrap: { width: 600 }
+      })
+      .setOrigin(0.5, 0);
+    this.accountRoot.add(this.pushStatusText);
+
+    this.pushButton = makeButton(
+      this,
+      0,
+      0,
+      t("Enable notifications"),
+      async () => this.togglePushNotifications()
+    ).setOrigin(0.5, 0);
+    this.pushButton.setAlpha(0.5);
+    this.pushButton.disableInteractive();
+    this.accountRoot.add(this.pushButton);
+
     const initialVolume = getStoredVolumeLevel();
     setGameVolumeLevel(this, initialVolume);
 
@@ -377,6 +437,7 @@ export class AccountScene extends Phaser.Scene {
       }
     });
 
+    void this.refreshPushNotificationUi();
     await this.loadUserInfo();
   }
 
@@ -507,6 +568,17 @@ export class AccountScene extends Phaser.Scene {
       this.unlinkFacebookButton.setPosition(centerX, cursorY);
       cursorY += this.unlinkFacebookButton.height + ACCOUNT_LAYOUT.sectionGap;
     }
+
+    this.pushTitle.setPosition(centerX, cursorY);
+    cursorY += this.pushTitle.height + 6;
+    this.pushDescription.setWordWrapWidth(contentWidth, true);
+    this.pushDescription.setPosition(centerX, cursorY);
+    cursorY += this.pushDescription.height + 6;
+    this.pushStatusText.setWordWrapWidth(contentWidth, true);
+    this.pushStatusText.setPosition(centerX, cursorY);
+    cursorY += this.pushStatusText.height + 8;
+    this.pushButton.setPosition(centerX, cursorY);
+    cursorY += this.pushButton.height + ACCOUNT_LAYOUT.sectionGap;
 
     this.audioTitle.setPosition(centerX, cursorY);
     cursorY += this.audioTitle.height + 6;
@@ -788,6 +860,68 @@ export class AccountScene extends Phaser.Scene {
     } catch (error) {
       console.error("Error unlinking Facebook:", error);
       this.statusText.setText("Failed to unlink Facebook account");
+    }
+  }
+
+  private async refreshPushNotificationUi(): Promise<void> {
+    this.pushState = await getPushNotificationState();
+    const statusKeys: Record<PushNotificationState, string> = {
+      unsupported: "Web Push is not supported by this browser.",
+      unconfigured: "Push notifications are not configured for this app.",
+      denied: "Notifications are blocked. Allow them in browser settings.",
+      disabled: "Notifications are off on this device.",
+      enabled: "Notifications are on for this device.",
+      error: "Notification setup failed. Check connection and retry."
+    };
+    this.pushStatusText.setText(t(statusKeys[this.pushState]));
+    this.updatePushButton();
+    this.layoutAccount();
+  }
+
+  private updatePushButton(): void {
+    this.pushButton.setText(
+      `[ ${t(this.pushState === "enabled" ? "Disable notifications" : "Enable notifications")} ]`
+    );
+    const canInteract =
+      !this.pushBusy &&
+      this.pushState !== "unsupported" &&
+      this.pushState !== "unconfigured" &&
+      this.pushState !== "denied";
+    if (canInteract) {
+      this.pushButton.setAlpha(1);
+      this.pushButton.setInteractive({ useHandCursor: true });
+    } else {
+      this.pushButton.setAlpha(0.5);
+      this.pushButton.disableInteractive();
+    }
+  }
+
+  private async togglePushNotifications(): Promise<void> {
+    if (this.pushBusy) return;
+    const disabling = this.pushState === "enabled";
+    this.pushBusy = true;
+    this.pushStatusText.setText(
+      t(disabling ? "Disabling notifications..." : "Enabling notifications...")
+    );
+    this.updatePushButton();
+    this.layoutAccount();
+    try {
+      if (disabling) {
+        await disablePushNotifications(this.turnService);
+      } else {
+        await enablePushNotifications(this.turnService);
+      }
+      await this.refreshPushNotificationUi();
+    } catch (error) {
+      console.warn("Push notification settings update failed:", error);
+      this.pushState = await getPushNotificationState();
+      this.pushStatusText.setText(
+        t(disabling ? "Failed to disable notifications." : "Failed to enable notifications.")
+      );
+    } finally {
+      this.pushBusy = false;
+      this.updatePushButton();
+      this.layoutAccount();
     }
   }
 

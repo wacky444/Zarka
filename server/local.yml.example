@@ -7,6 +7,8 @@ runtime:
     # Set this to the Facebook App Secret. Do not commit the real value.
     - "FACEBOOK_APP_SECRET=replace-with-facebook-app-secret"
     - "FACEBOOK_DATA_DELETION_URL=https://example.url/facebook/data-deletion"
+    - "PUSH_DISPATCHER_URL=http://push-dispatcher:7355/send"
+    - "PUSH_DISPATCH_SECRET=replace-with-the-same-32-plus-character-secret-from-server-env"
 socket:
   port: 7350
 console:

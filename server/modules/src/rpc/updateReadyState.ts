@@ -24,6 +24,10 @@ import { validateTime } from "../utils/validation";
 import { getRuntimeMatchId } from "../utils/matchIds";
 import { isAdminUser } from "../utils/admin";
 import { createReplaySnapshot } from "../match/replay/snapshot";
+import {
+  createTurnNotificationOutbox,
+  dispatchTurnNotificationOutbox
+} from "../services/turnPushNotifications";
 
 const READY_ADVANCE_MARGIN_MINUTES = 12 * 60;
 
@@ -185,8 +189,16 @@ export function updateReadyStateRpc(
     );
   }
 
+  const pushOutbox =
+    advanced && advanceResult
+      ? createTurnNotificationOutbox(match, ctx, nk, logger)
+      : null;
   try {
-    storage.writeMatch(match, read.version);
+    if (pushOutbox) {
+      storage.writeMatchWithPushOutbox(match, pushOutbox, read.version);
+    } else {
+      storage.writeMatch(match, read.version);
+    }
     if (trapEvents.length > 0) {
       const persisted = storage.getMatch(matchId);
       logger.debug(
@@ -300,6 +312,16 @@ export function updateReadyStateRpc(
         );
       }
     }
+  }
+
+  if (pushOutbox) {
+    dispatchTurnNotificationOutbox(
+      match.match_id,
+      match.current_turn,
+      ctx,
+      nk,
+      logger
+    );
   }
 
   const tailoredPlayerCharacters = tailorPlayerCharactersForViewer(

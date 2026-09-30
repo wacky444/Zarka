@@ -24,6 +24,15 @@ import {
 
 export type Move = { n: number; ts: number };
 
+export interface PushSubscriptionPayload {
+  endpoint: string;
+  expirationTime: number | null;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+}
+
 type BasicUser = {
   id?: string;
   user_id?: string;
@@ -270,6 +279,24 @@ export class TurnService {
       recipient_id
     } satisfies UpdateTestamentRequest);
     return res;
+  }
+
+  async registerPushSubscription(
+    device_id: string,
+    subscription: PushSubscriptionPayload,
+    locale: "en" | "es"
+  ) {
+    return this.client.rpc(this.session, "register_push_subscription", {
+      device_id,
+      subscription,
+      locale
+    });
+  }
+
+  async unregisterPushSubscription(device_id: string) {
+    return this.client.rpc(this.session, "unregister_push_subscription", {
+      device_id
+    });
   }
 
   async buyShopItem(
