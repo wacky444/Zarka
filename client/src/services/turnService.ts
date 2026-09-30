@@ -6,6 +6,9 @@ import {
   OPCODE_READY_STATE_UPDATE,
   OPCODE_SETTINGS_UPDATE,
   OPCODE_TURN_ADVANCED,
+  OPCODE_ZARKANS_DONATED,
+  type DonateZarkansRequest,
+  type ZarkansDonatedMessagePayload,
   type InMatchSettings,
   type ActionSubmission,
   type TurnAdvancedMessagePayload,
@@ -59,6 +62,7 @@ export class TurnService {
   private onReadyStateUpdate?: (
     payload: ReadyStateUpdateMessagePayload
   ) => void;
+  private onZarkansDonated?: (payload: ZarkansDonatedMessagePayload) => void;
   private usernameCache = new Map<string, string>();
 
   constructor(
@@ -281,6 +285,18 @@ export class TurnService {
     return res;
   }
 
+  async donateZarkans(
+    match_id: string,
+    recipient_id: string,
+    amount: number
+  ) {
+    return this.client.rpc(this.session, "donate_zarkans", {
+      match_id,
+      recipient_id,
+      amount
+    } satisfies DonateZarkansRequest);
+  }
+
   async registerPushSubscription(
     device_id: string,
     subscription: PushSubscriptionPayload,
@@ -433,6 +449,17 @@ export class TurnService {
           } catch (e) {
             console.warn("Failed to parse ready state update message", e);
           }
+        } else if (m.op_code === OPCODE_ZARKANS_DONATED) {
+          try {
+            const payload = JSON.parse(
+              new TextDecoder().decode(m.data)
+            ) as ZarkansDonatedMessagePayload;
+            if (this.onZarkansDonated) {
+              this.onZarkansDonated(payload);
+            }
+          } catch (e) {
+            console.warn("Failed to parse zarkans donation message", e);
+          }
         }
       };
     }
@@ -510,6 +537,12 @@ export class TurnService {
     this.onReadyStateUpdate = cb;
   }
 
+  setOnZarkansDonated(
+    cb?: (payload: ZarkansDonatedMessagePayload) => void
+  ) {
+    this.onZarkansDonated = cb;
+  }
+
   // Optionally allow callers to pre-connect the socket
   async connectSocket(): Promise<void> {
     await this.ensureSocketConnected();
@@ -530,6 +563,7 @@ export class TurnService {
     this.onMatchEnded = undefined;
     this.onTurnAdvanced = undefined;
     this.onReadyStateUpdate = undefined;
+    this.onZarkansDonated = undefined;
   }
 
   // Getters for client and session (used in MainScene)

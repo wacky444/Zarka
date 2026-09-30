@@ -51,6 +51,8 @@ import {
   type UpgradeSkillPayload,
   type UpdateTestamentPayload,
   type BuyShopItemPayload,
+  type DonateZarkansPayload,
+  type ZarkansDonatedMessagePayload,
   type ShopId
 } from "@shared";
 import { buildBoardIconUrl, deriveBoardIconKey } from "../ui/actionIcons";
@@ -201,6 +203,11 @@ export class GameScene extends Phaser.Scene {
     payload: ReadyStateUpdateMessagePayload
   ) => {
     this.handleReadyStateUpdate(payload);
+  };
+  private readonly zarkansDonatedHandler = (
+    payload: ZarkansDonatedMessagePayload
+  ) => {
+    void this.handleZarkansDonatedMessage(payload);
   };
   private readonly pointerDownHandler = (pointer: Phaser.Input.Pointer) => {
     this.tutorialPanDistance = 0;
@@ -510,6 +517,7 @@ export class GameScene extends Phaser.Scene {
       this.turnService.setOnTurnAdvanced(this.turnAdvancedHandler);
       this.turnService.setOnMatchEnded(this.matchEndedHandler);
       this.turnService.setOnReadyStateUpdate(this.readyStateUpdateHandler);
+      this.turnService.setOnZarkansDonated(this.zarkansDonatedHandler);
       this.accountService = this.registry.get(
         "accountService"
       ) as AccountService | null;
@@ -629,6 +637,7 @@ export class GameScene extends Phaser.Scene {
       this
     );
     this.characterPanel.on("shop-purchase", this.handleShopPurchase, this);
+    this.characterPanel.on("donate-zarkans", this.handleZarkansDonation, this);
     this.input.keyboard?.on("keydown", this.escapeKeyHandler);
     this.installBrowserHistoryGuard();
 
@@ -856,6 +865,11 @@ export class GameScene extends Phaser.Scene {
         this
       );
       this.characterPanel?.off("shop-purchase", this.handleShopPurchase, this);
+      this.characterPanel?.off(
+        "donate-zarkans",
+        this.handleZarkansDonation,
+        this
+      );
       this.gridModalActive = false;
       this.cancelMainActionLocationPick();
       this.itemTooltip?.hide();
@@ -874,6 +888,7 @@ export class GameScene extends Phaser.Scene {
         this.turnService.setOnTurnAdvanced();
         this.turnService.setOnMatchEnded();
         this.turnService.setOnReadyStateUpdate();
+        this.turnService.setOnZarkansDonated();
       }
       this.topBanner?.destroy();
       this.topBanner = null;
@@ -2406,8 +2421,83 @@ export class GameScene extends Phaser.Scene {
 
   private isUpgradingSkill = false;
   private isBuyingShopItem = false;
+  private isDonatingZarkans = false;
   private isUpdatingTestament = false;
   private pendingTestamentRecipient: string | null | undefined;
+
+  private async handleZarkansDonation(selection: {
+    targetPlayerId: string;
+    amount: number;
+  }): Promise<void> {
+    const matchId =
+      (this.registry.get("currentMatchId") as string | null) ??
+      this.currentMatch?.match_id;
+    if (
+      this.isDonatingZarkans ||
+      !this.turnService ||
+      !this.currentUserId ||
+      !matchId
+    ) {
+      return;
+    }
+
+    this.isDonatingZarkans = true;
+    this.characterPanel?.setDonationPending(true);
+    try {
+      const response = await this.turnService.donateZarkans(
+        matchId,
+        selection.targetPlayerId,
+        selection.amount
+      );
+      const result = this.parseRpcPayload<DonateZarkansPayload>(response);
+      if (
+        result.error ||
+        result.donor_id !== this.currentUserId ||
+        result.recipient_id !== selection.targetPlayerId ||
+        typeof result.donor_balance !== "number" ||
+        !Number.isSafeInteger(result.donor_balance) ||
+        result.donor_balance < 0
+      ) {
+        throw new Error(result.error ?? "invalid_donation_response");
+      }
+      if (this.currentMatch?.playerCharacters?.[this.currentUserId]) {
+        const donor = this.currentMatch.playerCharacters[this.currentUserId];
+        donor.economy = {
+          ...donor.economy,
+          zarkans: result.donor_balance
+        };
+        this.updateCharacterPanel(this.currentMatch);
+      }
+      this.characterPanel?.closeDonationModal();
+    } catch (error) {
+      console.warn("donate_zarkans failed", error);
+      this.characterPanel?.setDonationPending(
+        false,
+        t("Failed to send donation.")
+      );
+    } finally {
+      this.isDonatingZarkans = false;
+    }
+  }
+
+  private async handleZarkansDonatedMessage(
+    payload: ZarkansDonatedMessagePayload
+  ): Promise<void> {
+    if (
+      !this.currentUserId ||
+      !this.currentMatch ||
+      payload.match_id !== this.currentMatch.match_id ||
+      (payload.donor_id !== this.currentUserId &&
+        payload.recipient_id !== this.currentUserId)
+    ) {
+      return;
+    }
+    const match = await this.fetchMatchFromServer();
+    if (match && match.match_id === this.currentMatch?.match_id) {
+      this.currentMatch = match;
+      this.updateCharacterPanel(match);
+    }
+  }
 
   private async handleShopPurchase(payload: {
     shopId: ShopId;

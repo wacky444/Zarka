@@ -63,5 +63,3 @@ phaser.js:120564  GET https://wacky444.github.io/Zarka/assets/images/Board%20Gam
 09:20:44.116 phaser.js:120564  GET https://wacky444.github.io/Zarka/assets/images/Board%20Game%20Icons/drone.png 404 (Not Found)
 
 - improve the ready checkbox, to a cool button, if is the last player, show a confirm dialog
-
-- zarkans transfer

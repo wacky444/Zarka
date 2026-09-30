@@ -49,6 +49,7 @@ import { CharacterPanelPlayerListView } from "./CharacterPanelPlayerListView";
 import { Subtabs } from "./Subtabs";
 import { CharacterPanelSkillsView } from "./CharacterPanelSkillsView";
 import { CharacterPanelShopView } from "./CharacterPanelShopView";
+import type { ZarkanDonationSelection } from "./ZarkanDonationModal";
 import {
   getTutorialUiPolicy,
   isTutorialReadyActionAllowed,
@@ -359,6 +360,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     targetLocation?: Axial;
   }) => {
     this.emit("shop-purchase", payload);
+  };
+  private readonly handleZarkansDonation = (
+    selection: ZarkanDonationSelection
+  ) => {
+    this.emit("donate-zarkans", selection);
   };
   private readyPointerIsDown = false;
   private readonly handleReadyPointerDown = (
@@ -1430,6 +1436,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     });
     this.shopView.on("testament-change", this.handleTestamentChange, this);
     this.shopView.on("shop-purchase", this.handleShopPurchase, this);
+    this.shopView.on("donate-zarkans", this.handleZarkansDonation, this);
     this.shopView.on("modal-open", this.handleActionModalOpen, this);
     this.shopView.on("modal-close", this.handleActionModalClose, this);
     this.shopElements = this.shopView.getElements();
@@ -1917,6 +1924,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.skillsView?.destroy();
     this.shopView?.off("testament-change", this.handleTestamentChange, this);
     this.shopView?.off("shop-purchase", this.handleShopPurchase, this);
+    this.shopView?.off("donate-zarkans", this.handleZarkansDonation, this);
     this.shopView?.off("modal-open", this.handleActionModalOpen, this);
     this.shopView?.off("modal-close", this.handleActionModalClose, this);
     this.shopView?.destroy();
@@ -5782,6 +5790,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   finishShopPurchase(): void {
     this.shopView.finishShopPurchase();
+  }
+
+  setDonationPending(pending: boolean, error?: string): void {
+    this.shopView.setDonationPending(pending, error);
+  }
+
+  closeDonationModal(): void {
+    this.shopView.closeDonationModal();
   }
 
   beginSpyDronePurchase(): void {

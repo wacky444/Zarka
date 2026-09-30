@@ -11,6 +11,7 @@ import {
 import { PlayerSelector, type PlayerOption } from "./PlayerSelector";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
 import { getCellTypeLabel } from "./CellContentsPanel";
+import { ZarkanDonationModal, type ZarkanDonationSelection } from "./ZarkanDonationModal";
 import { t } from "../services/i18n";
 
 export interface CharacterPanelShopViewLayout {
@@ -53,6 +54,11 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
   private readonly background: Phaser.GameObjects.Rectangle;
   private readonly headerBox: Phaser.GameObjects.Rectangle;
   private readonly balanceText: Phaser.GameObjects.Text;
+  private readonly donateButtonBackground: Phaser.GameObjects.Rectangle;
+  private readonly donateButtonLabel: Phaser.GameObjects.Text;
+  private readonly donationModal: ZarkanDonationModal;
+  private donationTargets: PlayerOption[] = [];
+  private donateEnabled = false;
   private readonly testamentSelector: PlayerSelector;
   private readonly detectiveSelector: PlayerSelector;
   private readonly droneLocationSelector: GridSelect;
@@ -108,6 +114,65 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
       .setOrigin(0, 0.5)
       .setVisible(false);
     parent.add(this.balanceText);
+
+    this.donateButtonBackground = scene.add
+      .rectangle(layout.margin + headerWidth - 94, headerY + 11, 82, 22, 0x166534, 1)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0x4ade80, 1)
+      .setInteractive({ useHandCursor: true })
+      .setVisible(false);
+    let donatePointerId: number | null = null;
+    this.donateButtonBackground.on(
+      Phaser.Input.Events.POINTER_DOWN,
+      (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+        donatePointerId = pointer.id;
+        event.stopPropagation();
+      }
+    );
+    this.donateButtonBackground.on(Phaser.Input.Events.POINTER_OUT, () => {
+      donatePointerId = null;
+    });
+    this.donateButtonBackground.on(
+      Phaser.Input.Events.POINTER_UP,
+      (
+        _pointer: Phaser.Input.Pointer,
+        _x: number,
+        _y: number,
+        event: Phaser.Types.Input.EventData
+      ) => {
+        event.stopPropagation();
+        if (donatePointerId !== _pointer.id) {
+          return;
+        }
+        donatePointerId = null;
+        if (this.donateEnabled) {
+          this.donationModal.open(
+            this.donationTargets,
+            Math.max(
+              0,
+              Math.floor(this.currentCharacter?.economy?.zarkans ?? 0)
+            )
+          );
+        }
+      }
+    );
+    parent.add(this.donateButtonBackground);
+    this.donateButtonLabel = scene.add
+      .text(layout.margin + headerWidth - 53, headerY + 22, t("Donate"), {
+        fontSize: "12px",
+        color: "#ffffff",
+        fontStyle: "bold"
+      })
+      .setOrigin(0.5)
+      .setVisible(false);
+    parent.add(this.donateButtonLabel);
+
+    this.donationModal = new ZarkanDonationModal(scene);
+    this.donationModal.on("modal-open", () => this.emit("modal-open"));
+    this.donationModal.on("modal-close", () => this.emit("modal-close"));
+    this.donationModal.on("send", (selection: ZarkanDonationSelection) => {
+      this.emit("donate-zarkans", selection);
+    });
 
     const selectorY = headerY + HEADER_HEIGHT + 10;
     this.testamentSelector = new PlayerSelector(
@@ -258,6 +323,8 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
       this.background,
       this.headerBox,
       this.balanceText,
+      this.donateButtonBackground,
+      this.donateButtonLabel,
       this.testamentSelector,
       this.detectiveSelector,
       this.droneLocationSelector,
@@ -298,7 +365,11 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
         ? match.playerCharacters[currentUserId] ?? null
         : null;
     const options = playerOptions.filter((option) => {
-      if (!match || option.id === currentUserId) {
+      if (
+        !match ||
+        option.id === currentUserId ||
+        match.deadCharacters?.[option.id] === true
+      ) {
         return false;
       }
       const character = match.playerCharacters?.[option.id];
@@ -319,13 +390,28 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.updateDroneLocationOptions(match);
     const zarkans = this.currentCharacter?.economy?.zarkans ?? 0;
     this.balanceText.setText(`Zarkans: ${Math.max(0, Math.floor(zarkans))}`);
+    this.donationTargets = options;
     const enabled = Boolean(
-      this.currentCharacter &&
+      match &&
+        currentUserId &&
+        this.currentCharacter &&
+        !match.deadCharacters?.[currentUserId] &&
         !this.currentCharacter.statuses?.conditions?.includes("dead") &&
+        (this.currentCharacter.stats?.health?.current ?? 0) > 0 &&
         !this.currentCharacter.testamentProcessed
     );
     this.testamentSelector.setEnabled(enabled);
     this.testamentSelector.setActive(enabled);
+    this.setDonateEnabled(
+      Boolean(
+        match !== null &&
+          match.started === true &&
+          match.removed === 0 &&
+          enabled &&
+          options.length > 0 &&
+          Math.floor(zarkans) > 0
+      )
+    );
     this.detectiveSelector.setEnabled(enabled);
     this.detectiveSelector.setActive(false);
     this.detectiveSelector.setVisible(false);
@@ -401,7 +487,16 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.droneLocationSelector.setActive(false);
   }
 
+  setDonationPending(pending: boolean, error?: string): void {
+    this.donationModal.setPending(pending, error);
+  }
+
+  closeDonationModal(): void {
+    this.donationModal.close();
+  }
+
   closeModal(): void {
+    this.donationModal.close();
     this.testamentSelector.hideDropdown();
     this.detectiveSelector.hideDropdown();
     this.droneLocationSelector.hideModal();
@@ -413,7 +508,10 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.headerBox.setVisible(visible);
     this.balanceText.setVisible(visible);
     this.testamentSelector.setVisible(visible);
+    this.donateButtonBackground.setVisible(visible);
+    this.donateButtonLabel.setVisible(visible);
     if (!visible) {
+      this.donationModal.close();
       this.finishShopPurchase();
     }
     this.detectiveSelector.setVisible(false);
@@ -440,6 +538,15 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.headerBox.setSize(headerWidth, HEADER_HEIGHT);
     this.headerBox.setDisplaySize(headerWidth, HEADER_HEIGHT);
     this.balanceText.setPosition(options.margin + 24, headerY + HEADER_HEIGHT / 2);
+    this.donateButtonBackground.setPosition(
+      options.margin + headerWidth - 94,
+      headerY + 11
+    );
+    this.donateButtonLabel.setPosition(
+      options.margin + headerWidth - 53,
+      headerY + 22
+    );
+    this.donationModal.layout();
 
     const selectorY = headerY + HEADER_HEIGHT + 10;
     const selectorX = options.margin + 12;
@@ -468,6 +575,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
 
   destroy(): void {
     this.scrollPanel.clearMask?.();
+    this.donationModal.destroy();
     this.scrollMask.destroy();
     this.scrollMaskShape.destroy();
     this.testamentSelector.destroy();
@@ -485,6 +593,16 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     }
     this.cards.length = 0;
     this.removeAllListeners();
+  }
+
+  private setDonateEnabled(enabled: boolean): void {
+    this.donateEnabled = enabled;
+    this.donateButtonBackground.setAlpha(enabled ? 1 : 0.45);
+    if (enabled) {
+      this.donateButtonBackground.setInteractive({ useHandCursor: true });
+    } else {
+      this.donateButtonBackground.disableInteractive();
+    }
   }
 
   private getShopListTop(selectorY: number): number {

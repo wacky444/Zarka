@@ -20,6 +20,7 @@ export { updateSkinRpc } from "./updateSkin";
 export { upgradeSkillRpc } from "./upgradeSkill";
 export { updateTestamentRpc } from "./updateTestament";
 export { buyShopItemRpc } from "./buyShopItem";
+export { donateZarkansRpc } from "./donateZarkans";
 export { setAdminViewRpc } from "./setAdminView";
 export {
   facebookDataDeletionRpc,

@@ -9,6 +9,7 @@ import {
   OPCODE_READY_STATE_UPDATE,
   OPCODE_SETTINGS_UPDATE,
   OPCODE_TURN_ADVANCED,
+  OPCODE_ZARKANS_DONATED,
   type PlayerCharacter,
 } from "@shared";
 import { AsyncTurnState } from "../../models/types";
@@ -342,6 +343,29 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             true,
           );
         } catch {}
+      } else if (msg && msg.type === "zarkans_donated") {
+        const donorId = typeof msg.donor_id === "string" ? msg.donor_id : "";
+        const recipientId =
+          typeof msg.recipient_id === "string" ? msg.recipient_id : "";
+        const targetPresences = [
+          state.players[donorId],
+          state.players[recipientId],
+        ].filter((presence): presence is nkruntime.Presence => !!presence);
+        if (donorId && recipientId && targetPresences.length > 0) {
+          try {
+            dispatcher.broadcastMessage(
+              OPCODE_ZARKANS_DONATED,
+              JSON.stringify({
+                match_id: state.game_id,
+                donor_id: donorId,
+                recipient_id: recipientId,
+              }),
+              targetPresences,
+              null,
+              true,
+            );
+          } catch {}
+        }
       } else if (msg && msg.type === "match_removed") {
         try {
           const payload = JSON.stringify({ match_removed: true });

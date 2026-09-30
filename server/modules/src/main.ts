@@ -24,6 +24,7 @@ import {
   upgradeSkillRpc,
   updateTestamentRpc,
   buyShopItemRpc,
+  donateZarkansRpc,
   setAdminViewRpc,
   facebookDataDeletionRpc,
   facebookDataDeletionStatusRpc,
@@ -215,6 +216,14 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register buy_shop_item: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("donate_zarkans", donateZarkansRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register donate_zarkans: %s",
       (error && (error as Error).message) || String(error)
     );
   }

@@ -21,6 +21,7 @@ export const OPCODE_MATCH_REMOVED = 101;
 export const OPCODE_TURN_ADVANCED = 102;
 export const OPCODE_MATCH_ENDED = 103;
 export const OPCODE_READY_STATE_UPDATE = 104;
+export const OPCODE_ZARKANS_DONATED = 105;
 
 export type CreateTutorialMatchPayload = {
   ok?: boolean;
@@ -223,6 +224,28 @@ export type ReadyStateUpdateMessagePayload = {
   readyStates: Record<string, boolean>;
   deadCharacters?: Record<string, boolean>;
   traps?: TrapRecord[];
+};
+
+export type ZarkansDonatedMessagePayload = {
+  match_id: string;
+  donor_id: string;
+  recipient_id: string;
+};
+
+export type DonateZarkansRequest = {
+  match_id: string;
+  recipient_id: string;
+  amount: number;
+};
+
+export type DonateZarkansPayload = {
+  ok?: boolean;
+  match_id?: string;
+  donor_id?: string;
+  recipient_id?: string;
+  amount?: number;
+  donor_balance?: number;
+  error?: string;
 };
 
 export type SaveChatMessagePayload = {
