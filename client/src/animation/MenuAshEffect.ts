@@ -138,7 +138,7 @@ export class MenuAshEffect {
           : [0xa6a4a1, 0xd4cebf, 0x737782],
         blendMode: layer.ember ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL,
         frequency: (this.airflow.height + EDGE_MARGIN * 2) / 36 / layer.count * 1000,
-        maxParticles: layer.count + 8,
+        maxAliveParticles: layer.count + 8,
         reserve: layer.count + 8,
       });
       emitter.setDepth(-10).setScrollFactor(0);
