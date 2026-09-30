@@ -9,6 +9,7 @@ import { MatchesListView } from "./MatchesList";
 import { MyMatchesListView } from "./MyMatchesList";
 import { LobbyView } from "./LobbyView";
 import { applyStoredVolume } from "../animation/soundPlayer";
+import { MenuAshEffect } from "../animation/MenuAshEffect";
 import { getLocale, toggleLocale } from "../services/i18n";
 import { TUTORIAL_MATCH_METADATA_KEY } from "@shared";
 import { assetPath } from "../utils/assetPath";
@@ -42,6 +43,7 @@ const MAIN_LAYOUT = {
 
 export class MainScene extends Phaser.Scene {
   private mainRoot!: Phaser.GameObjects.Container;
+  private menuAshEffect: MenuAshEffect | null = null;
   private titleImage!: Phaser.GameObjects.Image;
   private statusText!: Phaser.GameObjects.Text;
   private turnService: TurnService | null = null;
@@ -200,6 +202,7 @@ export class MainScene extends Phaser.Scene {
 
   async create(data?: { client?: Client; session?: Session }) {
     applyStoredVolume(this);
+    this.menuAshEffect = new MenuAshEffect(this);
     this.mainRoot = this.add.container(0, 0);
 
     this.titleImage = this.add
@@ -226,6 +229,8 @@ export class MainScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutMain, this);
       this.events.off(Phaser.Scenes.Events.WAKE, this.wakeHandler);
+      this.menuAshEffect?.destroy();
+      this.menuAshEffect = null;
     });
 
     try {
@@ -774,6 +779,7 @@ export class MainScene extends Phaser.Scene {
 
   private applyViewVisibility() {
     const isMain = this.activeView === "main";
+    this.menuAshEffect?.setEnabled(isMain);
     if (this.mainRoot) {
       this.mainRoot.setVisible(isMain).setActive(isMain);
     }
