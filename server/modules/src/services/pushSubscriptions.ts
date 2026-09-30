@@ -158,7 +158,9 @@ export function registerPushSubscription(
       value: stored,
       permissionRead: 0,
       permissionWrite: 0,
-      version: currentSubscriptionRead?.version ?? ""
+      ...(currentSubscriptionRead?.version
+        ? { version: currentSubscriptionRead.version }
+        : {})
     },
     {
       collection: PUSH_SUBSCRIPTION_DEVICE_INDEX_COLLECTION,
@@ -167,7 +169,7 @@ export function registerPushSubscription(
       value: { userId } satisfies PushSubscriptionDeviceIndex,
       permissionRead: 0,
       permissionWrite: 0,
-      version: indexRead?.version ?? ""
+      ...(indexRead?.version ? { version: indexRead.version } : {})
     }
   ];
   const deletes: nkruntime.StorageDeleteRequest[] =

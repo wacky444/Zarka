@@ -48,6 +48,7 @@ export function registerPushSubscriptionRpc(
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    _logger.error("registerPushSubscription error: %s", error instanceof Error && error.stack ? error.stack : message);
     if (message === "too many push subscriptions") {
       throw makeNakamaError(message, nkruntime.Codes.RESOURCE_EXHAUSTED);
     }
