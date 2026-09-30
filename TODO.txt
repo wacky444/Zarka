@@ -52,4 +52,8 @@
 
 - bombard has animation? it should have it similar to cell destroyed
 
-- pantalla de ayuda con el orden de acciones
+- help screen with action orders
+
+- i never got hero team
+
+- create a deterministic test with several players doing actions and interacting between them, a full match

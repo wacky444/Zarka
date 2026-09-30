@@ -60,6 +60,10 @@ export class CellContentsPanel {
   private cellType = LocalizationType.Road;
   private entries: CellContentsEntry[] = [];
   private openingPointerId: number | null = null;
+  private warningTurn: number | undefined;
+  private destructionTurn: number | undefined;
+  private currentTurn = 0;
+  private destructionText: Phaser.GameObjects.Text | null = null;
   private readonly itemTooltip: ItemTooltipManager;
 
   private readonly handlePointerDown = (): void => {
@@ -100,14 +104,49 @@ export class CellContentsPanel {
     coord: Axial,
     cellType: LocalizationType,
     entries: CellContentsEntry[],
-    openingPointerId?: number,
+    options: {
+      openingPointerId?: number;
+      warningTurn?: number;
+      destructionTurn?: number;
+      currentTurn?: number;
+    } = {},
   ): void {
     this.coord = { ...coord };
     this.cellType = cellType;
     this.entries = [...entries];
-    this.openingPointerId = openingPointerId ?? null;
+    this.openingPointerId = options.openingPointerId ?? null;
+    this.warningTurn = Number.isFinite(options.warningTurn)
+      ? options.warningTurn
+      : undefined;
+    this.destructionTurn = Number.isFinite(options.destructionTurn)
+      ? options.destructionTurn
+      : undefined;
+    this.currentTurn = Number.isFinite(options.currentTurn)
+      ? options.currentTurn ?? 0
+      : 0;
     this.isVisible = true;
     this.render();
+  }
+
+  updateCurrentTurn(currentTurn: number): void {
+    if (!this.isVisible || currentTurn === this.currentTurn) {
+      return;
+    }
+    this.currentTurn = currentTurn;
+    const message = this.getDestructionMessage();
+    const hasMessage = this.destructionText !== null;
+    if (Boolean(message) !== hasMessage) {
+      this.render();
+      return;
+    }
+    if (!message || !this.destructionText) {
+      return;
+    }
+    const previousHeight = this.destructionText.height;
+    this.destructionText.setText(message);
+    if (this.destructionText.height !== previousHeight) {
+      this.render();
+    }
   }
 
   close(): void {
@@ -263,9 +302,27 @@ export class CellContentsPanel {
       38,
       Math.min(52, Math.floor((listWidth / 5) * 0.78)),
     );
+    let contentHeight = 8;
     const actualEntries = this.entries.filter(
       (entry) => ItemLibrary[entry.itemId] && entry.quantity > 0,
     );
+    const destructionMessage = this.getDestructionMessage();
+    if (destructionMessage) {
+      this.destructionText = this.scene.add
+        .text(12, contentHeight, destructionMessage, {
+          fontFamily: "Arial",
+          fontSize: "14px",
+          fontStyle: "bold",
+          color: THEME.colors.warning,
+          wordWrap: {
+            width: listWidth - 24,
+            useAdvancedWrap: true,
+          },
+        })
+        .setOrigin(0, 0);
+      content.add(this.destructionText);
+      contentHeight += Math.max(22, this.destructionText.getBounds().height) + 10;
+    }
     const cellDefinition = CellLibrary[this.cellType];
     const possibleEntries: CellContentsEntry[] = (
       cellDefinition.startingItems ?? []
@@ -274,8 +331,6 @@ export class CellContentsPanel {
     if (safeCount > 0) {
       possibleEntries.push({ itemId: "safe", quantity: safeCount });
     }
-    let contentHeight = 8;
-
     const addItemSection = (
       heading: string,
       entries: CellContentsEntry[],
@@ -410,7 +465,23 @@ export class CellContentsPanel {
     overlay.add(closeButton);
   }
 
+  private getDestructionMessage(): string | null {
+    if (
+      typeof this.warningTurn !== "number" ||
+      typeof this.destructionTurn !== "number" ||
+      this.currentTurn < this.warningTurn ||
+      this.currentTurn >= this.destructionTurn
+    ) {
+      return null;
+    }
+    const turnsLeft = this.destructionTurn - this.currentTurn;
+    return `${t("Destroyed in")} ${turnsLeft} ${t(
+      turnsLeft === 1 ? "turn" : "turns",
+    )}`;
+  }
+
   private destroyOverlay(): void {
+    this.destructionText = null;
     this.scrollPanel?.setScrollerEnable?.(false);
     this.scrollPanel?.setMouseWheelScrollerEnable?.(false);
     this.scrollPanel?.clearMask?.();

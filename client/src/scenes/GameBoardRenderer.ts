@@ -33,6 +33,7 @@ import {
   type CellContentsEntry
 } from "../ui/CellContentsPanel";
 import { HoverTooltip } from "../ui/HoverTooltip";
+import { t } from "../services/i18n";
 import {
   createSkinContainer,
   type SkinContainer,
@@ -108,6 +109,10 @@ export class GameBoardRenderer {
   private playerCoordForTinting: Axial | null = null;
   private playerViewRange = 0;
   private mapRenderingPaused = false;
+  private hoveredDestructionTooltip: {
+    tileId: string;
+    pointer: Phaser.Input.Pointer;
+  } | null = null;
   private locationSelectionHoverText: Phaser.GameObjects.Text | null = null;
 
   constructor(
@@ -320,12 +325,11 @@ export class GameBoardRenderer {
         Phaser.Input.Events.POINTER_OVER,
         (pointer: Phaser.Input.Pointer) => {
           this.callbacks.onTileHover(tile.id);
-          if (isWarning && typeof destructionTurn === "number") {
-            const turnsLeft = destructionTurn - currentTurn;
-            this.hoverTooltip.show(pointer.x, pointer.y, {
-              title: "Incoming Destruction",
-              body: `Destroyed in ${turnsLeft} ${turnsLeft === 1 ? "turn" : "turns"}`,
-            });
+          if (this.showDestructionTooltip(tile, pointer)) {
+            this.hoveredDestructionTooltip = { tileId: tile.id, pointer };
+          } else {
+            this.hoveredDestructionTooltip = null;
+            this.hoverTooltip.hide();
           }
         },
       );
@@ -338,7 +342,10 @@ export class GameBoardRenderer {
           ) {
             resetCellInfoPress();
           }
-          this.hoverTooltip.hide();
+          if (this.hoveredDestructionTooltip?.tileId === tile.id) {
+            this.hoveredDestructionTooltip = null;
+            this.hoverTooltip.hide();
+          }
           if (
             this.callbacks.getLocationSelection().hoveredTileId === tile.id
           ) {
@@ -412,6 +419,62 @@ export class GameBoardRenderer {
       replayView?.snapshot.traps ?? this.callbacks.getCurrentMatch()?.traps,
     );
     this.applyMapRenderingState();
+    this.refreshTurnDependentUi();
+  }
+
+  refreshTurnDependentUi(): void {
+    this.cellContentsPanel.updateCurrentTurn(this.getCurrentTurn());
+    this.refreshHoveredDestructionTooltip();
+  }
+
+  private refreshHoveredDestructionTooltip(): void {
+    const hovered = this.hoveredDestructionTooltip;
+    if (!hovered) {
+      return;
+    }
+    const tile = this.mapTileSprites.find(
+      (entry) => entry.tile.id === hovered.tileId,
+    )?.tile;
+    if (!tile || !this.showDestructionTooltip(tile, hovered.pointer)) {
+      this.hoveredDestructionTooltip = null;
+      this.hoverTooltip.hide();
+    }
+  }
+
+  private showDestructionTooltip(
+    tile: HexTile,
+    pointer: Phaser.Input.Pointer,
+  ): boolean {
+    const destructionTurn =
+      typeof tile.meta?.destructionTurn === "number"
+        ? tile.meta.destructionTurn
+        : undefined;
+    const warningTurn =
+      typeof tile.meta?.warningTurn === "number"
+        ? tile.meta.warningTurn
+        : undefined;
+    const currentTurn = this.getCurrentTurn();
+    const isDestroyed =
+      tile.meta?.destroyed === true ||
+      (typeof destructionTurn === "number" && currentTurn >= destructionTurn);
+    const isWarning =
+      !isDestroyed &&
+      typeof warningTurn === "number" &&
+      typeof destructionTurn === "number" &&
+      currentTurn >= warningTurn &&
+      currentTurn < destructionTurn;
+    if (!isWarning || typeof destructionTurn !== "number") {
+      return false;
+    }
+
+    const turnsLeft = destructionTurn - currentTurn;
+    this.hoverTooltip.show(pointer.x, pointer.y, {
+      title: t("Incoming Destruction"),
+      body: `${t("Destroyed in")} ${turnsLeft} ${t(
+        turnsLeft === 1 ? "turn" : "turns",
+      )}`,
+    });
+    return true;
   }
 
   renderPlayerCharacters(match: MatchRecord): void {
@@ -662,6 +725,12 @@ export class GameBoardRenderer {
                   snapshot.coord,
                   snapshot.localizationType,
                   cellEntries,
+                  typeof snapshot.meta?.warningTurn === "number"
+                    ? snapshot.meta.warningTurn
+                    : undefined,
+                  typeof snapshot.meta?.destructionTurn === "number"
+                    ? snapshot.meta.destructionTurn
+                    : undefined,
                 );
               },
             );
@@ -785,7 +854,18 @@ export class GameBoardRenderer {
       tile.coord,
       tile.cellType.localizationType,
       this.tileItemEntries.get(tile.id) ?? [],
-      openingPointerId
+      {
+        openingPointerId,
+        warningTurn:
+          typeof tile.meta?.warningTurn === "number"
+            ? tile.meta.warningTurn
+            : undefined,
+        destructionTurn:
+          typeof tile.meta?.destructionTurn === "number"
+            ? tile.meta.destructionTurn
+            : undefined,
+        currentTurn: this.getCurrentTurn(),
+      },
     );
     this.callbacks.onCellInfoOpened(tile.coord);
   }
@@ -794,8 +874,14 @@ export class GameBoardRenderer {
     coord: Axial,
     cellType: LocalizationType,
     entries: CellContentsEntry[],
+    warningTurn?: number,
+    destructionTurn?: number,
   ): void {
-    this.cellContentsPanel.show(coord, cellType, entries);
+    this.cellContentsPanel.show(coord, cellType, entries, {
+      warningTurn,
+      destructionTurn,
+      currentTurn: this.getCurrentTurn(),
+    });
     this.callbacks.onCellInfoOpened(coord);
   }
 

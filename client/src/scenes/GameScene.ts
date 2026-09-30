@@ -2692,6 +2692,7 @@ export class GameScene extends Phaser.Scene {
     if (this.characterPanel) {
       this.characterPanel.setLogTurnInfo(match.current_turn ?? 0);
     }
+    this.boardRenderer?.refreshTurnDependentUi();
   }
 
   private enqueueReplay(events: ReplayEvent[]) {
