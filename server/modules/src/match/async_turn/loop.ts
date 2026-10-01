@@ -4,6 +4,7 @@ import { DEFAULT_REPLAY_VIEW_DISTANCE } from "@shared";
 import { AsyncTurnState, MatchRecord } from "../../models/types";
 import { createNakamaWrapper } from "../../services/nakamaWrapper";
 import { StorageService } from "../../services/storageService";
+import { assignAfkActions } from "../afkActions";
 import { resolveTurnForMatch } from "../turnResolution";
 import { sendTutorialBotMessageForTurn } from "../TutorialBotChat";
 import { isBotId } from "../botAI";
@@ -168,6 +169,8 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       if (hasAutoAdvancedToday(match.lastAutoAdvanceAt, nowMs)) {
         return { state };
       }
+
+      assignAfkActions(match);
     }
 
     const trapsBeforeTurn = match.traps?.length ?? 0;
