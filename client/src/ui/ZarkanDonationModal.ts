@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { PlayerSelector, type PlayerOption } from "./PlayerSelector";
+import { THEME } from "./ColorPalette";
 import { t } from "../services/i18n";
 
 export type ZarkanDonationSelection = {
@@ -159,7 +160,7 @@ export class ZarkanDonationModal extends Phaser.GameObjects.Container {
     this.amountValue = ownerScene.add
       .text(0, 0, "1", {
         fontSize: "18px",
-        color: "#facc15",
+        color: THEME.colors.zarkanGold,
         fontStyle: "bold"
       })
       .setOrigin(0.5);
@@ -167,7 +168,7 @@ export class ZarkanDonationModal extends Phaser.GameObjects.Container {
     this.balanceLabel = ownerScene.add
       .text(0, 0, "", {
         fontSize: "12px",
-        color: "#facc15"
+        color: THEME.colors.zarkanGold
       })
       .setOrigin(1, 0.5);
     this.add(this.balanceLabel);

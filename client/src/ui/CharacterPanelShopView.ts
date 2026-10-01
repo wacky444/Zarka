@@ -11,6 +11,7 @@ import {
 import { PlayerSelector, type PlayerOption } from "./PlayerSelector";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
 import { getCellTypeLabel } from "./CellContentsPanel";
+import { THEME } from "./ColorPalette";
 import { ZarkanDonationModal, type ZarkanDonationSelection } from "./ZarkanDonationModal";
 import { t } from "../services/i18n";
 
@@ -108,7 +109,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.balanceText = scene.add
       .text(layout.margin + 24, headerY + HEADER_HEIGHT / 2, "Zarkans: 0", {
         fontSize: "15px",
-        color: "#facc15",
+        color: THEME.colors.zarkanGold,
         fontStyle: "bold"
       })
       .setOrigin(0, 0.5)
@@ -662,7 +663,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
         cardWidth - CARD_PADDING,
         startY + 8,
         definition.costLabel ?? `${definition.cost} zarkans`,
-        { fontSize: "12px", color: "#facc15" }
+        { fontSize: "12px", color: THEME.colors.zarkanGold }
       )
       .setOrigin(1, 0);
     const category = definition.category
