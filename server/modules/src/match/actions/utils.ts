@@ -226,6 +226,30 @@ export function resolvePlanDestination(
   };
 }
 
+export function countCarriedItem(
+  character: PlayerCharacter,
+  itemId: string,
+): number {
+  const carriedItems = character.inventory?.carriedItems;
+  if (!itemId || !Array.isArray(carriedItems)) {
+    return 0;
+  }
+  return carriedItems.reduce(
+    (total, stack) => {
+      if (
+        !stack ||
+        stack.itemId !== itemId ||
+        typeof stack.quantity !== "number" ||
+        !Number.isFinite(stack.quantity)
+      ) {
+        return total;
+      }
+      return total + Math.max(0, Math.floor(stack.quantity));
+    },
+    0,
+  );
+}
+
 export function hasCarriedItem(
   character: PlayerCharacter,
   itemId: string,

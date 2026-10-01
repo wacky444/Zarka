@@ -54,7 +54,8 @@ test("placing C4 consumes charges and adds a detonator for each one", () => {
   const match = createMatch();
   const character = match.playerCharacters.player;
   character.inventory.carriedItems = [
-    { itemId: "c4", quantity: 2, weight: 8 },
+    { itemId: "c4", quantity: 1, weight: 4 },
+    { itemId: "c4", quantity: 1, weight: 4 },
   ];
   character.stats.load.current = 8;
   character.actionPlan = {

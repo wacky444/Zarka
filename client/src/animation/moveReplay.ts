@@ -24,6 +24,7 @@ import { animateFailedActionEvent } from "./replayActions/FailedActionAnimation"
 import { animateDetectEvent } from "./replayActions/DetectAnimation";
 import { animateChemicalWeaponEvent } from "./replayActions/ChemicalWeaponAnimation";
 import { animateTrapEvent } from "./replayActions/TrapAnimation";
+import { animatePlaceC4Event } from "./replayActions/PlaceC4Animation";
 import { animateTileDestroyedEvent } from "./replayActions/TileDestroyedAnimation";
 import { animateShootPistolEvent } from "./replayActions/ShootPistolAnimation";
 import { animateShootHarpoonEvent } from "./replayActions/ShootHarpoonAnimation";
@@ -118,6 +119,8 @@ export async function playReplayEvents(
       await animateChemicalWeaponEvent(context, event);
     } else if (actionId === ActionLibrary.place_trap.id) {
       await animateTrapEvent(context, event);
+    } else if (actionId === ActionLibrary.place_c4.id) {
+      await animatePlaceC4Event(context, event);
     }
   }
 }

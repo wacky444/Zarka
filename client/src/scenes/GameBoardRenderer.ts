@@ -103,6 +103,11 @@ export class GameBoardRenderer {
   private c4Visuals: Array<
     Phaser.GameObjects.Image | Phaser.GameObjects.Text
   > = [];
+  private c4VisualGroups: Array<{
+    chargeIds: string[];
+    visuals: Array<Phaser.GameObjects.Image | Phaser.GameObjects.Text>;
+  }> = [];
+  private hiddenC4ChargeIds = new Set<string>();
   private trackerMarkers: Array<
     Phaser.GameObjects.Graphics | Phaser.GameObjects.Text
   > = [];
@@ -997,16 +1002,16 @@ export class GameBoardRenderer {
     this.clearC4Visuals();
     const currentUserId = this.callbacks.getCurrentUserId();
     const canSeeAllC4 = this.callbacks.isAdminViewEnabled();
-    const chargesByTile = new Map<string, { charge: C4Record; count: number }>();
+    const chargesByTile = new Map<string, C4Record[]>();
     for (const charge of c4s ?? []) {
       if (!canSeeAllC4 && charge.ownerId !== currentUserId) {
         continue;
       }
       const existing = chargesByTile.get(charge.tileId);
       if (existing) {
-        existing.count += 1;
+        existing.push(charge);
       } else {
-        chargesByTile.set(charge.tileId, { charge, count: 1 });
+        chargesByTile.set(charge.tileId, [charge]);
       }
     }
 
@@ -1014,7 +1019,11 @@ export class GameBoardRenderer {
     if (!this.scene.textures.exists(c4Texture.texture)) {
       return;
     }
-    for (const { charge, count } of chargesByTile.values()) {
+    for (const charges of chargesByTile.values()) {
+      const charge = charges[0];
+      if (!charge) {
+        continue;
+      }
       const world = this.getTileWorldPosition(charge.tileId, charge.coord);
       const icon = this.scene.add.image(
         world.x + 28,
@@ -1025,10 +1034,13 @@ export class GameBoardRenderer {
       icon.setDisplaySize(24, 24);
       icon.setDepth(7);
       this.uiCamera.ignore(icon);
+      const groupVisuals: Array<
+        Phaser.GameObjects.Image | Phaser.GameObjects.Text
+      > = [icon];
       this.c4Visuals.push(icon);
-      if (count > 1) {
+      if (charges.length > 1) {
         const countLabel = this.scene.add
-          .text(icon.x + 10, icon.y - 10, String(count), {
+          .text(icon.x + 10, icon.y - 10, String(charges.length), {
             fontFamily: "Arial",
             fontSize: "13px",
             fontStyle: "bold",
@@ -1042,7 +1054,21 @@ export class GameBoardRenderer {
           .setDepth(8);
         this.uiCamera.ignore(countLabel);
         this.c4Visuals.push(countLabel);
+        groupVisuals.push(countLabel);
       }
+      this.c4VisualGroups.push({
+        chargeIds: charges.map(({ id }) => id),
+        visuals: groupVisuals,
+      });
+    }
+    this.applyMapRenderingState();
+  }
+
+  setC4MarkerVisibility(chargeId: string, visible: boolean): void {
+    if (visible) {
+      this.hiddenC4ChargeIds.delete(chargeId);
+    } else {
+      this.hiddenC4ChargeIds.add(chargeId);
     }
     this.applyMapRenderingState();
   }
@@ -1539,6 +1565,8 @@ export class GameBoardRenderer {
       visual.destroy();
     }
     this.c4Visuals = [];
+    this.c4VisualGroups = [];
+    this.hiddenC4ChargeIds.clear();
   }
 
   private getTileWorldPosition(
@@ -1642,8 +1670,15 @@ export class GameBoardRenderer {
     for (const visual of this.trapVisuals) {
       visual.setVisible(visible);
     }
-    for (const visual of this.c4Visuals) {
-      visual.setVisible(visible);
+    for (const group of this.c4VisualGroups) {
+      const groupVisible =
+        visible &&
+        !group.chargeIds.some((chargeId) =>
+          this.hiddenC4ChargeIds.has(chargeId),
+        );
+      for (const visual of group.visuals) {
+        visual.setVisible(groupVisible);
+      }
     }
     for (const marker of this.trackerMarkers) {
       marker.setVisible(visible);

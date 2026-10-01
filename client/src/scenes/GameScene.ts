@@ -2868,7 +2868,9 @@ export class GameScene extends Phaser.Scene {
         if (this.uiCam) {
           this.uiCam.ignore(object);
         }
-      }
+      },
+      setC4MarkerVisibility: (chargeId, visible) =>
+        this.boardRenderer?.setC4MarkerVisibility(chargeId, visible),
     };
   }
 

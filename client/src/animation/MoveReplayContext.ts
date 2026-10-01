@@ -22,4 +22,5 @@ export interface MoveReplayContext {
   waitForPlaybackResume?: () => Promise<void>;
   shouldStopPlayback?: () => boolean;
   ignoreUI: (object: Phaser.GameObjects.GameObject) => void;
+  setC4MarkerVisibility?: (chargeId: string, visible: boolean) => void;
 }

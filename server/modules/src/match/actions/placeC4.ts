@@ -11,6 +11,7 @@ import type { MatchRecord } from "../../models/types";
 import { getRequestedExtraExecutions, getUsableExtraExecutions } from "../../utils/energy";
 import {
   consumeCarriedItem,
+  countCarriedItem,
   type PlannedActionParticipant,
 } from "./utils";
 import { BaseAction } from "./classes/BaseAction";
@@ -22,19 +23,6 @@ function findTileAtCoord(
   return match.map?.tiles.find(
     (tile) => tile.coord.q === coord.q && tile.coord.r === coord.r,
   );
-}
-
-function countCarriedC4(character: PlannedActionParticipant["character"]): number {
-  return (character.inventory?.carriedItems ?? [])
-    .filter((item) => item.itemId === "c4")
-    .reduce(
-      (total, item) =>
-        total +
-        (typeof item.quantity === "number"
-          ? Math.max(0, Math.floor(item.quantity))
-          : 0),
-      0,
-    );
 }
 
 function createC4Id(match: MatchRecord, ownerId: string, turn: number): string {
@@ -96,7 +84,7 @@ export class PlaceC4Action extends BaseAction {
         continue;
       }
 
-      const c4Count = countCarriedC4(participant.character);
+      const c4Count = countCarriedItem(participant.character, "c4");
       const requestedExtraExecutions = getRequestedExtraExecutions(
         participant.plan,
       );
