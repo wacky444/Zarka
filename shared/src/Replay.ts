@@ -1,6 +1,6 @@
 import type { ActionId } from "./Action";
 import type { Axial, GameMap } from "./hexTile";
-import type { MatchItemRecord, TrapRecord } from "./match";
+import type { C4Record, MatchItemRecord, TrapRecord } from "./match";
 import type { PlayerCharacter } from "./playerCharacter";
 
 export interface ReplayTurn {
@@ -63,6 +63,7 @@ export interface ReplaySnapshot {
   map?: GameMap;
   items?: MatchItemRecord[];
   traps?: TrapRecord[];
+  c4s?: C4Record[];
   playerCharacters?: Record<string, PlayerCharacter>;
   deadCharacters?: Record<string, boolean>;
 }

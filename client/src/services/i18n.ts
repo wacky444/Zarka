@@ -732,6 +732,11 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   "En una localización adyacente, sin prismáticos o un aliado con walkie talkie, se desconoce la identidad del objetivo.":
     "At an adjacent location, the target's identity remains unknown unless you have binoculars or an ally there with a walkie-talkie.",
   "Colocar C4": "Place C4",
+  "Requiere tener una carga de C4.": "Requires a C4 charge.",
+  "Instala un explosivo en la localización actual, añade un detonador al inventario y podrá detonarse en turnos posteriores.":
+    "Places a C4 charge at your current location, adds a detonator to your inventory, and lets you detonate it on a later turn.",
+  "Permite colocar una segunda carga de C4.":
+    "Allows placing a second C4 charge.",
   "Colocar trampa": "Place trap",
   Proteger: "Protect",
   Esquivar: "Dodge",

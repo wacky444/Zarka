@@ -18,6 +18,7 @@ import { normalizeMatchName } from "../../utils/normalize";
 import { clampNumber, validateTime } from "../../utils/validation";
 import { tailorReplayEvents } from "../replay/tailorReplay";
 import {
+  tailorC4sForViewer,
   tailorMapForCharacter,
   tailorMatchItemsForCharacter,
   tailorPlayerCharactersForViewer,
@@ -311,6 +312,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
                       msg.playerCharacters?.[playerId] ?? null,
                     ),
                 traps: tailorTrapsForViewer(msg.traps, playerId, viewAll),
+                c4s: tailorC4sForViewer(msg.c4s, playerId, viewAll),
               });
               dispatcher.broadcastMessage(
                 OPCODE_TURN_ADVANCED,

@@ -11,6 +11,7 @@ import { makeNakamaError } from "../utils/errors";
 import { MatchRecord } from "../models/types";
 import type { AdvanceTurnResult } from "../match/advanceTurn";
 import {
+  tailorC4sForViewer,
   tailorMapForCharacter,
   tailorMatchItemsForCharacter,
   tailorPlayerCharactersForViewer,
@@ -281,6 +282,7 @@ export function updateReadyStateRpc(
           map: match.map,
           items: match.items,
           traps: match.traps,
+          c4s: match.c4s,
         }),
       );
     } catch (e) {
@@ -375,6 +377,7 @@ export function updateReadyStateRpc(
       ? match.items
       : tailorMatchItemsForCharacter(match.items, viewerCharacter),
     traps: tailorTrapsForViewer(match.traps, ctx.userId, viewAll),
+    c4s: tailorC4sForViewer(match.c4s, ctx.userId, viewAll),
   };
 
   return JSON.stringify(response);

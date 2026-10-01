@@ -27,6 +27,14 @@ export interface TrapRecord {
   placedTurn: number;
 }
 
+export interface C4Record {
+  id: string;
+  ownerId: string;
+  tileId: string;
+  coord: Axial;
+  placedTurn: number;
+}
+
 export interface MatchTrackerRecord {
   id: string;
   ownerId: string;
@@ -71,6 +79,8 @@ export interface MatchRecord {
   map?: GameMap;
   items?: MatchItemRecord[];
   traps?: TrapRecord[];
+  /** Server-private placed C4; omitted from other players' views. */
+  c4s?: C4Record[];
   /** Server-private tracker placements; omitted from normal player views. */
   trackers?: MatchTrackerRecord[];
   /** Donation history; match views expose entries only to participants involved. */

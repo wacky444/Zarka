@@ -12,6 +12,7 @@ export function createReplaySnapshot(match: MatchRecord): ReplaySnapshot {
   }
   snapshot.items = cloneJson(match.items ?? []);
   snapshot.traps = cloneJson(match.traps ?? []);
+  snapshot.c4s = cloneJson(match.c4s ?? []);
   if (match.playerCharacters) {
     snapshot.playerCharacters = cloneJson(match.playerCharacters);
   }

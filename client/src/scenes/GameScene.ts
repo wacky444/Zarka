@@ -26,6 +26,7 @@ import {
   HexTile,
   type ActionId,
   type Axial,
+  type C4Record,
   type GameMap,
   generateGameMap,
   type GetStatePayload,
@@ -1019,6 +1020,10 @@ export class GameScene extends Phaser.Scene {
 
   private renderTraps(traps: TrapRecord[] | undefined): void {
     this.boardRenderer?.renderTraps(traps);
+  }
+
+  private renderC4s(c4s: C4Record[] | undefined): void {
+    this.boardRenderer?.renderC4s(c4s);
   }
 
   private renderFireTileAnimations(map: GameMap): void {
@@ -2372,6 +2377,12 @@ export class GameScene extends Phaser.Scene {
             this.renderTraps(payload.traps);
           }
         }
+        if (Array.isArray(payload.c4s)) {
+          this.currentMatch.c4s = payload.c4s;
+          if (!this.replayView) {
+            this.renderC4s(payload.c4s);
+          }
+        }
         if (!this.replayView && payload.map) {
           this.currentMatch.map = payload.map;
           this.renderItems(payload.map);
@@ -2747,6 +2758,15 @@ export class GameScene extends Phaser.Scene {
     }
     if (Array.isArray(payload.traps)) {
       match.traps = payload.traps;
+      if (!this.replayView) {
+        this.renderTraps(payload.traps);
+      }
+    }
+    if (Array.isArray(payload.c4s)) {
+      match.c4s = payload.c4s;
+      if (!this.replayView) {
+        this.renderC4s(payload.c4s);
+      }
     }
     if (payload.map) {
       match.map = payload.map;
@@ -3255,6 +3275,7 @@ export class GameScene extends Phaser.Scene {
       map: snapshot.map ?? this.currentMatch.map,
       items: snapshot.items ?? this.currentMatch.items,
       traps: snapshot.traps ?? this.currentMatch.traps,
+      c4s: snapshot.c4s ?? [],
       playerCharacters:
         snapshot.playerCharacters ?? this.currentMatch.playerCharacters,
       deadCharacters:

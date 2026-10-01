@@ -4,6 +4,7 @@ import {
   DEFAULT_SKIN,
   type ActionId,
   type Axial,
+  type C4Record,
   type GameMap,
   HexTile,
   ItemLibrary,
@@ -98,6 +99,9 @@ export class GameBoardRenderer {
     | Phaser.GameObjects.Graphics
     | Phaser.GameObjects.Image
     | Phaser.GameObjects.Text
+  > = [];
+  private c4Visuals: Array<
+    Phaser.GameObjects.Image | Phaser.GameObjects.Text
   > = [];
   private trackerMarkers: Array<
     Phaser.GameObjects.Graphics | Phaser.GameObjects.Text
@@ -420,6 +424,11 @@ export class GameBoardRenderer {
     const replayView = this.callbacks.getReplayView();
     this.renderTraps(
       replayView?.snapshot.traps ?? this.callbacks.getCurrentMatch()?.traps,
+    );
+    this.renderC4s(
+      replayView
+        ? replayView.snapshot.c4s ?? []
+        : this.callbacks.getCurrentMatch()?.c4s,
     );
     this.applyMapRenderingState();
     this.refreshTurnDependentUi();
@@ -984,6 +993,60 @@ export class GameBoardRenderer {
     this.applyMapRenderingState();
   }
 
+  renderC4s(c4s: C4Record[] | undefined): void {
+    this.clearC4Visuals();
+    const currentUserId = this.callbacks.getCurrentUserId();
+    const canSeeAllC4 = this.callbacks.isAdminViewEnabled();
+    const chargesByTile = new Map<string, { charge: C4Record; count: number }>();
+    for (const charge of c4s ?? []) {
+      if (!canSeeAllC4 && charge.ownerId !== currentUserId) {
+        continue;
+      }
+      const existing = chargesByTile.get(charge.tileId);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        chargesByTile.set(charge.tileId, { charge, count: 1 });
+      }
+    }
+
+    const c4Texture = resolveItemTexture(ItemLibrary.c4);
+    if (!this.scene.textures.exists(c4Texture.texture)) {
+      return;
+    }
+    for (const { charge, count } of chargesByTile.values()) {
+      const world = this.getTileWorldPosition(charge.tileId, charge.coord);
+      const icon = this.scene.add.image(
+        world.x + 28,
+        world.y - 24,
+        c4Texture.texture,
+        c4Texture.frame,
+      );
+      icon.setDisplaySize(24, 24);
+      icon.setDepth(7);
+      this.uiCamera.ignore(icon);
+      this.c4Visuals.push(icon);
+      if (count > 1) {
+        const countLabel = this.scene.add
+          .text(icon.x + 10, icon.y - 10, String(count), {
+            fontFamily: "Arial",
+            fontSize: "13px",
+            fontStyle: "bold",
+            color: "#ffffff",
+            backgroundColor: "#111827",
+            padding: { x: 3, y: 2 },
+            stroke: "#111827",
+            strokeThickness: 3,
+          })
+          .setOrigin(0.5)
+          .setDepth(8);
+        this.uiCamera.ignore(countLabel);
+        this.c4Visuals.push(countLabel);
+      }
+    }
+    this.applyMapRenderingState();
+  }
+
   refreshTileVisuals(): void {
     for (const entry of this.mapTileSprites) {
       this.updateTileTintState(entry.image, entry.tile);
@@ -1405,6 +1468,7 @@ export class GameBoardRenderer {
     this.mapTileSprites = [];
     this.clearFireTileAnimations();
     this.clearTrapVisuals();
+    this.clearC4Visuals();
   }
 
   private clearFireTileAnimations(): void {
@@ -1468,6 +1532,13 @@ export class GameBoardRenderer {
       visual.destroy();
     }
     this.trapVisuals = [];
+  }
+
+  private clearC4Visuals(): void {
+    for (const visual of this.c4Visuals) {
+      visual.destroy();
+    }
+    this.c4Visuals = [];
   }
 
   private getTileWorldPosition(
@@ -1569,6 +1640,9 @@ export class GameBoardRenderer {
       skullImage?.setVisible(visible);
     }
     for (const visual of this.trapVisuals) {
+      visual.setVisible(visible);
+    }
+    for (const visual of this.c4Visuals) {
       visual.setVisible(visible);
     }
     for (const marker of this.trackerMarkers) {

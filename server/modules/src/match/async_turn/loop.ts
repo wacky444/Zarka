@@ -254,6 +254,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
           map: match.map,
           items: match.items,
           traps: match.traps,
+          c4s: match.c4s,
         }),
       );
     } catch (error) {

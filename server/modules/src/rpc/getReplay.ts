@@ -11,6 +11,7 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { tailorReplayEvents } from "../match/replay/tailorReplay";
 import {
+  tailorC4sForViewer,
   tailorMapForCharacter,
   tailorMatchItemsForCharacter,
   tailorPlayerCharactersForViewer,
@@ -106,6 +107,7 @@ export function getReplayRpc(
               viewerCharacter,
             ),
             traps: tailorTrapsForViewer(replay.snapshot.traps, ctx.userId),
+            c4s: tailorC4sForViewer(replay.snapshot.c4s, ctx.userId),
             playerCharacters: tailorPlayerCharactersForViewer(
               replay.snapshot.playerCharacters,
               ctx.userId,

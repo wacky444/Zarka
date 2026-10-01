@@ -236,6 +236,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     name: "Colocar C4",
     category: ActionCategory.Primary,
     energyCost: 2,
+    developed: true,
     cooldown: 3,
     requiredItems: ["c4"],
     requirements: [
@@ -247,7 +248,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Instala un explosivo en la localización actual que podrá detonarse en turnos posteriores."
+          "Instala un explosivo en la localización actual, añade un detonador al inventario y podrá detonarse en turnos posteriores."
       }
     ],
     extraExecution: {

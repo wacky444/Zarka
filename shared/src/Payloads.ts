@@ -1,4 +1,5 @@
 import type {
+  C4Record,
   MatchItemRecord,
   MatchRecord,
   TrapRecord,
@@ -103,6 +104,7 @@ export type UpdateReadyStatePayload = {
   map?: GameMap;
   items?: MatchItemRecord[];
   traps?: TrapRecord[];
+  c4s?: C4Record[];
   error?: string;
 };
 
@@ -210,6 +212,7 @@ export type TurnAdvancedMessagePayload = {
   map?: GameMap;
   items?: MatchItemRecord[];
   traps?: TrapRecord[];
+  c4s?: C4Record[];
 };
 
 export type MatchEndedMessagePayload = {

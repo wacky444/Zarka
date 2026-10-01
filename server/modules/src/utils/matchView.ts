@@ -1,5 +1,6 @@
 import {
   isCharacterHidden,
+  type C4Record,
   type GameMap,
   type MatchItemRecord,
   type MatchRecord as SharedMatchRecord,
@@ -84,6 +85,20 @@ function filterItemsByDiscoveredLookup(
     return [];
   }
   return filtered.map((item) => ({ ...item }));
+}
+
+export function tailorC4sForViewer(
+  c4s: C4Record[] | undefined,
+  viewerId: string | undefined | null,
+  viewAll = false,
+): C4Record[] | undefined {
+  if (!Array.isArray(c4s) || viewAll) {
+    return c4s;
+  }
+  if (!viewerId) {
+    return [];
+  }
+  return c4s.filter((charge) => charge.ownerId === viewerId);
 }
 
 export function tailorTrapsForViewer(
@@ -260,6 +275,7 @@ export function tailorMatchForPlayer(
     ? match.items
     : filterItemsByDiscoveredLookup(match.items, discovered);
   const traps = tailorTrapsForViewer(match.traps, playerId, viewAll);
+  const c4s = tailorC4sForViewer(match.c4s, playerId, viewAll);
   const zarkanDonations = viewAll
     ? match.zarkanDonations ?? []
     : (match.zarkanDonations ?? []).filter(
@@ -333,6 +349,7 @@ export function tailorMatchForPlayer(
     ...(revealedTeamsByPlayerId ? { revealedTeamsByPlayerId } : {}),
     map,
     items,
-    traps
+    traps,
+    c4s
   };
 }
