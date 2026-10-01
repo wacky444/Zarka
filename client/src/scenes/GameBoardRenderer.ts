@@ -389,6 +389,7 @@ export class GameBoardRenderer {
             return;
           }
           if (
+            !pointer.wasTouch ||
             this.callbacks.getCurrentMatch()?.metadata?.[
               TUTORIAL_MATCH_METADATA_KEY
             ]
