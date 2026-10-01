@@ -187,7 +187,7 @@ export class EndGameReportScene extends Phaser.Scene {
 
     y = this.addSectionTitle(width, y, t("Team Leaderboard"));
     for (const team of report.teams) {
-      const teamText = `${team.rank}. ${team.team_id}${team.won ? ` · ${t("Winner")}` : ""}\n${t("Damage")}: ${team.total_damage_dealt}   ${t("Received")}: ${team.total_damage_received}   ${t("Kills")}: ${team.kills}`;
+      const teamText = `${team.rank}. ${t(team.team_id)}${team.won ? ` · ${t("Winner")}` : ""}\n${t("Damage")}: ${team.total_damage_dealt}   ${t("Received")}: ${team.total_damage_received}   ${t("Kills")}: ${team.kills}`;
       y = this.addCard(width, y, teamText, team.won ? "#854d0e" : "#172554");
     }
 

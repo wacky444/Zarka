@@ -408,13 +408,13 @@ export class CharacterPanelLogView {
           const cover = meta?.coverTeamId;
           if (team && cover) {
             lines.push(
-              `${actor} ${t("belongs to the team")} ${team} (${t(
+              `${actor} ${t("belongs to the team")} ${t(team)} (${t(
                 "infiltrated in team"
-              )} ${cover})`
+              )} ${t(cover)})`
             );
           } else if (team) {
             lines.push(
-              `${actor} ${t("belongs to the team")} ${team}`
+              `${actor} ${t("belongs to the team")} ${t(team)}`
             );
           }
           continue;
@@ -461,7 +461,7 @@ export class CharacterPanelLogView {
                   "and discovered"
                 )} ${this.resolvePlayerName(targetId)} ${t(
                   "belongs to the team"
-                )} ${targetTeam}`
+                )} ${t(targetTeam)}`
               : `${actor} ${t("hired a detective")}`
           );
           continue;
@@ -1040,7 +1040,7 @@ export class CharacterPanelLogView {
                 const team =
                   (target.metadata as { teamId?: string })?.teamId ||
                   this.resolvePlayerTeam(target.targetId);
-                const teamSuffix = team ? ` (${t("Team")} ${team})` : "";
+                const teamSuffix = team ? ` (${t("Team")} ${t(team)})` : "";
                 lines.push(
                   `${targetName}${teamSuffix} ${t("was eliminated")}`
                 );
@@ -1049,7 +1049,7 @@ export class CharacterPanelLogView {
               const team =
                 (target.metadata as { teamId?: string })?.teamId ||
                 this.resolvePlayerTeam(target.targetId);
-              const teamSuffix = team ? ` (${t("Team")} ${team})` : "";
+              const teamSuffix = team ? ` (${t("Team")} ${t(team)})` : "";
               lines.push(
                 `${targetName}${teamSuffix} ${t("was eliminated")}`
               );

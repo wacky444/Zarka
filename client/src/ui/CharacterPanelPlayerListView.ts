@@ -817,7 +817,7 @@ export class CharacterPanelPlayerListView {
         .text(
           PLAYER_LIST_LABEL_PADDING,
           teamY + teamRowHeight / 2,
-          `${teamName}:`,
+          `${t(teamName)}:`,
           {
             fontSize: "14px",
             color: isEliminated ? "#94a3d4" : "#ffffff",
@@ -1006,7 +1006,7 @@ export class CharacterPanelPlayerListView {
       match.revealedTeamsByPlayerId?.[selectedId]?.trim() ||
       character?.teamId?.trim() ||
       UNKNOWN_TEAM_LABEL;
-    this.playersTabCardTeam.setText(`${t("Team")}: ${teamId}`);
+    this.playersTabCardTeam.setText(`${t("Team")}: ${t(teamId)}`);
     const viewer = this.currentUserId
       ? match.playerCharacters?.[this.currentUserId]
       : undefined;

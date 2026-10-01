@@ -186,6 +186,7 @@ export function distributeTeams(
   }
 
   const totalPlayers = orderedRoster.length;
+  const randomizedRoster = shuffleArray(orderedRoster);
   const chosenTheme = ALL_THEMES[Math.floor(Math.random() * ALL_THEMES.length)];
   const shuffledThemeNames = shuffleArray(chosenTheme.names);
 
@@ -199,7 +200,7 @@ export function distributeTeams(
   }
 
   let heroPlayerId: string | undefined;
-  let remainingPlayers = [...orderedRoster];
+  let remainingPlayers = [...randomizedRoster];
   let teamSizes: number[] = [];
   let allowTwins = false;
 
@@ -254,13 +255,27 @@ export function distributeTeams(
 
   let twinPlayerIds: [string, string] | undefined;
   if (allowTwins && normalTeams.length >= 2) {
-    const teamIndices = shuffleArray(normalTeams.map((_, idx) => idx));
-    const teamA = normalTeams[teamIndices[0]];
-    const teamB = normalTeams[teamIndices[1]];
-    if (teamA.memberIds.length > 0 && teamB.memberIds.length > 0) {
-      const twinAId = teamA.memberIds[teamA.memberIds.length - 1];
-      const twinBId = teamB.memberIds[teamB.memberIds.length - 1];
-      twinPlayerIds = [twinAId, twinBId];
+    const eligibleTwinPairs: Array<[string, string]> = [];
+    for (let teamIndex = 0; teamIndex < normalTeams.length; teamIndex += 1) {
+      for (
+        let otherTeamIndex = teamIndex + 1;
+        otherTeamIndex < normalTeams.length;
+        otherTeamIndex += 1
+      ) {
+        const team = normalTeams[teamIndex];
+        const otherTeam = normalTeams[otherTeamIndex];
+        for (const playerId of team.memberIds) {
+          for (const otherPlayerId of otherTeam.memberIds) {
+            eligibleTwinPairs.push([playerId, otherPlayerId]);
+          }
+        }
+      }
+    }
+    if (eligibleTwinPairs.length > 0) {
+      twinPlayerIds =
+        eligibleTwinPairs[
+          Math.floor(Math.random() * eligibleTwinPairs.length)
+        ];
       result.twinPlayerIds = twinPlayerIds;
     }
   }
