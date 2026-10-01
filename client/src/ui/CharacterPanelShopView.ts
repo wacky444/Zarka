@@ -367,6 +367,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     const options = playerOptions.filter((option) => {
       if (
         !match ||
+        !match.players.includes(option.id) ||
         option.id === currentUserId ||
         match.deadCharacters?.[option.id] === true
       ) {
