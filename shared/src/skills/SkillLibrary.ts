@@ -65,7 +65,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
       "Reduce el esfuerzo en 2 puntos en colocación de C4 y trampas y detonación de C4",
     cost: 2,
     max: 2,
-    implemented: false,
+    implemented: true,
     category: "offensive",
     effect: {
       type: "action_energy_discount",
