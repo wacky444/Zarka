@@ -43,6 +43,7 @@ import {
   executeUseBinocularsAction,
 } from "./actions/observeLocation";
 import { executeStealAction } from "./actions/steal";
+import { executeGiveAction } from "./actions/give";
 import { executeBlackMarketTradeAction } from "./actions/blackMarketTrade";
 import { executePickUpAction } from "./actions/pickup";
 import { executeDropAction } from "./actions/drop";
@@ -734,6 +735,30 @@ export function executeAction(
         }
         handled = true;
       }
+    }
+  } else if (action.id === ActionLibrary.give.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = executeGiveAction(participants, match);
+      eventsForAction = energyEvents.length
+        ? [...energyEvents, ...actionEvents]
+        : actionEvents;
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
     }
   } else if (action.id === ActionLibrary.feed.id) {
     const participants = collectParticipants(match, action.id);

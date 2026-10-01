@@ -5013,6 +5013,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private getMainActionItemOptions(): ItemPriorityOption[] {
+    if (this.mainActionSelection === "give") {
+      return this.inventoryItemOptions;
+    }
     if (this.mainActionSelection === "throw_object") {
       return this.inventoryItemOptions.filter(
         (option) => option.id !== "zarkans"

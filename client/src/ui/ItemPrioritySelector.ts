@@ -222,9 +222,11 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
       return;
     }
     if (this.priority.indexOf(option.id) !== -1) {
+      this.priority = this.priority.filter((id) => id !== option.id);
       this.syncing = true;
       this.grid.setValue(null, false);
       this.syncing = false;
+      this.updateListDisplay(true);
       return;
     }
     this.priority = [...this.priority, option.id];

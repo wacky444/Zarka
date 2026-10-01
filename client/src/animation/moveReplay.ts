@@ -1,6 +1,7 @@
 import { ActionLibrary, type ReplayEvent } from "@shared";
 import type { MoveReplayContext } from "./MoveReplayContext";
 import { animateFeedEvent } from "./replayActions/FeedAnimation";
+import { animateGiveEvent } from "./replayActions/GiveAnimation";
 import { animateBreakfastEvent } from "./replayActions/BreakfastAnimation";
 import { animateDeathEvent } from "./replayActions/DeathAnimation";
 import { animateUnconsciousEvent } from "./replayActions/UnconsciousAnimation";
@@ -77,6 +78,8 @@ export async function playReplayEvents(
       await animateBreakfastEvent(context, event);
     } else if (actionId === ActionLibrary.refuel.id) {
       await animatePickUpEvent(context, event);
+    } else if (actionId === ActionLibrary.give.id) {
+      await animateGiveEvent(context, event);
     } else if (actionId === ActionLibrary.feed.id) {
       await animateFeedEvent(context, event);
     } else if (actionId === ActionLibrary.protect.id) {

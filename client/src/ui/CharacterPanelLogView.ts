@@ -977,6 +977,18 @@ export class CharacterPanelLogView {
                   )} ${targetName}`
                 : `${actor} ${t("stole nothing from")} ${targetName}`
             );
+          } else if (actionId === "give") {
+            const givenItems = this.extractGivenItemNames(
+              event.action.metadata
+            );
+            const targetId = event.targets?.[0]?.targetId;
+            if (givenItems.length > 0 && targetId) {
+              lines.push(
+                `${actor} ${t("gave")} ${givenItems.join(", ")} ${t(
+                  "to"
+                )} ${this.resolvePlayerName(targetId)}`
+              );
+            }
           } else if (actionId === "pick_up") {
             const pickedItems = this.extractPickedItemNames(
               event.action.metadata
@@ -1308,6 +1320,23 @@ export class CharacterPanelLogView {
       }
     }
     return result;
+  }
+
+  private extractGivenItemNames(metadata: unknown): string[] {
+    if (!metadata || typeof metadata !== "object") {
+      return [];
+    }
+    const entries = (metadata as { givenItems?: unknown }).givenItems;
+    if (!Array.isArray(entries)) {
+      return [];
+    }
+    return entries.flatMap((entry) => {
+      if (!entry || typeof entry !== "object") {
+        return [];
+      }
+      const itemType = (entry as { itemType?: unknown }).itemType;
+      return typeof itemType === "string" ? [this.resolveItemName(itemType)] : [];
+    });
   }
 
   private extractPickedItemNames(metadata: unknown): string[] {

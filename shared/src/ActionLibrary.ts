@@ -480,6 +480,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 1,
     cooldown: 3,
+    developed: true,
     requirements: [{ description: "Debe tener el objeto a entregar." }],
     effects: [{ description: "Transfiere un objeto a otro personaje." }],
     extraExecution: {
@@ -491,7 +492,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "token_give.png",
     actionOrder: 6,
     actionSubOrder: 4,
-    tags: ["Support", "Logistics", "SingleTarget"]
+    tags: ["Support", "Logistics", "SingleTarget", "TargetItems"]
   },
   poison_food: {
     id: "poison_food",
