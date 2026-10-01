@@ -2527,6 +2527,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const userMap = usernames ? { ...usernames } : {};
     this.lastUserMap = userMap;
     this.logView.setUsernames(userMap);
+    this.logView.setDonations(match?.zarkanDonations ?? []);
     const teamMap: Record<string, string> = {
       ...(match?.revealedTeamsByPlayerId ?? {})
     };

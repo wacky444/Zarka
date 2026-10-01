@@ -38,6 +38,13 @@ export interface MatchTrackerRecord {
   expiresTurn: number;
 }
 
+export interface ZarkanDonationRecord {
+  donor_id: string;
+  recipient_id: string;
+  amount: number;
+  turn: number;
+}
+
 export interface MatchRecord {
   /** Stable logical game identifier used by storage and client RPCs. */
   match_id: string;
@@ -66,6 +73,8 @@ export interface MatchRecord {
   traps?: TrapRecord[];
   /** Server-private tracker placements; omitted from normal player views. */
   trackers?: MatchTrackerRecord[];
+  /** Donation history; match views expose entries only to participants involved. */
+  zarkanDonations?: ZarkanDonationRecord[];
   teams?: string[];
   teamCounts?: Record<string, number>;
   /** Team identities revealed to the viewing player by Detective purchases. */

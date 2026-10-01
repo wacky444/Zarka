@@ -5,6 +5,7 @@ import { createDefaultCharacter } from "../../src/utils/playerCharacter";
 import { donateZarkansRpc } from "../../src/rpc/donateZarkans";
 import { asyncTurnMatchSignal } from "../../src/match/async_turn/signal";
 import type { AsyncTurnState } from "../../src/models/types";
+import { tailorMatchForPlayer } from "../../src/utils/matchView";
 import { OPCODE_ZARKANS_DONATED } from "@shared";
 import { MATCH_COLLECTION, MATCH_KEY_PREFIX, SERVER_USER_ID } from "../../src/constants";
 
@@ -147,6 +148,14 @@ test("donation transfers zarkans immediately and signals both participants", () 
   assert.equal(harness.getMatch().current_turn, 4);
   assert.equal(harness.getMatch().playerCharacters.donor.economy.zarkans, 3);
   assert.equal(harness.getMatch().playerCharacters.recipient.economy.zarkans, 12);
+  assert.deepEqual(harness.getMatch().zarkanDonations, [
+    {
+      donor_id: "donor",
+      recipient_id: "recipient",
+      amount: 7,
+      turn: 4
+    }
+  ]);
   assert.deepEqual(harness.signals, [
     {
       matchId: "runtime-match",
@@ -158,6 +167,35 @@ test("donation transfers zarkans immediately and signals both participants", () 
       })
     }
   ]);
+});
+
+test("donation history is visible only to its sender and recipient", () => {
+  const match = createMatch();
+  match.zarkanDonations = [
+    {
+      donor_id: "donor",
+      recipient_id: "recipient",
+      amount: 7,
+      turn: 4
+    }
+  ];
+
+  assert.deepEqual(
+    tailorMatchForPlayer(match, "donor").zarkanDonations,
+    match.zarkanDonations
+  );
+  assert.deepEqual(
+    tailorMatchForPlayer(match, "recipient").zarkanDonations,
+    match.zarkanDonations
+  );
+  assert.deepEqual(
+    tailorMatchForPlayer(match, "spectator").zarkanDonations,
+    []
+  );
+  assert.deepEqual(
+    tailorMatchForPlayer(match, "spectator", true).zarkanDonations,
+    match.zarkanDonations
+  );
 });
 
 test("donation realtime signal only targets donor and recipient", () => {

@@ -260,6 +260,13 @@ export function tailorMatchForPlayer(
     ? match.items
     : filterItemsByDiscoveredLookup(match.items, discovered);
   const traps = tailorTrapsForViewer(match.traps, playerId, viewAll);
+  const zarkanDonations = viewAll
+    ? match.zarkanDonations ?? []
+    : (match.zarkanDonations ?? []).filter(
+        (donation) =>
+          donation.donor_id === playerId ||
+          donation.recipient_id === playerId
+      );
   const playerCharacters = tailorPlayerCharactersForViewer(
     match.playerCharacters,
     playerId,
@@ -322,6 +329,7 @@ export function tailorMatchForPlayer(
     deadCharacters,
     teams: match.teams ? [...match.teams] : Object.keys(teamCounts),
     teamCounts,
+    zarkanDonations,
     ...(revealedTeamsByPlayerId ? { revealedTeamsByPlayerId } : {}),
     map,
     items,

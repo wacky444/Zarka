@@ -6,6 +6,7 @@ import {
   type ActionId,
   type Axial,
   type ReplayEvent,
+  type ZarkanDonationRecord,
 } from "@shared";
 
 function readAxialMetadata(value: unknown): Axial | null {
@@ -49,6 +50,8 @@ export class CharacterPanelLogView {
   private selectedTurn: number | null = null;
   private displayedTurn: number | null = null;
   private eventStrings: string[] = [];
+  private replayEventStrings: string[] = [];
+  private donationRecords: ZarkanDonationRecord[] = [];
   private loading = false;
   private playbackActive = false;
   private lastRequestedTurn: number | null = null;
@@ -86,6 +89,20 @@ export class CharacterPanelLogView {
     this.teams = { ...map };
   }
 
+  setDonations(records: ZarkanDonationRecord[]): void {
+    this.donationRecords = [...records];
+    if (this.displayedTurn === null) {
+      return;
+    }
+    this.eventStrings = [
+      ...this.replayEventStrings,
+      ...this.formatDonationEvents(this.displayedTurn),
+    ];
+    this.updateEventText();
+    this.updateButtons();
+    this.refreshDisplay();
+  }
+
   setTurnInfo(maxTurn: number): void {
     const normalized = Math.max(0, Math.floor(maxTurn));
     const previous = this.maxTurn;
@@ -119,18 +136,13 @@ export class CharacterPanelLogView {
     this.displayedTurn = this.selectedTurn;
     this.lastRequestedTurn = this.selectedTurn;
     this.loading = false;
-    this.eventStrings = this.formatReplayEvents(events);
+    this.replayEventStrings = this.formatReplayEvents(events);
+    this.eventStrings = [
+      ...this.replayEventStrings,
+      ...this.formatDonationEvents(resolvedTurn),
+    ];
     this.notifyEliminationEvents(resolvedTurn, events);
-    if (this.eventStrings.length > 0) {
-      this.elements.eventsText.setText(this.eventStrings.join("\n"));
-      this.elements.statusText.setVisible(false);
-      this.elements.statusText.setText("");
-      if (this.visible) {
-        this.elements.eventsText.setVisible(true);
-      }
-    } else {
-      this.showStatus(t("No events recorded."));
-    }
+    this.updateEventText();
     this.updateTurnLabel();
     this.updateButtons();
     this.refreshDisplay();
@@ -156,6 +168,7 @@ export class CharacterPanelLogView {
     this.loading = false;
     this.displayedTurn = null;
     this.eventStrings = [];
+    this.replayEventStrings = [];
     this.showStatus(message || t("Replay not available."));
     this.updateTurnLabel();
     this.updateButtons();
@@ -362,6 +375,19 @@ export class CharacterPanelLogView {
     );
   }
 
+  private updateEventText(): void {
+    if (this.eventStrings.length > 0) {
+      this.elements.eventsText.setText(this.eventStrings.join("\n"));
+      this.elements.statusText.setVisible(false);
+      this.elements.statusText.setText("");
+      if (this.visible) {
+        this.elements.eventsText.setVisible(true);
+      }
+    } else {
+      this.showStatus(t("No events recorded."));
+    }
+  }
+
   private showStatus(message: string): void {
     this.elements.statusText.setText(message);
     this.elements.statusText.setVisible(
@@ -389,6 +415,19 @@ export class CharacterPanelLogView {
       this.elements.statusText.setVisible(text.length > 0);
       this.elements.eventsText.setVisible(false);
     }
+  }
+
+  private formatDonationEvents(turn: number): string[] {
+    return this.donationRecords
+      .filter((donation) => donation.turn === turn)
+      .map(
+        (donation) =>
+          `${this.resolvePlayerName(donation.donor_id)} ${t(
+            "has donated"
+          )} ${donation.amount} zarkans ${t("to")} ${this.resolvePlayerName(
+            donation.recipient_id
+          )}`
+      );
   }
 
   private formatReplayEvents(events: ReplayEvent[]): string[] {

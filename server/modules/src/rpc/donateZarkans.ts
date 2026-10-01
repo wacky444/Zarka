@@ -131,6 +131,15 @@ export function donateZarkansRpc(
   };
   donor.economy.zarkans = donorBalance - amount;
   recipient.economy.zarkans = recipientBalance + amount;
+  match.zarkanDonations = [
+    ...(match.zarkanDonations ?? []),
+    {
+      donor_id: ctx.userId,
+      recipient_id: recipientId,
+      amount,
+      turn: match.current_turn
+    }
+  ];
 
   try {
     storage.writeMatch(match, read.version);

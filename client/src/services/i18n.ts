@@ -48,6 +48,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Sending...": "Enviando...",
   "Sending donation...": "Enviando donación...",
   "Failed to send donation.": "No se pudo enviar la donación.",
+  "has donated": "ha donado",
   "Turn reminders can be delayed by Android or browser power management.":
     "Los recordatorios de turno pueden retrasarse por el ahorro de batería de Android o del navegador.",
   "Checking notification support...": "Comprobando compatibilidad con notificaciones...",
