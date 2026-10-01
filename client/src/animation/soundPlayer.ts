@@ -71,6 +71,8 @@ export const SOUND_ASSET_FILES: Record<string, string> = {
   lock_quick: "lock_quick.wav",
   fire_lighting: "fire_lighting.wav",
   shot_muffled: "shot_muffled.wav",
+  air_pump: "air_pump.wav",
+  gurgling: "gurgling.wav",
 };
 
 export const ACTION_SOUNDS: Record<string, string[]> = {
@@ -87,6 +89,7 @@ export const ACTION_SOUNDS: Record<string, string[]> = {
     "foley_footstep_concrete_4",
   ],
   pick_up: ["weapon_pick_up", "item_equip", "wood_small_pickup"],
+  refuel: ["air_pump", "gurgling"],
   drop: ["weapon_drop", "wood_small_drop", "cardboard_drop"],
   search: ["page_turn", "paper_move", "paper_scrunch"],
   feed: ["munching_food", "drink_slurp"],

@@ -62,5 +62,3 @@
 - no se pudo enviar la donacion
 
 - protect, dodge and sleep in case the turn is skipped
-
-- refuel sound
