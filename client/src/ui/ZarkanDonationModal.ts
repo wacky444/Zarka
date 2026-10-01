@@ -167,7 +167,7 @@ export class ZarkanDonationModal extends Phaser.GameObjects.Container {
     this.balanceLabel = ownerScene.add
       .text(0, 0, "", {
         fontSize: "12px",
-        color: "#94a3b8"
+        color: "#facc15"
       })
       .setOrigin(1, 0.5);
     this.add(this.balanceLabel);
