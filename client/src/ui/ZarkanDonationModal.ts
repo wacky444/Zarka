@@ -1,5 +1,7 @@
 import Phaser from "phaser";
+import { ItemLibrary } from "@shared";
 import { PlayerSelector, type PlayerOption } from "./PlayerSelector";
+import { resolveItemTexture } from "./itemIcons";
 import { THEME } from "./ColorPalette";
 import { t } from "../services/i18n";
 
@@ -18,7 +20,7 @@ export class ZarkanDonationModal extends Phaser.GameObjects.Container {
   private readonly balanceLabel: Phaser.GameObjects.Text;
   private readonly sliderTrack: Phaser.GameObjects.Rectangle;
   private readonly sliderFill: Phaser.GameObjects.Rectangle;
-  private readonly sliderThumb: Phaser.GameObjects.Arc;
+  private readonly sliderThumb: Phaser.GameObjects.Image;
   private readonly decreaseButton: Phaser.GameObjects.Container;
   private readonly increaseButton: Phaser.GameObjects.Container;
   private readonly sendButton: Phaser.GameObjects.Container;
@@ -196,9 +198,10 @@ export class ZarkanDonationModal extends Phaser.GameObjects.Container {
       .rectangle(0, 0, 1, 8, 0x3b82f6, 1)
       .setOrigin(0, 0.5);
     this.add(this.sliderFill);
+    const zarkanTexture = resolveItemTexture(ItemLibrary.zarkans);
     this.sliderThumb = ownerScene.add
-      .circle(0, 0, 10, 0x93c5fd, 1)
-      .setStrokeStyle(2, 0xffffff, 1)
+      .image(0, 0, zarkanTexture.texture, zarkanTexture.frame)
+      .setDisplaySize(24, 24)
       .setInteractive({ useHandCursor: true });
     this.sliderThumb.on(
       Phaser.Input.Events.POINTER_DOWN,
