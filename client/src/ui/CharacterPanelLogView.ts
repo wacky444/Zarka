@@ -903,6 +903,15 @@ export class CharacterPanelLogView {
                   : `${actor} ${t("injected a virus")}`
               );
             }
+          } else if (actionId === "inject_vaccine") {
+            const targetId = event.targets?.[0]?.targetId;
+            lines.push(
+              targetId === event.actorId
+                ? `${actor} ${t("vaccinated themselves")}`
+                : targetId
+                  ? `${actor} ${t("vaccinated")} ${this.resolvePlayerName(targetId)}`
+                  : `${actor} ${t("used a vaccine")}`
+            );
           } else if (actionId === "search") {
             const foundItems = this.extractSearchItemNames(
               event.action.metadata

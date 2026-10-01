@@ -1271,6 +1271,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 1,
     cooldown: 3,
+    developed: true,
     requirements: [
       { description: "Requiere tener una vacuna.", consumesResource: true }
     ],
