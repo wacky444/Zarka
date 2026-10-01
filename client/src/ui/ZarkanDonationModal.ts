@@ -283,7 +283,7 @@ export class ZarkanDonationModal extends Phaser.GameObjects.Container {
     this.sendButton.add([this.sendButtonBackground, this.sendButtonLabel]);
     this.add(this.sendButton);
 
-    this.cancelButton = this.createButton(t("Cancel"), 132, 42, 42, 0x475569, () => {
+    this.cancelButton = this.createButton(t("Cancel"), 132, 42, 15, 0x475569, () => {
       this.close();
     });
     this.add(this.cancelButton);
@@ -301,6 +301,7 @@ export class ZarkanDonationModal extends Phaser.GameObjects.Container {
     this.maxAmount = Math.max(0, Math.floor(maxAmount));
     this.amount = this.maxAmount > 0 ? 1 : 0;
     this.pending = false;
+    this.sendButtonLabel.setText(t("Send"));
     this.errorLabel.setVisible(false);
     this.visibleModal = true;
     this.layout();
