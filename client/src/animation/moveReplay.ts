@@ -75,6 +75,8 @@ export async function playReplayEvents(
       await animateRecoverEvent(context, event);
     } else if (actionId === ActionLibrary.breakfast.id) {
       await animateBreakfastEvent(context, event);
+    } else if (actionId === ActionLibrary.refuel.id) {
+      await animatePickUpEvent(context, event);
     } else if (actionId === ActionLibrary.feed.id) {
       await animateFeedEvent(context, event);
     } else if (actionId === ActionLibrary.protect.id) {

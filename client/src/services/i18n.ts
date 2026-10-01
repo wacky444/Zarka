@@ -750,6 +750,8 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   "Atacar con cuchillo": "Knife attack",
   Desplazarse: "Move",
   Repostar: "Refuel",
+  "Debe ejecutarse en la gasolinera.": "Must be performed at the gas station.",
+  "Obtiene 3 unidades de combustible.": "Obtains 3 units of fuel.",
   Coger: "Pick up",
   Buscar: "Search",
   Manipular: "Manipulate",

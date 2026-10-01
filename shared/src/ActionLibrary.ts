@@ -405,6 +405,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 2,
     cooldown: 3,
+    developed: true,
     requirements: [{ description: "Debe ejecutarse en la gasolinera." }],
     effects: [{ description: "Obtiene 3 unidades de combustible." }],
     texture: "Board Game Icons",
