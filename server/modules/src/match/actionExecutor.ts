@@ -11,6 +11,7 @@ import type {
 import type { MatchRecord } from "../models/types";
 import { executeMoveAction } from "./actions/move";
 import { executePlaceC4Action } from "./actions/placeC4";
+import { executeDetonateC4Action } from "./actions/detonateC4";
 import { executePlaceTrapAction } from "./actions/placeTrap";
 import { executeCreateFireAction } from "./actions/createFire";
 import { executeDodgeAction } from "./actions/dodge";
@@ -243,6 +244,47 @@ export function executeAction(
         createFailedActionEvent(participant, action.id, {
           reason: "missing_item",
           missingItemId: "c4",
+        }),
+      );
+      eventsForAction = [...energyEvents, ...actionEvents, ...failureEvents];
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.detonate_c4.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const eligible: PlannedActionParticipant[] = [];
+      const missing: PlannedActionParticipant[] = [];
+      for (const participant of participants) {
+        if (hasCarriedItem(participant.character, "detonator")) {
+          eligible.push(participant);
+        } else {
+          missing.push(participant);
+          clearPlanByKey(participant.character, participant.planKey);
+          match.playerCharacters![participant.playerId] = participant.character;
+        }
+      }
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = eligible.length
+        ? executeDetonateC4Action(eligible, match)
+        : [];
+      const failureEvents = missing.map((participant) =>
+        createFailedActionEvent(participant, action.id, {
+          reason: "missing_item",
+          missingItemId: "detonator",
         }),
       );
       eventsForAction = [...energyEvents, ...actionEvents, ...failureEvents];

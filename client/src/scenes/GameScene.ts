@@ -3086,6 +3086,14 @@ export class GameScene extends Phaser.Scene {
     target: Axial,
     extraExecutions = 0
   ): boolean {
+    if (actionId === "detonate_c4") {
+      return (this.currentMatch?.c4s ?? []).some(
+        (charge) =>
+          charge.ownerId === this.currentUserId &&
+          charge.coord.q === target.q &&
+          charge.coord.r === target.r,
+      );
+    }
     const targetTile = this.currentMatch?.map?.tiles.find(
       (t) => t.coord.q === target.q && t.coord.r === target.r
     );

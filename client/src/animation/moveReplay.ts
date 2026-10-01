@@ -121,6 +121,12 @@ export async function playReplayEvents(
       await animateTrapEvent(context, event);
     } else if (actionId === ActionLibrary.place_c4.id) {
       await animatePlaceC4Event(context, event);
+    } else if (
+      actionId === ActionLibrary.detonate_c4.id &&
+      event.action.targetLocation
+    ) {
+      playRandomSound(context.scene, TILE_DESTROYED_SOUNDS);
+      await animateTileDestroyedEvent(context, event.action.targetLocation);
     }
   }
 }

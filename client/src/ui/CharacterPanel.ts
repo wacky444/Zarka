@@ -3817,7 +3817,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       t(
         this.mainActionSelection === "place_trap"
           ? "Second Trap Destination"
-          : "Second Shot Destination"
+          : this.mainActionSelection === "detonate_c4"
+            ? "Second C4 Destination"
+            : "Second Shot Destination"
       )
     );
     this.secondLocationSelector.setVisible(supports);
@@ -4988,7 +4990,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private selectedMainActionSupportsSecondLocation(): boolean {
     return (
       (this.mainActionSelection === "shoot_pistol" ||
-        this.mainActionSelection === "place_trap") &&
+        this.mainActionSelection === "place_trap" ||
+        this.mainActionSelection === "detonate_c4") &&
       this.mainExtraExecutions > 0 &&
       this.selectedActionSupportsLocation()
     );

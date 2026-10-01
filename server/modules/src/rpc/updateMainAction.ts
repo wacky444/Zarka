@@ -149,7 +149,8 @@ export function updateMainActionRpc(
     if (
       !extraExecutions ||
       (normalizedActionId !== "shoot_pistol" &&
-        normalizedActionId !== "place_trap")
+        normalizedActionId !== "place_trap" &&
+        normalizedActionId !== "detonate_c4")
     ) {
       secondTargetLocation = undefined;
     }

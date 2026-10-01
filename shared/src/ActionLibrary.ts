@@ -654,25 +654,31 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 1,
     cooldown: 3,
+    developed: true,
+    range: [0],
     requiredItems: ["detonator"],
     requirements: [
-      { description: "Requiere portar el detonador vinculado al C4." }
+      {
+        description: "Requiere portar un detonador y tener una carga de C4 propia colocada.",
+        consumesResource: true
+      }
     ],
     effects: [
       {
         description:
-          "Activa todas las cargas colocadas por el usuario en esa localización infligiendo [health-damage]12[/health-damage] de vida; la explosión se oye a dos casillas."
+          "Detona una carga propia de C4 en la localización seleccionada e inflige [health-damage]12[/health-damage] a todos los personajes allí; la explosión se oye a dos casillas y no puede esquivarse."
       }
     ],
     extraExecution: {
       cost: 1,
-      description: "Permite detonar una segunda carga independiente."
+      maxRepetitions: 1,
+      description: "Permite detonar una segunda carga de C4 independiente."
     },
     texture: "Board Game Icons",
     frame: "exploding_6.png",
     actionOrder: 11,
     actionSubOrder: 0,
-    tags: ["Attack", "Area"]
+    tags: ["Attack", "Area", "Ranged"]
   },
   axe_attack: {
     id: "axe_attack",

@@ -598,6 +598,15 @@ export class CharacterPanelLogView {
           lines.push(`${actor} ${t("activated the cameras")}`);
           continue;
         }
+        if (actionId === "detonate_c4") {
+          const location = event.action.targetLocation;
+          lines.push(
+            location
+              ? `${actor} ${t("detonó un C4 en")} (${location.q}, ${location.r})`
+              : `${actor} ${t("used")} ${t(ActionLibrary.detonate_c4.name)}`,
+          );
+          continue;
+        }
         if (actionId === "failedAction") {
           lines.push(this.buildFailedActionLine(actor, event.action.metadata));
           continue;

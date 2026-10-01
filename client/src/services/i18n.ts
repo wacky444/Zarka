@@ -180,6 +180,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Second Shot Target Player": "Objetivo del segundo disparo",
   "Second Shot Destination": "Destino del segundo disparo",
   "Second Trap Destination": "Destino de la segunda trampa",
+  "Second C4 Destination": "Destino del segundo C4",
   "None selected": "Ninguno seleccionado",
   "Extra power": "Potencia adicional",
   "Priority Items": "Objetos prioritarios",
@@ -733,6 +734,12 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
     "At an adjacent location, the target's identity remains unknown unless you have binoculars or an ally there with a walkie-talkie.",
   "Colocar C4": "Place C4",
   "Requiere tener una carga de C4.": "Requires a C4 charge.",
+  "Requiere portar un detonador y tener una carga de C4 propia colocada.":
+    "Requires a detonator and one of your own placed C4 charges.",
+  "Detona una carga propia de C4 en la localización seleccionada e inflige [health-damage]12[/health-damage] a todos los personajes allí; la explosión se oye a dos casillas y no puede esquivarse.":
+    "Detonates one of your C4 charges at the selected location, dealing [health-damage]12[/health-damage] damage to everyone there; the explosion can be heard two tiles away and cannot be dodged.",
+  "Permite detonar una segunda carga de C4 independiente.":
+    "Allows detonating a second independent C4 charge.",
   "Instala un explosivo en la localización actual, añade un detonador al inventario y podrá detonarse en turnos posteriores.":
     "Places a C4 charge at your current location, adds a detonator to your inventory, and lets you detonate it on a later turn.",
   "Permite colocar una segunda carga de C4.":
@@ -755,6 +762,7 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   "Usar arma química": "Use chemical weapon",
   Asustar: "Scare",
   "Detonar C4": "Detonate C4",
+  "detonó un C4 en": "detonated a C4 at",
   "Atacar con hacha": "Axe attack",
   "Golpear con bate": "Bat attack",
   "Atacar con motosierra": "Chainsaw attack",
