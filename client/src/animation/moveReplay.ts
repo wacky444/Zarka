@@ -1,6 +1,7 @@
 import { ActionLibrary, type ReplayEvent } from "@shared";
 import type { MoveReplayContext } from "./MoveReplayContext";
 import { animateFeedEvent } from "./replayActions/FeedAnimation";
+import { animateInjectVirusEvent } from "./replayActions/InjectVirusAnimation";
 import { animateGiveEvent } from "./replayActions/GiveAnimation";
 import { animateBreakfastEvent } from "./replayActions/BreakfastAnimation";
 import { animateDeathEvent } from "./replayActions/DeathAnimation";
@@ -80,6 +81,8 @@ export async function playReplayEvents(
       await animatePickUpEvent(context, event);
     } else if (actionId === ActionLibrary.give.id) {
       await animateGiveEvent(context, event);
+    } else if (actionId === ActionLibrary.inject_virus.id) {
+      await animateInjectVirusEvent(context, event);
     } else if (actionId === ActionLibrary.feed.id) {
       await animateFeedEvent(context, event);
     } else if (actionId === ActionLibrary.protect.id) {

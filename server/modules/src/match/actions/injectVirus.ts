@@ -11,6 +11,7 @@ import { ReplayActionEffect } from "@shared";
 import {
   collectPlanTargetIds,
   consumeCarriedItem,
+  createFailedActionEvent,
   type PlannedActionParticipant,
 } from "./utils";
 import { BaseAction } from "./classes/BaseAction";
@@ -67,14 +68,30 @@ export class InjectVirusAction extends BaseAction {
         !!targetCoord &&
         origin.q === targetCoord.q &&
         origin.r === targetCoord.r;
-      const consumed = consumeCarriedItem(participant.character, "virus");
-
-      this.clearPlan(participant);
-      match.playerCharacters![participant.playerId] = participant.character;
-      if (!consumed || !target || !sameLocation) {
+      if (!target || !sameLocation) {
+        this.clearPlan(participant);
+        events.push(
+          createFailedActionEvent(participant, actionId, {
+            reason: "invalid_target",
+          })
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+        continue;
+      }
+      if (!consumeCarriedItem(participant.character, "virus")) {
+        this.clearPlan(participant);
+        events.push(
+          createFailedActionEvent(participant, actionId, {
+            reason: "missing_item",
+            missingItemId: "virus",
+          })
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
         continue;
       }
 
+      this.clearPlan(participant);
+      match.playerCharacters![participant.playerId] = participant.character;
       ensureVirusCondition(target, (match.current_turn ?? 0) + 1);
       match.playerCharacters![targetId] = target;
       const targetEntry: ReplayActionTarget = {
@@ -84,6 +101,7 @@ export class InjectVirusAction extends BaseAction {
       const action: ReplayActionDone = {
         actionId,
         originLocation: origin,
+        targetLocation: targetCoord,
         damageDealt: 0,
         effects: ReplayActionEffect.Hit,
         metadata: {
@@ -96,6 +114,7 @@ export class InjectVirusAction extends BaseAction {
         actorId: participant.playerId,
         action,
         targets: [targetEntry],
+        visibility: { scope: "limited", playerIds: [participant.playerId] },
       });
     }
     return events;

@@ -115,6 +115,21 @@ export function tailorTrapsForViewer(
   return traps.filter((trap) => trap.ownerId === viewerId);
 }
 
+function redactVirusStatus(character: PlayerCharacter): PlayerCharacter {
+  const sanitized = { ...character };
+  if (sanitized.statuses) {
+    const statuses = { ...sanitized.statuses };
+    if (Array.isArray(statuses.conditions)) {
+      statuses.conditions = statuses.conditions.filter(
+        (condition) => condition !== "infected"
+      );
+    }
+    delete statuses.virus;
+    sanitized.statuses = statuses;
+  }
+  return sanitized;
+}
+
 function computeViewRange(
   character: PlayerCharacter | undefined | null
 ): number {
@@ -163,7 +178,7 @@ export function tailorPlayerCharactersForViewer(
     }
     const candidate = playerCharacters[id];
     if (id === viewerKey) {
-      filtered[id] = candidate;
+      filtered[id] = redactVirusStatus(candidate);
       continue;
     }
     if (!isInitialSpawnTurn && isCharacterHidden(candidate, currentTurn ?? 0)) {
@@ -219,7 +234,7 @@ export function tailorPlayerCharactersForViewer(
       const isConfirmedTeammate =
         Array.isArray(viewer.relationships?.confirmedTeammates) &&
         viewer.relationships.confirmedTeammates.indexOf(id) !== -1;
-      const sanitized = { ...candidate };
+      const sanitized = redactVirusStatus(candidate);
       delete sanitized.discoveredItemIds;
       delete sanitized.revealedItemTypesByPlayerId;
       delete sanitized.revealedTeamIdsByPlayerId;
