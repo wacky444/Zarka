@@ -610,6 +610,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   throws: "lanza",
   took: "sufrió",
   "was eliminated": "fue eliminado",
+  "was damaged by fire": "fue dañado por el fuego",
+  "damaged by fire": "dañado por el fuego",
   Cell: "Casilla",
   changed: "cambió",
   "was destroyed": "fue destruida",
@@ -722,6 +724,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
 
 const ENGLISH_GAME_NAMES: Record<string, string> = {
   "Crear un incendio": "Start a fire",
+  "Daño por incendio": "Fire damage",
   Recuperarse: "Recover",
   Alimentar: "Feed",
   Desayunar: "Have breakfast",

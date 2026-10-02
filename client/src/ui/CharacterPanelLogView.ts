@@ -771,6 +771,8 @@ export class CharacterPanelLogView {
         } else if (actionId === "move" && event.action.targetLocation) {
           const { q, r } = event.action.targetLocation;
           lines.push(`${actor} ${t("moved to")} (${q}, ${r})`);
+        } else if (actionId === "fire_damage") {
+          lines.push(`${actor} ${t("was damaged by fire")}`);
         } else {
           const extraExecutions =
             typeof (event.action.metadata as { extraExecutions?: unknown })
