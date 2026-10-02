@@ -126,6 +126,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Link Facebook": "Vincular Facebook",
   "Unlink Facebook": "Desvincular Facebook",
   "Audio Settings": "Configuración de audio",
+  "Music: ON": "Música: Activada",
+  "Music: OFF": "Música: Desactivada",
   "[ ] View all actions and players": "[ ] Ver todas las acciones y jugadores",
   "[x] View all actions and players": "[x] Ver todas las acciones y jugadores",
   "Back to Game": "Volver al juego",

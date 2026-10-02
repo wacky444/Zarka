@@ -35,7 +35,10 @@ import {
   preloadReplaySounds,
   getStoredVolumeLevel,
   setGameVolumeLevel,
-  playRandomSound
+  playRandomSound,
+  isMusicEnabled,
+  setMusicEnabled,
+  stopMenuMusic
 } from "../animation/soundPlayer";
 
 function buildSkinItems(category: SkinCategory): GridSelectItem[] {
@@ -106,6 +109,8 @@ export class AccountScene extends Phaser.Scene {
   private audioTitle!: Phaser.GameObjects.Text;
   private volumeLabel!: Phaser.GameObjects.Text;
   private volumeSlider!: SliderInstance;
+  private musicToggleButton!: UIButton;
+  private musicEnabled = true;
   private linkFacebookButton!: UIButton;
   private unlinkFacebookButton!: UIButton;
   private backButton!: UIButton;
@@ -419,6 +424,25 @@ export class AccountScene extends Phaser.Scene {
     this.volumeSlider.layout();
     this.accountRoot.add(this.volumeSlider);
 
+    this.musicEnabled = isMusicEnabled();
+    this.musicToggleButton = makeButton(
+      this,
+      0,
+      0,
+      this.getMusicToggleLabel(),
+      () => {
+        this.musicEnabled = !this.musicEnabled;
+        setMusicEnabled(this.musicEnabled);
+        if (!this.musicEnabled) {
+          stopMenuMusic(this);
+        }
+        this.musicToggleButton.setText(`[ ${this.getMusicToggleLabel()} ]`);
+        playRandomSound(this, ["pop_1"]);
+      },
+      ["account"]
+    ).setOrigin(0.5, 0);
+    this.accountRoot.add(this.musicToggleButton);
+
     this.backButton = makeButton(this, 0, 0, "Back to Game", () => {
       this.scene.start("MainScene", {
         client: this.client,
@@ -587,7 +611,10 @@ export class AccountScene extends Phaser.Scene {
     cursorY += this.volumeLabel.height + 12;
 
     this.volumeSlider.setPosition(centerX, cursorY + 14);
-    cursorY += 34 + ACCOUNT_LAYOUT.sectionGap;
+    cursorY += 34 + 12;
+
+    this.musicToggleButton.setPosition(centerX, cursorY);
+    cursorY += this.musicToggleButton.height + ACCOUNT_LAYOUT.sectionGap;
 
     this.backButton.setPosition(centerX, cursorY);
     cursorY += this.backButton.height + ACCOUNT_LAYOUT.horizontalPadding;
@@ -599,6 +626,10 @@ export class AccountScene extends Phaser.Scene {
     this.accountScrollPanel.setSize?.(viewportWidth, viewportHeight);
     this.accountScrollPanel.setMinSize?.(viewportWidth, viewportHeight);
     this.accountScrollPanel.layout?.();
+  }
+
+  private getMusicToggleLabel(): string {
+    return this.musicEnabled ? "Music: ON" : "Music: OFF";
   }
 
   private createSkinPreview(x: number, y: number) {

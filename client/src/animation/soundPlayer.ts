@@ -210,3 +210,97 @@ export function applyStoredVolume(scene: Phaser.Scene): number {
   setGameVolumeLevel(scene, level);
   return level;
 }
+
+export const MUSIC_STORAGE_KEY = "zarka_music_enabled";
+export const DIRT_CITY_MUSIC_KEY = "music-dirt-city";
+
+export function isMusicEnabled(): boolean {
+  try {
+    const raw = localStorage.getItem(MUSIC_STORAGE_KEY);
+    if (raw !== null) {
+      return raw === "true";
+    }
+  } catch {
+    return true;
+  }
+  return true;
+}
+
+export function setMusicEnabled(enabled: boolean): void {
+  try {
+    localStorage.setItem(MUSIC_STORAGE_KEY, enabled ? "true" : "false");
+  } catch {
+    // Ignore error
+  }
+}
+
+export function preloadMenuMusic(scene: Phaser.Scene): void {
+  if (!scene.cache.audio.exists(DIRT_CITY_MUSIC_KEY)) {
+    scene.load.audio(
+      DIRT_CITY_MUSIC_KEY,
+      encodeURI(assetPath("assets/music/Dirt City.mp3"))
+    );
+  }
+}
+
+export function playMenuMusic(scene: Phaser.Scene): void {
+  if (!scene || !scene.sound || !isMusicEnabled()) {
+    return;
+  }
+  if (!scene.cache.audio.exists(DIRT_CITY_MUSIC_KEY)) {
+    if (scene.load.isLoading()) {
+      scene.load.once(Phaser.Loader.Events.COMPLETE, () => {
+        playMenuMusic(scene);
+      });
+    }
+    return;
+  }
+
+  applyStoredVolume(scene);
+  let music = scene.sound.get(DIRT_CITY_MUSIC_KEY);
+  if (!music) {
+    music = scene.sound.add(DIRT_CITY_MUSIC_KEY, {
+      loop: true,
+      volume: 1
+    });
+  } else if ("setVolume" in music) {
+    (music as Phaser.Sound.WebAudioSound).setVolume(1);
+  }
+
+  if (music.isPaused) {
+    music.resume();
+  } else if (!music.isPlaying) {
+    music.play();
+  }
+}
+
+export function pauseMenuMusic(scene: Phaser.Scene): void {
+  if (!scene || !scene.sound) {
+    return;
+  }
+  const music = scene.sound.get(DIRT_CITY_MUSIC_KEY);
+  if (music && music.isPlaying) {
+    music.pause();
+  }
+}
+
+export function stopMenuMusic(scene: Phaser.Scene): void {
+  if (!scene || !scene.sound) {
+    return;
+  }
+  const music = scene.sound.get(DIRT_CITY_MUSIC_KEY);
+  if (music && (music.isPlaying || music.isPaused)) {
+    music.stop();
+  }
+}
+
+export function cleanupMenuMusic(scene: Phaser.Scene): void {
+  if (!scene || !scene.sound) {
+    return;
+  }
+  const music = scene.sound.get(DIRT_CITY_MUSIC_KEY);
+  if (music) {
+    music.stop();
+    scene.sound.remove(music);
+  }
+}

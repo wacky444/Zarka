@@ -12,7 +12,15 @@ import { makeButton, UIButton } from "../ui/button";
 import { MatchesListView } from "./MatchesList";
 import { MyMatchesListView } from "./MyMatchesList";
 import { LobbyView } from "./LobbyView";
-import { applyStoredVolume } from "../animation/soundPlayer";
+import {
+  applyStoredVolume,
+  cleanupMenuMusic,
+  isMusicEnabled,
+  pauseMenuMusic,
+  playMenuMusic,
+  preloadMenuMusic,
+  stopMenuMusic
+} from "../animation/soundPlayer";
 import { MenuAshEffect } from "../animation/MenuAshEffect";
 import { getLocale, toggleLocale } from "../services/i18n";
 import { TUTORIAL_MATCH_METADATA_KEY } from "@shared";
@@ -70,6 +78,7 @@ export class MainScene extends Phaser.Scene {
   private readonly wakeHandler = () => {
     this.layoutMain();
     void this.refreshTutorialGate(true);
+    this.updateMenuMusic();
   };
 
   constructor() {
@@ -202,6 +211,7 @@ export class MainScene extends Phaser.Scene {
       "zarka-main-title",
       assetPath("assets/images/zarka-icon-hexagon.png")
     );
+    preloadMenuMusic(this);
   }
 
   async create(data?: { client?: Client; session?: Session }) {
@@ -230,12 +240,21 @@ export class MainScene extends Phaser.Scene {
     this.layoutMain();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutMain, this);
     this.events.on(Phaser.Scenes.Events.WAKE, this.wakeHandler);
+    this.events.on(Phaser.Scenes.Events.SLEEP, () => {
+      pauseMenuMusic(this);
+    });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutMain, this);
       this.events.off(Phaser.Scenes.Events.WAKE, this.wakeHandler);
       this.menuAshEffect?.destroy();
       this.menuAshEffect = null;
+      cleanupMenuMusic(this);
     });
+    if (this.sound.locked) {
+      this.sound.once(Phaser.Sound.Events.UNLOCKED, () => {
+        this.updateMenuMusic();
+      });
+    }
 
     try {
       // Use passed session data if available, otherwise initialize new connection
@@ -800,6 +819,7 @@ export class MainScene extends Phaser.Scene {
     if (this.mainRoot) {
       this.mainRoot.setVisible(isMain).setActive(isMain);
     }
+    this.updateMenuMusic();
 
     // Toggle buttons based on tags
     this.buttons.forEach((btn) => {
@@ -826,6 +846,19 @@ export class MainScene extends Phaser.Scene {
       }
     } catch (e) {
       console.warn("applyViewVisibility: view toggle error", e);
+    }
+  }
+
+  private updateMenuMusic(): void {
+    const isMain = this.activeView === "main";
+    if (!isMusicEnabled()) {
+      stopMenuMusic(this);
+      return;
+    }
+    if (isMain) {
+      playMenuMusic(this);
+    } else {
+      pauseMenuMusic(this);
     }
   }
 
@@ -925,6 +958,7 @@ export class MainScene extends Phaser.Scene {
       0,
       "Account Settings",
       () => {
+        pauseMenuMusic(this);
         this.scene.start("AccountScene", {
           client: this.turnService?.getClient(),
           session: this.turnService?.getSession()
@@ -1014,6 +1048,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private logout(message?: string) {
+    stopMenuMusic(this);
     if (
       this.scene.isActive("GameScene") ||
       this.scene.isSleeping("GameScene")
