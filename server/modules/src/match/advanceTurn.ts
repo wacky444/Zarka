@@ -252,7 +252,7 @@ function appendHiddenStatusEvents(
       kind: "player",
       actorId: playerId,
       action: { actionId: ActionLibrary.status_hidden.id },
-      visibility: { scope: "all" },
+      visibility: { scope: "limited", playerIds: [playerId] },
     });
   }
 }

@@ -12,6 +12,7 @@ import {
 import type { MatchRecord } from "../../src/models/types";
 import { advanceTurn } from "../../src/match/advanceTurn";
 import { collectTargets } from "../../src/match/actions/targeting";
+import { tailorReplayEvents } from "../../src/match/replay/tailorReplay";
 import { tailorPlayerCharactersForViewer } from "../../src/utils/matchView";
 import { createDefaultCharacter } from "../../src/utils/playerCharacter";
 
@@ -60,10 +61,11 @@ function hasHiddenLogEvent(events: ReplayEvent[], playerId: string): boolean {
   );
 }
 
-test("coward characters are hidden by default and emit the invisible log event", () => {
+test("coward characters are hidden and only see their own invisible log event", () => {
   const coward = createCharacter("coward", 0);
+  const observer = createCharacter("observer", 0);
   coward.abilities.push("coward");
-  const match = createMatch([coward], 1);
+  const match = createMatch([coward, observer], 1);
 
   const result = advanceTurn(match, 1, logger);
   const hiddenEvent = result.events.find(
@@ -73,7 +75,20 @@ test("coward characters are hidden by default and emit the invisible log event",
 
   assert.equal(isCharacterHidden(coward, 1), true);
   assert.ok(hiddenEvent && hiddenEvent.kind === "player");
-  assert.deepEqual(hiddenEvent.visibility, { scope: "all" });
+  assert.deepEqual(hiddenEvent.visibility, {
+    scope: "limited",
+    playerIds: [coward.id],
+  });
+  assert.equal(
+    tailorReplayEvents([hiddenEvent], coward.id, match.playerCharacters, 0)
+      .length,
+    1
+  );
+  assert.equal(
+    tailorReplayEvents([hiddenEvent], observer.id, match.playerCharacters, 0)
+      .length,
+    0
+  );
 });
 
 test("moving reveals a coward for the current turn", () => {
