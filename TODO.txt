@@ -44,8 +44,6 @@
 
 - in mobile, add the player sprites in the target selector, and item sprites in item selector
 
-- pressing on a cell shows the name of the cell type but its not translated
-
 - bombard has animation? it should have it similar to cell destroyed
 
 - help screen with action orders
@@ -54,11 +52,6 @@
 
 - create a deterministic test with several players doing actions and interacting between them, a full match
 
-
 - improve the ready checkbox, to a cool button, if is the last player, show a confirm dialog
-
-- clicking in a cell in pc doesnt open the content view
-
-- no se pudo enviar la donacion
 
 - protect, dodge and sleep in case the turn is skipped
