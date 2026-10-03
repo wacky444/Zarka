@@ -61,6 +61,7 @@ export type SkillEffectType =
   | "detect_immunity"
   | "counterattack_on_attacked"
   | "locker_sale_bonus"
+  | "perceive_hidden_characters"
   | string;
 
 export interface SkillEffect {

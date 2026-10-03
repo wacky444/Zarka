@@ -1,4 +1,5 @@
 import {
+  canSeeHiddenCharacter,
   isCharacterHidden,
   type C4Record,
   type GameMap,
@@ -182,7 +183,9 @@ export function tailorPlayerCharactersForViewer(
       continue;
     }
     if (!isInitialSpawnTurn && isCharacterHidden(candidate, currentTurn ?? 0)) {
-      continue;
+      if (!canSeeHiddenCharacter(viewer, candidate)) {
+        continue;
+      }
     }
     if (!viewerCoord) {
       continue;

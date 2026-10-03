@@ -214,3 +214,51 @@ export function getLockerSaleBonus(
   }
   return getSkillRank(character, "salesman") > 0 ? 1 : 0;
 }
+
+export function canSeeHiddenCharacter(
+  viewer: PlayerCharacter | undefined | null,
+  target: PlayerCharacter | undefined | null
+): boolean {
+  if (!viewer || !target) {
+    return false;
+  }
+  if (viewer.id === target.id) {
+    return true;
+  }
+  const conditions = viewer.statuses?.conditions;
+  if (
+    Array.isArray(conditions) &&
+    (conditions.indexOf("unconscious") !== -1 || conditions.indexOf("dead") !== -1)
+  ) {
+    return false;
+  }
+  if (
+    typeof viewer.stats?.health?.current === "number" &&
+    viewer.stats.health.current <= 0
+  ) {
+    return false;
+  }
+  const hasPerception =
+    getSkillRank(viewer, "perception2") > 0 ||
+    getSkillEffectTotal(viewer, "perceive_hidden_characters") > 0;
+  if (!hasPerception) {
+    return false;
+  }
+  const viewerCoord = viewer.position?.coord;
+  const targetCoord = target.position?.coord;
+  if (
+    !viewerCoord ||
+    !targetCoord ||
+    typeof viewerCoord.q !== "number" ||
+    !isFinite(viewerCoord.q) ||
+    typeof viewerCoord.r !== "number" ||
+    !isFinite(viewerCoord.r) ||
+    typeof targetCoord.q !== "number" ||
+    !isFinite(targetCoord.q) ||
+    typeof targetCoord.r !== "number" ||
+    !isFinite(targetCoord.r)
+  ) {
+    return false;
+  }
+  return viewerCoord.q === targetCoord.q && viewerCoord.r === targetCoord.r;
+}

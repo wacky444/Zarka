@@ -294,8 +294,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
     description: "Ve a los escondidos en la propia localización",
     cost: 2,
     max: 1,
-    implemented: false,
-    category: "utility"
+    implemented: true,
+    category: "utility",
+    effect: {
+      type: "perceive_hidden_characters",
+      value: 1
+    }
   },
   perception3: {
     id: "perception3",
