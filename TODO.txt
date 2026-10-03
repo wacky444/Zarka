@@ -50,8 +50,6 @@
 
 - i never got hero team
 
-- create a deterministic test with several players doing actions and interacting between them, a full match
-
 - improve the ready checkbox, to a cool button, if is the last player, show a confirm dialog
 
 - protect, dodge and sleep in case the turn is skipped
