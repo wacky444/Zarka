@@ -118,7 +118,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "Tracking app",
     description: "Reports the number of traps or C4 one location away.",
     cost: 8,
-    implemented: false,
+    implemented: true,
     category: "Applications"
   },
   helicopter: {

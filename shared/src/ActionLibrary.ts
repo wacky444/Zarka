@@ -1446,6 +1446,21 @@ export const ActionLibrary: ActionLibraryDefinition = {
     notes: ["Evento privado al contratar la aplicación de cámaras."],
     tags: ["Economy", "Recon"]
   },
+  buy_tracking_app: {
+    id: "buy_tracking_app",
+    name: "Comprar aplicación de rastreo",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "card_target.png",
+    actionOrder: 99,
+    actionSubOrder: 7,
+    notes: ["Evento privado al comprar la aplicación de rastreo."],
+    tags: ["Economy", "Recon"]
+  },
   buy_spy_drone: {
     id: "buy_spy_drone",
     name: "Contratar dron espía",

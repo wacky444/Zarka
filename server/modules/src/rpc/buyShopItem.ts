@@ -5,6 +5,7 @@ import {
   LocalizationType,
   TUTORIAL_BOT_ID,
   TUTORIAL_MATCH_METADATA_KEY,
+  axialDistance,
   isCharacterHidden,
   type Axial,
   type BuyShopItemPayload,
@@ -82,6 +83,7 @@ export function buyShopItemRpc(
   const supportedShopIds: ShopId[] = [
     "detective",
     "security_camera_app",
+    "tracking_app",
     "spy_drone",
     "pyromaniac",
     "bomber",
@@ -255,6 +257,44 @@ export function buyShopItemRpc(
       observedPlayerIds,
       location: LocalizationType.Security,
     };
+  } else if (resolvedShopId === "tracking_app") {
+    const actorCoord = actor.position?.coord;
+    let c4Current = 0;
+    let c4Distance1 = 0;
+    let trapsLocation = 0;
+
+    if (actorCoord) {
+      for (const c4 of match.c4s ?? []) {
+        if (!c4?.coord) {
+          continue;
+        }
+        const dist = axialDistance(actorCoord, c4.coord);
+        if (dist === 0) {
+          c4Current += 1;
+        } else if (dist === 1) {
+          c4Distance1 += 1;
+        }
+      }
+
+      for (const trap of match.traps ?? []) {
+        if (!trap?.from?.coord || !trap?.to?.coord) {
+          continue;
+        }
+        if (
+          isSameCoord(trap.from.coord, actorCoord) ||
+          isSameCoord(trap.to.coord, actorCoord)
+        ) {
+          trapsLocation += 1;
+        }
+      }
+    }
+
+    metadata = {
+      ...metadata,
+      c4Current,
+      c4Distance1,
+      trapsLocation,
+    };
   } else if (
     (resolvedShopId === "spy_drone" ||
       resolvedShopId === "pyromaniac" ||
@@ -366,11 +406,13 @@ export function buyShopItemRpc(
       ? "buy_detective"
       : resolvedShopId === "security_camera_app"
         ? "buy_security_camera_app"
-        : resolvedShopId === "spy_drone"
-          ? "buy_spy_drone"
-          : resolvedShopId === "pyromaniac"
-            ? "buy_pyromaniac"
-            : "buy_bomber";
+        : resolvedShopId === "tracking_app"
+          ? "buy_tracking_app"
+          : resolvedShopId === "spy_drone"
+            ? "buy_spy_drone"
+            : resolvedShopId === "pyromaniac"
+              ? "buy_pyromaniac"
+              : "buy_bomber";
   const event: ReplayPlayerEvent = {
     kind: "player",
     actorId: ctx.userId,

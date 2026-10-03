@@ -543,6 +543,31 @@ export class CharacterPanelLogView {
           );
           continue;
         }
+        if (actionId === "buy_tracking_app") {
+          const metadata = event.action.metadata as
+            | {
+                c4Current?: unknown;
+                c4Distance1?: unknown;
+                trapsLocation?: unknown;
+              }
+            | undefined;
+          const c4Current =
+            typeof metadata?.c4Current === "number"
+              ? metadata.c4Current
+              : 0;
+          const c4Distance1 =
+            typeof metadata?.c4Distance1 === "number"
+              ? metadata.c4Distance1
+              : 0;
+          const trapsLocation =
+            typeof metadata?.trapsLocation === "number"
+              ? metadata.trapsLocation
+              : 0;
+          lines.push(
+            `${t("There are")} ${c4Current} ${t("c4 in current cell")}, ${c4Distance1} ${t("c4 at distance 1 and")} ${trapsLocation} ${t("traps in this location")}`
+          );
+          continue;
+        }
         if (actionId === "buy_pyromaniac") {
           lines.push(`${actor} ${t("hired a pyromaniac")}`);
           continue;

@@ -773,7 +773,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
       this.beginPyromaniacPurchase();
     } else if (shopId === "bomber") {
       this.beginBomberPurchase();
-    } else if (shopId === "security_camera_app") {
+    } else if (shopId === "security_camera_app" || shopId === "tracking_app") {
       this.emit("shop-purchase", { shopId });
     }
   }

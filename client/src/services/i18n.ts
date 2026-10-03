@@ -557,6 +557,10 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "used binoculars": "usó prismáticos",
   "used the security camera app and saw":
     "usó la aplicación de cámaras de seguridad y vio",
+  "There are": "Hay",
+  "c4 in current cell": "c4 en la casilla actual",
+  "c4 at distance 1 and": "c4 a distancia 1 y",
+  "traps in this location": "trampas en esta localización",
   characters: "personajes",
   Turn: "Turno",
   died: "murió",

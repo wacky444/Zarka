@@ -77,6 +77,7 @@ export type ActionId =
   | "buy_detective"
   | "detective_reward"
   | "buy_security_camera_app"
+  | "buy_tracking_app"
   | "buy_spy_drone"
   | "buy_pyromaniac"
   | "fire_damage"
