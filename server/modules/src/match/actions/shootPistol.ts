@@ -30,6 +30,7 @@ import {
 import { getUsableExtraExecutions } from "../../utils/energy";
 import { isCharacterDead } from "../../utils/playerCharacter";
 import { collectTargets } from "./targeting";
+import { maybeTriggerVengefulCounterAttack } from "./vengeful";
 import { BaseAction } from "./classes/BaseAction";
 
 function resolveDodge(target: PlayerCharacter): boolean {
@@ -134,6 +135,17 @@ export class ShootPistolAction extends BaseAction {
               targetLocation: targetCandidate.coord,
             },
           });
+          const counterEvents = maybeTriggerVengefulCounterAttack(
+            match,
+            participant.playerId,
+            targetId
+          );
+          if (counterEvents.length > 0) {
+            postEvents.push(...counterEvents);
+          }
+          if (isCharacterDead(participant.character)) {
+            break;
+          }
           continue;
         }
 
@@ -174,6 +186,18 @@ export class ShootPistolAction extends BaseAction {
           targetEntry.eliminated = true;
         }
         targetEntries.push(targetEntry);
+
+        const counterEvents = maybeTriggerVengefulCounterAttack(
+          match,
+          participant.playerId,
+          targetId
+        );
+        if (counterEvents.length > 0) {
+          postEvents.push(...counterEvents);
+        }
+        if (isCharacterDead(participant.character)) {
+          break;
+        }
       }
 
       this.clearPlan(participant);

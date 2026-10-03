@@ -26,6 +26,7 @@ import {
   resolveGuardedDamage,
   type PlannedActionParticipant,
 } from "./utils";
+import { maybeTriggerVengefulCounterAttack } from "./vengeful";
 import { BaseAction } from "./classes/BaseAction";
 
 const ROCKET_DAMAGE = 20;
@@ -139,6 +140,15 @@ export class ShootRocketLauncherAction extends BaseAction {
           targetEntry.eliminated = true;
         }
         targetEntries.push(targetEntry);
+
+        const counterEvents = maybeTriggerVengefulCounterAttack(
+          match,
+          participant.playerId,
+          targetId
+        );
+        if (counterEvents.length > 0) {
+          postEvents.push(...counterEvents);
+        }
       }
 
       if (!Array.isArray(targetTile.itemIds)) {

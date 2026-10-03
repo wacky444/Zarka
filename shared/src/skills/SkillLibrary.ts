@@ -380,8 +380,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
     description: "Recibe 1 zarkan extra por cada venta en taquillas",
     cost: 2,
     max: 1,
-    implemented: false,
-    category: "utility"
+    implemented: true,
+    category: "utility",
+    effect: {
+      type: "locker_sale_bonus",
+      value: 1
+    }
   },
   pensioner: {
     id: "pensioner",
@@ -402,8 +406,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
     description: "No puede ser descubierto mediante la acción detectar",
     cost: 4,
     max: 1,
-    implemented: false,
-    category: "defense"
+    implemented: true,
+    category: "defense",
+    effect: {
+      type: "detect_immunity",
+      value: 1
+    }
   },
   brave: {
     id: "brave",
@@ -425,8 +433,12 @@ export const SkillLibrary: SkillLibraryDefinition = {
       "Al ser atacado contrataca de inmediato con cuchillo, bate con o sin clavos o hacha (aleatorio) al agresor siempre que esté en la misma localización, incluso si se desmayara. Si no dispusiera de ninguna de estas armas contrataca con puñetazo. Los contrataques no afectan al cooldown ni se consideran una acción en cuanto a la intoxicación. Se puede decidir no contratacar a un jugador neutral (previo aviso). La habilidad no se activa si es por un contrataque",
     cost: 5,
     max: 1,
-    implemented: false,
-    category: "offensive"
+    implemented: true,
+    category: "offensive",
+    effect: {
+      type: "counterattack_on_attacked",
+      value: 1
+    }
   },
   charming: {
     id: "charming",

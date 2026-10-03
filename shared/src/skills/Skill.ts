@@ -57,6 +57,10 @@ export type SkillEffectType =
   | "pickup_scope_increase"
   | "corpse_consumption"
   | "daily_zarkan_income"
+  | "scare_immunity"
+  | "detect_immunity"
+  | "counterattack_on_attacked"
+  | "locker_sale_bonus"
   | string;
 
 export interface SkillEffect {

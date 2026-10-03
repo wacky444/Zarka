@@ -1,6 +1,7 @@
 import type { MatchRecord } from "../../models/types";
 import {
   ActionLibrary,
+  getLockerSaleBonus,
   getSkillRank,
   ItemLibrary,
   syncBandolierLoadCapacity,
@@ -226,8 +227,7 @@ export class DropAction extends BaseAction {
             typeof rawSellValue === "number" && isFinite(rawSellValue)
               ? Math.max(0, rawSellValue)
               : 0;
-          const salesmanBonus =
-            getSkillRank(participant.character, "salesman") > 0 ? 1 : 0;
+          const salesmanBonus = getLockerSaleBonus(participant.character);
           const earned = baseValue + salesmanBonus;
           totalEarnedZarkans += earned;
 

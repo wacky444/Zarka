@@ -182,3 +182,35 @@ export function hasLethalDamageProtection(
   }
   return false;
 }
+
+export function isCharacterUndetectable(
+  character: PlayerCharacter | undefined | null
+): boolean {
+  if (!character || !Array.isArray(character.abilities) || character.abilities.length === 0) {
+    return false;
+  }
+  return (
+    getSkillRank(character, "undetectable") > 0 ||
+    getSkillEffectTotal(character, "detect_immunity") > 0
+  );
+}
+
+
+export function hasVengefulSkill(
+  character: PlayerCharacter | undefined | null
+): boolean {
+  return getSkillRank(character, "vengeful") > 0;
+}
+
+export function getLockerSaleBonus(
+  character: PlayerCharacter | undefined | null
+): number {
+  if (!character || !Array.isArray(character.abilities) || character.abilities.length === 0) {
+    return 0;
+  }
+  const effectBonus = getSkillEffectTotal(character, "locker_sale_bonus");
+  if (effectBonus > 0) {
+    return effectBonus;
+  }
+  return getSkillRank(character, "salesman") > 0 ? 1 : 0;
+}

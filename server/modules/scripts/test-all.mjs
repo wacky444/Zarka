@@ -92,9 +92,13 @@ if (typeof document === "undefined") {
     join(temporary, file.replace(/\.ts$/, ".js"))
   );
 
-  const result = spawnSync(process.execPath, ["--test", ...builtFiles], {
-    stdio: "inherit"
-  });
+  const result = spawnSync(
+    process.execPath,
+    ["--test", "--test-concurrency=1", ...builtFiles],
+    {
+      stdio: "inherit"
+    }
+  );
   if (result.error) {
     throw result.error;
   }

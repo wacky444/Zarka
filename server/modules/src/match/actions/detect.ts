@@ -5,7 +5,11 @@ import type {
   ReplayActionTarget,
   ReplayPlayerEvent,
 } from "@shared";
-import { ActionLibrary, ExtraExecutionEffect } from "@shared";
+import {
+  ActionLibrary,
+  ExtraExecutionEffect,
+  isCharacterUndetectable,
+} from "@shared";
 import { type PlannedActionParticipant } from "./utils";
 import { axialDistance } from "../../utils/location";
 import { getUsableExtraExecutions } from "../../utils/energy";
@@ -65,6 +69,9 @@ export class DetectAction extends BaseAction {
           continue;
         }
         const other = playerMap[playerId];
+        if (isCharacterUndetectable(other)) {
+          continue;
+        }
         const otherCoord = other?.position?.coord;
         if (!otherCoord) {
           continue;

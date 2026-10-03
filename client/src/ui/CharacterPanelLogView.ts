@@ -782,7 +782,14 @@ export class CharacterPanelLogView {
               : 0;
           const extraLabel =
             extraExecutions > 0 ? ` (+${extraExecutions} ${t("extra")})` : "";
-          lines.push(`${actor} ${t("used")} ${actionName}${extraLabel}`);
+          const isCounterAttack =
+            (event.action.metadata as { isCounterAttack?: boolean } | undefined)
+              ?.isCounterAttack === true;
+          if (isCounterAttack) {
+            lines.push(`${actor} ${t("counterattacked")}`);
+          } else {
+            lines.push(`${actor} ${t("used")} ${actionName}${extraLabel}`);
+          }
           if (
             actionId === "axe_attack" ||
             actionId === "knife_attack" ||
@@ -864,6 +871,20 @@ export class CharacterPanelLogView {
               );
             } else {
               lines.push(`${actor} ${t("missed with")} ${t("a harpoon")}`);
+            }
+          } else if (actionId === "punch") {
+            const totalDamage =
+              typeof event.action.damageDealt === "number"
+                ? event.action.damageDealt
+                : 0;
+            if (totalDamage > 0) {
+              lines.push(
+                `${actor} ${t("dealt")} ${totalDamage} ${t("damage")} ${t(
+                  "with a punch"
+                )}`
+              );
+            } else {
+              lines.push(`${actor} ${t("missed with a punch")}`);
             }
           } else if (actionId === "fire_rocket_launcher") {
             const totalDamage =

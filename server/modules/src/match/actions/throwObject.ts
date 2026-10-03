@@ -30,6 +30,7 @@ import {
   resolveGuardedDamage,
   type PlannedActionParticipant,
 } from "./utils";
+import { maybeTriggerVengefulCounterAttack } from "./vengeful";
 import { BaseAction } from "./classes/BaseAction";
 
 interface ThrownItem {
@@ -263,6 +264,14 @@ export class ThrowObjectAction extends BaseAction {
             damageTaken: 0,
             effects: ReplayActionEffect.Dodged,
           });
+          const counterEvents = maybeTriggerVengefulCounterAttack(
+            match,
+            participant.playerId,
+            candidate.id
+          );
+          if (counterEvents.length > 0) {
+            postEvents.push(...counterEvents);
+          }
           continue;
         }
 
@@ -300,6 +309,15 @@ export class ThrowObjectAction extends BaseAction {
           targetEntry.eliminated = true;
         }
         targetEntries.push(targetEntry);
+
+        const counterEvents = maybeTriggerVengefulCounterAttack(
+          match,
+          participant.playerId,
+          candidate.id
+        );
+        if (counterEvents.length > 0) {
+          postEvents.push(...counterEvents);
+        }
       }
 
       this.clearPlan(participant);

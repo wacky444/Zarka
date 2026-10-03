@@ -22,6 +22,7 @@ import {
 import { ActionLibrary, getDamageReduction, getDodgeSuccessChance } from "@shared";
 import { getUsableExtraExecutions } from "../../../utils/energy";
 import { collectTargets } from "../targeting";
+import { maybeTriggerVengefulCounterAttack } from "../vengeful";
 import { BaseAction } from "./BaseAction";
 
 function resolveDodge(target: PlayerCharacter): boolean {
@@ -116,6 +117,14 @@ export abstract class BaseAttackAction extends BaseAction {
             damageTaken: 0,
             effects: ReplayActionEffect.Dodged
           });
+          const counterEvents = maybeTriggerVengefulCounterAttack(
+            match,
+            participant.playerId,
+            targetId
+          );
+          if (counterEvents.length > 0) {
+            postEvents.push(...counterEvents);
+          }
           continue;
         }
         const guarded = isTargetProtected(target);
@@ -156,6 +165,14 @@ export abstract class BaseAttackAction extends BaseAction {
           targetEntry.eliminated = true;
         }
         targetEntries.push(targetEntry);
+        const counterEvents = maybeTriggerVengefulCounterAttack(
+          match,
+          participant.playerId,
+          targetId
+        );
+        if (counterEvents.length > 0) {
+          postEvents.push(...counterEvents);
+        }
       }
       this.clearPlan(participant);
       if (targetEntries.length === 0) {

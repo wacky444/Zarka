@@ -27,6 +27,7 @@ import {
 } from "./utils";
 import { getUsableExtraExecutions } from "../../utils/energy";
 import { collectTargets } from "./targeting";
+import { maybeTriggerVengefulCounterAttack } from "./vengeful";
 import { BaseAction } from "./classes/BaseAction";
 
 function resolveDodge(target: PlayerCharacter): boolean {
@@ -96,6 +97,14 @@ export class ShootHarpoonAction extends BaseAction {
             damageTaken: 0,
             effects: ReplayActionEffect.Dodged,
           });
+          const counterEvents = maybeTriggerVengefulCounterAttack(
+            match,
+            participant.playerId,
+            targetId
+          );
+          if (counterEvents.length > 0) {
+            postEvents.push(...counterEvents);
+          }
           continue;
         }
 
@@ -135,6 +144,15 @@ export class ShootHarpoonAction extends BaseAction {
           targetEntry.eliminated = true;
         }
         targetEntries.push(targetEntry);
+
+        const counterEvents = maybeTriggerVengefulCounterAttack(
+          match,
+          participant.playerId,
+          targetId
+        );
+        if (counterEvents.length > 0) {
+          postEvents.push(...counterEvents);
+        }
       }
 
       this.clearPlan(participant);
