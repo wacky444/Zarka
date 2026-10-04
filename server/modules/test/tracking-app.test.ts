@@ -8,9 +8,13 @@ import {
   type Axial,
   type C4Record,
   type ReplayPlayerEvent,
-  type TrapRecord,
+  type TrapRecord
 } from "@shared";
-import { MATCH_COLLECTION, MATCH_KEY_PREFIX, SERVER_USER_ID } from "../src/constants";
+import {
+  MATCH_COLLECTION,
+  MATCH_KEY_PREFIX,
+  SERVER_USER_ID
+} from "../src/constants";
 import type { MatchRecord } from "../src/models/types";
 import { buyShopItemRpc } from "../src/rpc/buyShopItem";
 import { createDefaultCharacter } from "../src/utils/playerCharacter";
@@ -24,8 +28,8 @@ runtimeGlobals.nkruntime = {
     NOT_FOUND: 5,
     PERMISSION_DENIED: 7,
     FAILED_PRECONDITION: 9,
-    ABORTED: 10,
-  },
+    ABORTED: 10
+  }
 };
 
 type StoredMatch = {
@@ -38,7 +42,7 @@ function createTestContext(userId: string): nkruntime.Context {
     userId,
     username: `${userId}_user`,
     vars: {},
-    env: {},
+    env: {}
   } as unknown as nkruntime.Context;
 }
 
@@ -47,7 +51,7 @@ function createTestLogger(): nkruntime.Logger {
     debug: () => {},
     info: () => {},
     warn: () => {},
-    error: () => {},
+    error: () => {}
   } as unknown as nkruntime.Logger;
 }
 
@@ -61,7 +65,7 @@ function createMatchWithState(options?: {
   actor.economy.zarkans = options?.actorZarkans ?? 20;
   actor.position = {
     tileId: "tile_2_3",
-    coord: options?.actorCoord ?? { q: 2, r: 3 },
+    coord: options?.actorCoord ?? { q: 2, r: 3 }
   };
 
   return {
@@ -76,7 +80,7 @@ function createMatchWithState(options?: {
     started: true,
     removed: 0,
     c4s: options?.c4s ?? [],
-    traps: options?.traps ?? [],
+    traps: options?.traps ?? []
   };
 }
 
@@ -89,7 +93,7 @@ function createNakama(initialMatch: MatchRecord) {
           (req) =>
             req.collection === MATCH_COLLECTION &&
             req.key === `${MATCH_KEY_PREFIX}${initialMatch.match_id}` &&
-            req.userId === SERVER_USER_ID,
+            req.userId === SERVER_USER_ID
         )
         .map((req) => ({
           collection: req.collection,
@@ -100,14 +104,14 @@ function createNakama(initialMatch: MatchRecord) {
           permissionRead: 2,
           permissionWrite: 0,
           createTime: 0,
-          updateTime: 0,
+          updateTime: 0
         })),
     storageWrite: (writes: nkruntime.StorageWriteRequest[]) =>
       writes.map((w) => {
         if (w.collection === MATCH_COLLECTION) {
           const val = w.value as { match?: MatchRecord } | MatchRecord;
           stored.value = JSON.parse(
-            JSON.stringify("match" in val && val.match ? val.match : val),
+            JSON.stringify("match" in val && val.match ? val.match : val)
           ) as MatchRecord;
           stored.version = `v_${Date.now()}`;
         }
@@ -115,14 +119,14 @@ function createNakama(initialMatch: MatchRecord) {
           collection: w.collection,
           key: w.key,
           userId: w.userId,
-          version: stored.version,
+          version: stored.version
         };
       }),
     storageList: () => ({ objects: [] }),
     storageDelete: () => {},
     matchCreate: () => "match-id",
     matchList: () => [],
-    matchSignal: () => "",
+    matchSignal: () => ""
   };
   return { fakeNakama: fake as unknown as nkruntime.Nakama, stored };
 }
@@ -146,13 +150,13 @@ test("buyShopItemRpc fails if player has insufficient zarkans for tracking app",
         ctx,
         logger,
         fakeNakama,
-        JSON.stringify({ match_id: "test-match", shop_id: "tracking_app" }),
+        JSON.stringify({ match_id: "test-match", shop_id: "tracking_app" })
       );
     },
     (err: unknown) => {
       const e = err as { message: string };
       return e.message.includes("insufficient_zarkans");
-    },
+    }
   );
 });
 
@@ -166,7 +170,7 @@ test("buyShopItemRpc succeeds and reports 0 when no c4 or traps exist", () => {
     ctx,
     logger,
     fakeNakama,
-    JSON.stringify({ match_id: "test-match", shop_id: "tracking_app" }),
+    JSON.stringify({ match_id: "test-match", shop_id: "tracking_app" })
   );
   const response = JSON.parse(responseJson) as {
     ok: boolean;
@@ -181,7 +185,10 @@ test("buyShopItemRpc succeeds and reports 0 when no c4 or traps exist", () => {
   const event = response.event;
   assert.equal(event.kind, "player");
   assert.equal(event.action.actionId, "buy_tracking_app");
-  assert.deepEqual(event.visibility, { scope: "limited", playerIds: ["buyer"] });
+  assert.deepEqual(event.visibility, {
+    scope: "limited",
+    playerIds: ["buyer"]
+  });
 
   const metadata = event.action.metadata as {
     c4Current: number;
@@ -201,29 +208,29 @@ test("buyShopItemRpc accurately detects c4 at current cell, distance 1, and trap
       ownerId: "enemy1",
       tileId: "t_2_3",
       coord: { q: 2, r: 3 },
-      placedTurn: 1,
+      placedTurn: 1
     },
     {
       id: "c4-dist1-1",
       ownerId: "enemy2",
       tileId: "t_3_3",
       coord: { q: 3, r: 3 }, // adjacent
-      placedTurn: 1,
+      placedTurn: 1
     },
     {
       id: "c4-dist1-2",
       ownerId: "enemy3",
       tileId: "t_2_2",
       coord: { q: 2, r: 2 }, // adjacent
-      placedTurn: 1,
+      placedTurn: 1
     },
     {
       id: "c4-dist2",
       ownerId: "enemy4",
       tileId: "t_4_3",
       coord: { q: 4, r: 3 }, // distance 2
-      placedTurn: 1,
-    },
+      placedTurn: 1
+    }
   ];
 
   const traps: TrapRecord[] = [
@@ -234,7 +241,7 @@ test("buyShopItemRpc accurately detects c4 at current cell, distance 1, and trap
       from: { tileId: "t_2_3", coord: { q: 2, r: 3 } },
       to: { tileId: "t_3_3", coord: { q: 3, r: 3 } },
       damage: 7,
-      placedTurn: 1,
+      placedTurn: 1
     },
     // Trap where "to" is buyer's cell
     {
@@ -243,7 +250,7 @@ test("buyShopItemRpc accurately detects c4 at current cell, distance 1, and trap
       from: { tileId: "t_2_4", coord: { q: 2, r: 4 } },
       to: { tileId: "t_2_3", coord: { q: 2, r: 3 } },
       damage: 7,
-      placedTurn: 1,
+      placedTurn: 1
     },
     // Trap between two other cells (not touching buyer's cell)
     {
@@ -252,15 +259,15 @@ test("buyShopItemRpc accurately detects c4 at current cell, distance 1, and trap
       from: { tileId: "t_3_3", coord: { q: 3, r: 3 } },
       to: { tileId: "t_4_3", coord: { q: 4, r: 3 } },
       damage: 7,
-      placedTurn: 1,
-    },
+      placedTurn: 1
+    }
   ];
 
   const match = createMatchWithState({
     actorZarkans: 20,
     actorCoord: { q: 2, r: 3 },
     c4s,
-    traps,
+    traps
   });
   const { fakeNakama } = createNakama(match);
   const ctx = createTestContext("buyer");
@@ -270,7 +277,7 @@ test("buyShopItemRpc accurately detects c4 at current cell, distance 1, and trap
     ctx,
     logger,
     fakeNakama,
-    JSON.stringify({ match_id: "test-match", shop_id: "tracking_app" }),
+    JSON.stringify({ match_id: "test-match", shop_id: "tracking_app" })
   );
   const response = JSON.parse(responseJson) as {
     ok: boolean;

@@ -15,6 +15,7 @@ socket:
     - "*"
     - "https://html-classic.itch.zone"
     - "https://*.hwcdn.net"
+    - "https://*.itch.io"
 console:
   port: 9100
   username: "admin"
