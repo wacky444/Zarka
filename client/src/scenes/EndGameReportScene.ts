@@ -1,5 +1,10 @@
 import Phaser from "phaser";
-import type { GetMatchReportPayload, MatchReport, MatchReportPlayer, Skin } from "@shared";
+import type {
+  GetMatchReportPayload,
+  MatchReport,
+  MatchReportPlayer,
+  Skin
+} from "@shared";
 import { DEFAULT_SKIN } from "@shared";
 import { t } from "../services/i18n";
 import type { TurnService } from "../services/turnService";
@@ -29,7 +34,7 @@ const ACHIEVEMENT_LABELS: Record<string, string> = {
   scavenger: "Scavenger",
   glutton: "Glutton",
   medic: "Medic",
-  runner: "Runner",
+  runner: "Runner"
 };
 
 export class EndGameReportScene extends Phaser.Scene {
@@ -51,7 +56,7 @@ export class EndGameReportScene extends Phaser.Scene {
     this.load.atlasXML(
       "char",
       assetPath("assets/spritesheets/roguelikeChar_transparent.png"),
-      assetPath("assets/spritesheets/roguelikeChar_transparent.xml"),
+      assetPath("assets/spritesheets/roguelikeChar_transparent.xml")
     );
   }
 
@@ -75,9 +80,9 @@ export class EndGameReportScene extends Phaser.Scene {
       try {
         const response = await this.turnService.getMatchReport(this.matchId);
         const raw = (response as unknown as { payload?: unknown }).payload;
-        const payload = (
-          typeof raw === "string" ? JSON.parse(raw) : raw
-        ) as GetMatchReportPayload | undefined;
+        const payload = (typeof raw === "string" ? JSON.parse(raw) : raw) as
+          | GetMatchReportPayload
+          | undefined;
         if (payload?.ok && payload.report) {
           this.report = payload.report;
           this.renderReport(payload.report);
@@ -102,7 +107,7 @@ export class EndGameReportScene extends Phaser.Scene {
       .text(width / 2, 22, t("Loading end-game report..."), {
         color: "#cbd5e1",
         fontSize: "16px",
-        align: "center",
+        align: "center"
       })
       .setOrigin(0.5, 0);
 
@@ -115,24 +120,24 @@ export class EndGameReportScene extends Phaser.Scene {
       scrollMode: 0,
       panel: {
         child: this.root,
-        mask: true,
+        mask: true
       },
       slider: {
         track: this.rexUI.add.roundRectangle(0, 0, 4, 120, 2, 0x1f2a4a),
-        thumb: this.rexUI.add.roundRectangle(0, 0, 6, 36, 3, 0x3b82f6),
+        thumb: this.rexUI.add.roundRectangle(0, 0, 6, 36, 3, 0x3b82f6)
       },
       scroller: {
         threshold: 10,
         rectBoundsInteractive: true,
         slidingDeceleration: 5000,
         backDeceleration: 2000,
-        pointerOutRelease: true,
+        pointerOutRelease: true
       },
       mouseWheelScroller: {
         focus: 2,
-        speed: 0.5,
+        speed: 0.5
       },
-      space: { left: 12, right: 12, top: 8, bottom: 8, panel: 8 },
+      space: { left: 12, right: 12, top: 8, bottom: 8, panel: 8 }
     }) as unknown as ScrollablePanel;
     this.scrollPanel.setOrigin(0, 0);
     this.scrollPanel.setPosition(0, 54);
@@ -144,7 +149,7 @@ export class EndGameReportScene extends Phaser.Scene {
       height - 32,
       t("Back to Menu"),
       () => this.returnToMenu(),
-      ["report"],
+      ["report"]
     ).setOrigin(0.5);
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
@@ -195,7 +200,9 @@ export class EndGameReportScene extends Phaser.Scene {
       const winningTeam = report.teams.find((team) => team.won);
       const isWinner = Boolean(
         (winningTeam && userId && winningTeam.player_ids.includes(userId)) ||
-        (player && report.winning_team_id && player.team_id === report.winning_team_id) ||
+        (player &&
+          report.winning_team_id &&
+          player.team_id === report.winning_team_id) ||
         (player && report.winning_character_ids.includes(player.character_id))
       );
 
@@ -215,7 +222,7 @@ export class EndGameReportScene extends Phaser.Scene {
       .text(width / 2, y, title, {
         color: titleColor,
         fontSize: "34px",
-        fontStyle: "bold",
+        fontStyle: "bold"
       })
       .setOrigin(0.5, 0);
     this.root.add(titleText);
@@ -225,7 +232,7 @@ export class EndGameReportScene extends Phaser.Scene {
     const summary = this.add
       .text(width / 2, y, `${matchName}${t("Turns")}: ${report.turns}`, {
         color: "#cbd5e1",
-        fontSize: "16px",
+        fontSize: "16px"
       })
       .setOrigin(0.5, 0);
     this.root.add(summary);
@@ -244,7 +251,7 @@ export class EndGameReportScene extends Phaser.Scene {
       const titleText = `${team.rank}. ${teamName}${team.won ? ` · ${t("Winner")}` : ""}`;
       const statsText = `${t("Damage")}: ${team.total_damage_dealt}   ${t("Received")}: ${team.total_damage_received}   ${t("Kills")}: ${team.kills}`;
       const teamPlayers = report.players.filter(
-        (player) => team.player_ids.indexOf(player.player_id) !== -1,
+        (player) => team.player_ids.indexOf(player.player_id) !== -1
       );
       y = this.addTeamCard(
         width,
@@ -252,22 +259,19 @@ export class EndGameReportScene extends Phaser.Scene {
         titleText,
         teamPlayers,
         statsText,
-        team.won ? "#854d0e" : "#172554",
+        team.won ? "#854d0e" : "#172554"
       );
-    }
-
-    if (report.winning_character_ids.length > 0) {
-      y = this.addSectionTitle(width, y + 8, t("Winners"));
-      const winners = report.players.filter((player) =>
-        report.winning_character_ids.indexOf(player.character_id) !== -1,
-      );
-      y = this.addWinnerRow(width, y, winners);
     }
 
     y = this.addSectionTitle(width, y + 12, t("Player Statistics"));
     for (const player of report.players) {
       const playerText = `${player.player_name}\n${t("Damage")}: ${player.damage_dealt}   ${t("Received")}: ${player.damage_received}   ${t("Kills")}: ${player.players_killed}\n${t("Actions")}: ${player.actions_used}   ${t("Items")}: ${player.items_collected}   ${t("Average weight")}: ${player.average_weight_carried.toFixed(1)}   ${player.alive ? t("Alive") : t("Eliminated")}`;
-      y = this.addCard(width, y, playerText, player.alive ? "#14532d" : "#3f1d2e");
+      y = this.addCard(
+        width,
+        y,
+        playerText,
+        player.alive ? "#14532d" : "#3f1d2e"
+      );
     }
 
     y = this.addSectionTitle(width, y + 12, t("Achievements"));
@@ -276,11 +280,9 @@ export class EndGameReportScene extends Phaser.Scene {
     } else {
       for (const achievement of report.achievements) {
         const player = report.players.find(
-          (entry) => entry.player_id === achievement.player_id,
+          (entry) => entry.player_id === achievement.player_id
         );
-        const label = t(
-          ACHIEVEMENT_LABELS[achievement.id] ?? achievement.id,
-        );
+        const label = t(ACHIEVEMENT_LABELS[achievement.id] ?? achievement.id);
         const value =
           typeof achievement.value === "number"
             ? ` · ${achievement.value.toFixed(1)}`
@@ -289,7 +291,7 @@ export class EndGameReportScene extends Phaser.Scene {
           width,
           y,
           `${label}${value}\n${player?.player_name ?? t("Unknown")}`,
-          "#422006",
+          "#422006"
         );
       }
     }
@@ -304,25 +306,37 @@ export class EndGameReportScene extends Phaser.Scene {
       .text(width / 2, y, text, {
         color: "#f8fafc",
         fontSize: "22px",
-        fontStyle: "bold",
+        fontStyle: "bold"
       })
       .setOrigin(0.5, 0);
     this.root.add(title);
     return y + 36;
   }
 
-  private addCard(width: number, y: number, text: string, color: string): number {
+  private addCard(
+    width: number,
+    y: number,
+    text: string,
+    color: string
+  ): number {
     const lines = text.split("\n").length;
     const height = lines > 1 ? 70 : 48;
     const background = this.add
-      .rectangle(width / 2, y + height / 2, width, height, parseInt(color.slice(1), 16), 1)
+      .rectangle(
+        width / 2,
+        y + height / 2,
+        width,
+        height,
+        parseInt(color.slice(1), 16),
+        1
+      )
       .setOrigin(0.5);
     const label = this.add
       .text(16, y + height / 2, text, {
         color: "#f8fafc",
         fontSize: "15px",
         lineSpacing: 5,
-        wordWrap: { width: width - 32 },
+        wordWrap: { width: width - 32 }
       })
       .setOrigin(0, 0.5);
     this.root.add([background, label]);
@@ -335,7 +349,7 @@ export class EndGameReportScene extends Phaser.Scene {
     titleText: string,
     teamPlayers: MatchReportPlayer[],
     statsText: string,
-    color: string,
+    color: string
   ): number {
     const hasPlayers = teamPlayers.length > 0;
     const title = this.add
@@ -343,7 +357,7 @@ export class EndGameReportScene extends Phaser.Scene {
         color: "#f8fafc",
         fontSize: "16px",
         fontStyle: "bold",
-        wordWrap: { width: width - 32 },
+        wordWrap: { width: width - 32 }
       })
       .setOrigin(0, 0);
 
@@ -371,7 +385,7 @@ export class EndGameReportScene extends Phaser.Scene {
             color: "#fef3c7",
             fontSize: "12px",
             align: "center",
-            wordWrap: { width: Math.max(70, spacing - 4) },
+            wordWrap: { width: Math.max(70, spacing - 4) }
           })
           .setOrigin(0.5, 0);
         elements.push(nameLabel);
@@ -387,7 +401,7 @@ export class EndGameReportScene extends Phaser.Scene {
         color: "#cbd5e1",
         fontSize: "14px",
         lineSpacing: 4,
-        wordWrap: { width: width - 32 },
+        wordWrap: { width: width - 32 }
       })
       .setOrigin(0, 0);
     elements.push(stats);
@@ -396,38 +410,18 @@ export class EndGameReportScene extends Phaser.Scene {
     const height = cardBottom - y;
 
     const background = this.add
-      .rectangle(width / 2, y + height / 2, width, height, parseInt(color.slice(1), 16), 1)
+      .rectangle(
+        width / 2,
+        y + height / 2,
+        width,
+        height,
+        parseInt(color.slice(1), 16),
+        1
+      )
       .setOrigin(0.5);
 
     this.root.add([background, ...elements]);
     return y + height + 8;
-  }
-
-  private addWinnerRow(
-    width: number,
-    y: number,
-    winners: MatchReportPlayer[],
-  ): number {
-    const rowHeight = 86;
-    const row = this.add.container(0, y);
-    for (let index = 0; index < winners.length; index += 1) {
-      const player = winners[index];
-      const x = 50 + index * Math.min(100, (width - 60) / Math.max(1, winners.length));
-      const skin: Skin = player.skin ?? DEFAULT_SKIN;
-      const sprite = createSkinContainer(this, x, rowHeight / 2 - 8, skin, 3);
-      row.add(sprite);
-      const label = this.add
-        .text(x, rowHeight - 12, player.player_name, {
-          color: "#fef3c7",
-          fontSize: "12px",
-          align: "center",
-          wordWrap: { width: 90 },
-        })
-        .setOrigin(0.5, 1);
-      row.add(label);
-    }
-    this.root.add(row);
-    return y + rowHeight;
   }
 
   private showError(message: string) {
@@ -436,9 +430,11 @@ export class EndGameReportScene extends Phaser.Scene {
 
   private returnToMenu() {
     this.scene.stop(this.reportId);
-    const mainScene = this.scene.get("MainScene") as {
-      showMyMatchesView?: () => void;
-    } | undefined;
+    const mainScene = this.scene.get("MainScene") as
+      | {
+          showMyMatchesView?: () => void;
+        }
+      | undefined;
     if (mainScene?.showMyMatchesView) {
       if (this.scene.isSleeping("MainScene")) {
         this.scene.wake("MainScene");
