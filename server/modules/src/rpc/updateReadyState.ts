@@ -295,6 +295,24 @@ export function updateReadyStateRpc(
     if (match.removed && match.removed !== 0) {
       try {
         const alive = getAliveCharacterIds(match);
+        const characters = match.playerCharacters ?? {};
+        const firstAlive = alive.length > 0 ? alive[0] : undefined;
+        const winningChar = firstAlive ? characters[firstAlive] : undefined;
+        const winningTeamId = winningChar
+          ? winningChar.secretTeamId?.trim() ||
+            winningChar.teamId?.trim() ||
+            `solo_${firstAlive}`
+          : undefined;
+        const winnerIds = winningTeamId
+          ? (match.players ?? []).filter((pId) => {
+              const char = characters[pId];
+              const team =
+                char?.secretTeamId?.trim() ||
+                char?.teamId?.trim() ||
+                `solo_${pId}`;
+              return team === winningTeamId;
+            })
+          : alive;
         const winnerId = alive.length > 0 ? alive[0] : undefined;
         const reason = alive.length === 0 ? "all_dead" : "last_alive";
         nkWrapper.matchSignal(
@@ -303,7 +321,7 @@ export function updateReadyStateRpc(
             type: "match_ended",
             match_id: matchId,
             winnerId,
-            winnerIds: alive,
+            winnerIds,
             reason,
           }),
         );

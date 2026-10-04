@@ -15,6 +15,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "with a punch": "con un puñetazo",
   "missed with a punch": "falló el puñetazo",
   "Victory!": "¡Victoria!",
+  Defeat: "Derrota",
+  "Defeat!": "¡Derrota!",
   "Match Draw": "Empate",
   Turns: "Turnos",
   "Team Leaderboard": "Clasificación de equipos",

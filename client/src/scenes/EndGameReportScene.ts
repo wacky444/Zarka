@@ -6,6 +6,7 @@ import type { TurnService } from "../services/turnService";
 import { makeButton, type UIButton } from "../ui/button";
 import { createSkinContainer } from "../ui/PlayerSkinRenderer";
 import { assetPath } from "../utils/assetPath";
+import { SessionManager } from "../services/sessionManager";
 
 interface ScrollablePanel extends Phaser.GameObjects.GameObject {
   layout?: () => void;
@@ -16,6 +17,7 @@ interface ScrollablePanel extends Phaser.GameObjects.GameObject {
 
 export interface EndGameReportSceneData {
   matchId: string;
+  userId?: string;
 }
 
 const ACHIEVEMENT_LABELS: Record<string, string> = {
@@ -38,6 +40,7 @@ export class EndGameReportScene extends Phaser.Scene {
   private report: MatchReport | null = null;
   private turnService: TurnService | null = null;
   private matchId = "";
+  private currentUserId: string | null = null;
   private returnButton!: UIButton;
 
   constructor() {
@@ -54,6 +57,11 @@ export class EndGameReportScene extends Phaser.Scene {
 
   async create(data?: EndGameReportSceneData) {
     this.matchId = data?.matchId ?? "";
+    this.currentUserId =
+      data?.userId ??
+      (this.registry.get("currentUserId") as string | null) ??
+      SessionManager.getStoredSession()?.user_id ??
+      null;
     this.turnService = this.registry.get("turnService") as TurnService | null;
     this.createLayout();
 
@@ -162,12 +170,50 @@ export class EndGameReportScene extends Phaser.Scene {
     const width = Math.max(280, this.scale.width - 48);
     let y = 16;
 
-    const title = report.winning_team_id
-      ? t("Victory!")
-      : t("Match Draw");
+    const isDraw = !report.winning_team_id || report.reason === "all_dead";
+    const userId =
+      this.currentUserId ??
+      (this.registry.get("currentUserId") as string | null) ??
+      SessionManager.getStoredSession()?.user_id ??
+      null;
+
+    const player = userId
+      ? report.players.find((p) => p.player_id === userId)
+      : undefined;
+    const isParticipant =
+      Boolean(player) ||
+      (Boolean(userId) &&
+        report.teams.some((team) => team.player_ids.includes(userId!)));
+
+    let title: string;
+    let titleColor: string;
+
+    if (isDraw) {
+      title = t("Match Draw");
+      titleColor = "#38bdf8";
+    } else if (isParticipant) {
+      const winningTeam = report.teams.find((team) => team.won);
+      const isWinner = Boolean(
+        (winningTeam && userId && winningTeam.player_ids.includes(userId)) ||
+        (player && report.winning_team_id && player.team_id === report.winning_team_id) ||
+        (player && report.winning_character_ids.includes(player.character_id))
+      );
+
+      if (isWinner) {
+        title = t("Victory!");
+        titleColor = "#fbbf24";
+      } else {
+        title = t("Defeat");
+        titleColor = "#ef4444";
+      }
+    } else {
+      title = t("End Game Report");
+      titleColor = "#f8fafc";
+    }
+
     const titleText = this.add
       .text(width / 2, y, title, {
-        color: report.winning_team_id ? "#fbbf24" : "#38bdf8",
+        color: titleColor,
         fontSize: "34px",
         fontStyle: "bold",
       })
@@ -187,7 +233,15 @@ export class EndGameReportScene extends Phaser.Scene {
 
     y = this.addSectionTitle(width, y, t("Team Leaderboard"));
     for (const team of report.teams) {
-      const teamText = `${team.rank}. ${t(team.team_id)}${team.won ? ` · ${t("Winner")}` : ""}\n${t("Damage")}: ${team.total_damage_dealt}   ${t("Received")}: ${team.total_damage_received}   ${t("Kills")}: ${team.kills}`;
+      let teamName = t(team.team_id);
+      if (team.team_id.startsWith("solo_")) {
+        const soloId = team.team_id.replace(/^solo_/, "");
+        const soloPlayer = report.players.find((p) => p.player_id === soloId);
+        if (soloPlayer) {
+          teamName = soloPlayer.player_name;
+        }
+      }
+      const teamText = `${team.rank}. ${teamName}${team.won ? ` · ${t("Winner")}` : ""}\n${t("Damage")}: ${team.total_damage_dealt}   ${t("Received")}: ${team.total_damage_received}   ${t("Kills")}: ${team.kills}`;
       y = this.addCard(width, y, teamText, team.won ? "#854d0e" : "#172554");
     }
 

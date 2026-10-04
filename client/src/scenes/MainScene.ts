@@ -604,7 +604,10 @@ export class MainScene extends Phaser.Scene {
       return;
     }
     this.scene.sleep("MainScene");
-    this.scene.run("EndGameReportScene", { matchId });
+    this.scene.run("EndGameReportScene", {
+      matchId,
+      userId: this.currentUserId ?? undefined,
+    });
   }
 
   private getTutorialMatchStorage(): TutorialMatchStorage | null {

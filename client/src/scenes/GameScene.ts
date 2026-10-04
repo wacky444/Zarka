@@ -1345,7 +1345,10 @@ export class GameScene extends Phaser.Scene {
     }
     this.scene.stop("GameScene");
     if (matchId) {
-      this.scene.run("EndGameReportScene", { matchId });
+      this.scene.run("EndGameReportScene", {
+        matchId,
+        userId: this.currentUserId ?? undefined,
+      });
     } else if (this.scene.isSleeping("MainScene")) {
       this.scene.wake("MainScene");
     }

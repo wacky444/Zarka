@@ -277,9 +277,25 @@ export function finalizeMatchIfEnded(
       }
 
       const previous = parsePlayerStatsFromUser(user);
+      const characters = match.playerCharacters ?? {};
+      const firstAlive = outcome.aliveCharacterIds[0];
+      const winningCharacter = firstAlive ? characters[firstAlive] : undefined;
+      const winningTeamId = winningCharacter
+        ? winningCharacter.secretTeamId?.trim() ||
+          winningCharacter.teamId?.trim() ||
+          `solo_${firstAlive}`
+        : undefined;
+
+      const playerCharacter = characters[playerId];
+      const playerTeamId = playerCharacter
+        ? playerCharacter.secretTeamId?.trim() ||
+          playerCharacter.teamId?.trim() ||
+          `solo_${playerId}`
+        : undefined;
+
       const isWinner =
         outcome.reason === "last_alive" &&
-        outcome.aliveCharacterIds.indexOf(playerId) !== -1;
+        Boolean(winningTeamId && playerTeamId === winningTeamId);
       const isDraw = outcome.reason === "all_dead";
 
       const nextMatchesPlayed = previous.matchesPlayed + 1;

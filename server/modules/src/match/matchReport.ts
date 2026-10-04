@@ -322,8 +322,13 @@ export function buildMatchReport(
   }));
 
   const alivePlayers = aggregatePlayers.filter((player) => player.alive);
+  const uniqueAliveTeams = new Set(
+    alivePlayers.map((player) => player.effectiveTeamId),
+  );
   const winningTeamId =
-    reason === "last_alive" && alivePlayers.length > 0
+    reason === "last_alive" &&
+    alivePlayers.length > 0 &&
+    uniqueAliveTeams.size === 1
       ? alivePlayers[0].effectiveTeamId
       : undefined;
   const winningCharacterIds = winningTeamId
