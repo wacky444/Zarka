@@ -53,3 +53,13 @@
 - improve the ready checkbox, to a cool button, if is the last player, show a confirm dialog
 
 - protect, dodge and sleep in case the turn is skipped
+
+- tabs in settings
+
+- fully log visible in the end report
+
+- pressing tab in the register view goes from position 1 to 3 then to 2, swap username and password position visually
+
+- step 1 2 and 3 are not saved, after doing them it resumes where the tutorial left off, but the 3 first steps have to be repeated every time the web reloads in the middle of tutorial
+
+- character panel has too many code lines

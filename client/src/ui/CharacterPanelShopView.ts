@@ -368,7 +368,6 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     const options = playerOptions.filter((option) => {
       if (
         !match ||
-        !match.players.includes(option.id) ||
         option.id === currentUserId ||
         match.deadCharacters?.[option.id] === true
       ) {
@@ -392,7 +391,10 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.updateDroneLocationOptions(match);
     const zarkans = this.currentCharacter?.economy?.zarkans ?? 0;
     this.balanceText.setText(`Zarkans: ${Math.max(0, Math.floor(zarkans))}`);
-    this.donationTargets = options;
+    const donationTargets = options.filter(
+      (option) => match?.players?.includes(option.id)
+    );
+    this.donationTargets = donationTargets;
     const enabled = Boolean(
       match &&
         currentUserId &&
@@ -410,7 +412,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
           match.started === true &&
           match.removed === 0 &&
           enabled &&
-          options.length > 0 &&
+          donationTargets.length > 0 &&
           Math.floor(zarkans) > 0
       )
     );
