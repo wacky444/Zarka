@@ -319,7 +319,6 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     parent.add(this.scrollPanel);
 
     this.layout(layout);
-    this.buildShopList(listWidth - 8);
     this.elements.push(
       this.background,
       this.headerBox,
@@ -574,7 +573,13 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.scrollPanel.setPosition?.(options.margin + 12, listTop);
     this.scrollPanel.setSize?.(listWidth, listHeight);
     this.scrollPanel.setMinSize?.(listWidth, listHeight);
-    this.scrollPanel.layout?.();
+    const nextCardWidth = Math.max(0, listWidth - 8);
+    if (this.shopCardWidth !== nextCardWidth) {
+      this.shopCardWidth = nextCardWidth;
+      this.rebuildShopList();
+    } else {
+      this.scrollPanel.layout?.();
+    }
   }
 
   destroy(): void {
