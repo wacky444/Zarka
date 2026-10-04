@@ -614,7 +614,13 @@ export class CharacterPanelSkillsView {
     this.scrollPanel.setPosition?.(options.margin + 12, listTop);
     this.scrollPanel.setSize?.(listWidth, listHeight);
     this.scrollPanel.setMinSize?.(listWidth, listHeight);
-    this.scrollPanel.layout?.();
+    const nextCardWidth = Math.max(0, listWidth - 8);
+    if (this.skillCardWidth !== nextCardWidth) {
+      this.skillCardWidth = nextCardWidth;
+      this.rebuildSkillList();
+    } else {
+      this.scrollPanel.layout?.();
+    }
     this.categoryTabs.bringToTop();
   }
 

@@ -63,3 +63,15 @@
 - step 1 2 and 3 are not saved, after doing them it resumes where the tutorial left off, but the 3 first steps have to be repeated every time the web reloads in the middle of tutorial
 
 - character panel has too many code lines
+
+- review scare tutorial hint
+
+- changing window size doesn't swap between mobile and pc, like its calculated once, making the gui show incorrect modal positions
+
+- use the fast new modals that was for mobile also in pc
+
+- when starting a match, don't allow less than 24 hours in the first turn
+
+- skills must be spent on turn 1
+
+- when leaving a match, if empty, remove it
