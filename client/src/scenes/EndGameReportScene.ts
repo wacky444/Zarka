@@ -241,12 +241,23 @@ export class EndGameReportScene extends Phaser.Scene {
           teamName = soloPlayer.player_name;
         }
       }
-      const teamText = `${team.rank}. ${teamName}${team.won ? ` · ${t("Winner")}` : ""}\n${t("Damage")}: ${team.total_damage_dealt}   ${t("Received")}: ${team.total_damage_received}   ${t("Kills")}: ${team.kills}`;
-      y = this.addCard(width, y, teamText, team.won ? "#854d0e" : "#172554");
+      const titleText = `${team.rank}. ${teamName}${team.won ? ` · ${t("Winner")}` : ""}`;
+      const statsText = `${t("Damage")}: ${team.total_damage_dealt}   ${t("Received")}: ${team.total_damage_received}   ${t("Kills")}: ${team.kills}`;
+      const teamPlayers = report.players.filter(
+        (player) => team.player_ids.indexOf(player.player_id) !== -1,
+      );
+      y = this.addTeamCard(
+        width,
+        y,
+        titleText,
+        teamPlayers,
+        statsText,
+        team.won ? "#854d0e" : "#172554",
+      );
     }
 
     if (report.winning_character_ids.length > 0) {
-      y = this.addSectionTitle(width, y + 8, t("Winning Characters"));
+      y = this.addSectionTitle(width, y + 8, t("Winners"));
       const winners = report.players.filter((player) =>
         report.winning_character_ids.indexOf(player.character_id) !== -1,
       );
@@ -315,6 +326,80 @@ export class EndGameReportScene extends Phaser.Scene {
       })
       .setOrigin(0, 0.5);
     this.root.add([background, label]);
+    return y + height + 8;
+  }
+
+  private addTeamCard(
+    width: number,
+    y: number,
+    titleText: string,
+    teamPlayers: MatchReportPlayer[],
+    statsText: string,
+    color: string,
+  ): number {
+    const hasPlayers = teamPlayers.length > 0;
+    const title = this.add
+      .text(16, y + 12, titleText, {
+        color: "#f8fafc",
+        fontSize: "16px",
+        fontStyle: "bold",
+        wordWrap: { width: width - 32 },
+      })
+      .setOrigin(0, 0);
+
+    const titleBottom = y + 12 + title.height;
+    const elements: Phaser.GameObjects.GameObject[] = [title];
+
+    let currentY = titleBottom;
+
+    if (hasPlayers) {
+      const spriteY = currentY + 28;
+      const nameY = spriteY + 24;
+      const count = teamPlayers.length;
+      const spacing = Math.min(100, (width - 80) / Math.max(1, count));
+
+      let maxNameBottom = nameY + 16;
+      for (let index = 0; index < count; index += 1) {
+        const player = teamPlayers[index];
+        const x = 50 + index * spacing;
+        const skin: Skin = player.skin ?? DEFAULT_SKIN;
+        const sprite = createSkinContainer(this, x, spriteY, skin, 3);
+        elements.push(sprite);
+
+        const nameLabel = this.add
+          .text(x, nameY, player.player_name, {
+            color: "#fef3c7",
+            fontSize: "12px",
+            align: "center",
+            wordWrap: { width: Math.max(70, spacing - 4) },
+          })
+          .setOrigin(0.5, 0);
+        elements.push(nameLabel);
+        maxNameBottom = Math.max(maxNameBottom, nameY + nameLabel.height);
+      }
+      currentY = maxNameBottom + 10;
+    } else {
+      currentY += 8;
+    }
+
+    const stats = this.add
+      .text(16, currentY, statsText, {
+        color: "#cbd5e1",
+        fontSize: "14px",
+        lineSpacing: 4,
+        wordWrap: { width: width - 32 },
+      })
+      .setOrigin(0, 0);
+    elements.push(stats);
+
+    const cardBottom = currentY + stats.height + 12;
+    const height = cardBottom - y;
+
+    const background = this.add
+      .rectangle(width / 2, y + height / 2, width, height, parseInt(color.slice(1), 16), 1)
+      .setOrigin(0.5);
+
+    this.root.add([background, ...elements]);
     return y + height + 8;
   }
 

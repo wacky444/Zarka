@@ -24,7 +24,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Damage: "Daño",
   Received: "Recibido",
   Kills: "Bajas",
-  "Winning Characters": "Personajes ganadores",
+  Winners: "Ganadores",
   "Player Statistics": "Estadísticas de jugadores",
   "Average weight": "Peso medio",
   Actions: "Acciones",
