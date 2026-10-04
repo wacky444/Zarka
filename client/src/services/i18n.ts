@@ -54,7 +54,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "has donated": "ha donado",
   "Turn reminders can be delayed by Android or browser power management.":
     "Los recordatorios de turno pueden retrasarse por el ahorro de batería de Android o del navegador.",
-  "Checking notification support...": "Comprobando compatibilidad con notificaciones...",
+  "Checking notification support...":
+    "Comprobando compatibilidad con notificaciones...",
   "Enable notifications": "Activar notificaciones",
   "Disable notifications": "Desactivar notificaciones",
   "Web Push is not supported by this browser.":
@@ -71,8 +72,10 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
     "No se pudieron configurar las notificaciones. Comprueba la conexión e inténtalo de nuevo.",
   "Enabling notifications...": "Activando notificaciones...",
   "Disabling notifications...": "Desactivando notificaciones...",
-  "Failed to enable notifications.": "No se pudieron activar las notificaciones.",
-  "Failed to disable notifications.": "No se pudieron desactivar las notificaciones.",
+  "Failed to enable notifications.":
+    "No se pudieron activar las notificaciones.",
+  "Failed to disable notifications.":
+    "No se pudieron desactivar las notificaciones.",
   "Nakama Server Logs": "Registros del servidor Nakama",
   "Enter the Nakama console password to continue.":
     "Introduce la contraseña de consola de Nakama para continuar.",
@@ -472,8 +475,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
     "Asustar está preparado. Establece Potencia adicional en 1, selecciona al bot y elige la casilla marcada con la calavera.",
   "Submit the final plan. The bot will be moved onto the doomed cell and normal destruction will resolve.":
     "Envía el plan final. El bot llegará a la casilla condenada y se resolverá la destrucción normal.",
-  "Press Ready and watch the map warning, damage, and victory flow.":
-    "Pulsa Listo y observa el aviso del mapa, el daño y el flujo de victoria.",
+  "Selecting a target location requires extra power, set the power to 6 and then select the location that is about to be destroyed.":
+    "Seleccionar una ubicación objetivo requiere potencia adicional, establece la potencia en 6 y luego selecciona la ubicación que está a punto de ser destruida.",
   "You won by combining information, preparation, positioning, and timing.":
     "Ganaste al combinar información, preparación, posicionamiento y tiempo.",
   "The victory screen recaps the lessons before opening the normal match report.":
@@ -773,7 +776,8 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   Manipular: "Manipulate",
   Dar: "Give",
   "Debe tener el objeto a entregar.": "Must have an item to give.",
-  "Transfiere un objeto a otro personaje.": "Transfers an item to another character.",
+  "Transfiere un objeto a otro personaje.":
+    "Transfers an item to another character.",
   "Permite entregar objetos adicionales en la misma acción.":
     "Allows giving additional items in the same action.",
   "Envenenar alimento": "Poison food",

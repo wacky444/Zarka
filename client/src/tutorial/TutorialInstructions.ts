@@ -92,7 +92,8 @@ export const TUTORIAL_INSTRUCTIONS: Record<
   resolve_destruction: {
     instruction:
       "Submit the final plan. The bot will be moved onto the doomed cell and normal destruction will resolve.",
-    hint: "Press Ready and watch the map warning, damage, and victory flow."
+    hint:
+      "Selecting a target location requires extra power, set the power to 6 and then select the location that is about to be destroyed."
   },
   victory_recap: {
     instruction:
