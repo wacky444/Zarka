@@ -227,6 +227,9 @@ export class MyMatchesListView {
       const matchName = m.name && m.name.trim() ? m.name : `Match ${idx + 1}`;
       const isCreator = this.scene.registry.get("currentUserId") === m.creator;
       const isFinished = m.status === "finished";
+      const isStarted = Boolean(
+        m.started || m.status === "in_progress" || isFinished
+      );
       let stateLabel: string;
       if (isFinished) {
         stateLabel = this.formatFinishedSummary(m);
@@ -244,7 +247,7 @@ export class MyMatchesListView {
       const text = `${
         idx + 1
       }. ${matchName} | ${hostDisplay} | ${playerCount}/${maxPlayers} ${t("Players")} | ${turns} ${t("Turns")} | ${stateLabel}`;
-      this.createRow(matchId, text, isFinished);
+      this.createRow(matchId, text, isFinished, isStarted);
     });
 
     this.layoutMyMatches();
@@ -264,7 +267,12 @@ export class MyMatchesListView {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   }
 
-  private createRow(matchId: string, text: string, isFinished: boolean) {
+  private createRow(
+    matchId: string,
+    text: string,
+    isFinished: boolean,
+    isStarted: boolean = false
+  ) {
     const lineObj = this.scene.add
       .text(0, 0, text, {
         color: "#00ccff",
@@ -297,7 +305,7 @@ export class MyMatchesListView {
       0,
       t("Leave"),
       async () => {
-        if (!isFinished) {
+        if (!isFinished && !isStarted) {
           await this.onLeave?.(matchId);
         }
       },
@@ -305,7 +313,7 @@ export class MyMatchesListView {
     ).setOrigin(0.5);
     this.container.add(leaveBtn);
     this.listItems.push(leaveBtn);
-    if (isFinished) {
+    if (isFinished || isStarted) {
       leaveBtn.setVisible(false).setActive(false);
     }
 

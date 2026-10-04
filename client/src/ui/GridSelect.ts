@@ -246,6 +246,7 @@ type RexScrollablePanel = Phaser.GameObjects.GameObject & {
   setMouseWheelScrollerEnable?: (enabled: boolean) => void;
   setScrollerEnable?: (enabled: boolean) => void;
   setScrollFactor?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
+  addChildOY?: (inc: number, clamp?: boolean) => void;
 };
 
 type RexGridTable = Phaser.GameObjects.GameObject & {
@@ -266,6 +267,7 @@ type RexGridTable = Phaser.GameObjects.GameObject & {
   setScrollerEnable?: (enabled: boolean) => void;
   setMouseWheelScrollerEnable?: (enabled: boolean) => void;
   setScrollFactor?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
+  addChildOY?: (inc: number, clamp?: boolean) => void;
 };
 
 type RexRoundRectangle = Phaser.GameObjects.GameObject & {
@@ -892,11 +894,13 @@ export class GridSelect extends Phaser.GameObjects.Container {
       (
         _pointer: Phaser.Input.Pointer,
         _dx: number,
-        _dy: number,
+        dy: number,
         _dz: number,
         event: WheelEvent
       ) => {
         event?.stopPropagation?.();
+        this.mobileGridPanel?.addChildOY?.(-dy, true);
+        this.gridTable?.addChildOY?.(-dy, true);
       }
     );
 
@@ -1231,7 +1235,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
         : 0;
       const icon = hasActionIcon
         ? this.scene.add
-            .image(x + cellWidth / 2, y + 10 + iconSize / 2, item.texture, item.frame)
+            .image(
+              x + cellWidth / 2,
+              y + 10 + iconSize / 2,
+              item.texture,
+              item.frame
+            )
             .setDisplaySize(iconSize, iconSize)
             .setAlpha(item.disabled ? 0.5 : 1)
         : undefined;
@@ -1240,7 +1249,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
           fontSize: "15px",
           color: item.disabled
             ? THEME.colors.textDisabled
-            : item.labelColor ?? THEME.colors.textPrimary,
+            : (item.labelColor ?? THEME.colors.textPrimary),
           align: "center",
           wordWrap: { width: Math.max(1, cellWidth - 16) }
         })
@@ -1251,49 +1260,49 @@ export class GridSelect extends Phaser.GameObjects.Container {
         Number.isFinite(item.energyCost);
       const energy = hasEnergyCost
         ? this.scene.add
-            .text(
-              x + cellWidth / 2,
-              y,
-              `${t("Energy")}: ${item.energyCost}`,
-              {
-                fontSize: "12px",
-                color: item.disabled
-                  ? THEME.colors.textDisabled
-                  : THEME.colors.energyCost,
-                align: "center"
-              }
-            )
+            .text(x + cellWidth / 2, y, `${t("Energy")}: ${item.energyCost}`, {
+              fontSize: "12px",
+              color: item.disabled
+                ? THEME.colors.textDisabled
+                : THEME.colors.energyCost,
+              align: "center"
+            })
             .setOrigin(0.5)
         : undefined;
       const cooldownRemaining = item.cooldownRemaining ?? 0;
-      const cooldown = cooldownRemaining > 0
-        ? (this.scene.rexUI.add.BBCodeText(
-            x + cellWidth / 2,
-            y,
-            `[color=${THEME.colors.cooldown}]CD: ${cooldownRemaining}[/color]`,
-            {
-              fontSize: "11px",
-              color: THEME.colors.cooldown,
-              align: "center",
-              wrap: { mode: "word", width: Math.max(1, cellWidth - 16) },
-              maxLines: 1
-            }
-          ) as Phaser.GameObjects.Text).setOrigin(0.5)
-        : undefined;
+      const cooldown =
+        cooldownRemaining > 0
+          ? (
+              this.scene.rexUI.add.BBCodeText(
+                x + cellWidth / 2,
+                y,
+                `[color=${THEME.colors.cooldown}]CD: ${cooldownRemaining}[/color]`,
+                {
+                  fontSize: "11px",
+                  color: THEME.colors.cooldown,
+                  align: "center",
+                  wrap: { mode: "word", width: Math.max(1, cellWidth - 16) },
+                  maxLines: 1
+                }
+              ) as Phaser.GameObjects.Text
+            ).setOrigin(0.5)
+          : undefined;
       const missingRequirement = item.missingRequirement?.trim();
       const warning = missingRequirement
-        ? (this.scene.rexUI.add.BBCodeText(
-            x + cellWidth / 2,
-            y,
-            `[color=${THEME.colors.warning}]${missingRequirement}[/color]`,
-            {
-              fontSize: "11px",
-              color: THEME.colors.warning,
-              align: "center",
-              wrap: { mode: "word", width: Math.max(1, cellWidth - 16) },
-              maxLines: 2
-            }
-          ) as Phaser.GameObjects.Text).setOrigin(0.5)
+        ? (
+            this.scene.rexUI.add.BBCodeText(
+              x + cellWidth / 2,
+              y,
+              `[color=${THEME.colors.warning}]${missingRequirement}[/color]`,
+              {
+                fontSize: "11px",
+                color: THEME.colors.warning,
+                align: "center",
+                wrap: { mode: "word", width: Math.max(1, cellWidth - 16) },
+                maxLines: 2
+              }
+            ) as Phaser.GameObjects.Text
+          ).setOrigin(0.5)
         : undefined;
       const descriptionContent =
         typeof item.description === "string" ? item.description.trim() : "";
@@ -1301,11 +1310,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
         ? Math.min(6, this.resolveMaxDescriptionLines(this.cellHeight))
         : this.resolveMaxDescriptionLines(this.cellHeight);
       const description = descriptionContent
-        ? (this.scene.rexUI.add.BBCodeText(
-            x + cellWidth / 2,
-            y,
-            "",
-            {
+        ? (
+            this.scene.rexUI.add.BBCodeText(x + cellWidth / 2, y, "", {
               fontSize: "12px",
               color: THEME.colors.modalText,
               align: "center",
@@ -1314,8 +1320,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
                 width: Math.max(1, cellWidth - 16)
               },
               maxLines: descriptionMaxLines
-            }
-          ) as Phaser.GameObjects.Text).setOrigin(0.5)
+            }) as Phaser.GameObjects.Text
+          ).setOrigin(0.5)
         : undefined;
       const descriptionTruncated = description
         ? this.applyDescriptionText(
@@ -1325,13 +1331,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
             descriptionMaxLines
           )
         : false;
-      const textParts = [
-        label,
-        energy,
-        cooldown,
-        warning,
-        description
-      ].filter((part): part is Phaser.GameObjects.Text => part !== undefined);
+      const textParts = [label, energy, cooldown, warning, description].filter(
+        (part): part is Phaser.GameObjects.Text => part !== undefined
+      );
       const partGap = 4;
       const groupHeight =
         textParts.reduce((height, part) => height + part.height, 0) +
@@ -1422,12 +1424,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
           if (
             down &&
             down.id === pointer.id &&
-            Phaser.Math.Distance.Between(
-              down.x,
-              down.y,
-              pointer.x,
-              pointer.y
-            ) > 10
+            Phaser.Math.Distance.Between(down.x, down.y, pointer.x, pointer.y) >
+              10
           ) {
             cancelLongPress();
             if (longPressTriggered) {
@@ -1451,12 +1449,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
             !down ||
             down.id !== pointer.id ||
             pointer.button !== 0 ||
-            Phaser.Math.Distance.Between(
-              down.x,
-              down.y,
-              pointer.x,
-              pointer.y
-            ) > 10 ||
+            Phaser.Math.Distance.Between(down.x, down.y, pointer.x, pointer.y) >
+              10 ||
             item.disabled
           ) {
             return;
@@ -1486,6 +1480,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
           this.tooltip?.hide();
         }
       });
+      background.on(
+        Phaser.Input.Events.POINTER_WHEEL,
+        (_pointer: Phaser.Input.Pointer, _dx: number, dy: number) => {
+          this.mobileGridPanel?.addChildOY?.(-dy, true);
+        }
+      );
 
       content.add(background);
       if (icon) {
@@ -1533,23 +1533,17 @@ export class GridSelect extends Phaser.GameObjects.Container {
           ? THEME.colors.textDisabled
           : cell.item.highlighted
             ? THEME.colors.healthRecover
-            : cell.item.labelColor ?? THEME.colors.textPrimary
+            : (cell.item.labelColor ?? THEME.colors.textPrimary)
       );
       cell.icon?.setAlpha(cell.item.disabled ? 0.5 : 1);
       cell.energy?.setColor(
-        cell.item.disabled
-          ? THEME.colors.textDisabled
-          : THEME.colors.energyCost
+        cell.item.disabled ? THEME.colors.textDisabled : THEME.colors.energyCost
       );
       cell.cooldown?.setColor(
-        cell.item.disabled
-          ? THEME.colors.textDisabled
-          : THEME.colors.cooldown
+        cell.item.disabled ? THEME.colors.textDisabled : THEME.colors.cooldown
       );
       cell.warning?.setColor(
-        cell.item.disabled
-          ? THEME.colors.textDisabled
-          : THEME.colors.warning
+        cell.item.disabled ? THEME.colors.textDisabled : THEME.colors.warning
       );
       cell.description?.setColor(
         cell.item.disabled ? THEME.colors.textDisabled : THEME.colors.modalText
@@ -1719,9 +1713,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
       existing instanceof Phaser.GameObjects.Container
         ? existing
         : scene.add.container(0, 0);
-    let background = container.getData(
-      "mobileBackground"
-    ) as Phaser.GameObjects.Rectangle | undefined;
+    let background = container.getData("mobileBackground") as
+      | Phaser.GameObjects.Rectangle
+      | undefined;
     if (!background) {
       background = scene.add
         .rectangle(0, 0, cell.width, cell.height, THEME.colors.cardBackground)
@@ -1783,7 +1777,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         label.setColor(
           item.disabled
             ? THEME.colors.textDisabled
-            : item.labelColor ?? THEME.colors.textPrimary
+            : (item.labelColor ?? THEME.colors.textPrimary)
         );
         label.setVisible(true);
         labelHeight = label.height;
@@ -1823,7 +1817,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       label.setColor(
         item.disabled
           ? THEME.colors.textDisabled
-          : item.labelColor ?? THEME.colors.textPrimary
+          : (item.labelColor ?? THEME.colors.textPrimary)
       );
       label.setVisible(true);
     }
@@ -1887,10 +1881,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
       )
         ? scene.add.image(0, 0, item.texture, item.frame).setOrigin(0.5, 0.5)
         : null;
-      const iconSlot = item.centerOpaquePixels && icon
-        ? scene.add.container(0, 0)
-        : null;
-      const iconSpacer = icon ? null : scene.add.zone(0, 0, 0, 0).setOrigin(0.5);
+      const iconSlot =
+        item.centerOpaquePixels && icon ? scene.add.container(0, 0) : null;
+      const iconSpacer = icon
+        ? null
+        : scene.add.zone(0, 0, 0, 0).setOrigin(0.5);
       let resolvedIconSize = 0;
       if (item.isEmptyOption) {
         icon?.setVisible(false);

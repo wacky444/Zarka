@@ -6,6 +6,7 @@ import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { isCharacterDead } from "../utils/playerCharacter";
+import { applySkillToCharacter } from "../match/afkSkills";
 
 export function upgradeSkillRpc(
   ctx: nkruntime.Context,
@@ -128,70 +129,9 @@ export function upgradeSkillRpc(
     skillCountMap[id] = nextCount;
   }
 
-  progression.availableSkillPoints = availablePoints - totalCost;
-  progression.spentSkillPoints =
-    (progression.spentSkillPoints ?? 0) + totalCost;
-  character.progression = progression;
-
   for (const id of skillIds) {
-    currentAbilities.push(id);
-    const definition = SkillLibrary[id];
-    const effect = definition?.effect;
-    if (!effect) {
-      continue;
-    }
-
-    if (!character.stats) {
-      character.stats = {
-        health: { current: 10, max: 12, knockoutThreshold: 5, injuredMax: 5 },
-        energy: { current: 10, max: 20 },
-        load: { current: 0, max: 25 },
-        speed: 0,
-        sympathy: 0,
-        baseViewRange: 0
-      };
-    }
-
-    if (effect.type === "max_health_increase") {
-      if (!character.stats.health) {
-        character.stats.health = {
-          current: 10,
-          max: 12,
-          knockoutThreshold: 5,
-          injuredMax: 5
-        };
-      }
-      character.stats.health.max += effect.value;
-    } else if (effect.type === "max_load_increase") {
-      if (!character.stats.load) {
-        character.stats.load = {
-          current: 3,
-          max: 25,
-          bandolierCapacityBonus: 0
-        };
-      }
-      character.stats.load.max += effect.value;
-    } else if (effect.type === "speed_increase") {
-      const currentSpeed =
-        typeof character.stats.speed === "number" &&
-        isFinite(character.stats.speed)
-          ? character.stats.speed
-          : 0;
-      character.stats.speed = currentSpeed + effect.value;
-    } else if (effect.type === "set_knockout_threshold") {
-      if (!character.stats.health) {
-        character.stats.health = {
-          current: 10,
-          max: 12,
-          knockoutThreshold: 5,
-          injuredMax: 5
-        };
-      }
-      character.stats.health.knockoutThreshold = effect.value;
-      character.stats.health.injuredMax = effect.value;
-    }
+    applySkillToCharacter(character, id);
   }
-  character.abilities = currentAbilities;
 
   storage.writeMatch(match, read.version);
 

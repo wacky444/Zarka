@@ -5,6 +5,7 @@ import { AsyncTurnState, MatchRecord } from "../../models/types";
 import { createNakamaWrapper } from "../../services/nakamaWrapper";
 import { StorageService } from "../../services/storageService";
 import { assignAfkActions } from "../afkActions";
+import { assignAfkSkillPoints } from "../afkSkills";
 import { resolveTurnForMatch } from "../turnResolution";
 import { sendTutorialBotMessageForTurn } from "../TutorialBotChat";
 import { isBotId } from "../botAI";
@@ -171,6 +172,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       }
 
       assignAfkActions(match);
+      assignAfkSkillPoints(match);
     }
 
     const trapsBeforeTurn = match.traps?.length ?? 0;

@@ -24,6 +24,8 @@ type FixWidthSizerInstance = Phaser.GameObjects.GameObject & {
     child: Phaser.GameObjects.GameObject,
     config?: Record<string, unknown>
   ) => FixWidthSizerInstance;
+  hide?: (child?: Phaser.GameObjects.GameObject) => FixWidthSizerInstance;
+  show?: (child?: Phaser.GameObjects.GameObject) => FixWidthSizerInstance;
 };
 
 type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
@@ -75,6 +77,7 @@ export class LobbyView {
   private botPlayersStepper?: StepperHandle;
   private turnsToBeAt1TileStepper?: StepperHandle;
   private renameButton?: UIButton;
+  private leaveButton?: UIButton;
   private startMatchButton?: UIButton;
   private removeMatchButton?: UIButton;
   private returnToGameButton?: UIButton;
@@ -188,17 +191,18 @@ export class LobbyView {
     this.actionSizer.setOrigin?.(0, 0);
     this.contentRoot.add(this.actionSizer);
 
-    const leaveBtn = makeButton(
+    this.leaveButton = makeButton(
       scene,
       0,
       0,
       "Leave Match",
       async () => {
+        if (this.started) return;
         if (this.onLeave) await this.onLeave();
       },
       ["inMatch"]
     );
-    this.actionSizer.add(leaveBtn, { padding: 2 });
+    this.actionSizer.add(this.leaveButton, { padding: 2 });
 
     const endTurnBtn = makeButton(
       scene,
@@ -420,6 +424,7 @@ export class LobbyView {
 
     this.refreshPlayerList();
     this.updateStartButtonState();
+    this.updateLeaveButtonState();
 
     this.returnToGameButton = makeButton(
       scene,
@@ -771,6 +776,7 @@ export class LobbyView {
       this.startMatchBusy = false;
     }
     this.updateStartButtonState();
+    this.updateLeaveButtonState();
     if (this.returnToGameButton) {
       this.returnToGameButton.setVisible(started);
     }
@@ -833,5 +839,24 @@ export class LobbyView {
       );
     }
     this.updateStartButtonState();
+  }
+
+  private updateLeaveButtonState(): void {
+    if (!this.leaveButton) return;
+    if (this.started) {
+      if (this.actionSizer?.hide) {
+        this.actionSizer.hide(this.leaveButton);
+      } else {
+        this.leaveButton.setVisible(false);
+      }
+      this.leaveButton.setActive(false);
+    } else {
+      if (this.actionSizer?.show) {
+        this.actionSizer.show(this.leaveButton);
+      } else {
+        this.leaveButton.setVisible(true);
+      }
+      this.leaveButton.setActive(true);
+    }
   }
 }

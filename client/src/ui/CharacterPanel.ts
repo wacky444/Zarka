@@ -182,6 +182,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private healthBar: ProgressBar;
   private energyBar: ProgressBar;
   private readyToggle!: Phaser.GameObjects.Text;
+  private unspentSkillsWarning!: Phaser.GameObjects.Text;
   private mainActionBox: Phaser.GameObjects.Rectangle;
   private secondaryActionBox: Phaser.GameObjects.Rectangle;
   private extraSecondaryActionBox: Phaser.GameObjects.Rectangle;
@@ -270,6 +271,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private inventoryItemOptions: ItemPriorityOption[] = [];
   private currentMatch: MatchRecord | null = null;
   private currentUserId: string | null = null;
+  private currentCharacter: PlayerCharacter | null = null;
   private currentPlayerSkin: import("@shared").Skin | null = null;
   private playerAccounts = new Map<string, import("@shared").UserAccount>();
   private lastUserMap: Record<string, string> = {};
@@ -346,7 +348,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.setMainActionPriorityItems(itemIds ?? [], true);
   };
   private readonly handleReadyToggle = () => {
-    if (!this.readyEnabled || !this.isTutorialReadyAllowed()) {
+    if (
+      !this.readyEnabled ||
+      !this.isTutorialReadyAllowed() ||
+      this.getUnspentSkillPoints() > 0
+    ) {
       return;
     }
     this.setReadyState(!this.readyState, true);
@@ -373,7 +379,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     localY: number,
     event: Phaser.Types.Input.EventData
   ) => {
-    if (!this.readyEnabled || !this.isTutorialReadyAllowed()) {
+    if (
+      !this.readyEnabled ||
+      !this.isTutorialReadyAllowed() ||
+      this.getUnspentSkillPoints() > 0
+    ) {
       return;
     }
     this.readyPointerIsDown = true;
@@ -867,6 +877,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.handleReadyPointerUp
     );
     this.add(this.readyToggle);
+    this.unspentSkillsWarning = scene.add
+      .text(barX + this.readyToggle.width + 12, readyY + 1, "", {
+        fontSize: "14px",
+        color: THEME.colors.warning
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    this.add(this.unspentSkillsWarning);
     this.setReadyEnabled(false);
 
     this.scrollContent = scene.add.container(0, 0);
@@ -2063,6 +2081,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.extraSecondaryDropSellToggle.setVisible(false);
     this.extraSecondaryDropSellToggle.setActive(false);
     this.readyToggle.disableInteractive();
+    this.unspentSkillsWarning?.setVisible(false);
     this.scrollPanel?.setMouseWheelScrollerEnable?.(false);
     this.scrollPanel?.setScrollerEnable?.(false);
   }
@@ -2371,6 +2390,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.energyBar.resize(this.barWidth, BAR_HEIGHT);
     if (this.readyToggle) {
       this.readyToggle.setPosition(barX, statusContentTop + 80);
+      if (this.unspentSkillsWarning) {
+        this.unspentSkillsWarning.setPosition(
+          barX + this.readyToggle.width + 12,
+          statusContentTop + 81
+        );
+      }
     }
     const scrollWidth = Math.max(120, width - MARGIN * 2);
     this.mainActionDropdownWidth = Math.max(0, scrollWidth - 24);
@@ -2577,6 +2602,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     playerName: string | null,
     ready: boolean
   ) {
+    this.currentCharacter = character;
     this.skillsView?.update(character);
     if (!character) {
       this.nameText.setText("No character");
@@ -3000,6 +3026,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.readyState = normalized;
     if (this.readyToggle) {
       this.readyToggle.setText(normalized ? "[x] Ready" : "[ ] Ready");
+      if (this.unspentSkillsWarning) {
+        this.unspentSkillsWarning.setPosition(
+          this.readyToggle.x + this.readyToggle.width + 12,
+          this.readyToggle.y + 1
+        );
+      }
     }
     if (emit && changed) {
       this.emit("ready-change", normalized);
@@ -3062,6 +3094,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     });
   }
 
+  private getUnspentSkillPoints(): number {
+    return this.currentCharacter?.progression?.availableSkillPoints ?? 0;
+  }
+
   private setReadyEnabled(enabled: boolean) {
     this.readyEnabled = enabled;
     if (!this.readyToggle) {
@@ -3073,8 +3109,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       !this.characterSubtabs ||
       this.characterSubtabs.getActiveKey() === "status";
     const tutorialReadyAllowed = this.isTutorialReadyAllowed();
+    const unspentPoints = this.getUnspentSkillPoints();
+    const hasUnspentSkillPoints = unspentPoints > 0;
     const showReady =
       enabled &&
+      !hasUnspentSkillPoints &&
       (!this.tutorialActive || (this.tutorialReadyEnabled && tutorialReadyAllowed)) &&
       isCharacterActive &&
       isStatusActive;
@@ -3086,6 +3125,24 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.readyToggle.disableInteractive();
       if (this.tutorialActive && !tutorialReadyAllowed && this.readyState) {
         this.setReadyState(false, true);
+      }
+      if (hasUnspentSkillPoints && this.readyState) {
+        this.setReadyState(false, true);
+      }
+    }
+
+    if (this.unspentSkillsWarning) {
+      if (hasUnspentSkillPoints && isCharacterActive && isStatusActive) {
+        this.unspentSkillsWarning.setText(
+          `${t("Unspent points")}: ${unspentPoints}`
+        );
+        this.unspentSkillsWarning.setPosition(
+          this.readyToggle.x + this.readyToggle.width + 12,
+          this.readyToggle.y + 1
+        );
+        this.unspentSkillsWarning.setVisible(true);
+      } else {
+        this.unspentSkillsWarning.setVisible(false);
       }
     }
     if (this.tutorialActive) {

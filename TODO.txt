@@ -81,3 +81,9 @@
 - in 3g mode, the game loads the menu without login, then logins and shows the buttons for both menus overlapping
 
 - when selecting an action like pick_up, changing tab and coming back, the selector for prioritize is not there
+
+- the turn 0 is autoskipped at 23:50
+
+- creating a new match, i see the skulls of destruction inminent from another game, it didnt cleared
+
+- scare action without setting anything scared at 2 distance

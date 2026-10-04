@@ -107,6 +107,16 @@ export function updateReadyStateRpc(
   }
 
   if (
+    requestedReady &&
+    (viewerCharacter?.progression?.availableSkillPoints ?? 0) > 0
+  ) {
+    throw makeNakamaError(
+      "unspent_skill_points",
+      nkruntime.Codes.FAILED_PRECONDITION,
+    );
+  }
+
+  if (
     match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] &&
     requestedReady &&
     match.current_turn === 4 &&

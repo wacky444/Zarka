@@ -534,6 +534,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Defeated in battle": "Derrotado en combate",
   "erupted in flames": "ardió en llamas",
   Skills: "Habilidades",
+  "Unspent points": "Puntos sin gastar",
   Offensive: "Ataque",
   Defense: "Defensa",
   Utility: "Utilidad",
