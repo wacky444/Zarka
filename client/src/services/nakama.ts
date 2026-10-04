@@ -6,7 +6,9 @@ export async function healthProbe(
   useSSL: boolean
 ): Promise<void> {
   const scheme = useSSL ? "https" : "http";
-  const url = `${scheme}://${host}:${port}/healthcheck`;
+  const defaultPort = useSSL ? 443 : 80;
+  const portPart = port === defaultPort ? "" : `:${port}`;
+  const url = `${scheme}://${host}${portPart}/healthcheck`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 3000);
   const res = await fetch(url, { method: "GET", signal: controller.signal });

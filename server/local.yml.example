@@ -11,6 +11,10 @@ runtime:
     - "PUSH_DISPATCH_SECRET=replace-with-the-same-32-plus-character-secret-from-server-env"
 socket:
   port: 7350
+  cors_allowed_origins:
+    - "*"
+    - "https://html-classic.itch.zone"
+    - "https://*.hwcdn.net"
 console:
   port: 9100
   username: "admin"

@@ -8,6 +8,10 @@
 {$CADDY_DOMAIN} {
 	encode gzip
 
+	header {
+		Access-Control-Allow-Private-Network "true"
+	}
+
 	@adminApi path /admin/logs /admin/update
 	handle @adminApi {
 		reverse_proxy admin-api:7354
