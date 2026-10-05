@@ -27,6 +27,7 @@ import {
 } from "./turnFire";
 import { applyScheduledDestruction } from "./turnDestruction";
 import { refreshTrackerViews } from "./trackerState";
+import { createPerception4DetectionEvents } from "./perception4";
 
 function sortedActions(): ActionDefinition[] {
   const keys = Object.keys(ActionLibrary) as Array<keyof typeof ActionLibrary>;
@@ -335,6 +336,7 @@ export function advanceTurn(
     ...applyScheduledDestruction(match, resolvedTurn, logger),
   );
   clearExpiredFires(match, resolvedTurn);
+  replayEvents.push(...createPerception4DetectionEvents(match));
   // removeProtectedState(match);
 
   applyTestaments(match, replayEvents);

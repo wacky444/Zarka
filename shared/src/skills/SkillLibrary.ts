@@ -318,11 +318,15 @@ export const SkillLibrary: SkillLibraryDefinition = {
     id: "perception4",
     name: "Percepción 4",
     description:
-      "Detecta incendios a cualquier distancia y número de personas hasta 1 localización de distancia",
+      "Detecta incendios a cualquier distancia e identifica a los jugadores en la misma localización o hasta 1 localización de distancia",
     cost: 5,
     max: 1,
-    implemented: false,
-    category: "utility"
+    implemented: true,
+    category: "utility",
+    effect: {
+      type: "perceive_nearby_players",
+      value: 1
+    }
   },
   perception5: {
     id: "perception5",

@@ -54,6 +54,7 @@ export type SkillEffectType =
   | "search_discovery_increase"
   | "search_food_drink_priority"
   | "perceive_character_details"
+  | "perceive_nearby_players"
   | "pickup_scope_increase"
   | "corpse_consumption"
   | "daily_zarkan_income"

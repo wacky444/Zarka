@@ -742,6 +742,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
 };
 
 const ENGLISH_GAME_NAMES: Record<string, string> = {
+  "Detecta incendios a cualquier distancia e identifica a los jugadores en la misma localización o hasta 1 localización de distancia":
+    "Detects fires at any distance and identifies players in the same or an adjacent location",
   "Crear un incendio": "Start a fire",
   "Daño por incendio": "Fire damage",
   Recuperarse: "Recover",
