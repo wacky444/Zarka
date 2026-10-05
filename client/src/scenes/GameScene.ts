@@ -1523,6 +1523,7 @@ export class GameScene extends Phaser.Scene {
     if (!visible) {
       this.replayControls?.setState({
         visible: false,
+        turn: this.replayView?.turn ?? 0,
         canPrevious: false,
         canPlayPause: false,
         canNext: false,
@@ -1536,6 +1537,7 @@ export class GameScene extends Phaser.Scene {
     const cachedReplay = this.logReplayCache.get(turn);
     this.replayControls?.setState({
       visible: true,
+      turn,
       canPrevious: navigationEnabled && turn > 0,
       canPlayPause:
         !this.logFetchRunning &&
@@ -3363,6 +3365,7 @@ export class GameScene extends Phaser.Scene {
       this.renderMap(replayMatch.map);
     }
     this.renderPlayerCharacters(replayMatch);
+    this.updateReplayControls();
   }
 
   private clearReplaySnapshot(renderCurrentState = true): void {

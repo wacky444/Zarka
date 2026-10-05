@@ -1,8 +1,10 @@
 import Phaser from "phaser";
+import { t } from "../services/i18n";
 import { makeButton, type UIButton } from "./button";
 
 export interface ReplayControlsState {
   visible: boolean;
+  turn: number;
   canPrevious: boolean;
   canPlayPause: boolean;
   canNext: boolean;
@@ -19,10 +21,14 @@ export interface ReplayControlsCallbacks {
 export class ReplayControls {
   private readonly container: Phaser.GameObjects.Container;
   private readonly background: Phaser.GameObjects.Rectangle;
+  private readonly turnLabel: Phaser.GameObjects.Text;
   private readonly previousButton: UIButton;
   private readonly playPauseButton: UIButton;
   private readonly nextButton: UIButton;
   private readonly liveButton: UIButton;
+  private layoutWidth = 0;
+  private layoutHeight = 0;
+  private menuHeight = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -36,6 +42,13 @@ export class ReplayControls {
     this.background = scene.add
       .rectangle(0, 0, scene.scale.width, 44, 0x111827, 0.94)
       .setOrigin(0, 0);
+    this.turnLabel = scene.add
+      .text(0, 0, `${t("Turn")} 0`, {
+        color: "#dbeafe",
+        fontSize: "14px",
+        fontStyle: "bold"
+      })
+      .setOrigin(0, 0.5);
     this.previousButton = makeButton(
       scene,
       0,
@@ -54,6 +67,7 @@ export class ReplayControls {
     this.liveButton = makeButton(scene, 0, 0, "Live", callbacks.onLive);
     this.container.add([
       this.background,
+      this.turnLabel,
       this.previousButton,
       this.playPauseButton,
       this.nextButton,
@@ -63,10 +77,16 @@ export class ReplayControls {
   }
 
   layout(width: number, height: number, menuHeight: number): void {
+    this.layoutWidth = width;
+    this.layoutHeight = height;
+    this.menuHeight = menuHeight;
     const gap = 6;
     const horizontalPadding = 6;
     const controlHeight = 44;
+    const labelGap = 8;
     const totalWidth =
+      this.turnLabel.width +
+      labelGap +
       this.previousButton.width +
       this.playPauseButton.width +
       this.nextButton.width +
@@ -80,9 +100,11 @@ export class ReplayControls {
 
     this.background.setSize(width, controlHeight).setDisplaySize(width, controlHeight);
     this.container.setPosition(0, y);
-    this.previousButton.setPosition(startX, 4);
+    this.turnLabel.setPosition(startX, controlHeight / 2);
+    const buttonStartX = startX + this.turnLabel.width + labelGap;
+    this.previousButton.setPosition(buttonStartX, 4);
     this.playPauseButton.setPosition(
-      this.previousButton.x + this.previousButton.width + gap,
+      buttonStartX + this.previousButton.width + gap,
       4
     );
     this.nextButton.setPosition(
@@ -96,6 +118,10 @@ export class ReplayControls {
   }
 
   setState(state: ReplayControlsState): void {
+    this.turnLabel.setText(`${t("Turn")} ${state.turn}`);
+    if (this.layoutWidth > 0) {
+      this.layout(this.layoutWidth, this.layoutHeight, this.menuHeight);
+    }
     this.container.setVisible(state.visible);
     this.setButtonEnabled(this.previousButton, state.canPrevious);
     this.setButtonEnabled(this.playPauseButton, state.canPlayPause);
