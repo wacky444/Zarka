@@ -339,6 +339,26 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private readonly iconTextGap: number;
   private currentWidth: number;
   private modalVisible = false;
+  private modalViewportWidth = 0;
+  private modalViewportHeight = 0;
+  private modalViewportIsMobile = false;
+  private resizeTimer: Phaser.Time.TimerEvent | null = null;
+  private readonly handleScaleResize = (): void => {
+    if (!this.modalVisible) {
+      return;
+    }
+    if (this.resizeTimer) {
+      this.scene.time.removeEvent(this.resizeTimer);
+    }
+    this.resizeTimer = this.scene.time.delayedCall(120, () => {
+      this.resizeTimer = null;
+      if (!this.modalVisible) {
+        return;
+      }
+      this.closeModal(true);
+      this.openModal();
+    });
+  };
   private readonly handleTooltipPointerDown = (): void => {
     if (this.modalVisible) {
       this.tooltip?.hide();
@@ -358,6 +378,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.handleTooltipPointerDown,
       this
     );
+    scene.scale.on(
+      Phaser.Scale.Events.RESIZE,
+      this.handleScaleResize,
+      this
+    );
 
     this.collapsedHeight = config.height ?? 64;
     this.columns = Math.max(1, config.columns ?? 3);
@@ -366,10 +391,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.placeholder = config.placeholder ?? "Select";
     this.emptyLabel = config.emptyLabel ?? "Unknown";
     this.iconTextGap = config.iconTextGap ?? 16;
-    this.defaultModalWidth =
-      config.modalWidth ?? Math.min(scene.scale.width - 80, 600);
-    this.defaultModalHeight =
-      config.modalHeight ?? Math.min(scene.scale.height - 80, 480);
+    this.defaultModalWidth = config.modalWidth ?? 600;
+    this.defaultModalHeight = config.modalHeight ?? 480;
     this.modalWidth = this.defaultModalWidth;
     this.modalHeight = this.defaultModalHeight;
     this.iconTargetSize = Math.min(this.collapsedHeight - 12, 48);
@@ -504,6 +527,15 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.handleTooltipPointerDown,
       this
     );
+    this.scene.scale.off(
+      Phaser.Scale.Events.RESIZE,
+      this.handleScaleResize,
+      this
+    );
+    if (this.resizeTimer) {
+      this.scene.time.removeEvent(this.resizeTimer);
+      this.resizeTimer = null;
+    }
     this.closeModal(true);
     this.tooltip?.destroy();
     this.tooltip = null;
@@ -745,6 +777,19 @@ export class GridSelect extends Phaser.GameObjects.Container {
     if (!this.enabled || this.items.length === 0) {
       return;
     }
+    const scene = this.scene;
+    const { width, height } = scene.scale;
+    const mobile = isMobile(width);
+    if (
+      this.overlay &&
+      (this.modalViewportWidth !== width ||
+        this.modalViewportHeight !== height ||
+        this.modalViewportIsMobile !== mobile)
+    ) {
+      this.closeModal(true);
+      this.openModal();
+      return;
+    }
     if (!this.modalVisible) {
       this.modalVisible = true;
       this.emit("modal-open");
@@ -770,11 +815,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.tooltip?.hide();
       return;
     }
-    const scene = this.scene;
-    const { width, height } = scene.scale;
-    const mobile = isMobile(width);
-    this.modalWidth = mobile ? width : this.defaultModalWidth;
-    this.modalHeight = mobile ? height : this.defaultModalHeight;
+    this.modalWidth = mobile
+      ? width
+      : Math.min(this.defaultModalWidth, Math.max(1, width - 80));
+    this.modalHeight = mobile
+      ? height
+      : Math.min(this.defaultModalHeight, Math.max(1, height - 80));
 
     const overlay = scene.add.container(0, 0);
     overlay.setDepth(10000);
@@ -973,6 +1019,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
     this.ensureTooltip();
     this.overlay = overlay;
+    this.modalViewportWidth = width;
+    this.modalViewportHeight = height;
+    this.modalViewportIsMobile = mobile;
     this.gridTable = useStaticMobileGrid ? null : (gridView as RexGridTable);
     this.mobileGridPanel = useStaticMobileGrid
       ? (gridView as RexScrollablePanel)
@@ -1089,6 +1138,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
   private closeModal(forceDestroy = false) {
     this.clearLongPressTimers();
+    if (this.resizeTimer) {
+      this.scene.time.removeEvent(this.resizeTimer);
+      this.resizeTimer = null;
+    }
     const wasVisible = this.modalVisible;
     if (!this.overlay) {
       if (wasVisible) {
@@ -1115,6 +1168,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.mobileGridPanel = null;
       this.mobileGridContent = null;
       this.mobileGridCells = [];
+      this.modalViewportWidth = 0;
+      this.modalViewportHeight = 0;
+      this.modalViewportIsMobile = false;
       this.tooltip?.destroy();
       this.tooltip = null;
     } else {

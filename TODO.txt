@@ -20,19 +20,9 @@
 
 - autoreplay after turn in mobile
 
-- not getting the logs of player eliminateds
+- not getting the logs of player eliminateds, only when log is opened
 
-- in the choose item to grab, mark the already selecteds
-
-- adding extra power to pistol should show another target selector to choose another player or same
-
-- extra power on shoot looks like it increases damage, doesnt do two actions, the second bullet didnt g o off after first target dead
-
-- there isnt a effect on the ground on pyro, also didnt get a confirm when bought
-
-- ending screen says bot2 won, not team?
-
-- in mobile there is bad performance when the selectors are open
+- on pyro, also didnt get a confirm when bought
 
 - tutorial step 6 should teach about prioritize items
 
