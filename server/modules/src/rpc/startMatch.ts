@@ -16,6 +16,7 @@ import {
 import { tailorMapForCharacter } from "../utils/matchView";
 import { createReplaySnapshot } from "../match/replay/snapshot";
 import { getRuntimeMatchId } from "../utils/matchIds";
+import { getInitialAutoAdvanceAt } from "../utils/autoSkip";
 
 export function startMatchRpc(
   ctx: nkruntime.Context,
@@ -120,7 +121,17 @@ export function startMatchRpc(
   assignSpawnPositions(match, logger);
   distributeTeams(match, logger);
 
+  const startedAtMs = Date.now();
   match.started = true;
+  if (match.autoSkip !== false) {
+    const initialAutoAdvanceAt = getInitialAutoAdvanceAt(
+      match.roundTime,
+      startedAtMs,
+    );
+    if (initialAutoAdvanceAt !== undefined) {
+      match.lastAutoAdvanceAt = initialAutoAdvanceAt;
+    }
+  }
 
   const turn0Events: ReplayEvent[] = [];
   for (const playerId in match.playerCharacters) {
