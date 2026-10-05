@@ -1901,6 +1901,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.mainActionDropdown.setActive(true);
     this.refreshExtraExecutionSelectorState();
     this.refreshLocationSelectorState();
+    this.refreshPlayerSelectorState();
+    this.refreshItemSelectorState();
     this.secondaryActionDropdown.setVisible(true);
     this.secondaryActionDropdown.setActive(true);
     const hasExtraSecondaryAction = this.hasExtraSecondaryAction();
