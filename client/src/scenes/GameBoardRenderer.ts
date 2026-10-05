@@ -695,7 +695,7 @@ export class GameBoardRenderer {
         world.x,
         world.y + verticalOffset,
       );
-      container.setDepth(4 + world.y / 1000);
+      container.setDepth(5.5 + world.y / 1000);
 
       const rows = Math.ceil(displayCount / iconsPerRow);
       for (let row = 0; row < rows; row += 1) {
