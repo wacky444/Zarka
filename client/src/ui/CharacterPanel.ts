@@ -5820,8 +5820,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.tabsController.setActiveTab(key);
   }
 
-  setLogTurnInfo(maxTurn: number) {
-    this.logView.setTurnInfo(maxTurn);
+  openLogTab(): void {
+    this.tabsController.setActiveTab("log");
+  }
+
+  setLogTurnInfo(maxTurn: number, initialTurn?: number) {
+    this.logView.setTurnInfo(maxTurn, initialTurn);
   }
 
   setLogReplay(turn: number, maxTurn: number, events: ReplayEvent[]) {

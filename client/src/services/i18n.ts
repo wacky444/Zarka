@@ -8,6 +8,8 @@ const LOCALE_STORAGE_KEY = "zarka_locale";
 
 const SPANISH_TRANSLATIONS: Record<string, string> = {
   "End Game Report": "Informe final",
+  "View replay": "Ver repetición",
+  "Back to Report": "Volver al informe",
   "Loading end-game report...": "Cargando informe final...",
   "Loading game...": "Cargando partida...",
   "Report unavailable": "Informe no disponible",

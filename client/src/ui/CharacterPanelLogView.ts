@@ -103,11 +103,19 @@ export class CharacterPanelLogView {
     this.refreshDisplay();
   }
 
-  setTurnInfo(maxTurn: number): void {
+  setTurnInfo(maxTurn: number, initialTurn?: number): void {
     const normalized = Math.max(0, Math.floor(maxTurn));
     const previous = this.maxTurn;
     this.maxTurn = normalized;
-    if (
+    if (typeof initialTurn === "number" && Number.isFinite(initialTurn)) {
+      this.selectedTurn = Phaser.Math.Clamp(
+        Math.floor(initialTurn),
+        0,
+        normalized
+      );
+      this.displayedTurn = null;
+      this.lastRequestedTurn = null;
+    } else if (
       this.selectedTurn === null ||
       this.selectedTurn > normalized ||
       (normalized > previous && this.selectedTurn === previous)

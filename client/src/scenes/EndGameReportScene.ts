@@ -238,6 +238,17 @@ export class EndGameReportScene extends Phaser.Scene {
     this.root.add(summary);
     y += 36;
 
+    const viewReplayButton = makeButton(
+      this,
+      width / 2,
+      y,
+      t("View replay"),
+      () => this.openReplay(),
+      ["report"]
+    ).setOrigin(0.5, 0);
+    this.root.add(viewReplayButton);
+    y += viewReplayButton.height + 20;
+
     y = this.addSectionTitle(width, y, t("Team Leaderboard"));
     for (const team of report.teams) {
       let teamName = t(team.team_id);
@@ -426,6 +437,14 @@ export class EndGameReportScene extends Phaser.Scene {
 
   private showError(message: string) {
     this.statusText.setText(message);
+  }
+
+  private openReplay(): void {
+    this.scene.start("GameScene", {
+      matchId: this.matchId,
+      reportReplay: true,
+      userId: this.currentUserId ?? undefined,
+    });
   }
 
   private returnToMenu() {

@@ -63,9 +63,14 @@ export function getReplayRpc(
 
   const match = matchRead.match;
   const players = Array.isArray(match.players) ? match.players : [];
-  if (players.indexOf(ctx.userId) === -1) {
+  const isAdmin = isAdminUser(nk, ctx.userId);
+  if (players.indexOf(ctx.userId) === -1 && !isAdmin) {
     throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
   }
+  const fullReplayRequested = json.full_replay === true;
+  const hasMatchReport = fullReplayRequested
+    ? storage.getMatchReport(matchId) !== null
+    : false;
 
   const maxTurn =
     typeof match.current_turn === "number" ? match.current_turn : 0;
@@ -77,7 +82,8 @@ export function getReplayRpc(
     turn = 0;
   }
 
-  const viewAll = json.view_all === true && isAdminUser(nk, ctx.userId);
+  const viewAll =
+    (json.view_all === true && isAdmin) || hasMatchReport;
   let events: ReplayEvent[] = [];
   let snapshot: ReplaySnapshot | undefined;
   if (turn >= 0) {

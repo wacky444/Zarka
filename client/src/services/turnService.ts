@@ -185,10 +185,21 @@ export class TurnService {
     return res;
   }
 
-  async getReplay(match_id: string, turn?: number, viewAll = false) {
-    const payload: { match_id: string; turn?: number; view_all: boolean } = {
+  async getReplay(
+    match_id: string,
+    turn?: number,
+    viewAll = false,
+    fullReplay = false
+  ) {
+    const payload: {
+      match_id: string;
+      turn?: number;
+      view_all: boolean;
+      full_replay: boolean;
+    } = {
       match_id,
-      view_all: viewAll
+      view_all: viewAll,
+      full_replay: fullReplay
     };
     if (typeof turn === "number") {
       payload.turn = turn;
