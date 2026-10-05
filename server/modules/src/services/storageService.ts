@@ -283,6 +283,16 @@ export class StorageService {
     ]);
   }
 
+  deleteMatchReport(matchId: string): void {
+    this.nk.storageDelete([
+      {
+        collection: MATCH_REPORT_COLLECTION,
+        key: this.getMatchReportKey(matchId),
+        userId: SERVER_USER_ID,
+      },
+    ]);
+  }
+
   getChatLog(matchId: string): ChatLogStorageObject | null {
     const key = this.getChatKey(matchId);
     const reads = this.nk.storageRead([

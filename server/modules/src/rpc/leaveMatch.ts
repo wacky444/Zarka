@@ -89,27 +89,55 @@ export function leaveMatchRpc(
         );
       }
     } else {
+      const empty = match.players.length === 0;
+      if (empty) {
+        match.removed = 1;
+        match.started = false;
+      }
       try {
         storage.writeMatch(match, read.version);
         try {
           nkWrapper.matchSignal(
             getRuntimeMatchId(match),
-            JSON.stringify({
-              type: "sync_players",
-              players: match.players,
-              size: match.size,
-              name: match.name,
-              started: match.started,
-            })
+            JSON.stringify(
+              empty
+                ? { type: "match_removed" }
+                : {
+                    type: "sync_players",
+                    players: match.players,
+                    size: match.size,
+                    name: match.name,
+                    started: match.started,
+                  }
+            )
           );
         } catch (signalError) {
           logger.debug(
-            "leave_match: matchSignal sync failed: %s",
+            "leave_match: matchSignal failed: %s",
             (signalError as Error).message
           );
         }
-      } catch (e) {
+      } catch {
         throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
+      }
+      if (empty) {
+        try {
+          for (const turn of storage.listTurnsForMatch(matchId)) {
+            storage.deleteTurnByKey(turn.key);
+          }
+          for (const replay of storage.listReplaysForMatch(matchId)) {
+            storage.deleteReplayByKey(replay.key);
+          }
+          storage.deleteChatLog(matchId);
+          storage.deleteMatchReport(matchId);
+          storage.deleteMatch(matchId);
+        } catch (cleanupError) {
+          logger.warn(
+            "leave_match: empty match cleanup failed for %s: %s",
+            matchId,
+            (cleanupError as Error).message || String(cleanupError)
+          );
+        }
       }
     }
   }

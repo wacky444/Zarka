@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { TUTORIAL_BOT_ID, TUTORIAL_MATCH_METADATA_KEY } from "@shared";
+import {
+  TUTORIAL_BOT_ID,
+  TUTORIAL_MATCH_METADATA_KEY,
+  type MatchReport
+} from "@shared";
 import { createNakamaWrapper } from "../src/services/nakamaWrapper";
 import { StorageService } from "../src/services/storageService";
 import { createMatchRpc } from "../src/rpc/createMatch";
@@ -372,6 +376,113 @@ test("leaving an incomplete tutorial discards its session so it can restart", ()
     createTutorialMatchRpc(context, logger, harness.nakama, "")
   ) as { match_id: string };
   assert.notEqual(restarted.match_id, created.match_id);
+});
+
+test("leaving last player removes empty match and stored history", () => {
+  const harness = createNakamaHarness();
+  const logger = createLogger();
+  const userId = "empty-match-player";
+  const match = createTutorialMatch({
+    matchId: "empty-match",
+    playerId: userId,
+    createdAt: 123
+  });
+  delete match.metadata;
+  match.players = [userId];
+  match.current_turn = 1;
+  match.started = true;
+  harness.storage.writeMatch(match);
+  harness.storage.appendTurn({
+    match_id: match.match_id,
+    turn: 0,
+    player: userId,
+    move: {},
+    created_at: 123
+  });
+  harness.storage.appendReplayTurn({
+    match_id: match.match_id,
+    turn: 0,
+    events: [],
+    created_at: 123
+  });
+  harness.storage.appendChatMessage({
+    matchId: match.match_id,
+    messageId: "empty-match:chat",
+    senderId: userId,
+    displayName: userId,
+    content: "hello",
+    createdAt: 123,
+    system: false
+  });
+  const report: MatchReport = {
+    match_id: match.match_id,
+    created_at: 123,
+    ended_at: 124,
+    turns: 1,
+    reason: "last_alive",
+    winning_character_ids: [],
+    teams: [],
+    players: [],
+    achievements: []
+  };
+  harness.storage.writeMatchReport(report);
+
+  const result = JSON.parse(
+    leaveMatchRpc(
+      { userId } as nkruntime.Context,
+      logger,
+      harness.nakama,
+      JSON.stringify({ match_id: match.match_id })
+    )
+  ) as { ok?: boolean; left?: boolean; players?: string[] };
+
+  assert.equal(result.ok, true);
+  assert.equal(result.left, true);
+  assert.deepEqual(result.players, []);
+  assert.equal(harness.storage.getMatch(match.match_id), null);
+  assert.deepEqual(harness.storage.listTurnsForMatch(match.match_id), []);
+  assert.deepEqual(harness.storage.listReplaysForMatch(match.match_id), []);
+  assert.deepEqual(harness.storage.listChatMessages(match.match_id), []);
+  assert.equal(harness.storage.getMatchReport(match.match_id), null);
+  assert.equal(
+    JSON.parse(harness.signals.at(-1) ?? "{}").type,
+    "match_removed"
+  );
+});
+
+test("leaving does not remove match while players remain", () => {
+  const harness = createNakamaHarness();
+  const logger = createLogger();
+  const userId = "leaving-player";
+  const remainingUserId = "remaining-player";
+  const match = createTutorialMatch({
+    matchId: "still-active-match",
+    playerId: userId,
+    createdAt: 123
+  });
+  delete match.metadata;
+  match.players = [userId, remainingUserId];
+  match.started = false;
+  harness.storage.writeMatch(match);
+
+  const result = JSON.parse(
+    leaveMatchRpc(
+      { userId } as nkruntime.Context,
+      logger,
+      harness.nakama,
+      JSON.stringify({ match_id: match.match_id })
+    )
+  ) as { ok?: boolean; left?: boolean; players?: string[] };
+
+  assert.equal(result.left, true);
+  assert.deepEqual(result.players, [remainingUserId]);
+  assert.deepEqual(harness.storage.getMatch(match.match_id)?.match.players, [
+    remainingUserId
+  ]);
+  assert.equal(
+    JSON.parse(harness.signals.at(-1) ?? "{}").type,
+    "sync_players"
+  );
 });
 
 test("authoritative tutorial victory sets completion once and preserves profile data", () => {
