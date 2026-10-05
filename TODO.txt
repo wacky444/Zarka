@@ -1,5 +1,3 @@
-- auto advance turn when time has ran out, doesn't work, the timer just reset
-
 - icons for, inventory, character, status, skills, players, teams, log/replay, map, chat, arrow right, left
 
 - when a player joined without doing f5, in the player list it shows a guid
@@ -11,10 +9,6 @@
 - improve ground visuals, check kenney hexagon pack examples
 
 - train and experience
-
-- y diría q cuando seleccionas una skill q necesita un objetivo, debería cambiar directamente a seleccionarlo
-
-- planteate hacer un escenario básico de tutorial y pones un set limitado de cosas para ir probando
 
 - y muchas skills de atacar tienen iconos muy distintos
 
@@ -45,10 +39,6 @@
 
 - protect, dodge and sleep in case the turn is skipped
 
-- tabs in settings
-
-- fully log visible in the end report
-
 - pressing tab in the register view goes from position 1 to 3 then to 2, swap username and password position visually
 
 - step 1 2 and 3 are not saved, after doing them it resumes where the tutorial left off, but the 3 first steps have to be repeated every time the web reloads in the middle of tutorial
@@ -78,4 +68,4 @@
 
 - scare action without setting anything scared at 2 distance
 
-- Percepción 4 te dice cuantas personas hay a 1 de distancia, y sus nombres
+- Percepcion 4 test
