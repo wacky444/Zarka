@@ -540,9 +540,7 @@ export class SettingsScene extends Phaser.Scene {
 
     this.skinTitle.setVisible(showAppearance);
     this.previewLabel.setVisible(showAppearance);
-    for (const layer of Object.values(this.previewLayers)) {
-      layer.setVisible(showAppearance);
-    }
+    this.updatePreview();
     for (const selector of Object.values(this.skinSelectors)) {
       selector?.setVisible(showAppearance);
     }
@@ -767,6 +765,11 @@ export class SettingsScene extends Phaser.Scene {
 
   private updatePreview() {
     updateSkinLayers(this.previewLayers, this.currentSkin, this.textures);
+    if (this.activeSettingsTab !== "appearance") {
+      for (const layer of Object.values(this.previewLayers)) {
+        layer.setVisible(false);
+      }
+    }
   }
 
   private createSkinSelectors(startX: number, startY: number) {

@@ -977,6 +977,7 @@ export class MainScene extends Phaser.Scene {
       this.getLanguageToggleLabel(),
       () => {
         toggleLocale();
+        accountSettingsButton.setText(`[ ${t("Settings")} ]`);
         languageButton.setText(`[ ${this.getLanguageToggleLabel()} ]`);
         if (this.turnService) {
           void bindExistingPushSubscription(this.turnService).catch((error: unknown) => {

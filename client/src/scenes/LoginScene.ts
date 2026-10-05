@@ -308,17 +308,19 @@ export class LoginScene extends Phaser.Scene {
       return;
     }
 
-    const fields = [
-      { label: this.emailLabel, display: this.emailDisplay },
-      { label: this.passwordLabel, display: this.passwordDisplay },
-      { label: this.usernameLabel, display: this.usernameDisplay }
-    ];
+    const fields =
+      this.guiState === LoginGuiState.Register
+        ? [
+            { label: this.emailLabel, display: this.emailDisplay },
+            { label: this.usernameLabel, display: this.usernameDisplay },
+            { label: this.passwordLabel, display: this.passwordDisplay }
+          ]
+        : [
+            { label: this.emailLabel, display: this.emailDisplay },
+            { label: this.passwordLabel, display: this.passwordDisplay }
+          ];
     let fieldY = LOGIN_LAYOUT.controlsY;
-    for (const [index, field] of fields.entries()) {
-      const isUsername = index === fields.length - 1;
-      if (isUsername && this.guiState !== LoginGuiState.Register) {
-        continue;
-      }
+    for (const field of fields) {
       field.label.setPosition(left, fieldY);
       field.display.setPosition(left, fieldY + LOGIN_LAYOUT.formLabelHeight);
       field.display.setFixedSize(contentWidth, LOGIN_LAYOUT.formInputHeight);
