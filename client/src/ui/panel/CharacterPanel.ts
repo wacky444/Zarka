@@ -1899,7 +1899,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.scrollPanel?.setScrollerEnable?.(true);
     this.mainActionDropdown.setVisible(true);
     this.mainActionDropdown.setActive(true);
-    this.refreshExtraExecutionSelectorState();
+    this.refreshExtraExecutionSelectorState(this.mainExtraExecutions);
     this.refreshLocationSelectorState();
     this.refreshPlayerSelectorState();
     this.refreshItemSelectorState();
@@ -1910,14 +1910,18 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.extraSecondaryActionLabel.setVisible(hasExtraSecondaryAction);
     this.extraSecondaryActionDropdown.setVisible(hasExtraSecondaryAction);
     this.extraSecondaryActionDropdown.setActive(hasExtraSecondaryAction);
-    this.refreshSecondaryExtraExecutionSelectorState();
+    this.refreshSecondaryExtraExecutionSelectorState(
+      this.secondaryExtraExecutions
+    );
     this.refreshSecondaryLocationSelectorState();
     this.refreshSecondaryChemicalTargetState();
     this.refreshSecondaryPlayerSelectorState();
     this.refreshSecondaryItemSelectorState();
     this.refreshSecondarySearchPriorityState();
     this.refreshSecondaryDropSellState();
-    this.refreshExtraSecondaryExecutionSelectorState();
+    this.refreshExtraSecondaryExecutionSelectorState(
+      this.extraSecondaryExtraExecutions
+    );
     this.refreshExtraSecondaryLocationSelectorState();
     this.refreshExtraSecondaryChemicalTargetState();
     this.refreshExtraSecondaryPlayerSelectorState();
