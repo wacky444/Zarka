@@ -38,13 +38,15 @@ function sameCoord(left: Axial, right: Axial): boolean {
 
 function randomAdjacentDestination(
   match: MatchRecord,
-  origin: Axial
+  origin: Axial,
+  avoid?: Axial
 ): { tileId: string; coord: Axial } | undefined {
   const candidates: HexTileSnapshot[] = [];
   for (const coord of neighbors(origin)) {
     for (const tile of match.map?.tiles ?? []) {
       if (
         sameCoord(tile.coord, coord) &&
+        (!avoid || !sameCoord(tile.coord, avoid)) &&
         tile.walkable !== false &&
         tile.meta?.destroyed !== true
       ) {
@@ -87,9 +89,11 @@ export class ScareAction extends BaseAction {
       });
       const origin = participant.character.position?.coord;
       const requestedTargets = participant.plan.targetPlayerIds ?? [];
-      const pushingTwoPlayers =
-        extraExecutions > 0 && requestedTargets.length > 1;
       const requestedDestination = participant.plan.targetLocationId;
+      const pushingTwoPlayers =
+        extraExecutions > 0 &&
+        !requestedDestination &&
+        requestedTargets.length > 1;
       const chosenDestination =
         extraExecutions > 0 &&
         !pushingTwoPlayers &&
@@ -129,10 +133,9 @@ export class ScareAction extends BaseAction {
           });
           continue;
         }
-        const destination = pushingTwoPlayers
-          ? randomAdjacentDestination(match, target.position?.coord ?? origin)
-          : chosenDestination ??
-            randomAdjacentDestination(match, target.position?.coord ?? origin);
+        const destination =
+          chosenDestination ??
+          randomAdjacentDestination(match, origin, target.position?.coord);
         if (!destination) {
           continue;
         }

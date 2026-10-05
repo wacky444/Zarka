@@ -8,7 +8,7 @@ import {
   axialDistance,
   neighbors,
 } from "@shared";
-import type { PlayerCharacter } from "@shared";
+import type { Axial, PlayerCharacter, ReplayEvent } from "@shared";
 import type { MatchRecord } from "../../src/models/types";
 import { executeAction } from "../../src/match/actionExecutor";
 import { createDefaultCharacter } from "../../src/utils/playerCharacter";
@@ -20,61 +20,131 @@ const logger = {
   error: () => undefined,
 } as unknown as nkruntime.Logger;
 
+const ORIGIN: Axial = { q: 0, r: 0 };
+
 function createCharacter(id: string): PlayerCharacter {
   const character = createDefaultCharacter(id);
-  character.position = { tileId: `tile-${id}`, coord: { q: 0, r: 0 } };
+  character.position = { tileId: `tile-${id}`, coord: { ...ORIGIN } };
   return character;
 }
 
-test("Scare clamps distant selected destinations to the nearest tile toward them", () => {
-  const actor = createCharacter("actor");
-  const target = createCharacter("target");
-  const origin = { q: 0, r: 0 };
-  const requestedDestination = { q: 2, r: 0 };
-  const mapTiles = [
-    ...neighbors(origin),
-    requestedDestination,
-  ].map((coord, index) => ({
-    id: `tile-${index}`,
-    coord,
-    localizationType: LocalizationType.Road,
-    walkable: true,
-    itemIds: [],
-  }));
-  actor.actionPlan = {
-    main: {
-      actionId: ActionLibrary.scare.id,
-      targetPlayerIds: [target.id],
-      targetLocationId: requestedDestination,
-      extraExecutions: 1,
-    },
-  };
-  const match: MatchRecord = {
-    match_id: "scare-direction-test",
-    players: [actor.id, target.id],
-    playerCharacters: { [actor.id]: actor, [target.id]: target },
+function createMatch(
+  characters: PlayerCharacter[],
+  extraTileCoords: Axial[] = []
+): MatchRecord {
+  const tileCoords = [ORIGIN, ...neighbors(ORIGIN), ...extraTileCoords];
+  const seen = new Set<string>();
+  const tiles = tileCoords
+    .filter((coord) => {
+      const key = `${coord.q}:${coord.r}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .map((coord, index) => ({
+      id: `tile-${index}`,
+      coord,
+      localizationType: LocalizationType.Road,
+      walkable: true,
+      itemIds: [],
+    }));
+  const playerCharacters = Object.fromEntries(
+    characters.map((character) => [character.id, character])
+  );
+  return {
+    match_id: "scare-action-test",
+    players: characters.map((character) => character.id),
+    playerCharacters,
     playerList: {},
-    size: 2,
+    size: characters.length,
     created_at: 1,
     current_turn: 0,
     started: true,
     removed: 0,
-    map: { cols: 3, rows: 3, seed: "scare-direction", tiles: mapTiles },
+    map: { cols: 3, rows: 3, seed: "scare-action", tiles },
   };
+}
 
-  const events = executeAction(
-    match,
-    ActionLibrary.scare,
-    1,
-    {},
-    logger,
+function scareEvents(events: ReplayEvent[]) {
+  return events.filter(
+    (event) =>
+      event.kind === "player" && event.action.actionId === ActionLibrary.scare.id
   );
-  const scareEvent = events.find(
-    (event) => event.kind === "player" && event.action.actionId === "scare",
-  );
+}
+
+test("Scare sends co-located target to one cell from caster without extra power", () => {
+  const actor = createCharacter("actor");
+  const target = createCharacter("target");
+  actor.actionPlan = { main: { actionId: ActionLibrary.scare.id } };
+  const match = createMatch([actor, target]);
+
+  const events = executeAction(match, ActionLibrary.scare, 1, {}, logger);
   const movedTo = target.position?.coord;
 
-  assert.ok(scareEvent);
-  assert.deepEqual(movedTo, { q: 1, r: 0 });
-  assert.equal(axialDistance(origin, movedTo!), 1);
+  assert.equal(scareEvents(events).length, 1);
+  assert.ok(movedTo);
+  assert.notDeepEqual(movedTo, ORIGIN);
+  assert.equal(axialDistance(ORIGIN, movedTo), 1);
+});
+
+test("extra Scare chooses one adjacent destination instead of a second target", () => {
+  const actor = createCharacter("actor");
+  const firstTarget = createCharacter("first");
+  const secondTarget = createCharacter("second");
+  const destination = { q: -1, r: 0 };
+  actor.actionPlan = {
+    main: {
+      actionId: ActionLibrary.scare.id,
+      extraExecutions: 1,
+      targetPlayerIds: [firstTarget.id, secondTarget.id],
+      targetLocationId: destination,
+    },
+  };
+  const match = createMatch([actor, firstTarget, secondTarget]);
+
+  const events = executeAction(match, ActionLibrary.scare, 1, {}, logger);
+
+  assert.equal(scareEvents(events).length, 1);
+  assert.deepEqual(firstTarget.position?.coord, destination);
+  assert.deepEqual(secondTarget.position?.coord, ORIGIN);
+  assert.equal(axialDistance(ORIGIN, firstTarget.position!.coord), 1);
+});
+
+test("extra Scare can scare two targets, both ending one cell from caster", () => {
+  const actor = createCharacter("actor");
+  const firstTarget = createCharacter("first");
+  const secondTarget = createCharacter("second");
+  actor.actionPlan = {
+    main: {
+      actionId: ActionLibrary.scare.id,
+      extraExecutions: 1,
+      targetPlayerIds: [firstTarget.id, secondTarget.id],
+    },
+  };
+  const match = createMatch([actor, firstTarget, secondTarget]);
+
+  const events = executeAction(match, ActionLibrary.scare, 1, {}, logger);
+
+  assert.equal(scareEvents(events).length, 2);
+  assert.equal(axialDistance(ORIGIN, firstTarget.position!.coord), 1);
+  assert.equal(axialDistance(ORIGIN, secondTarget.position!.coord), 1);
+});
+
+test("protected character cannot be pushed by Scare", () => {
+  const actor = createCharacter("actor");
+  const target = createCharacter("target");
+  actor.actionPlan = {
+    main: { actionId: ActionLibrary.scare.id, targetPlayerIds: [target.id] },
+  };
+  target.actionPlan = { main: { actionId: ActionLibrary.protect.id } };
+  const match = createMatch([actor, target]);
+
+  executeAction(match, ActionLibrary.protect, 1, {}, logger);
+  const events = executeAction(match, ActionLibrary.scare, 1, {}, logger);
+
+  assert.ok(target.statuses?.conditions?.includes("protected"));
+  assert.deepEqual(target.position?.coord, ORIGIN);
+  assert.equal(scareEvents(events).length, 0);
 });
