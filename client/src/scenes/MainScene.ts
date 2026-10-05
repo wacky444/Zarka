@@ -22,7 +22,7 @@ import {
   stopMenuMusic
 } from "../animation/soundPlayer";
 import { MenuAshEffect } from "../animation/MenuAshEffect";
-import { getLocale, toggleLocale } from "../services/i18n";
+import { getLocale, t, toggleLocale } from "../services/i18n";
 import { TUTORIAL_MATCH_METADATA_KEY } from "@shared";
 import { assetPath } from "../utils/assetPath";
 import { isMobile } from "../utils/isMobile";
@@ -959,10 +959,10 @@ export class MainScene extends Phaser.Scene {
       this,
       0,
       0,
-      "Account Settings",
+      t("Settings"),
       () => {
         pauseMenuMusic(this);
-        this.scene.start("AccountScene", {
+        this.scene.start("SettingsScene", {
           client: this.turnService?.getClient(),
           session: this.turnService?.getSession()
         });

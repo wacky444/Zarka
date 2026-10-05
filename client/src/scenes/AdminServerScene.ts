@@ -467,7 +467,7 @@ export class AdminServerScene extends Phaser.Scene {
 
   private returnToAccount(): void {
     this.adminPassword = "";
-    this.scene.start("AccountScene", {
+    this.scene.start("SettingsScene", {
       client: this.client,
       session: this.session,
     });

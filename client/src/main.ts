@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { LoginScene } from "./scenes/LoginScene";
 import { MainScene } from "./scenes/MainScene";
 import { GameScene } from "./scenes/GameScene";
-import { AccountScene } from "./scenes/AccountScene";
+import { SettingsScene } from "./scenes/SettingsScene";
 import { EndGameReportScene } from "./scenes/EndGameReportScene";
 import { AdminServerScene } from "./scenes/AdminServerScene";
 import RexUIPlugin from "phaser3-rex-plugins/templates/ui/ui-plugin";
@@ -35,7 +35,7 @@ const config: Phaser.Types.Core.GameConfig = {
     LoginScene,
     MainScene,
     GameScene,
-    AccountScene,
+    SettingsScene,
     EndGameReportScene,
     AdminServerScene,
   ],

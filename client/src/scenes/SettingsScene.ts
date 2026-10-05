@@ -74,6 +74,7 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   setScrollerEnable?: (enabled: boolean) => void;
   scrollerEnable?: boolean;
   setMouseWheelScrollerEnable?: (enabled: boolean) => void;
+  scrollToTop?: () => void;
   mouseWheelScrollerEnable?: boolean;
 };
 
@@ -84,7 +85,17 @@ type SliderInstance = Phaser.GameObjects.GameObject & {
   setValue: (value?: number, min?: number, max?: number) => SliderInstance;
   setGap: (gap?: number, min?: number, max?: number) => SliderInstance;
   setPosition: (x: number, y: number) => SliderInstance;
+  setVisible: (visible: boolean) => SliderInstance;
 };
+
+type SettingsTab = "account" | "appearance" | "audio" | "notifications";
+
+const SETTINGS_TABS: ReadonlyArray<{ id: SettingsTab; label: string }> = [
+  { id: "account", label: "Account" },
+  { id: "appearance", label: "Appearance" },
+  { id: "audio", label: "Audio" },
+  { id: "notifications", label: "Notifications" }
+];
 
 const ACCOUNT_LAYOUT = {
   maxWidth: 760,
@@ -95,9 +106,12 @@ const ACCOUNT_LAYOUT = {
   selectorGap: 8
 };
 
-export class AccountScene extends Phaser.Scene {
+export class SettingsScene extends Phaser.Scene {
   private accountRoot!: Phaser.GameObjects.Container;
   private accountScrollPanel!: ScrollablePanelInstance;
+  private tabButtons: Partial<Record<SettingsTab, UIButton>> = {};
+  private activeSettingsTab: SettingsTab = "account";
+  private displayNameLoaded = false;
   private titleText!: Phaser.GameObjects.Text;
   private skinStatsTitle!: Phaser.GameObjects.Text;
   private skinTitle!: Phaser.GameObjects.Text;
@@ -140,7 +154,7 @@ export class AccountScene extends Phaser.Scene {
   private saving = false;
 
   constructor() {
-    super("AccountScene");
+    super("SettingsScene");
   }
 
   preload() {
@@ -197,7 +211,7 @@ export class AccountScene extends Phaser.Scene {
     this.accountScrollPanel.setOrigin?.(0, 0);
 
     this.titleText = this.add
-      .text(0, 0, "Account Settings", {
+      .text(0, 0, t("Settings"), {
         color: "#ffffff",
         fontSize: "28px",
         fontStyle: "bold"
@@ -451,6 +465,8 @@ export class AccountScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
     this.accountRoot.add(this.backButton);
 
+    this.createSettingsTabs();
+    this.updateSettingsTabVisibility();
     this.layoutAccount();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutAccount, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -463,6 +479,83 @@ export class AccountScene extends Phaser.Scene {
 
     void this.refreshPushNotificationUi();
     await this.loadUserInfo();
+  }
+
+  private createSettingsTabs(): void {
+    for (const tab of SETTINGS_TABS) {
+      const button = makeButton(
+        this,
+        0,
+        0,
+        t(tab.label),
+        () => this.selectSettingsTab(tab.id),
+        ["account"]
+      ).setOrigin(0.5, 0);
+      this.tabButtons[tab.id] = button;
+      this.accountRoot.add(button);
+    }
+    this.updateSettingsTabButtons();
+  }
+
+  private selectSettingsTab(tab: SettingsTab): void {
+    if (this.activeSettingsTab === tab) {
+      return;
+    }
+    this.activeSettingsTab = tab;
+    this.updateSettingsTabButtons();
+    this.updateSettingsTabVisibility();
+    this.layoutAccount();
+    this.accountScrollPanel.scrollToTop?.();
+  }
+
+  private updateSettingsTabButtons(): void {
+    for (const tab of SETTINGS_TABS) {
+      const button = this.tabButtons[tab.id];
+      if (!button) {
+        continue;
+      }
+      button.setText(
+        this.activeSettingsTab === tab.id ? `[ ${t(tab.label)} ]` : t(tab.label)
+      );
+    }
+  }
+
+  private updateSettingsTabVisibility(): void {
+    const showAccount = this.activeSettingsTab === "account";
+    const showAppearance = this.activeSettingsTab === "appearance";
+    const showAudio = this.activeSettingsTab === "audio";
+    const showNotifications = this.activeSettingsTab === "notifications";
+
+    this.userInfoText.setVisible(showAccount);
+    this.displayNameText.setVisible(showAccount);
+    this.changeDisplayNameButton.setVisible(showAccount && this.displayNameLoaded);
+    this.adminViewToggle.setVisible(showAccount && this.isAdmin);
+    this.adminServerButton.setVisible(showAccount && this.isAdmin);
+    this.skinStatsTitle.setVisible(showAccount);
+    this.playerStatsText.setVisible(showAccount);
+    this.facebookTitle.setVisible(showAccount);
+    this.facebookStatusText.setVisible(showAccount);
+    this.linkFacebookButton.setVisible(showAccount);
+    this.unlinkFacebookButton.setVisible(showAccount);
+
+    this.skinTitle.setVisible(showAppearance);
+    this.previewLabel.setVisible(showAppearance);
+    for (const layer of Object.values(this.previewLayers)) {
+      layer.setVisible(showAppearance);
+    }
+    for (const selector of Object.values(this.skinSelectors)) {
+      selector?.setVisible(showAppearance);
+    }
+
+    this.audioTitle.setVisible(showAudio);
+    this.volumeLabel.setVisible(showAudio);
+    this.volumeSlider.setVisible(showAudio);
+    this.musicToggleButton.setVisible(showAudio);
+
+    this.pushTitle.setVisible(showNotifications);
+    this.pushDescription.setVisible(showNotifications);
+    this.pushStatusText.setVisible(showNotifications);
+    this.pushButton.setVisible(showNotifications);
   }
 
   private layoutAccount(): void {
@@ -486,135 +579,154 @@ export class AccountScene extends Phaser.Scene {
     this.statusText.setPosition(centerX, cursorY);
     cursorY += this.statusText.height + 10;
 
-    this.userInfoText.setWordWrapWidth(contentWidth, true);
-    this.userInfoText.setPosition(centerX, cursorY);
-    cursorY += this.userInfoText.height + 8;
-
-    this.displayNameText.setPosition(centerX, cursorY);
-    cursorY += this.displayNameText.height + 6;
-    if (this.changeDisplayNameButton.visible) {
-      this.changeDisplayNameButton.setPosition(centerX, cursorY);
-      cursorY += this.changeDisplayNameButton.height + 8;
-    }
-    if (this.adminViewToggle.visible) {
-      this.adminViewToggle.setPosition(centerX, cursorY);
-      cursorY += this.adminViewToggle.height + ACCOUNT_LAYOUT.sectionGap;
-    } else {
-      cursorY += ACCOUNT_LAYOUT.sectionGap;
-    }
-    if (this.adminServerButton.visible) {
-      this.adminServerButton.setPosition(centerX, cursorY);
-      cursorY += this.adminServerButton.height + ACCOUNT_LAYOUT.sectionGap;
-    }
-
-    this.skinStatsTitle.setPosition(centerX, cursorY);
-    cursorY += this.skinStatsTitle.height + 16;
-    this.playerStatsText.setWordWrapWidth(contentWidth, true);
-    this.playerStatsText.setPosition(centerX, cursorY);
-    cursorY += this.playerStatsText.height + ACCOUNT_LAYOUT.sectionGap;
-
-    this.skinTitle.setPosition(centerX, cursorY);
-    cursorY += this.skinTitle.height + 12;
-
-    const narrowSkinLayout = contentWidth < ACCOUNT_LAYOUT.narrowSkinBreakpoint;
-    const previewColumnWidth = ACCOUNT_LAYOUT.previewSize + 40;
-    const previewTop = cursorY;
-    let selectorX = contentLeft;
-    let selectorY = cursorY;
-    let selectorWidth = contentWidth;
-    const previewCenterY =
-      previewTop + this.previewLabel.height + 12 + ACCOUNT_LAYOUT.previewSize / 2;
-    const previewBottom =
-      previewTop + this.previewLabel.height + 12 + ACCOUNT_LAYOUT.previewSize;
-
-    if (!narrowSkinLayout) {
-      selectorX = contentLeft + previewColumnWidth + ACCOUNT_LAYOUT.sectionGap;
-      selectorWidth = contentWidth - (previewColumnWidth + ACCOUNT_LAYOUT.sectionGap);
-      const previewCenterX = contentLeft + previewColumnWidth / 2;
-      this.previewLabel.setPosition(previewCenterX, previewTop);
-      for (const layer of Object.values(this.previewLayers)) {
-        layer.setPosition(previewCenterX, previewCenterY);
-      }
-    } else {
-      this.previewLabel.setPosition(centerX, previewTop);
-      for (const layer of Object.values(this.previewLayers)) {
-        layer.setPosition(centerX, previewCenterY);
-      }
-      selectorY = previewBottom + ACCOUNT_LAYOUT.sectionGap;
-    }
-
-    let selectorBottom = selectorY;
-    for (const category of this.skinCategoryOrder) {
-      const selector = this.skinSelectors[category];
-      if (!selector) {
+    const tabColumns = contentWidth >= 600 ? SETTINGS_TABS.length : 2;
+    const tabGapX = 8;
+    const tabGapY = 6;
+    const tabCellWidth =
+      (contentWidth - tabGapX * (tabColumns - 1)) / tabColumns;
+    const tabRowHeight = Math.max(
+      ...SETTINGS_TABS.map((tab) => this.tabButtons[tab.id]?.height ?? 0)
+    );
+    for (let i = 0; i < SETTINGS_TABS.length; i++) {
+      const button = this.tabButtons[SETTINGS_TABS[i].id];
+      if (!button) {
         continue;
       }
-      selector.setDisplayWidth(Math.max(180, selectorWidth));
-      selector.setPosition(selectorX, selectorBottom);
-      selectorBottom += selector.height + ACCOUNT_LAYOUT.selectorGap;
+      const column = i % tabColumns;
+      const row = Math.floor(i / tabColumns);
+      button.setPosition(
+        contentLeft + column * (tabCellWidth + tabGapX) + tabCellWidth / 2,
+        cursorY + row * (tabRowHeight + tabGapY)
+      );
     }
+    cursorY +=
+      Math.ceil(SETTINGS_TABS.length / tabColumns) * (tabRowHeight + tabGapY) +
+      ACCOUNT_LAYOUT.sectionGap;
 
-    const skinBottom = Math.max(previewBottom, selectorBottom);
-    cursorY = skinBottom + ACCOUNT_LAYOUT.sectionGap;
+    if (this.activeSettingsTab === "account") {
+      this.userInfoText.setWordWrapWidth(contentWidth, true);
+      this.userInfoText.setPosition(centerX, cursorY);
+      cursorY += this.userInfoText.height + 8;
 
-    this.facebookTitle.setPosition(centerX, cursorY);
-    cursorY += this.facebookTitle.height + 6;
-    this.facebookStatusText.setWordWrapWidth(contentWidth, true);
-    this.facebookStatusText.setPosition(centerX, cursorY);
-    cursorY += this.facebookStatusText.height + 10;
+      this.displayNameText.setPosition(centerX, cursorY);
+      cursorY += this.displayNameText.height + 6;
+      if (this.changeDisplayNameButton.visible) {
+        this.changeDisplayNameButton.setPosition(centerX, cursorY);
+        cursorY += this.changeDisplayNameButton.height + 8;
+      }
+      if (this.adminViewToggle.visible) {
+        this.adminViewToggle.setPosition(centerX, cursorY);
+        cursorY += this.adminViewToggle.height + ACCOUNT_LAYOUT.sectionGap;
+      }
+      if (this.adminServerButton.visible) {
+        this.adminServerButton.setPosition(centerX, cursorY);
+        cursorY += this.adminServerButton.height + ACCOUNT_LAYOUT.sectionGap;
+      }
 
-    const facebookButtonGap = 12;
-    const facebookButtonsWidth =
-      this.linkFacebookButton.width +
-      facebookButtonGap +
-      this.unlinkFacebookButton.width;
-    if (facebookButtonsWidth <= contentWidth) {
-      const buttonsLeft = (viewportWidth - facebookButtonsWidth) / 2;
-      this.linkFacebookButton.setPosition(
-        buttonsLeft + this.linkFacebookButton.width / 2,
-        cursorY
-      );
-      this.unlinkFacebookButton.setPosition(
-        buttonsLeft +
-          this.linkFacebookButton.width +
-          facebookButtonGap +
-          this.unlinkFacebookButton.width / 2,
-        cursorY
-      );
-      cursorY +=
-        Math.max(
-          this.linkFacebookButton.height,
-          this.unlinkFacebookButton.height
-        ) + ACCOUNT_LAYOUT.sectionGap;
+      this.skinStatsTitle.setPosition(centerX, cursorY);
+      cursorY += this.skinStatsTitle.height + 16;
+      this.playerStatsText.setWordWrapWidth(contentWidth, true);
+      this.playerStatsText.setPosition(centerX, cursorY);
+      cursorY += this.playerStatsText.height + ACCOUNT_LAYOUT.sectionGap;
+
+      this.facebookTitle.setPosition(centerX, cursorY);
+      cursorY += this.facebookTitle.height + 6;
+      this.facebookStatusText.setWordWrapWidth(contentWidth, true);
+      this.facebookStatusText.setPosition(centerX, cursorY);
+      cursorY += this.facebookStatusText.height + 10;
+
+      const facebookButtonGap = 12;
+      const facebookButtonsWidth =
+        this.linkFacebookButton.width +
+        facebookButtonGap +
+        this.unlinkFacebookButton.width;
+      if (facebookButtonsWidth <= contentWidth) {
+        const buttonsLeft = (viewportWidth - facebookButtonsWidth) / 2;
+        this.linkFacebookButton.setPosition(
+          buttonsLeft + this.linkFacebookButton.width / 2,
+          cursorY
+        );
+        this.unlinkFacebookButton.setPosition(
+          buttonsLeft +
+            this.linkFacebookButton.width +
+            facebookButtonGap +
+            this.unlinkFacebookButton.width / 2,
+          cursorY
+        );
+        cursorY +=
+          Math.max(
+            this.linkFacebookButton.height,
+            this.unlinkFacebookButton.height
+          ) + ACCOUNT_LAYOUT.sectionGap;
+      } else {
+        this.linkFacebookButton.setPosition(centerX, cursorY);
+        cursorY += this.linkFacebookButton.height + 8;
+        this.unlinkFacebookButton.setPosition(centerX, cursorY);
+        cursorY += this.unlinkFacebookButton.height + ACCOUNT_LAYOUT.sectionGap;
+      }
+    } else if (this.activeSettingsTab === "appearance") {
+      this.skinTitle.setPosition(centerX, cursorY);
+      cursorY += this.skinTitle.height + 12;
+
+      const narrowSkinLayout = contentWidth < ACCOUNT_LAYOUT.narrowSkinBreakpoint;
+      const previewColumnWidth = ACCOUNT_LAYOUT.previewSize + 40;
+      const previewTop = cursorY;
+      let selectorX = contentLeft;
+      let selectorY = cursorY;
+      let selectorWidth = contentWidth;
+      const previewCenterY =
+        previewTop + this.previewLabel.height + 12 + ACCOUNT_LAYOUT.previewSize / 2;
+      const previewBottom =
+        previewTop + this.previewLabel.height + 12 + ACCOUNT_LAYOUT.previewSize;
+
+      if (!narrowSkinLayout) {
+        selectorX = contentLeft + previewColumnWidth + ACCOUNT_LAYOUT.sectionGap;
+        selectorWidth = contentWidth - (previewColumnWidth + ACCOUNT_LAYOUT.sectionGap);
+        const previewCenterX = contentLeft + previewColumnWidth / 2;
+        this.previewLabel.setPosition(previewCenterX, previewTop);
+        for (const layer of Object.values(this.previewLayers)) {
+          layer.setPosition(previewCenterX, previewCenterY);
+        }
+      } else {
+        this.previewLabel.setPosition(centerX, previewTop);
+        for (const layer of Object.values(this.previewLayers)) {
+          layer.setPosition(centerX, previewCenterY);
+        }
+        selectorY = previewBottom + ACCOUNT_LAYOUT.sectionGap;
+      }
+
+      let selectorBottom = selectorY;
+      for (const category of this.skinCategoryOrder) {
+        const selector = this.skinSelectors[category];
+        if (!selector) {
+          continue;
+        }
+        selector.setDisplayWidth(Math.max(180, selectorWidth));
+        selector.setPosition(selectorX, selectorBottom);
+        selectorBottom += selector.height + ACCOUNT_LAYOUT.selectorGap;
+      }
+      cursorY = Math.max(previewBottom, selectorBottom) + ACCOUNT_LAYOUT.sectionGap;
+    } else if (this.activeSettingsTab === "notifications") {
+      this.pushTitle.setPosition(centerX, cursorY);
+      cursorY += this.pushTitle.height + 6;
+      this.pushDescription.setWordWrapWidth(contentWidth, true);
+      this.pushDescription.setPosition(centerX, cursorY);
+      cursorY += this.pushDescription.height + 6;
+      this.pushStatusText.setWordWrapWidth(contentWidth, true);
+      this.pushStatusText.setPosition(centerX, cursorY);
+      cursorY += this.pushStatusText.height + 8;
+      this.pushButton.setPosition(centerX, cursorY);
+      cursorY += this.pushButton.height + ACCOUNT_LAYOUT.sectionGap;
     } else {
-      this.linkFacebookButton.setPosition(centerX, cursorY);
-      cursorY += this.linkFacebookButton.height + 8;
-      this.unlinkFacebookButton.setPosition(centerX, cursorY);
-      cursorY += this.unlinkFacebookButton.height + ACCOUNT_LAYOUT.sectionGap;
+      this.audioTitle.setPosition(centerX, cursorY);
+      cursorY += this.audioTitle.height + 6;
+      this.volumeLabel.setPosition(centerX, cursorY);
+      cursorY += this.volumeLabel.height + 12;
+      this.volumeSlider.setPosition(centerX, cursorY + 14);
+      cursorY += 34 + 12;
+      this.musicToggleButton.setPosition(centerX, cursorY);
+      cursorY += this.musicToggleButton.height + ACCOUNT_LAYOUT.sectionGap;
     }
-
-    this.pushTitle.setPosition(centerX, cursorY);
-    cursorY += this.pushTitle.height + 6;
-    this.pushDescription.setWordWrapWidth(contentWidth, true);
-    this.pushDescription.setPosition(centerX, cursorY);
-    cursorY += this.pushDescription.height + 6;
-    this.pushStatusText.setWordWrapWidth(contentWidth, true);
-    this.pushStatusText.setPosition(centerX, cursorY);
-    cursorY += this.pushStatusText.height + 8;
-    this.pushButton.setPosition(centerX, cursorY);
-    cursorY += this.pushButton.height + ACCOUNT_LAYOUT.sectionGap;
-
-    this.audioTitle.setPosition(centerX, cursorY);
-    cursorY += this.audioTitle.height + 6;
-
-    this.volumeLabel.setPosition(centerX, cursorY);
-    cursorY += this.volumeLabel.height + 12;
-
-    this.volumeSlider.setPosition(centerX, cursorY + 14);
-    cursorY += 34 + 12;
-
-    this.musicToggleButton.setPosition(centerX, cursorY);
-    cursorY += this.musicToggleButton.height + ACCOUNT_LAYOUT.sectionGap;
 
     this.backButton.setPosition(centerX, cursorY);
     cursorY += this.backButton.height + ACCOUNT_LAYOUT.horizontalPadding;
@@ -783,8 +895,7 @@ export class AccountScene extends Phaser.Scene {
           userAccount = rpcPayload.account;
           this.isAdmin = rpcPayload.account.isAdmin === true;
           this.adminViewEnabled = this.isAdmin && isAdminViewEnabled();
-          this.adminViewToggle.setVisible(this.isAdmin);
-          this.adminServerButton.setVisible(this.isAdmin);
+          this.updateSettingsTabVisibility();
           this.updateAdminViewToggle();
         }
       } catch (e) {
@@ -809,7 +920,8 @@ export class AccountScene extends Phaser.Scene {
         `Display Name: ${displayName || "(not set)"}`
       );
 
-      this.changeDisplayNameButton.setVisible(true);
+      this.displayNameLoaded = true;
+      this.updateSettingsTabVisibility();
       this.layoutAccount();
 
       if (userAccount) {
