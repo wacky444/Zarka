@@ -1,68 +1,88 @@
 import Phaser from "phaser";
 import {
   ActionLibrary,
-  type ActionDefinition,
   type ActionId,
   type Axial,
   type MatchRecord,
   type PlayerCharacter,
-  ActionCategory,
   type ReplayEvent,
-  ItemLibrary,
-  type ItemId,
-  type ItemDefinition,
   DEFAULT_SKIN,
-  Skin,
-  PlayerCharacterUnknown,
+  type Skin,
   getActionEnergyDiscount,
   getSkillEffectTotal,
   type ShopId,
-  type TutorialStepId
+  type TutorialStepId,
+  type UserAccount
 } from "@shared";
-import { GridSelect, type GridSelectItem } from "./GridSelect";
-import { getMissingRequirement } from "./ActionRequirementWarnings";
-import { deriveBoardIconKey, isBoardIconTexture } from "./actionIcons";
-import { ProgressBar } from "./ProgressBar";
-import { LocationSelector } from "./LocationSelector";
-import { ExtraExecutionSelector } from "./ExtraExecutionSelector";
-import { PlayerSelector, type PlayerOption } from "./PlayerSelector";
+import { GridSelect, type GridSelectItem } from "../GridSelect";
+import { LocationSelector } from "../LocationSelector";
+import { ExtraExecutionSelector } from "../ExtraExecutionSelector";
+import { PlayerSelector, type PlayerOption } from "../PlayerSelector";
 import {
   ItemPrioritySelector,
   type ItemPriorityOption
-} from "./ItemPrioritySelector";
+} from "../ItemPrioritySelector";
 import {
   CharacterPanelTabs,
   type CharacterPanelTabEntry,
   type TabKey
-} from "./CharacterPanelTabs";
-import { CharacterPanelLogView } from "./CharacterPanelLogView";
-import { InventoryGrid, type InventoryGridItem } from "./InventoryGrid";
-import { resolveItemTexture } from "./itemIcons";
-import { THEME } from "./ColorPalette";
-import { createSkinContainer, SkinContainer } from "./PlayerSkinRenderer";
+} from "../CharacterPanelTabs";
+import { CharacterPanelLogView } from "../CharacterPanelLogView";
+import { THEME } from "../ColorPalette";
 import {
   CharacterPanelChatView,
   type ChatConnectionState,
   type ChatMessageViewModel
-} from "./CharacterPanelChatView";
-import { CharacterPanelPlayerListView } from "./CharacterPanelPlayerListView";
-import { Subtabs } from "./Subtabs";
-import { CharacterPanelSkillsView } from "./CharacterPanelSkillsView";
-import { CharacterPanelShopView } from "./CharacterPanelShopView";
-import type { ZarkanDonationSelection } from "./ZarkanDonationModal";
+} from "../CharacterPanelChatView";
+import { CharacterPanelPlayerListView } from "../CharacterPanelPlayerListView";
+import { Subtabs } from "../Subtabs";
+import { CharacterPanelSkillsView } from "../CharacterPanelSkillsView";
+import { CharacterPanelShopView } from "../CharacterPanelShopView";
+import type { ZarkanDonationSelection } from "../ZarkanDonationModal";
 import {
   getTutorialUiPolicy,
   isTutorialReadyActionAllowed,
   type TutorialControlHighlight
-} from "../tutorial/TutorialUiPolicy";
-import { t } from "../services/i18n";
+} from "../../tutorial/TutorialUiPolicy";
+import { t } from "../../services/i18n";
+import {
+  buildMainActionItems,
+  buildSecondaryActionItems,
+  collectMainActions,
+  collectSecondaryActions,
+  formatActionName as formatActionLabel,
+  type CharacterPanelActionOptionsContext
+} from "./CharacterPanelActionOptions";
+import {
+  actionSupportsExtraExecution,
+  actionSupportsLocation,
+  actionSupportsSingleTarget,
+  actionSupportsTargetItems,
+  buildExtraSecondaryActionSelection,
+  buildMainActionSelection,
+  layoutActionPlan,
+  buildSecondaryActionSelection,
+  type MainActionSelection,
+  type SecondaryActionSelection
+} from "./CharacterPanelActionPlanView";
+import { buildCharacterPanelItemOptions } from "./CharacterPanelItemOptions";
+import {
+  buildPlayerOptions,
+  buildPlayerTargetOptionSets
+} from "./CharacterPanelPlayerOptions";
+import { PlayerOptionSkinCache } from "./PlayerOptionSkinCache";
+import { CharacterPanelInventoryView } from "./CharacterPanelInventoryView";
+import { CharacterPanelStatusView } from "./CharacterPanelStatusView";
+import { CharacterPanelTabLayout } from "./CharacterPanelTabLayout";
+
+export type { MainActionSelection, SecondaryActionSelection };
 
 export type CharacterSubTabKey = "status" | "skills";
 
 export type {
   ChatMessageViewModel,
   ChatConnectionState
-} from "./CharacterPanelChatView";
+} from "../CharacterPanelChatView";
 
 type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   layout?: () => void;
@@ -84,48 +104,10 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
 const DEFAULT_WIDTH = 420;
 const TAB_HEIGHT = 40;
 const TAB_ARROW_WIDTH = 36;
-const MOBILE_TAB_MIN_WIDTH = 82;
 const MARGIN = 16;
 const PORTRAIT_SIZE = 96;
 const BAR_HEIGHT = 20;
 const BOX_HEIGHT = 180;
-const PRIMARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
-  .filter(
-    (definition) =>
-      definition.category === ActionCategory.Primary && !definition.hidden
-  )
-  .map((definition) => definition.id)
-  .sort((a, b) => ActionLibrary[a].name.localeCompare(ActionLibrary[b].name));
-const SECONDARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
-  .filter(
-    (definition) =>
-      definition.category === ActionCategory.Secondary && !definition.hidden
-  )
-  .map((definition) => definition.id)
-  .sort((a, b) => ActionLibrary[a].name.localeCompare(ActionLibrary[b].name));
-
-export type MainActionSelection = {
-  actionId: string | null;
-  targetLocation: Axial | null;
-  secondTargetLocation: Axial | null;
-  targetPlayerIds?: string[];
-  secondTargetPlayerId?: string | null;
-  targetItemIds?: string[];
-  extraExecutions?: number;
-};
-
-export type SecondaryActionSelection = {
-  actionId: string | null;
-  targetLocation: Axial | null;
-  targetPlayerIds?: string[];
-  targetItemIds?: string[];
-  extraExecutions?: number;
-  prioritizeFoodDrink?: boolean;
-  singleTarget?: boolean;
-  inspectAdditionalTarget?: boolean;
-  sellInstead?: boolean;
-};
-
 type LogEliminationPayload = {
   playerId: string;
   playerName: string;
@@ -155,8 +137,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private tabPreviousText!: Phaser.GameObjects.Text;
   private tabNextButton!: Phaser.GameObjects.Rectangle;
   private tabNextText!: Phaser.GameObjects.Text;
-  private mobileTabNavigation = false;
-  private tabStartIndex = 0;
+  private tabLayout!: CharacterPanelTabLayout;
   private characterElements: Phaser.GameObjects.GameObject[] = [];
   private characterSubtabs!: Subtabs<CharacterSubTabKey>;
   private skillsView!: CharacterPanelSkillsView;
@@ -175,12 +156,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private tutorialReadyEnabled = true;
   private logView!: CharacterPanelLogView;
   private chatView!: CharacterPanelChatView;
-  private portrait: SkinContainer;
-  private nameText: Phaser.GameObjects.Text;
-  private healthLabel: Phaser.GameObjects.Text;
-  private energyLabel: Phaser.GameObjects.Text;
-  private healthBar: ProgressBar;
-  private energyBar: ProgressBar;
+  private statusView!: CharacterPanelStatusView;
+  private inventoryView!: CharacterPanelInventoryView;
+  private playerOptionSkinCache!: PlayerOptionSkinCache;
   private readyToggle!: Phaser.GameObjects.Text;
   private unspentSkillsWarning!: Phaser.GameObjects.Text;
   private mainActionBox: Phaser.GameObjects.Rectangle;
@@ -220,9 +198,6 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private extraSecondaryChemicalTargetToggle: Phaser.GameObjects.Text;
   private extraSecondaryPlayerSelector: PlayerSelector;
   private extraSecondaryItemSelector: ItemPrioritySelector;
-  private itemsBackground!: Phaser.GameObjects.Rectangle;
-  private itemsTitle!: Phaser.GameObjects.Text;
-  private inventoryGrid!: InventoryGrid;
   private scrollPanel: ScrollablePanelInstance | null = null;
   private scrollMask: Phaser.Display.Masks.GeometryMask | null = null;
   private scrollMaskShape: Phaser.GameObjects.Rectangle | null = null;
@@ -232,7 +207,6 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private gridModalOpenCount = 0;
   private panelWidth: number;
   private panelHeight: number;
-  private barWidth: number;
   private mainActionSelection: string | null = null;
   private secondaryActionSelection: string | null = null;
   private extraSecondaryActionSelection: string | null = null;
@@ -272,13 +246,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private currentMatch: MatchRecord | null = null;
   private currentUserId: string | null = null;
   private currentCharacter: PlayerCharacter | null = null;
-  private currentPlayerSkin: import("@shared").Skin | null = null;
-  private playerAccounts = new Map<string, import("@shared").UserAccount>();
+  private currentPlayerSkin: Skin | null = null;
+  private playerAccounts = new Map<string, UserAccount>();
   private lastUserMap: Record<string, string> = {};
-  private playerOptionSkinIcons = new Map<
-    string,
-    { textureKey: string; signature: string }
-  >();
   private readonly handleMainExtraExecutionChange = (reps: number) => {
     this.mainExtraExecutions = reps;
     this.refreshLocationSelectorState();
@@ -672,13 +642,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
   };
   private readonly handleLogElimination = (payload: LogEliminationPayload) => {
-    const character =
-      this.currentMatch?.playerCharacters?.[payload.playerId] ?? null;
-    const sprite = this.resolvePlayerSpriteInfo(
+    const sprite = this.playerOptionSkinCache.resolve(
       payload.playerId,
-      character,
       this.playerAccounts.get(payload.playerId)?.cosmetics.selectedSkinId ??
         null,
+      this.currentUserId,
+      this.currentPlayerSkin,
       1
     );
     const eventPayload: PlayerEliminatedPayload = {
@@ -702,10 +671,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
     this.panelWidth = width;
     this.panelHeight = height;
-    this.barWidth = width - (PORTRAIT_SIZE + MARGIN * 3);
     this.setSize(width, height);
     this.setScrollFactor(0);
     scene.add.existing(this);
+    this.playerOptionSkinCache = new PlayerOptionSkinCache(scene);
     this.setDepth(1000);
     this.background = scene.add
       .rectangle(0, 0, width, height, 0x151a2f, 0.92)
@@ -770,23 +739,32 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       })
       .setOrigin(0.5, 0.5)
       .setInteractive({ useHandCursor: true });
+    this.tabLayout = new CharacterPanelTabLayout(
+      this.tabs,
+      this.tabPreviousButton,
+      this.tabPreviousText,
+      this.tabNextButton,
+      this.tabNextText,
+      () => this.panelWidth,
+      (key) => this.tabsController?.isTabUnread(key) ?? false
+    );
     this.tabPreviousButton.on(Phaser.Input.Events.POINTER_UP, () => {
-      this.moveTabWindow(-1);
+      this.tabLayout.move(-1);
     });
     this.tabPreviousText.on(Phaser.Input.Events.POINTER_UP, () => {
-      this.moveTabWindow(-1);
+      this.tabLayout.move(-1);
     });
     this.tabNextButton.on(Phaser.Input.Events.POINTER_UP, () => {
-      this.moveTabWindow(1);
+      this.tabLayout.move(1);
     });
     this.tabNextText.on(Phaser.Input.Events.POINTER_UP, () => {
-      this.moveTabWindow(1);
+      this.tabLayout.move(1);
     });
     this.add(this.tabPreviousButton);
     this.add(this.tabPreviousText);
     this.add(this.tabNextButton);
     this.add(this.tabNextText);
-    this.layoutTabs(width);
+    this.tabLayout.layout(width);
 
     const contentTop = TAB_HEIGHT + MARGIN;
     const subtabY = TAB_HEIGHT + 8;
@@ -811,51 +789,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     });
 
     const statusContentTop = subtabBottom + 14;
-    const portraitScale = PORTRAIT_SIZE / 16;
-    this.portrait = createSkinContainer(
-      scene,
-      MARGIN + PORTRAIT_SIZE / 2,
-      statusContentTop + PORTRAIT_SIZE / 2,
-      DEFAULT_SKIN,
-      portraitScale
-    );
-    this.add(this.portrait);
-    this.nameText = scene.add
-      .text(MARGIN, statusContentTop - 14, "", {
-        fontSize: "18px",
-        color: "#ffffff"
-      })
-      .setOrigin(0, 0);
-    this.add(this.nameText);
     const barX = MARGIN * 2 + PORTRAIT_SIZE;
-    this.healthLabel = scene.add
-      .text(barX, statusContentTop - 14, "Health", {
-        fontSize: "14px",
-        color: "#a0b7ff"
-      })
-      .setOrigin(0, 0);
-    this.add(this.healthLabel);
-    this.healthBar = new ProgressBar(scene, barX, statusContentTop, {
-      width: this.barWidth,
-      height: BAR_HEIGHT,
-      trackColor: 0x25304c,
-      barColor: THEME.colors.healthAccent
+    this.statusView = new CharacterPanelStatusView(scene, this, {
+      margin: MARGIN,
+      portraitSize: PORTRAIT_SIZE,
+      barWidth: width - (PORTRAIT_SIZE + MARGIN * 3),
+      contentTop: statusContentTop,
+      barHeight: BAR_HEIGHT
     });
-    this.add(this.healthBar);
-    this.energyLabel = scene.add
-      .text(barX, statusContentTop + 32, t("Energy"), {
-        fontSize: "14px",
-        color: "#a0b7ff"
-      })
-      .setOrigin(0, 0);
-    this.add(this.energyLabel);
-    this.energyBar = new ProgressBar(scene, barX, statusContentTop + 46, {
-      width: this.barWidth,
-      height: BAR_HEIGHT,
-      trackColor: 0x25304c,
-      barColor: THEME.colors.energyAccent
-    });
-    this.add(this.energyBar);
     const readyY = statusContentTop + 80;
     this.readyToggle = scene.add
       .text(barX, readyY, "[ ] Ready", {
@@ -1409,43 +1350,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     );
     this.scrollContent.add(this.extraSecondaryChemicalTargetToggle);
     this.updateScrollLayout();
-    const itemsBoxY = contentTop;
-    const itemsBoxHeight = Math.max(
-      BOX_HEIGHT * 2,
-      height - itemsBoxY - MARGIN
-    );
-    const itemsBoxWidth = boxWidth;
-    this.itemsBackground = scene.add
-      .rectangle(MARGIN, itemsBoxY, itemsBoxWidth, itemsBoxHeight, 0x1b2440)
-      .setOrigin(0, 0)
-      .setVisible(false);
-    this.itemsBackground.setStrokeStyle?.(1, 0x253055, 0.8);
-    this.add(this.itemsBackground);
-    this.itemsTitle = scene.add
-      .text(MARGIN + 12, itemsBoxY + 12, "Inventory", {
-        fontSize: "16px",
-        color: "#ffffff"
-      })
-      .setOrigin(0, 0)
-      .setVisible(false);
-    this.add(this.itemsTitle);
-    this.inventoryGrid = new InventoryGrid(
-      scene,
-      MARGIN + 12,
-      itemsBoxY + 48,
-      itemsBoxWidth - 24,
-      Math.max(0, itemsBoxHeight - 60),
-      { columns: 2, iconSize: 32 }
-    );
-    this.inventoryGrid.setVisible(false);
-    this.inventoryGrid.setActive(false);
-    this.add(this.inventoryGrid);
-    this.inventoryGrid.setItems([]);
-    this.itemsElements = [
-      this.itemsBackground,
-      this.itemsTitle,
-      this.inventoryGrid
-    ];
+    this.inventoryView = new CharacterPanelInventoryView(scene, this, {
+      margin: MARGIN,
+      contentTop,
+      boxWidth,
+      panelHeight: height
+    });
+    this.itemsElements = this.inventoryView.getElements();
     this.shopView = new CharacterPanelShopView(scene, this, {
       margin: MARGIN,
       contentTop,
@@ -1546,7 +1457,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       onPlay: (turn) => {
         this.emit("log-play-manual", turn);
       },
-      formatActionName: (id) => this.formatActionName(id),
+      formatActionName: (id) => formatActionLabel(id),
       onElimination: this.handleLogElimination
     });
     this.logView.handleVisibilityChange({ visible: false, forceEnsure: false });
@@ -1588,12 +1499,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.emit("apply-skills", skillIds);
     });
     this.statusElements = [
-      this.portrait,
-      this.nameText,
-      this.healthLabel,
-      this.energyLabel,
-      this.healthBar,
-      this.energyBar,
+      ...this.statusView.getElements(),
       this.readyToggle
     ];
     if (this.scrollPanel) {
@@ -1615,11 +1521,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.hideCharacterTabContents();
       },
       onItemsTabShow: () => {
-        this.inventoryGrid.setActive(true);
-        this.inventoryGrid.refreshLayout();
+        this.inventoryView.setActive(true);
       },
       onItemsTabHide: () => {
-        this.inventoryGrid.setActive(false);
+        this.inventoryView.setActive(false);
       },
       onShopTabShow: () => {
         this.shopView.setVisible(true);
@@ -1647,7 +1552,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.logView.handleVisibilityChange({ visible, forceEnsure });
       },
       onTabChange: (key, previous) => {
-        this.revealTab(key);
+        this.tabLayout.reveal(key);
         this.emit("tab-change", key, previous);
       },
       onLogTabOpened: () => {
@@ -1955,7 +1860,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.scrollPanel = null;
     this.scrollMask = null;
     this.scrollMaskShape = null;
-    this.disposePlayerOptionSkinIcons();
+    this.playerOptionSkinCache.dispose();
+    this.statusView.destroy();
+    this.inventoryView.destroy();
     super.destroy(fromScene);
   }
 
@@ -2122,7 +2029,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       active ? policy.highlightedTab : null
     );
     if (active && policy.highlightedTab) {
-      this.revealTab(policy.highlightedTab);
+      this.tabLayout.reveal(policy.highlightedTab);
     }
     const isHighlighted = (control: TutorialControlHighlight): boolean =>
       active && policy.highlightedControls.includes(control);
@@ -2192,157 +2099,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   setMobileTabNavigation(enabled: boolean): void {
-    const modeChanged = this.mobileTabNavigation !== enabled;
-    this.mobileTabNavigation = enabled;
-    if (!enabled) {
-      this.tabStartIndex = 0;
-      this.layoutTabs(this.panelWidth);
-      return;
-    }
-    if (modeChanged) {
-      this.tabStartIndex = 0;
-      const activeKey = this.tabsController?.getActiveTab();
-      if (activeKey) {
-        this.revealTab(activeKey);
-        return;
-      }
-    }
-    this.layoutTabs(this.panelWidth);
-  }
-
-  private getMobileVisibleTabCount(width: number): number {
-    if (width >= this.tabs.length * MOBILE_TAB_MIN_WIDTH) {
-      return this.tabs.length;
-    }
-    const availableWidth = Math.max(1, width - TAB_ARROW_WIDTH * 2);
-    return Math.max(
-      1,
-      Math.min(
-        this.tabs.length,
-        Math.floor(availableWidth / MOBILE_TAB_MIN_WIDTH)
-      )
-    );
-  }
-
-  private revealTab(key: TabKey): void {
-    if (!this.mobileTabNavigation) {
-      return;
-    }
-    const tabIndex = this.tabs.findIndex((tab) => tab.key === key);
-    const visibleCount = this.getMobileVisibleTabCount(this.panelWidth);
-    if (tabIndex < 0 || visibleCount >= this.tabs.length) {
-      this.tabStartIndex = 0;
-      this.layoutTabs(this.panelWidth);
-      return;
-    }
-    if (tabIndex < this.tabStartIndex) {
-      this.tabStartIndex = tabIndex;
-    } else if (tabIndex >= this.tabStartIndex + visibleCount) {
-      this.tabStartIndex = tabIndex - visibleCount + 1;
-    }
-    this.layoutTabs(this.panelWidth);
-  }
-
-  private moveTabWindow(delta: number): void {
-    if (!this.mobileTabNavigation) {
-      return;
-    }
-    const visibleCount = this.getMobileVisibleTabCount(this.panelWidth);
-    if (visibleCount >= this.tabs.length) {
-      return;
-    }
-    const maxStart = this.tabs.length - visibleCount;
-    this.tabStartIndex = Math.max(
-      0,
-      Math.min(maxStart, this.tabStartIndex + delta)
-    );
-    this.layoutTabs(this.panelWidth);
-  }
-
-  private layoutTabs(width: number): void {
-    const compact =
-      this.mobileTabNavigation &&
-      this.getMobileVisibleTabCount(width) < this.tabs.length;
-    const visibleCount = compact
-      ? this.getMobileVisibleTabCount(width)
-      : this.tabs.length;
-    const tabAreaWidth = compact ? Math.max(1, width - TAB_ARROW_WIDTH * 2) : width;
-    const tabWidth = tabAreaWidth / Math.max(1, visibleCount);
-
-    if (!compact) {
-      this.tabStartIndex = 0;
-    } else {
-      this.tabStartIndex = Math.max(
-        0,
-        Math.min(this.tabs.length - visibleCount, this.tabStartIndex)
-      );
-    }
-
-    this.tabs.forEach((tab, index) => {
-      const visible =
-        !compact ||
-        (index >= this.tabStartIndex &&
-          index < this.tabStartIndex + visibleCount);
-      if (!visible) {
-        tab.rect.setVisible(false).disableInteractive();
-        tab.text.setVisible(false).disableInteractive();
-        tab.badge?.setVisible(false);
-        return;
-      }
-      const displayIndex = compact ? index - this.tabStartIndex : index;
-      const tabX = (compact ? TAB_ARROW_WIDTH : 0) + displayIndex * tabWidth;
-      tab.rect
-        .setPosition(tabX, 0)
-        .setSize(tabWidth, TAB_HEIGHT)
-        .setVisible(true)
-        .setInteractive({ useHandCursor: true });
-      tab.text
-        .setPosition(tabX + tabWidth / 2, TAB_HEIGHT / 2)
-        .setVisible(true)
-        .setInteractive({ useHandCursor: true });
-      tab.badge
-        ?.setPosition(tabX + tabWidth - 10, 6)
-        .setVisible(this.tabsController?.isTabUnread(tab.key) ?? false);
-    });
-
-    const showArrows = compact;
-    this.tabPreviousButton.setVisible(showArrows);
-    this.tabPreviousText.setVisible(showArrows);
-    this.tabNextButton.setVisible(showArrows);
-    this.tabNextText.setVisible(showArrows);
-    if (!showArrows) {
-      this.tabPreviousButton.disableInteractive();
-      this.tabPreviousText.disableInteractive();
-      this.tabNextButton.disableInteractive();
-      this.tabNextText.disableInteractive();
-      return;
-    }
-
-    const canMovePrevious = this.tabStartIndex > 0;
-    const canMoveNext = this.tabStartIndex + visibleCount < this.tabs.length;
-    this.tabPreviousButton.setPosition(0, 0).setAlpha(canMovePrevious ? 1 : 0.35);
-    this.tabPreviousText
-      .setPosition(TAB_ARROW_WIDTH / 2, TAB_HEIGHT / 2)
-      .setAlpha(canMovePrevious ? 1 : 0.35);
-    this.tabNextButton
-      .setPosition(width - TAB_ARROW_WIDTH, 0)
-      .setAlpha(canMoveNext ? 1 : 0.35);
-    this.tabNextText
-      .setPosition(width - TAB_ARROW_WIDTH / 2, TAB_HEIGHT / 2)
-      .setAlpha(canMoveNext ? 1 : 0.35);
-    if (canMovePrevious) {
-      this.tabPreviousButton.setInteractive({ useHandCursor: true });
-      this.tabPreviousText.setInteractive({ useHandCursor: true });
-    } else {
-      this.tabPreviousButton.disableInteractive();
-      this.tabPreviousText.disableInteractive();
-    }
-    if (canMoveNext) {
-      this.tabNextButton.setInteractive({ useHandCursor: true });
-      this.tabNextText.setInteractive({ useHandCursor: true });
-    } else {
-      this.tabNextButton.disableInteractive();
-      this.tabNextText.disableInteractive();
+    this.tabLayout.setMobileNavigation(enabled);
+    const activeKey = enabled ? this.tabsController?.getActiveTab() : null;
+    if (activeKey) {
+      this.tabLayout.reveal(activeKey);
     }
   }
 
@@ -2360,10 +2120,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   setPanelSize(width: number, height: number) {
     this.panelWidth = width;
     this.panelHeight = height;
-    this.barWidth = width - (PORTRAIT_SIZE + MARGIN * 3);
     this.setSize(width, height);
     this.background.setSize(width, height);
-    this.layoutTabs(width);
+    this.tabLayout.layout(width);
     const contentTop = TAB_HEIGHT + MARGIN;
     const subtabY = TAB_HEIGHT + 8;
     const subtabHeight = 28;
@@ -2378,16 +2137,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
     const statusContentTop = subtabBottom + 14;
     const barX = MARGIN * 2 + PORTRAIT_SIZE;
-    this.portrait.setPosition(
-      MARGIN + PORTRAIT_SIZE / 2,
-      statusContentTop + PORTRAIT_SIZE / 2
-    );
-    this.nameText.setPosition(MARGIN, statusContentTop - 14);
-    this.healthLabel.setPosition(barX, statusContentTop - 14);
-    this.healthBar.setPosition(barX, statusContentTop);
-    this.energyBar.setPosition(barX, statusContentTop + 46);
-    this.healthBar.resize(this.barWidth, BAR_HEIGHT);
-    this.energyBar.resize(this.barWidth, BAR_HEIGHT);
+    this.statusView.layout({
+      margin: MARGIN,
+      portraitSize: PORTRAIT_SIZE,
+      barWidth: width - (PORTRAIT_SIZE + MARGIN * 3),
+      contentTop: statusContentTop,
+      barHeight: BAR_HEIGHT
+    });
     if (this.readyToggle) {
       this.readyToggle.setPosition(barX, statusContentTop + 80);
       if (this.unspentSkillsWarning) {
@@ -2431,19 +2187,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const boxWidth = width - MARGIN * 2;
     const itemsBoxY = contentTop;
     const itemsBoxWidth = boxWidth;
-    const itemsBoxHeight = Math.max(
-      BOX_HEIGHT * 2,
-      height - itemsBoxY - MARGIN
-    );
-    this.itemsBackground.setPosition(MARGIN, itemsBoxY);
-    this.itemsBackground.setSize(itemsBoxWidth, itemsBoxHeight);
-    this.itemsBackground.setDisplaySize(itemsBoxWidth, itemsBoxHeight);
-    this.itemsTitle.setPosition(MARGIN + 12, itemsBoxY + 12);
-    this.inventoryGrid.setPosition(MARGIN + 12, itemsBoxY + 48);
-    this.inventoryGrid.setDimensions(
-      itemsBoxWidth - 24,
-      Math.max(0, itemsBoxHeight - 60)
-    );
+    this.inventoryView.layout({
+      margin: MARGIN,
+      contentTop: itemsBoxY,
+      boxWidth: itemsBoxWidth,
+      panelHeight: height
+    });
     this.shopView.layout({
       margin: MARGIN,
       contentTop: itemsBoxY,
@@ -2506,12 +2255,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     return this.panelWidth;
   }
 
-  setCurrentPlayerSkin(skin: import("@shared").Skin) {
+  setCurrentPlayerSkin(skin: Skin) {
     this.currentPlayerSkin = skin;
-    this.portrait.updateSkin(skin, this.scene.textures);
+    this.statusView.setSkin(skin, this.scene.textures);
   }
 
-  setPlayerAccount(userId: string, account: import("@shared").UserAccount) {
+  setPlayerAccount(userId: string, account: UserAccount) {
     this.playerAccounts.set(userId, account);
     if (this.currentMatch) {
       this.updatePlayerOptions(
@@ -2605,10 +2354,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.currentCharacter = character;
     this.skillsView?.update(character);
     if (!character) {
-      this.nameText.setText("No character");
-      this.useBarValue(this.healthBar, 0);
-      this.useBarValue(this.energyBar, 0);
-      this.energyLabel.setText(t("Energy"));
+      this.statusView.update(null, null);
       this.applyMainActions([], null, null);
       this.setMainActionTarget(null, false);
       this.setMainActionSecondTarget(null, false);
@@ -2660,38 +2406,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.refreshExtraSecondaryItemSelectorState();
       this.setReadyEnabled(false);
       this.setReadyState(false, false);
-      this.updateInventoryPanel(null);
+      this.inventoryView.update(null);
       this.updateScrollLayout();
       return;
     }
-    this.nameText.setText(playerName ?? character.name);
-    const health = character.stats.health;
-    const energy = character.stats.energy;
-
-    const upcomingTemporary =
-      typeof energy.temporary === "number" && energy.temporary > 0
-        ? energy.temporary
-        : 0;
-    let energyLabel = `${t("Energy")} ${energy.current}/${energy.max}`;
-    const extraSegments: string[] = [];
-
-    if (upcomingTemporary > 0) {
-      extraSegments.push(`+${upcomingTemporary} extra`);
-    }
-    if (extraSegments.length > 0) {
-      energyLabel += ` (${extraSegments.join(", ")})`;
-    }
-    this.energyLabel.setText(energyLabel);
-    this.useBarValue(
-      this.healthBar,
-      health.max === 0 ? 0 : health.current / health.max
-    );
-    this.healthLabel.setText(`Health ${health.current}/${health.max}`);
-    this.useBarValue(
-      this.energyBar,
-      energy.max === 0 ? 0 : energy.current / energy.max
-    );
-    const actions = this.collectMainActions(character);
+    this.statusView.update(character, playerName);
+    const actions = collectMainActions(character);
     const mainActionId = character.actionPlan?.main?.actionId ?? null;
     const mainExtraExecutions =
       character.actionPlan?.main?.extraExecutions ?? 0;
@@ -2729,7 +2449,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.setMainActionPriorityItems(targetItems, false);
     this.setLocationSelectionPending(false);
     this.playerSelector.setPending(false);
-    const secondaryActions = this.collectSecondaryActions(character);
+    const secondaryActions = collectSecondaryActions(character);
     const hasExtraSecondary = this.hasExtraSecondaryAction();
     const secondaryId = character.actionPlan?.secondary?.actionId ?? null;
     let extraSecondaryId =
@@ -2887,137 +2607,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       character.actionPlan?.extraSecondary?.prioritizeFoodDrink === true,
       character.actionPlan?.extraSecondary?.sellInstead === true
     );
-    this.updateInventoryPanel(character);
+    this.inventoryView.update(character);
     this.updateScrollLayout();
-  }
-
-  private useBarValue(bar: ProgressBar, ratio: number) {
-    const clamped = Phaser.Math.Clamp(ratio, 0, 1);
-    bar.setValue(clamped);
-  }
-
-  private updateInventoryPanel(character: PlayerCharacter | null) {
-    if (!this.itemsTitle || !this.inventoryGrid) {
-      return;
-    }
-    if (!character) {
-      this.itemsTitle.setText("Inventory");
-      this.inventoryGrid.setItems([]);
-      this.inventoryGrid.refreshLayout();
-      return;
-    }
-    const load = character.stats?.load;
-    if (load) {
-      const current = this.normalizeWeight(load.current);
-      const max = this.normalizeWeight(load.max);
-      this.itemsTitle.setText(`Inventory (Load ${current}/${max})`);
-    } else {
-      this.itemsTitle.setText("Inventory");
-    }
-    const carried = Array.isArray(character.inventory?.carriedItems)
-      ? character.inventory.carriedItems
-      : [];
-    const items = this.buildInventoryItems(
-      carried,
-      character.economy?.zarkans ?? 0
-    );
-    this.inventoryGrid.setItems(items);
-    this.inventoryGrid.refreshLayout();
-  }
-
-  private buildInventoryItems(
-    stacks: Array<{ itemId?: string; quantity?: number; weight?: number }>,
-    walletZarkans = 0
-  ): InventoryGridItem[] {
-    const aggregated = new Map<
-      string,
-      { quantity: number; totalWeight: number }
-    >();
-    for (const stack of stacks) {
-      if (!stack || typeof stack.itemId !== "string") {
-        continue;
-      }
-      const id = stack.itemId;
-      const quantity = this.normalizeQuantity(stack.quantity);
-      const weight = this.normalizeWeightRaw(stack.weight);
-      const entry = aggregated.get(id) ?? { quantity: 0, totalWeight: 0 };
-      entry.quantity += quantity;
-      entry.totalWeight += weight;
-      aggregated.set(id, entry);
-    }
-    const walletQuantity = this.normalizeQuantity(walletZarkans);
-    if (walletQuantity > 0) {
-      const zarkanEntry = aggregated.get("zarkans") ?? {
-        quantity: 0,
-        totalWeight: 0,
-      };
-      zarkanEntry.quantity += walletQuantity;
-      aggregated.set("zarkans", zarkanEntry);
-    }
-    const items: InventoryGridItem[] = [];
-    for (const [itemId, entry] of aggregated) {
-      const definition = this.resolveItemDefinition(itemId);
-      const quantity = entry.quantity;
-      const totalWeightRaw = entry.totalWeight;
-      const fallbackPerWeight = definition?.weight ?? 0;
-      const computedWeight =
-        totalWeightRaw > 0 ? totalWeightRaw : quantity * fallbackPerWeight;
-      const perItemWeight =
-        fallbackPerWeight > 0
-          ? fallbackPerWeight
-          : quantity > 0
-            ? computedWeight / quantity
-            : 0;
-      if (quantity <= 0 && computedWeight <= 0) {
-        continue;
-      }
-      const normalizedTotalWeight = this.normalizeWeight(computedWeight);
-      const normalizedPerItem = this.normalizeWeight(perItemWeight);
-      const textureInfo = definition
-        ? resolveItemTexture(definition)
-        : { texture: "hex", frame: "grass_01.png" as const };
-      items.push({
-        id: definition?.id ?? itemId,
-        name: definition?.name ?? this.formatActionName(itemId),
-        category: definition?.category ?? undefined,
-        description:
-          definition?.description ?? "Description not available yet.",
-        notes: definition?.notes ?? undefined,
-        quantity,
-        totalWeight: normalizedTotalWeight,
-        weightPerItem: normalizedPerItem,
-        texture: textureInfo.texture,
-        frame: textureInfo.frame
-      });
-    }
-    items.sort((a, b) => a.name.localeCompare(b.name));
-    return items;
-  }
-
-  private resolveItemDefinition(itemId: string): ItemDefinition | null {
-    const candidate = ItemLibrary[itemId as ItemId];
-    return candidate ?? null;
-  }
-
-  private normalizeQuantity(value: number | null | undefined): number {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-      return 0;
-    }
-    return Math.max(0, Math.floor(value));
-  }
-
-  private normalizeWeight(value: number | null | undefined): number {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-      return 0;
-    }
-    return Math.max(0, Math.round(value * 100) / 100);
-  }
-
-  private normalizeWeightRaw(value: number | null | undefined): number {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-      return 0;
-    }
-    return Math.max(0, value);
   }
 
   setReadyState(ready: boolean, emit = false): boolean {
@@ -3157,16 +2748,27 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
   }
 
+  private getActionOptionsContext(
+    character: PlayerCharacter | null = this.getCurrentCharacter()
+  ): CharacterPanelActionOptionsContext {
+    return {
+      character,
+      match: this.currentMatch,
+      currentTurn: this.currentTurn,
+      allowedMainActionIds: this.tutorialAllowedMainActionIds,
+      allowedSecondaryActionIds: this.tutorialAllowedSecondaryActionIds
+    };
+  }
+
   private applyMainActions(
     actions: ActionId[],
     preferredId: string | null,
     character: PlayerCharacter | null,
     storedExtraExecutions = 0
   ) {
-    const items = this.buildMainActionItems(
+    const items = buildMainActionItems(
       actions,
-      character,
-      this.currentTurn
+      this.getActionOptionsContext(character)
     );
     this.mainActionDropdown.setItems(items);
     this.mainActionDropdown.setEnabled(
@@ -3203,10 +2805,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     storedExtraExecutions = 0,
     disabledActionId: string | null = null
   ) {
-    const items = this.buildSecondaryActionItems(
+    const items = buildSecondaryActionItems(
       actions,
-      character,
-      this.currentTurn,
+      this.getActionOptionsContext(character),
       disabledActionId,
       "Already chosen as extra secondary action"
     );
@@ -3257,10 +2858,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.extraSecondaryActionLabel.setVisible(available);
     this.extraSecondaryActionDropdown.setVisible(available);
     this.extraSecondaryActionDropdown.setActive(available);
-    const items = this.buildSecondaryActionItems(
+    const items = buildSecondaryActionItems(
       actions,
-      character,
-      this.currentTurn,
+      this.getActionOptionsContext(character),
       available ? disabledActionId : null,
       "Already chosen as secondary action"
     );
@@ -3295,14 +2895,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private refreshSecondaryDropdownItems() {
     const character = this.getCurrentCharacter();
-    const actions = this.collectSecondaryActions(character);
+    const actions = collectSecondaryActions(character);
     const disabledId = this.hasExtraSecondaryAction()
       ? this.extraSecondaryActionSelection
       : null;
-    const items = this.buildSecondaryActionItems(
+    const items = buildSecondaryActionItems(
       actions,
-      character,
-      this.currentTurn,
+      this.getActionOptionsContext(character),
       disabledId,
       "Already chosen as extra secondary action"
     );
@@ -3316,210 +2915,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       return;
     }
     const character = this.getCurrentCharacter();
-    const actions = this.collectSecondaryActions(character);
-    const items = this.buildSecondaryActionItems(
+    const actions = collectSecondaryActions(character);
+    const items = buildSecondaryActionItems(
       actions,
-      character,
-      this.currentTurn,
+      this.getActionOptionsContext(character),
       this.secondaryActionSelection,
       "Already chosen as secondary action"
     );
     this.extraSecondaryActionDropdown.setItems(items);
     this.lastExtraSecondaryActionItem =
       this.extraSecondaryActionDropdown.getSelectedItem() ?? null;
-  }
-
-  private collectMainActions(character: PlayerCharacter) {
-    const set = new Set<ActionId>();
-    const plan = character.actionPlan;
-    if (plan?.main?.actionId) set.add(plan.main.actionId as ActionId);
-    if (plan?.nextMain?.actionId) set.add(plan.nextMain.actionId as ActionId);
-    return Array.from(set);
-  }
-
-  private collectSecondaryActions(character: PlayerCharacter | null) {
-    if (!character) {
-      return [];
-    }
-    const set = new Set<ActionId>();
-    const plan = character.actionPlan;
-    if (plan?.secondary?.actionId) set.add(plan.secondary.actionId as ActionId);
-    if (plan?.extraSecondary?.actionId)
-      set.add(plan.extraSecondary.actionId as ActionId);
-    return Array.from(set);
-  }
-
-  private buildMainActionItems(
-    actionIds: ActionId[],
-    character: PlayerCharacter | null,
-    currentTurn: number
-  ): GridSelectItem[] {
-    const cooldowns = this.buildActionCooldownMap(character, currentTurn);
-    const baseList: ActionId[] = PRIMARY_ACTION_IDS.filter(
-      (id) =>
-        this.tutorialAllowedMainActionIds === null ||
-        this.tutorialAllowedMainActionIds.has(id)
-    );
-    const availableActions = actionIds.filter(
-      (id) =>
-        this.tutorialAllowedMainActionIds === null ||
-        this.tutorialAllowedMainActionIds.has(id)
-    );
-    const sourceIds =
-      availableActions.length > 0
-        ? Array.from(new Set([...availableActions, ...baseList]))
-        : baseList;
-    const seen = new Set<string>();
-    const items: GridSelectItem[] = [];
-    for (const id of sourceIds) {
-      if (seen.has(id)) {
-        continue;
-      }
-      seen.add(id);
-      const remaining = cooldowns.get(id) ?? 0;
-      items.push(
-        this.resolveActionMetadata(id, remaining, false, undefined, character)
-      );
-    }
-    return items;
-  }
-
-  private buildSecondaryActionItems(
-    actionIds: ActionId[],
-    character: PlayerCharacter | null,
-    currentTurn: number,
-    disabledActionId?: string | null,
-    disabledReason?: string
-  ): GridSelectItem[] {
-    const cooldowns = this.buildActionCooldownMap(character, currentTurn);
-    const baseList: ActionId[] = SECONDARY_ACTION_IDS.filter(
-      (id) =>
-        this.tutorialAllowedSecondaryActionIds === null ||
-        this.tutorialAllowedSecondaryActionIds.has(id)
-    );
-    const availableActions = actionIds.filter(
-      (id) =>
-        this.tutorialAllowedSecondaryActionIds === null ||
-        this.tutorialAllowedSecondaryActionIds.has(id)
-    );
-    const sourceIds =
-      availableActions.length > 0
-        ? Array.from(new Set([...availableActions, ...baseList]))
-        : baseList;
-    const seen = new Set<string>();
-    const items: GridSelectItem[] = [];
-    for (const id of sourceIds) {
-      if (seen.has(id)) {
-        continue;
-      }
-      seen.add(id);
-      const remaining = cooldowns.get(id) ?? 0;
-      const isBlockedByOtherSlot = Boolean(
-        disabledActionId && id === disabledActionId
-      );
-      items.push(
-        this.resolveActionMetadata(
-          id,
-          remaining,
-          isBlockedByOtherSlot,
-          disabledReason,
-          character
-        )
-      );
-    }
-    return items;
-  }
-
-  private buildActionCooldownMap(
-    character: PlayerCharacter | null,
-    currentTurn: number
-  ): Map<string, number> {
-    const map = new Map<string, number>();
-    if (!character?.statuses?.cooldowns) {
-      return map;
-    }
-    for (const entry of character.statuses.cooldowns) {
-      if (!entry || typeof entry.actionId !== "string") {
-        continue;
-      }
-      const availableOnTurn =
-        typeof entry.availableOnTurn === "number"
-          ? entry.availableOnTurn
-          : currentTurn + 1 + Math.max(0, entry.remainingTurns);
-      const remaining = Math.max(
-        0,
-        Math.ceil(availableOnTurn - (currentTurn + 1))
-      );
-      if (remaining > 0) {
-        const current = map.get(entry.actionId) ?? 0;
-        map.set(entry.actionId, Math.max(current, remaining));
-      }
-    }
-    return map;
-  }
-
-  private resolveActionMetadata(
-    actionId: ActionId | string,
-    cooldownRemaining: number,
-    disabledByOtherSlot = false,
-    disabledReason?: string,
-    character: PlayerCharacter | null = null
-  ): GridSelectItem {
-    const normalizedRemaining = Math.max(0, Math.ceil(cooldownRemaining));
-    let isDisabled = normalizedRemaining > 0 || disabledByOtherSlot;
-    const definition = ActionLibrary[actionId as ActionId] ?? null;
-    if (definition) {
-      const { texture, frame } = this.resolveActionTexture(definition);
-      const developed = definition.developed === true;
-      if (!developed) {
-        isDisabled = true;
-      }
-      const descriptionBase = this.describeAction(definition);
-      let description = developed
-        ? descriptionBase
-        : `${descriptionBase}\n\n(${t("Not available in this build.")})`;
-      if (disabledByOtherSlot && disabledReason) {
-        description = `${description}\n\n(${disabledReason}.)`;
-      }
-      const targetCharacter = character ?? this.getCurrentCharacter();
-      const discount = targetCharacter
-        ? getActionEnergyDiscount(targetCharacter, definition.id)
-        : 0;
-      const effectiveEnergyCost = Math.max(0, definition.energyCost - discount);
-      const missingRequirement = developed
-        ? getMissingRequirement(
-            definition,
-            targetCharacter,
-            this.currentMatch?.map
-          )
-        : null;
-      return {
-        id: definition.id,
-        name: definition.name,
-        description,
-        texture,
-        frame,
-        tags: definition.tags,
-        energyCost: effectiveEnergyCost,
-        cooldownRemaining: normalizedRemaining,
-        missingRequirement,
-        disabled: isDisabled
-      };
-    }
-    const fallbackName = this.formatActionName(actionId);
-    let description = "Description coming soon.";
-    if (disabledByOtherSlot && disabledReason) {
-      description = `${description}\n\n(${disabledReason}.)`;
-    }
-    return {
-      id: actionId,
-      name: fallbackName,
-      description,
-      texture: "hex",
-      frame: "grass_01.png",
-      cooldownRemaining: normalizedRemaining,
-      disabled: isDisabled
-    };
   }
 
   private getCurrentCharacter(): PlayerCharacter | null {
@@ -4139,161 +3544,53 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.updateScrollLayout();
   }
 
-  private updateScrollLayout() {
-    if (!this.scrollPanel) {
-      return;
-    }
-    const width = this.scrollContentWidth;
-    if (width <= 0) {
-      return;
-    }
-    const horizontalPadding = 12;
-    let cursorY = 0;
-    const layoutActionBlock = (
-      box: Phaser.GameObjects.Rectangle,
-      label: Phaser.GameObjects.Text,
-      dropdown: GridSelect,
-      extraExecutionSelector: ExtraExecutionSelector | null,
-      locationSelector: LocationSelector,
-      secondLocationSelector: LocationSelector | null,
-      playerSelector: PlayerSelector,
-      itemSelector: ItemPrioritySelector,
-      searchPriorityToggle: Phaser.GameObjects.Text | null,
-      chemicalTargetToggle?: Phaser.GameObjects.Text | null,
-      dropSellToggle?: Phaser.GameObjects.Text | null,
-      additionalPlayerSelector: PlayerSelector | null = null,
-      additionalTargetToggle: Phaser.GameObjects.Text | null = null
-    ) => {
-      box.setPosition(0, cursorY);
-      box.setSize(width, BOX_HEIGHT);
-      box.setDisplaySize(width, BOX_HEIGHT);
-      label.setPosition(horizontalPadding, cursorY + 12);
-      dropdown.setPosition(horizontalPadding, cursorY + 48);
-      dropdown.setDisplayWidth(width - horizontalPadding * 2);
-      let innerCursor = cursorY + 48 + dropdown.height + 12;
-      if (extraExecutionSelector) {
-        extraExecutionSelector.setSelectorWidth(width - horizontalPadding * 2);
-        extraExecutionSelector.setPosition(horizontalPadding, innerCursor);
-        if (extraExecutionSelector.visible) {
-          innerCursor += extraExecutionSelector.height + 8;
-        }
-      }
-      locationSelector.setSelectorWidth(width - horizontalPadding * 2);
-      locationSelector.setPosition(horizontalPadding, innerCursor);
-      if (locationSelector.visible) {
-        innerCursor += locationSelector.height + 8;
-      }
-      if (secondLocationSelector) {
-        secondLocationSelector.setSelectorWidth(width - horizontalPadding * 2);
-        secondLocationSelector.setPosition(horizontalPadding, innerCursor);
-        if (secondLocationSelector.visible) {
-          innerCursor += secondLocationSelector.height + 8;
-        }
-      }
-      if (chemicalTargetToggle) {
-        chemicalTargetToggle.setPosition(horizontalPadding, innerCursor);
-        if (chemicalTargetToggle.visible) {
-          innerCursor += chemicalTargetToggle.height + 8;
-        }
-      }
-      playerSelector.setSelectorWidth(width - horizontalPadding * 2);
-      playerSelector.setPosition(horizontalPadding, innerCursor);
-      if (playerSelector.visible) {
-        innerCursor += playerSelector.height + 8;
-      }
-      if (additionalTargetToggle) {
-        additionalTargetToggle.setPosition(horizontalPadding, innerCursor);
-        if (additionalTargetToggle.visible) {
-          innerCursor += additionalTargetToggle.height + 8;
-        }
-      }
-      if (additionalPlayerSelector) {
-        additionalPlayerSelector.setSelectorWidth(width - horizontalPadding * 2);
-        additionalPlayerSelector.setPosition(horizontalPadding, innerCursor);
-        if (additionalPlayerSelector.visible) {
-          innerCursor += additionalPlayerSelector.height + 8;
-        }
-      }
-      itemSelector.setSelectorWidth(width - horizontalPadding * 2);
-      itemSelector.setPosition(horizontalPadding, innerCursor);
-      if (itemSelector.visible) {
-        innerCursor += itemSelector.height + 8;
-      }
-      if (searchPriorityToggle) {
-        searchPriorityToggle.setPosition(horizontalPadding, innerCursor);
-        if (searchPriorityToggle.visible) {
-          innerCursor += searchPriorityToggle.height + 8;
-        }
-      }
-      if (dropSellToggle) {
-        dropSellToggle.setPosition(horizontalPadding, innerCursor);
-        if (dropSellToggle.visible) {
-          innerCursor += dropSellToggle.height + 8;
-        }
-      }
-      const blockHeight = Math.max(BOX_HEIGHT, innerCursor - cursorY + 16);
-      box.setSize(width, blockHeight);
-      box.setDisplaySize(width, blockHeight);
-      cursorY += blockHeight;
-    };
-
-    layoutActionBlock(
-      this.mainActionBox,
-      this.mainActionLabel,
-      this.mainActionDropdown,
-      this.extraExecutionSelector,
-      this.locationSelector,
-      this.secondLocationSelector,
-      this.playerSelector,
-      this.itemSelector,
-      null,
-      null,
-      null,
-      this.scareSecondPlayerSelector,
-      null
-    );
-    cursorY += 16;
-    layoutActionBlock(
-      this.secondaryActionBox,
-      this.secondaryActionLabel,
-      this.secondaryActionDropdown,
-      this.secondaryExtraExecutionSelector,
-      this.secondaryLocationSelector,
-      null,
-      this.secondaryPlayerSelector,
-      this.secondaryItemSelector,
-      this.secondarySearchPriorityToggle,
-      this.secondaryChemicalTargetToggle,
-      this.secondaryDropSellToggle,
-      this.secondaryInspectSecondPlayerSelector,
-      this.secondaryInspectAdditionalTargetToggle
-    );
-    cursorY += 16;
-    if (this.hasExtraSecondaryAction()) {
-      this.extraSecondaryActionBox.setVisible(true);
-      this.extraSecondaryActionLabel.setVisible(true);
-      layoutActionBlock(
-        this.extraSecondaryActionBox,
-        this.extraSecondaryActionLabel,
-        this.extraSecondaryActionDropdown,
-        this.extraSecondaryExtraExecutionSelector,
-        this.extraSecondaryLocationSelector,
-        null,
-        this.extraSecondaryPlayerSelector,
-        this.extraSecondaryItemSelector,
-        this.extraSecondarySearchPriorityToggle,
-        this.extraSecondaryChemicalTargetToggle,
-        this.extraSecondaryDropSellToggle
-      );
-      cursorY += 16;
-    } else {
-      this.extraSecondaryActionBox.setVisible(false);
-      this.extraSecondaryActionLabel.setVisible(false);
-      this.extraSecondaryActionDropdown.setVisible(false);
-    }
-    this.scrollContent.setPosition(0, 0);
-    this.scrollContent.setSize(width, cursorY);
-    this.scrollPanel.layout?.();
+  private updateScrollLayout(): void {
+    layoutActionPlan({
+      width: this.scrollContentWidth,
+      scrollContent: this.scrollContent,
+      scrollPanel: this.scrollPanel,
+      main: {
+        box: this.mainActionBox,
+        label: this.mainActionLabel,
+        dropdown: this.mainActionDropdown,
+        extraExecutionSelector: this.extraExecutionSelector,
+        locationSelector: this.locationSelector,
+        secondLocationSelector: this.secondLocationSelector,
+        playerSelector: this.playerSelector,
+        itemSelector: this.itemSelector,
+        searchPriorityToggle: null,
+        additionalPlayerSelector: this.scareSecondPlayerSelector
+      },
+      secondary: {
+        box: this.secondaryActionBox,
+        label: this.secondaryActionLabel,
+        dropdown: this.secondaryActionDropdown,
+        extraExecutionSelector: this.secondaryExtraExecutionSelector,
+        locationSelector: this.secondaryLocationSelector,
+        secondLocationSelector: null,
+        playerSelector: this.secondaryPlayerSelector,
+        itemSelector: this.secondaryItemSelector,
+        searchPriorityToggle: this.secondarySearchPriorityToggle,
+        chemicalTargetToggle: this.secondaryChemicalTargetToggle,
+        dropSellToggle: this.secondaryDropSellToggle,
+        additionalPlayerSelector: this.secondaryInspectSecondPlayerSelector,
+        additionalTargetToggle: this.secondaryInspectAdditionalTargetToggle
+      },
+      extraSecondary: {
+        box: this.extraSecondaryActionBox,
+        label: this.extraSecondaryActionLabel,
+        dropdown: this.extraSecondaryActionDropdown,
+        extraExecutionSelector: this.extraSecondaryExtraExecutionSelector,
+        locationSelector: this.extraSecondaryLocationSelector,
+        secondLocationSelector: null,
+        playerSelector: this.extraSecondaryPlayerSelector,
+        itemSelector: this.extraSecondaryItemSelector,
+        searchPriorityToggle: this.extraSecondarySearchPriorityToggle,
+        chemicalTargetToggle: this.extraSecondaryChemicalTargetToggle,
+        dropSellToggle: this.extraSecondaryDropSellToggle
+      },
+      hasExtraSecondary: this.hasExtraSecondaryAction()
+    });
   }
 
   private setMainActionTargetPlayer(
@@ -4468,75 +3765,23 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     usernames: Record<string, string>,
     currentUserId: string | null
   ) {
-    const options: PlayerOption[] = [];
-    const viewerCharacter = currentUserId
-      ? match?.playerCharacters?.[currentUserId]
-      : undefined;
-    const viewerTeamId =
-      viewerCharacter?.secretTeamId?.trim() ||
-      viewerCharacter?.teamId?.trim() ||
-      undefined;
-    const confirmedTeammates = new Set(
-      viewerCharacter?.relationships?.confirmedTeammates ?? []
-    );
-    if (match) {
-      const seen = new Set<string>();
-      const pushOption = (id: string | null | undefined) => {
-        if (!id || seen.has(id)) {
-          return;
-        }
-        seen.add(id);
-        const character = match.playerCharacters?.[id] ?? null;
-        const account = this.playerAccounts.get(id) ?? null;
-        const accountDisplayName =
-          typeof account?.displayName === "string" &&
-          account.displayName.trim().length > 0
-            ? account.displayName.trim()
-            : null;
-        const baseName =
-          accountDisplayName ?? usernames[id] ?? character?.name ?? id;
-        const accountSkin = account?.cosmetics.selectedSkinId ?? null;
-        const displayName = baseName && baseName.length > 0 ? baseName : id;
-        const label =
-          currentUserId && id === currentUserId
-            ? `${displayName} (You)`
-            : displayName;
-        const revealedTeamId =
-          match.revealedTeamsByPlayerId?.[id]?.trim() ||
-          viewerCharacter?.revealedTeamIdsByPlayerId?.[id]?.trim();
-        const knownTeamId =
-          revealedTeamId || character?.teamId?.trim() || undefined;
-        const labelColor =
-          id === currentUserId ||
-          confirmedTeammates.has(id) ||
-          (viewerTeamId && knownTeamId && viewerTeamId === knownTeamId)
-            ? THEME.colors.healthRecover
-            : viewerTeamId && knownTeamId
-              ? THEME.colors.healthDamage
-              : THEME.colors.textPrimary;
-        const sprite = this.resolvePlayerSpriteInfo(
-          id,
-          character,
+    this.playerOptions = buildPlayerOptions(
+      match,
+      usernames,
+      currentUserId,
+      this.playerAccounts,
+      (playerId, accountSkin) =>
+        this.playerOptionSkinCache.resolve(
+          playerId,
           accountSkin,
+          currentUserId,
+          this.currentPlayerSkin,
           1
-        );
-        options.push({
-          id,
-          label,
-          labelColor,
-          name: displayName,
-          texture: sprite.texture,
-          frame: sprite.frame,
-          iconScale: sprite.iconScale
-        });
-      };
-      if (match.playerList) {
-        Object.keys(match.playerList).forEach((id) => pushOption(id));
-      }
-    }
-    this.playerOptions = options;
-    const activeIds = new Set(options.map((option) => option.id));
-    this.disposePlayerOptionSkinIcons(activeIds);
+        )
+    );
+    this.playerOptionSkinCache.retain(
+      new Set(this.playerOptions.map((option) => option.id))
+    );
     this.currentUserId = currentUserId ?? null;
     this.refreshPlayerOptionsForSelectors();
     this.refreshPlayerSelectorState();
@@ -4553,55 +3798,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private refreshPlayerOptionsForSelectors(): void {
-    const match = this.currentMatch;
-    const allowsDeadTarget = (actionId: string | null): boolean =>
-      actionId === "inspect";
-    const currentUserId = this.currentUserId;
-    const mainAllowsSelf = this.selectedActionCanTargetSelf();
-    const secondaryAllowsSelf = this.selectedSecondaryActionCanTargetSelf();
-    const extraSecondaryAllowsSelf =
-      this.selectedExtraSecondaryActionCanTargetSelf();
-    const buildOptions = (
-      actionId: string | null,
-      allowsSelf: boolean
-    ): PlayerOption[] => {
-      const options = this.playerOptions.filter((option) => {
-        if (match) {
-          const char = match.playerCharacters?.[option.id];
-          const isDead =
-            match.deadCharacters?.[option.id] === true ||
-            char?.statuses?.conditions?.includes("dead") ||
-            (typeof char?.stats?.health?.current === "number" &&
-              char.stats.health.current <= 0);
-          if (isDead && !allowsDeadTarget(actionId)) {
-            return false;
-          }
-        }
-        return allowsSelf || option.id !== currentUserId;
+    const { main: mainOptions, secondary: secondaryOptions, extraSecondary: extraSecondaryOptions } =
+      buildPlayerTargetOptionSets({
+        match: this.currentMatch,
+        playerOptions: this.playerOptions,
+        currentUserId: this.currentUserId,
+        mainActionId: this.mainActionSelection,
+        secondaryActionId: this.secondaryActionSelection,
+        extraSecondaryActionId: this.extraSecondaryActionSelection,
+        mainAllowsSelf: this.selectedActionCanTargetSelf(),
+        secondaryAllowsSelf: this.selectedSecondaryActionCanTargetSelf(),
+        extraSecondaryAllowsSelf:
+          this.selectedExtraSecondaryActionCanTargetSelf()
       });
-      options.sort((a, b) => {
-        const aVisible = match?.playerCharacters?.[a.id] !== undefined;
-        const bVisible = match?.playerCharacters?.[b.id] !== undefined;
-        return Number(!aVisible) - Number(!bVisible);
-      });
-      return options.map((option) => {
-        const isVisible = match?.playerCharacters?.[option.id] !== undefined;
-        return isVisible ? option : { ...option, warning: "Not visible" };
-      });
-    };
-
-    const mainOptions = buildOptions(
-      this.mainActionSelection,
-      mainAllowsSelf
-    );
-    const secondaryOptions = buildOptions(
-      this.secondaryActionSelection,
-      secondaryAllowsSelf
-    );
-    const extraSecondaryOptions = buildOptions(
-      this.extraSecondaryActionSelection,
-      extraSecondaryAllowsSelf
-    );
 
     this.mainPlayerOptions = mainOptions;
     this.secondaryPlayerOptions = secondaryOptions;
@@ -4789,126 +3998,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     match: MatchRecord | null,
     currentUserId: string | null
   ) {
-    const options: ItemPriorityOption[] = [];
-    const currentCharacter =
-      match && currentUserId
-        ? match.playerCharacters?.[currentUserId] ?? null
-        : null;
-    if (match && currentUserId) {
-      const character = match.playerCharacters?.[currentUserId] ?? null;
-      const tileId = character?.position?.tileId ?? null;
-      if (tileId) {
-        const tiles = Array.isArray(match.map?.tiles) ? match.map!.tiles : [];
-        const tile = tiles.find((entry) => entry && entry.id === tileId);
-        const matchItems = Array.isArray(match.items) ? match.items : [];
-        const lookup = new Map<string, (typeof matchItems)[number]>();
-        for (const record of matchItems) {
-          if (!record || typeof record.item_id !== "string") {
-            continue;
-          }
-          lookup.set(record.item_id, record);
-        }
-        const itemIds = Array.isArray(tile?.itemIds) ? tile!.itemIds : [];
-        for (const rawId of itemIds) {
-          if (typeof rawId !== "string" || rawId.length === 0) {
-            continue;
-          }
-          const record = lookup.get(rawId);
-          const itemType = record?.item_type;
-          if (itemType && ItemLibrary[itemType]?.canBePickedUp === false) {
-            continue;
-          }
-          let label = rawId;
-          let description: string | undefined;
-          let texture = "hex";
-          let frame: string | undefined = "grass_01.png";
-          let iconScale: number | undefined;
-          if (
-            itemType &&
-            (ItemLibrary as Record<string, ItemDefinition>)[itemType]
-          ) {
-            const definition =
-              ItemLibrary[itemType as keyof typeof ItemLibrary];
-            label = definition.name ?? label;
-            description = definition.description ?? description;
-            const visual = resolveItemTexture(definition);
-            texture = visual.texture;
-            frame = visual.frame;
-          }
-          options.push({
-            id: rawId,
-            label,
-            description,
-            texture,
-            frame,
-            iconScale
-          });
-        }
-      }
-    }
-    const inventoryOptions: ItemPriorityOption[] = [];
-    if (match && currentUserId) {
-      const character = match.playerCharacters?.[currentUserId] ?? null;
-      if (
-        character?.inventory &&
-        Array.isArray(character.inventory.carriedItems)
-      ) {
-        for (const stack of character.inventory.carriedItems) {
-          if (
-            !stack ||
-            typeof stack.itemId !== "string" ||
-            stack.quantity <= 0
-          ) {
-            continue;
-          }
-          const itemType = stack.itemId as ItemId;
-          const definition = ItemLibrary[itemType] as
-            | ItemDefinition
-            | undefined;
-          const baseName = definition?.name ?? itemType;
-          const label =
-            stack.quantity > 1
-              ? `${baseName} (x${stack.quantity})`
-              : baseName;
-          const description = definition?.description;
-          let texture = "hex";
-          let frame: string | undefined = "grass_01.png";
-          let iconScale: number | undefined;
-          if (definition) {
-            const visual = resolveItemTexture(definition);
-            texture = visual.texture;
-            frame = visual.frame;
-          }
-          inventoryOptions.push({
-            id: itemType,
-            label,
-            description,
-            texture,
-            frame,
-            iconScale
-          });
-        }
-      }
-    }
-    const stealOptions: ItemPriorityOption[] = [];
-    if (currentCharacter?.abilities?.includes("dexterity2")) {
-      for (const definition of Object.values(ItemLibrary)) {
-        if (definition.canBeStolen === false) {
-          continue;
-        }
-        const visual = resolveItemTexture(definition);
-        stealOptions.push({
-          id: definition.id,
-          label: definition.name,
-          description: definition.description,
-          texture: visual.texture,
-          frame: visual.frame
-        });
-      }
-    }
-    this.inventoryItemOptions = inventoryOptions;
-    this.itemOptions = options;
-    this.stealItemOptions = stealOptions;
+    const options = buildCharacterPanelItemOptions(match, currentUserId);
+    this.inventoryItemOptions = options.inventoryItems;
+    this.itemOptions = options.groundItems;
+    this.stealItemOptions = options.stealItems;
     const normalizedMain = this.filterPriorityIds(
       this.mainActionPriorityItems,
       this.getMainActionItemOptions()
@@ -4950,89 +4043,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.refreshExtraSecondaryItemSelectorState();
   }
 
-  private resolvePlayerSpriteInfo(
-    playerId: string,
-    _character: PlayerCharacter | PlayerCharacterUnknown | null,
-    accountSkin: Skin | null,
-    scale: number
-  ) {
-    const skinForPlayer =
-      accountSkin ??
-      (this.currentUserId && playerId === this.currentUserId
-        ? (this.currentPlayerSkin ?? DEFAULT_SKIN)
-        : DEFAULT_SKIN);
-    const signature = this.skinSignature(skinForPlayer);
-    const existing = this.playerOptionSkinIcons.get(playerId);
-    if (
-      existing &&
-      existing.signature === signature &&
-      this.scene.textures.exists(existing.textureKey)
-    ) {
-      return {
-        texture: existing.textureKey,
-        frame: undefined,
-        iconScale: scale
-      };
-    }
-
-    if (existing) {
-      if (this.scene.textures.exists(existing.textureKey)) {
-        this.scene.textures.remove(existing.textureKey);
-      }
-      this.playerOptionSkinIcons.delete(playerId);
-    }
-
-    const textureKey = `player-option-skin-${playerId}`;
-    const created = this.createPlayerOptionSkinTexture(
-      textureKey,
-      skinForPlayer
-    );
-    if (created) {
-      this.playerOptionSkinIcons.set(playerId, { textureKey, signature });
-      return { texture: textureKey, frame: undefined, iconScale: scale };
-    }
-
-    return { texture: "char", frame: DEFAULT_SKIN.body, iconScale: scale };
-  }
-
-  private createPlayerOptionSkinTexture(
-    textureKey: string,
-    skin: Skin
-  ): boolean {
-    if (this.scene.textures.exists(textureKey)) {
-      this.scene.textures.remove(textureKey);
-    }
-    const sprite = createSkinContainer(this.scene, 0, 0, skin, 1);
-    const rt = this.scene.make.renderTexture({ width: 16, height: 16 }, false);
-    if (!rt) {
-      sprite.destroy(true);
-      return false;
-    }
-    rt.draw(sprite, 8, 8);
-    rt.saveTexture(textureKey);
-    rt.destroy();
-    sprite.destroy(true);
-    return this.scene.textures.exists(textureKey);
-  }
-
-  private skinSignature(skin: Skin): string {
-    return [skin.body, skin.shoes, skin.shirt, skin.hair, skin.hat].join("|");
-  }
-
-  private disposePlayerOptionSkinIcons(activeIds?: Set<string>): void {
-    for (const [playerId, cached] of this.playerOptionSkinIcons) {
-      if (activeIds && activeIds.has(playerId)) {
-        continue;
-      }
-      if (this.scene.textures.exists(cached.textureKey)) {
-        this.scene.textures.remove(cached.textureKey);
-      }
-      this.playerOptionSkinIcons.delete(playerId);
-    }
-  }
-
   private selectedActionSupportsLocation() {
-    return this.lastMainActionItem?.tags?.includes("Ranged") ?? false;
+    return actionSupportsLocation(this.lastMainActionItem);
   }
 
   private selectedMainActionSupportsLocation(): boolean {
@@ -5055,14 +4067,15 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private selectedActionSupportsSingleTarget() {
-    return this.lastMainActionItem?.tags?.includes("SingleTarget") ?? false;
+    return actionSupportsSingleTarget(this.lastMainActionItem);
   }
 
   private selectedActionSupportsItemPriority() {
-    if (this.mainActionSelection === "steal") {
-      return this.hasDexterity2();
-    }
-    return this.lastMainActionItem?.tags?.includes("TargetItems") ?? false;
+    return actionSupportsTargetItems(
+      this.lastMainActionItem,
+      this.mainActionSelection,
+      this.hasDexterity2()
+    );
   }
 
   private hasDexterity2(): boolean {
@@ -5084,20 +4097,22 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private selectedSecondaryActionSupportsLocation() {
-    return this.lastSecondaryActionItem?.tags?.includes("Ranged") ?? false;
+    return actionSupportsLocation(this.lastSecondaryActionItem);
   }
 
   private selectedSecondaryActionSupportsSingleTarget() {
     if (this.secondaryActionSelection === "use_chemical_weapon") {
       return this.secondaryChemicalSingleTarget;
     }
-    return (
-      this.lastSecondaryActionItem?.tags?.includes("SingleTarget") ?? false
-    );
+    return actionSupportsSingleTarget(this.lastSecondaryActionItem);
   }
 
   private selectedSecondaryActionSupportsItemPriority() {
-    return this.lastSecondaryActionItem?.tags?.includes("TargetItems") ?? false;
+    return actionSupportsTargetItems(
+      this.lastSecondaryActionItem,
+      this.secondaryActionSelection,
+      false
+    );
   }
 
   private hasExtraSecondaryAction(): boolean {
@@ -5110,175 +4125,100 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   private selectedExtraSecondaryActionSupportsLocation() {
-    return this.lastExtraSecondaryActionItem?.tags?.includes("Ranged") ?? false;
+    return actionSupportsLocation(this.lastExtraSecondaryActionItem);
   }
 
   private selectedExtraSecondaryActionSupportsSingleTarget() {
     if (this.extraSecondaryActionSelection === "use_chemical_weapon") {
       return this.extraSecondaryChemicalSingleTarget;
     }
-    return (
-      this.lastExtraSecondaryActionItem?.tags?.includes("SingleTarget") ?? false
-    );
+    return actionSupportsSingleTarget(this.lastExtraSecondaryActionItem);
   }
 
   private selectedExtraSecondaryActionSupportsItemPriority() {
-    return (
-      this.lastExtraSecondaryActionItem?.tags?.includes("TargetItems") ?? false
+    return actionSupportsTargetItems(
+      this.lastExtraSecondaryActionItem,
+      this.extraSecondaryActionSelection,
+      false
     );
   }
 
   private selectedExtraSecondaryActionSupportsExtraExecution(): boolean {
-    if (!this.extraSecondaryActionSelection) {
-      return false;
-    }
-    const definition =
-      ActionLibrary[this.extraSecondaryActionSelection as ActionId] ?? null;
-    return definition?.extraExecution !== undefined;
+    return actionSupportsExtraExecution(this.extraSecondaryActionSelection);
   }
 
   private selectedActionSupportsExtraExecution(): boolean {
-    if (!this.mainActionSelection) {
-      return false;
-    }
-    const definition =
-      ActionLibrary[this.mainActionSelection as ActionId] ?? null;
-    return definition?.extraExecution !== undefined;
+    return actionSupportsExtraExecution(this.mainActionSelection);
   }
 
   private selectedSecondaryActionSupportsExtraExecution(): boolean {
-    if (!this.secondaryActionSelection) {
-      return false;
-    }
-    const definition =
-      ActionLibrary[this.secondaryActionSelection as ActionId] ?? null;
-    return definition?.extraExecution !== undefined;
+    return actionSupportsExtraExecution(this.secondaryActionSelection);
   }
 
   private emitMainActionChange() {
-    const supportsLocation = this.selectedMainActionSupportsLocation();
-    const supportsPlayer = this.selectedActionSupportsSingleTarget();
-    const supportsItems = this.selectedActionSupportsItemPriority();
-    const supportsExtra = this.selectedActionSupportsExtraExecution();
-    const payload: MainActionSelection = {
+    const payload = buildMainActionSelection({
       actionId: this.mainActionSelection,
-      targetLocation:
-        supportsLocation && this.mainActionTarget
-          ? { q: this.mainActionTarget.q, r: this.mainActionTarget.r }
-          : null,
-      secondTargetLocation:
-        this.selectedMainActionSupportsSecondLocation() &&
-        this.mainActionSecondTarget
-          ? {
-              q: this.mainActionSecondTarget.q,
-              r: this.mainActionSecondTarget.r
-            }
-          : null,
-      targetPlayerIds: supportsPlayer
-        ? [
-            this.mainActionTargetPlayerId,
-            this.mainActionSelection === "scare" &&
-            this.mainExtraExecutions > 0
-              ? this.scareSecondTargetPlayerId
-              : null
-          ].filter((id): id is string => id !== null)
-        : undefined,
-      secondTargetPlayerId:
+      targetLocation: this.mainActionTarget,
+      secondTargetLocation: this.mainActionSecondTarget,
+      targetPlayerId: this.mainActionTargetPlayerId,
+      secondTargetPlayerId: this.scareSecondTargetPlayerId,
+      targetItemIds: this.mainActionPriorityItems,
+      extraExecutions: this.mainExtraExecutions,
+      supportsLocation: this.selectedMainActionSupportsLocation(),
+      supportsSecondLocation: this.selectedMainActionSupportsSecondLocation(),
+      supportsPlayer: this.selectedActionSupportsSingleTarget(),
+      supportsItems: this.selectedActionSupportsItemPriority(),
+      supportsExtra: this.selectedActionSupportsExtraExecution(),
+      secondTargetPlayerIsPistolTarget:
         this.mainActionSelection === "shoot_pistol" &&
-        this.mainExtraExecutions > 0
-          ? this.scareSecondTargetPlayerId ?? undefined
-          : undefined,
-      targetItemIds: supportsItems
-        ? [...this.mainActionPriorityItems]
-        : undefined,
-      extraExecutions: supportsExtra ? this.mainExtraExecutions : undefined
-    };
+        this.mainExtraExecutions > 0,
+      secondTargetPlayerIsScareTarget:
+        this.mainActionSelection === "scare" && this.mainExtraExecutions > 0
+    });
     this.emit("main-action-change", payload);
   }
 
   private emitSecondaryActionChange() {
-    const supportsLocation = this.selectedSecondaryActionSupportsLocation();
-    const supportsPlayer = this.selectedSecondaryActionSupportsSingleTarget();
-    const supportsItems = this.selectedSecondaryActionSupportsItemPriority();
-    const supportsExtra = this.selectedSecondaryActionSupportsExtraExecution();
-    const hasAdditionalTarget =
-      this.supportsSecondaryAdditionalTargetSelection() &&
-      this.secondaryInspectAdditionalTarget &&
-      this.secondaryInspectSecondTargetPlayerId !== null;
-    const isAdditionalInspectTarget =
-      this.secondaryActionSelection === "inspect" && hasAdditionalTarget;
-    const payload: SecondaryActionSelection = {
+    const payload = buildSecondaryActionSelection({
       actionId: this.secondaryActionSelection,
-      prioritizeFoodDrink:
-        this.secondaryActionSelection === "search" &&
-        this.secondaryPrioritizeFoodDrink,
-      sellInstead:
-        this.secondaryActionSelection === "drop" &&
-        this.secondarySellInstead,
-      singleTarget:
-        this.secondaryActionSelection === "use_chemical_weapon"
-          ? this.secondaryChemicalSingleTarget
-          : undefined,
-      inspectAdditionalTarget: isAdditionalInspectTarget,
-      targetLocation:
-        supportsLocation && this.secondaryActionTarget
-          ? {
-              q: this.secondaryActionTarget.q,
-              r: this.secondaryActionTarget.r
-            }
-          : null,
-      targetPlayerIds: supportsPlayer
-        ? [
-            this.secondaryActionTargetPlayerId,
-            hasAdditionalTarget
-              ? this.secondaryInspectSecondTargetPlayerId
-              : null
-          ].filter((id): id is string => id !== null)
-        : undefined,
-      targetItemIds: supportsItems
-        ? [...this.secondaryActionPriorityItems]
-        : undefined,
-      extraExecutions: supportsExtra ? this.secondaryExtraExecutions : undefined
-    };
+      targetLocation: this.secondaryActionTarget,
+      targetPlayerId: this.secondaryActionTargetPlayerId,
+      secondTargetPlayerId: this.secondaryInspectSecondTargetPlayerId,
+      targetItemIds: this.secondaryActionPriorityItems,
+      extraExecutions: this.secondaryExtraExecutions,
+      prioritizeFoodDrink: this.secondaryPrioritizeFoodDrink,
+      singleTarget: this.secondaryChemicalSingleTarget,
+      sellInstead: this.secondarySellInstead,
+      supportsLocation: this.selectedSecondaryActionSupportsLocation(),
+      supportsPlayer: this.selectedSecondaryActionSupportsSingleTarget(),
+      supportsItems: this.selectedSecondaryActionSupportsItemPriority(),
+      supportsExtra: this.selectedSecondaryActionSupportsExtraExecution(),
+      hasAdditionalTarget:
+        this.supportsSecondaryAdditionalTargetSelection() &&
+        this.secondaryInspectAdditionalTarget &&
+        this.secondaryInspectSecondTargetPlayerId !== null
+    });
     this.emit("secondary-action-change", payload);
   }
 
   private emitExtraSecondaryActionChange() {
-    const supportsLocation = this.selectedExtraSecondaryActionSupportsLocation();
-    const supportsPlayer = this.selectedExtraSecondaryActionSupportsSingleTarget();
-    const supportsItems = this.selectedExtraSecondaryActionSupportsItemPriority();
-    const supportsExtra = this.selectedExtraSecondaryActionSupportsExtraExecution();
-    const payload: SecondaryActionSelection = {
+    const payload = buildExtraSecondaryActionSelection({
       actionId: this.extraSecondaryActionSelection,
-      prioritizeFoodDrink:
-        this.extraSecondaryActionSelection === "search" &&
-        this.extraSecondaryPrioritizeFoodDrink,
-      sellInstead:
-        this.extraSecondaryActionSelection === "drop" &&
-        this.extraSecondarySellInstead,
-      singleTarget:
-        this.extraSecondaryActionSelection === "use_chemical_weapon"
-          ? this.extraSecondaryChemicalSingleTarget
-          : undefined,
-      targetLocation:
-        supportsLocation && this.extraSecondaryActionTarget
-          ? {
-              q: this.extraSecondaryActionTarget.q,
-              r: this.extraSecondaryActionTarget.r
-            }
-          : null,
-      targetPlayerIds: supportsPlayer
-        ? this.extraSecondaryActionTargetPlayerId
-          ? [this.extraSecondaryActionTargetPlayerId]
-          : []
-        : undefined,
-      targetItemIds: supportsItems
-        ? [...this.extraSecondaryActionPriorityItems]
-        : undefined,
-      extraExecutions: supportsExtra
-        ? this.extraSecondaryExtraExecutions
-        : undefined
-    };
+      targetLocation: this.extraSecondaryActionTarget,
+      targetPlayerId: this.extraSecondaryActionTargetPlayerId,
+      secondTargetPlayerId: null,
+      targetItemIds: this.extraSecondaryActionPriorityItems,
+      extraExecutions: this.extraSecondaryExtraExecutions,
+      prioritizeFoodDrink: this.extraSecondaryPrioritizeFoodDrink,
+      singleTarget: this.extraSecondaryChemicalSingleTarget,
+      sellInstead: this.extraSecondarySellInstead,
+      supportsLocation: this.selectedExtraSecondaryActionSupportsLocation(),
+      supportsPlayer: this.selectedExtraSecondaryActionSupportsSingleTarget(),
+      supportsItems: this.selectedExtraSecondaryActionSupportsItemPriority(),
+      supportsExtra:
+        this.selectedExtraSecondaryActionSupportsExtraExecution(),
+      hasAdditionalTarget: false
+    });
     this.emit("extra-secondary-action-change", payload);
   }
 
@@ -5590,95 +4530,72 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   getMainActionSelection(): MainActionSelection {
-    const supportsLocation = this.selectedActionSupportsLocation();
-    const supportsPlayer = this.selectedActionSupportsSingleTarget();
-    const supportsItems = this.selectedActionSupportsItemPriority();
-    const supportsExtra = this.selectedActionSupportsExtraExecution();
-    return {
+    return buildMainActionSelection({
       actionId: this.mainActionSelection,
-      targetLocation:
-        supportsLocation && this.mainActionTarget
-          ? { q: this.mainActionTarget.q, r: this.mainActionTarget.r }
-          : null,
-      secondTargetLocation:
-        this.selectedMainActionSupportsSecondLocation() &&
-        this.mainActionSecondTarget
-          ? {
-              q: this.mainActionSecondTarget.q,
-              r: this.mainActionSecondTarget.r
-            }
-          : null,
-      targetPlayerIds: supportsPlayer
-        ? this.mainActionTargetPlayerId
-          ? [this.mainActionTargetPlayerId]
-          : []
-        : undefined,
-      secondTargetPlayerId:
+      targetLocation: this.mainActionTarget,
+      secondTargetLocation: this.mainActionSecondTarget,
+      targetPlayerId: this.mainActionTargetPlayerId,
+      secondTargetPlayerId: this.scareSecondTargetPlayerId,
+      targetItemIds: this.mainActionPriorityItems,
+      extraExecutions: this.mainExtraExecutions,
+      supportsLocation: this.selectedActionSupportsLocation(),
+      supportsSecondLocation: this.selectedMainActionSupportsSecondLocation(),
+      supportsPlayer: this.selectedActionSupportsSingleTarget(),
+      supportsItems: this.selectedActionSupportsItemPriority(),
+      supportsExtra: this.selectedActionSupportsExtraExecution(),
+      secondTargetPlayerIsPistolTarget:
         this.mainActionSelection === "shoot_pistol" &&
-        this.mainExtraExecutions > 0
-          ? this.scareSecondTargetPlayerId
-          : undefined,
-      targetItemIds: supportsItems
-        ? [...this.mainActionPriorityItems]
-        : undefined,
-      extraExecutions: supportsExtra ? this.mainExtraExecutions : undefined
-    };
+        this.mainExtraExecutions > 0,
+      secondTargetPlayerIsScareTarget: false
+    });
   }
 
   getSecondaryActionSelection(): SecondaryActionSelection {
-    const supportsLocation = this.selectedSecondaryActionSupportsLocation();
-    const supportsPlayer = this.selectedSecondaryActionSupportsSingleTarget();
-    const supportsExtra = this.selectedSecondaryActionSupportsExtraExecution();
-    const hasAdditionalTarget =
-      this.supportsSecondaryAdditionalTargetSelection() &&
-      this.secondaryInspectAdditionalTarget &&
-      this.secondaryInspectSecondTargetPlayerId !== null;
-    const isAdditionalInspectTarget =
-      this.secondaryActionSelection === "inspect" && hasAdditionalTarget;
-    return {
-      actionId: this.secondaryActionSelection,
-      prioritizeFoodDrink:
-        this.secondaryActionSelection === "search" &&
-        this.secondaryPrioritizeFoodDrink,
-      singleTarget:
-        this.secondaryActionSelection === "use_chemical_weapon"
-          ? this.secondaryChemicalSingleTarget
-          : undefined,
-      inspectAdditionalTarget: isAdditionalInspectTarget,
-      targetLocation:
-        supportsLocation && this.secondaryActionTarget
-          ? {
-              q: this.secondaryActionTarget.q,
-              r: this.secondaryActionTarget.r
-            }
-          : null,
-      targetPlayerIds: supportsPlayer
-        ? [
-            this.secondaryActionTargetPlayerId,
-            hasAdditionalTarget
-              ? this.secondaryInspectSecondTargetPlayerId
-              : null
-          ].filter((id): id is string => id !== null)
-        : undefined,
-      extraExecutions: supportsExtra ? this.secondaryExtraExecutions : undefined
-    };
+    return buildSecondaryActionSelection(
+      {
+        actionId: this.secondaryActionSelection,
+        targetLocation: this.secondaryActionTarget,
+        targetPlayerId: this.secondaryActionTargetPlayerId,
+        secondTargetPlayerId: this.secondaryInspectSecondTargetPlayerId,
+        targetItemIds: this.secondaryActionPriorityItems,
+        extraExecutions: this.secondaryExtraExecutions,
+        prioritizeFoodDrink: this.secondaryPrioritizeFoodDrink,
+        singleTarget: this.secondaryChemicalSingleTarget,
+        sellInstead: this.secondarySellInstead,
+        supportsLocation: this.selectedSecondaryActionSupportsLocation(),
+        supportsPlayer: this.selectedSecondaryActionSupportsSingleTarget(),
+        supportsItems: this.selectedSecondaryActionSupportsItemPriority(),
+        supportsExtra: this.selectedSecondaryActionSupportsExtraExecution(),
+        hasAdditionalTarget:
+          this.supportsSecondaryAdditionalTargetSelection() &&
+          this.secondaryInspectAdditionalTarget &&
+          this.secondaryInspectSecondTargetPlayerId !== null
+      },
+      { includeSellInstead: false, includeTargetItems: false }
+    );
   }
 
   getExtraSecondaryActionSelection(): SecondaryActionSelection {
-    const supportsLocation = this.selectedExtraSecondaryActionSupportsLocation();
-    return {
-      actionId: this.extraSecondaryActionSelection,
-      targetLocation:
-        supportsLocation && this.extraSecondaryActionTarget
-          ? {
-              q: this.extraSecondaryActionTarget.q,
-              r: this.extraSecondaryActionTarget.r,
-            }
-          : null,
-      extraExecutions: this.selectedExtraSecondaryActionSupportsExtraExecution()
-        ? this.extraSecondaryExtraExecutions
-        : undefined,
-    };
+    return buildExtraSecondaryActionSelection(
+      {
+        actionId: this.extraSecondaryActionSelection,
+        targetLocation: this.extraSecondaryActionTarget,
+        targetPlayerId: this.extraSecondaryActionTargetPlayerId,
+        secondTargetPlayerId: null,
+        targetItemIds: this.extraSecondaryActionPriorityItems,
+        extraExecutions: this.extraSecondaryExtraExecutions,
+        prioritizeFoodDrink: this.extraSecondaryPrioritizeFoodDrink,
+        singleTarget: this.extraSecondaryChemicalSingleTarget,
+        sellInstead: this.extraSecondarySellInstead,
+        supportsLocation: this.selectedExtraSecondaryActionSupportsLocation(),
+        supportsPlayer: this.selectedExtraSecondaryActionSupportsSingleTarget(),
+        supportsItems: this.selectedExtraSecondaryActionSupportsItemPriority(),
+        supportsExtra:
+          this.selectedExtraSecondaryActionSupportsExtraExecution(),
+        hasAdditionalTarget: false
+      },
+      { includeToggles: false, includeTargetLists: false }
+    );
   }
 
   setLocationSelectionPending(active: boolean): void {
@@ -5775,45 +4692,6 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       }
     }
     return true;
-  }
-
-  private formatActionName(id: string) {
-    const spaced = id.replace(/[_-]+/g, " ");
-    return spaced.slice(0, 1).toUpperCase() + spaced.slice(1);
-  }
-
-  private describeAction(definition: ActionDefinition) {
-    const parts: string[] = [];
-    if (definition.requirements?.length) {
-      const reqDescs = definition.requirements
-        .map((r) => r.description)
-        .filter((d): d is string => Boolean(d && d.trim().length > 0));
-      if (reqDescs.length > 0) {
-        parts.push(reqDescs.join("\n"));
-      }
-    }
-    if (definition.effects?.length) {
-      const effDescs = definition.effects
-        .map((e) => e.description)
-        .filter((d): d is string => Boolean(d && d.trim().length > 0));
-      if (effDescs.length > 0) {
-        parts.push(effDescs.join("\n"));
-      }
-    }
-    if (parts.length > 0) {
-      return parts.join("\n\n");
-    }
-    if (definition.notes?.length) {
-      return definition.notes[0];
-    }
-    return "Description coming soon.";
-  }
-
-  private resolveActionTexture(definition: ActionDefinition) {
-    if (isBoardIconTexture(definition.texture) && definition.frame) {
-      return { texture: deriveBoardIconKey(definition.frame) };
-    }
-    return { texture: definition.texture, frame: definition.frame };
   }
 
   private handleTabRequest(key: TabKey) {

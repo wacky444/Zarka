@@ -6,13 +6,16 @@ import {
   type MainActionSelection,
   type SecondaryActionSelection,
   type ChatMessageViewModel
-} from "../ui/CharacterPanel";
+} from "../ui/panel/CharacterPanel";
 import { GameBoardRenderer } from "./GameBoardRenderer";
 import { ActionPlanSynchronizer } from "./ActionPlanSynchronizer";
 import { TutorialProgressController } from "../tutorial/TutorialProgressController";
 import {
   clearActiveTutorialMatchId,
-  getBrowserTutorialMatchStorage
+  clearTutorialPresentationSteps,
+  getBrowserTutorialMatchStorage,
+  readTutorialPresentationSteps,
+  saveTutorialPresentationStep
 } from "../tutorial/ActiveTutorialMatch";
 import { getTutorialUiPolicy } from "../tutorial/TutorialUiPolicy";
 import type { TurnService } from "../services/turnService";
@@ -1008,6 +1011,20 @@ export class GameScene extends Phaser.Scene {
     }
     this.observeTutorialMatchState(match);
     this.observeTutorialChatHistory(this.chatMessages);
+    this.restoreTutorialPresentationProgress(match.match_id);
+  }
+
+  private restoreTutorialPresentationProgress(matchId: string): void {
+    if (!this.tutorialController || !this.currentUserId) {
+      return;
+    }
+    const steps = readTutorialPresentationSteps(
+      getBrowserTutorialMatchStorage(),
+      this.currentUserId,
+      matchId
+    );
+    this.tutorialController.restorePresentationSteps(steps);
+    this.updateTutorialGuidance();
   }
 
   private async fetchMatchFromServer(): Promise<MatchRecord | null> {
@@ -1388,6 +1405,11 @@ export class GameScene extends Phaser.Scene {
         this.currentUserId,
         matchId
       );
+      clearTutorialPresentationSteps(
+        getBrowserTutorialMatchStorage(),
+        this.currentUserId,
+        matchId
+      );
     }
     const runtimeMatchId = this.currentMatch?.runtime_match_id ?? matchId;
     if (runtimeMatchId && this.turnService) {
@@ -1701,8 +1723,29 @@ export class GameScene extends Phaser.Scene {
   }
 
   private recordTutorialPresentation(stepId: TutorialStepId): void {
+    const wasCompleted =
+      this.tutorialController?.hasCompletedStep(stepId) ?? false;
     this.tutorialController?.recordPresentation(stepId);
+    if (!wasCompleted) {
+      this.persistTutorialPresentationStep(stepId);
+    }
     this.completeVisibleTutorialSteps();
+  }
+
+  private persistTutorialPresentationStep(stepId: TutorialStepId): void {
+    if (
+      !this.currentUserId ||
+      !this.currentMatch?.match_id ||
+      !this.tutorialController?.hasCompletedStep(stepId)
+    ) {
+      return;
+    }
+    saveTutorialPresentationStep(
+      getBrowserTutorialMatchStorage(),
+      this.currentUserId,
+      this.currentMatch.match_id,
+      stepId
+    );
   }
 
   private recordTutorialGameplay(stepId: TutorialStepId): void {
@@ -1724,6 +1767,7 @@ export class GameScene extends Phaser.Scene {
         controller.hasObservedGameplayStep("bot_chat")
       ) {
         controller.recordPresentation(currentStep);
+        this.persistTutorialPresentationStep(currentStep);
         currentStep = controller.currentStep;
         continue;
       }
@@ -1734,6 +1778,7 @@ export class GameScene extends Phaser.Scene {
         this.hasTutorialDetectiveResult()
       ) {
         controller.recordPresentation(currentStep);
+        this.persistTutorialPresentationStep(currentStep);
         currentStep = controller.currentStep;
         continue;
       }

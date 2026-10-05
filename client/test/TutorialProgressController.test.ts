@@ -8,8 +8,11 @@ import {
 import { TUTORIAL_INSTRUCTIONS } from "../src/tutorial/TutorialInstructions.ts";
 import {
   clearActiveTutorialMatchId,
+  clearTutorialPresentationSteps,
   readActiveTutorialMatchId,
+  readTutorialPresentationSteps,
   saveActiveTutorialMatchId,
+  saveTutorialPresentationStep,
   type TutorialMatchStorage
 } from "../src/tutorial/ActiveTutorialMatch.ts";
 import { TUTORIAL_STEP_IDS, type TutorialStepId } from "@shared";
@@ -192,6 +195,46 @@ test("active tutorial match storage is user-scoped and survives scene reloads", 
   assert.equal(readActiveTutorialMatchId(storage, "user-a"), "match-a");
   assert.equal(clearActiveTutorialMatchId(storage, "user-a", "match-a"), true);
   assert.equal(readActiveTutorialMatchId(storage, "user-a"), null);
+});
+
+test("presentation progress persists across reloads with restored gameplay progress", () => {
+  const values = new Map<string, string>();
+  const storage: TutorialMatchStorage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key)
+  };
+  const matchId = "tutorial-match";
+  const presentationSteps: readonly TutorialStepId[] = [
+    "map_pan",
+    "inspect_current_cell",
+    "inspect_nearby_cell"
+  ];
+  const initial = new TutorialProgressController(TUTORIAL_STEP_IDS);
+
+  for (const stepId of presentationSteps) {
+    assert.equal(initial.currentStep, stepId);
+    assert.equal(initial.recordPresentation(stepId), true);
+    assert.equal(
+      saveTutorialPresentationStep(storage, "user-a", matchId, stepId),
+      true
+    );
+  }
+  assert.equal(initial.currentStep, "choose_skills");
+
+  const resumed = new TutorialProgressController(TUTORIAL_STEP_IDS);
+  assert.equal(resumed.recordGameplay("choose_skills"), false);
+  assert.equal(resumed.currentStep, "map_pan");
+  const savedSteps = readTutorialPresentationSteps(storage, "user-a", matchId);
+  assert.deepEqual(savedSteps, presentationSteps);
+  assert.equal(resumed.restorePresentationSteps(savedSteps), true);
+  assert.equal(resumed.currentStep, "search");
+  assert.deepEqual(
+    readTutorialPresentationSteps(storage, "user-a", "another-match"),
+    []
+  );
+  assert.equal(clearTutorialPresentationSteps(storage, "user-a", matchId), true);
+  assert.deepEqual(readTutorialPresentationSteps(storage, "user-a", matchId), []);
 });
 
 test("every ordered tutorial step has an instruction and optional hint", () => {

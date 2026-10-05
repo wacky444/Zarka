@@ -14,7 +14,7 @@ import {
 import type {
   MainActionSelection,
   SecondaryActionSelection,
-} from "../ui/CharacterPanel";
+} from "../ui/panel/CharacterPanel";
 import type { TurnService } from "../services/turnService";
 
 export interface ActionPlanSynchronizerContext {

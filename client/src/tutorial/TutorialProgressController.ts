@@ -41,6 +41,19 @@ export class TutorialProgressController {
     return this.advanceReadySteps();
   }
 
+  restorePresentationSteps(stepIds: readonly TutorialStepId[]): boolean {
+    for (const stepId of stepIds) {
+      const stepIndex = this.orderedSteps.indexOf(stepId);
+      const requiresPresentation =
+        PRESENTATION_ONLY_STEP_IDS.indexOf(stepId) !== -1 ||
+        PRESENTATION_AND_GAMEPLAY_STEP_IDS.indexOf(stepId) !== -1;
+      if (stepIndex >= this.currentStepIndex && requiresPresentation) {
+        this.observedPresentationSteps.add(stepId);
+      }
+    }
+    return this.advanceReadySteps();
+  }
+
   recordGameplay(stepId: TutorialStepId): boolean {
     if (PRESENTATION_ONLY_STEP_IDS.indexOf(stepId) !== -1) {
       return false;
