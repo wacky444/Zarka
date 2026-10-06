@@ -1308,12 +1308,15 @@ export class GridSelect extends Phaser.GameObjects.Container {
             ).setOrigin(0.5)
           : undefined;
       const missingRequirement = item.missingRequirement?.trim();
-      const warning = missingRequirement
+      const translatedMissingRequirement = missingRequirement
+        ? t(missingRequirement)
+        : undefined;
+      const warning = translatedMissingRequirement
         ? (
             this.scene.rexUI.add.BBCodeText(
               x + cellWidth / 2,
               y,
-              `[color=${THEME.colors.warning}]${missingRequirement}[/color]`,
+              `[color=${THEME.colors.warning}]${translatedMissingRequirement}[/color]`,
               {
                 fontSize: "11px",
                 color: THEME.colors.warning,
@@ -1325,7 +1328,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
           ).setOrigin(0.5)
         : undefined;
       const descriptionContent =
-        typeof item.description === "string" ? item.description.trim() : "";
+        typeof item.description === "string" ? t(item.description.trim()) : "";
       const descriptionMaxLines = icon
         ? Math.min(6, this.resolveMaxDescriptionLines(this.cellHeight))
         : this.resolveMaxDescriptionLines(this.cellHeight);

@@ -100,7 +100,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     id: "dexterity2",
     name: "Destreza 2",
     description:
-      "Permite concretar 1 objeto al robar a un jugador sin registro previo",
+      "Permite priorizar hasta 3 objetos al robar a un jugador, incluso sin registro previo",
     cost: 3,
     max: 1,
     implemented: true,

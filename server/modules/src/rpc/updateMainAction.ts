@@ -3,6 +3,7 @@
 import {
   ActionLibrary,
   MAX_PICKUP_NONE_PRIORITY_ENTRIES,
+  MAX_STEAL_PRIORITY_ITEMS,
   PICKUP_NONE_PRIORITY_ID,
   TUTORIAL_BOT_ID,
   TUTORIAL_MATCH_METADATA_KEY,
@@ -138,7 +139,11 @@ export function updateMainActionRpc(
         seen[trimmed] = true;
         filtered.push(trimmed);
       }
-      targetItemIds = filtered.length > 0 ? filtered : undefined;
+      const selectedItems =
+        normalizedActionId === "steal"
+          ? filtered.slice(0, MAX_STEAL_PRIORITY_ITEMS)
+          : filtered;
+      targetItemIds = selectedItems.length > 0 ? selectedItems : undefined;
     }
     const rawExtraExecutions = submission.extraExecutions;
     if (

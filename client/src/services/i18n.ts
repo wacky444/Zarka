@@ -702,6 +702,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "No prioritized items": "No hay objetos prioritarios",
   "No secondary action": "Sin acción secundaria",
   "Tap a player to target them": "Pulsa un jugador para seleccionarlo",
+  "Tap an action to select it": "Pulsa una acción para seleccionarla",
   "Tap an item to prioritize it": "Pulsa un objeto para priorizarlo",
   "Select player": "Seleccionar jugador",
   "Selecting...": "Seleccionando...",
@@ -724,6 +725,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Your session has expired. Please log in again.":
     "Tu sesión ha caducado. Inicia sesión de nuevo.",
   "Unsupported payload type: ": "Tipo de respuesta no compatible: ",
+  "Select Secondary Action": "Seleccionar acción secundaria",
   "Select Extra Secondary Action": "Seleccionar acción secundaria adicional",
   "No extra secondary action": "Sin acción secundaria adicional",
   Upgrade: "Mejorar",
@@ -964,6 +966,8 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   "Fuerza 5": "Strength 5",
   "Destreza 1": "Dexterity 1",
   "Destreza 2": "Dexterity 2",
+  "Permite priorizar hasta 3 objetos al robar a un jugador, incluso sin registro previo":
+    "Allows prioritizing up to 3 items when stealing from a player, even without inspecting them first.",
   "Destreza 3": "Dexterity 3",
   "Destreza 4": "Dexterity 4",
   "Resistencia 1": "Endurance 1",

@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import {
   ActionLibrary,
   MAX_PICKUP_NONE_PRIORITY_ENTRIES,
+  MAX_STEAL_PRIORITY_ITEMS,
   PICKUP_NONE_PRIORITY_ID,
   type ActionId,
   type Axial,
@@ -1545,6 +1546,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.refreshExtraExecutionSelectorState();
     this.refreshLocationSelectorState();
     this.refreshPlayerSelectorState();
+    this.refreshItemSelectorState();
     this.emit("ready-refresh-request");
     this.emitMainActionChange();
   };
@@ -2241,6 +2243,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   }
 
   private refreshItemSelectorState(): void {
+    this.itemSelector.setMaxEntries(this.getStealPriorityLimit());
     const supports = this.selectedActionSupportsItemPriority();
     const availableOptions = this.getMainActionItemOptions();
     const shouldShow = supports && availableOptions.length > 0;
@@ -2260,7 +2263,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.itemSelector.setActive(true);
     const filtered = this.filterPriorityIds(
       this.mainActionPriorityItems,
-      availableOptions
+      availableOptions,
+      this.getStealPriorityLimit()
     );
     this.mainActionPriorityItems = filtered;
     this.itemSelector.setValue(filtered, false);
@@ -2717,7 +2721,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
 
   private filterPriorityIds(
     ids: string[],
-    optionsList: ItemPriorityOption[] = this.itemOptions
+    optionsList: ItemPriorityOption[] = this.itemOptions,
+    maxEntries?: number
   ): string[] {
     if (!Array.isArray(ids) || ids.length === 0) {
       return [];
@@ -2725,6 +2730,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     const seen = new Set<string>();
     const filtered: string[] = [];
     let noneCount = 0;
+    let itemCount = 0;
     for (const value of ids) {
       if (typeof value !== "string") {
         continue;
@@ -2738,8 +2744,13 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
           continue;
         }
         noneCount += 1;
-      } else if (seen.has(trimmed)) {
-        continue;
+      } else {
+        if (seen.has(trimmed)) {
+          continue;
+        }
+        if (maxEntries !== undefined && itemCount >= maxEntries) {
+          continue;
+        }
       }
       const option = optionsList.find((entry) => entry.id === trimmed);
       if (!option || option.disabled) {
@@ -2747,6 +2758,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
           noneCount -= 1;
         }
         continue;
+      }
+      if (trimmed !== PICKUP_NONE_PRIORITY_ID) {
+        itemCount += 1;
       }
       seen.add(trimmed);
       filtered.push(trimmed);
@@ -2769,7 +2783,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     }
     const filtered = this.filterPriorityIds(
       ids,
-      this.getMainActionItemOptions()
+      this.getMainActionItemOptions(),
+      this.getStealPriorityLimit()
     );
     if (isSameTargetItems(this.mainActionPriorityItems, filtered)) {
       this.itemSelector.setValue(filtered, false);
@@ -2872,7 +2887,13 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   }
 
   private hasDexterity2(): boolean {
-    return getSkillEffectTotal(this.currentCharacter, "steal_item_priority") > 0;
+    return this.currentCharacter?.abilities?.includes("dexterity2") === true;
+  }
+
+  private getStealPriorityLimit(): number | undefined {
+    return this.mainActionSelection === "steal" && this.hasDexterity2()
+      ? MAX_STEAL_PRIORITY_ITEMS
+      : undefined;
   }
 
   private getMainActionItemOptions(): ItemPriorityOption[] {
@@ -2916,10 +2937,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     if (!character) {
       return false;
     }
-    return (
-      getSkillEffectTotal(character, "extra_secondary_action") > 0 ||
-      this.hasDexterity2()
-    );
+    return getSkillEffectTotal(character, "extra_secondary_action") > 0;
   }
 
   private selectedExtraSecondaryActionSupportsLocation(): boolean {

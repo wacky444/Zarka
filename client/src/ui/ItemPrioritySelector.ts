@@ -33,6 +33,7 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
   private pending = false;
   private disposed = false;
   private preferredWidth: number;
+  private maxEntries: number | null = null;
   private syncing = false;
   private listHeight = 0;
 
@@ -94,22 +95,41 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
       texture: option.texture ?? "hex",
       frame: option.frame,
     }));
-    const filtered = this.priority.filter((id) =>
-      normalized.some((option) => option.id === id && option.disabled !== true)
-    );
-    const priorityChanged = filtered.length !== this.priority.length;
-    if (this.sameOptions(this.options, normalized) && !priorityChanged) {
+    const optionsUnchanged = this.sameOptions(this.options, normalized);
+    this.options = normalized;
+    const filtered = this.filterIds(this.priority);
+    const priorityChanged = !this.sameArray(filtered, this.priority);
+    if (optionsUnchanged && !priorityChanged) {
       return;
     }
-    this.options = normalized;
-    if (priorityChanged) {
-      this.priority = filtered;
-    }
+    this.priority = filtered;
     this.syncing = true;
     this.grid.setValue(null, false);
     this.syncing = false;
     this.updateListDisplay(false);
     this.updateState();
+  }
+
+  setMaxEntries(maxEntries: number | undefined): void {
+    if (this.disposed) {
+      return;
+    }
+    const normalized =
+      typeof maxEntries === "number" && Number.isFinite(maxEntries)
+        ? Math.max(0, Math.floor(maxEntries))
+        : null;
+    if (normalized === this.maxEntries) {
+      return;
+    }
+    this.maxEntries = normalized;
+    const filtered = this.filterIds(this.priority);
+    const priorityChanged = !this.sameArray(filtered, this.priority);
+    this.priority = filtered;
+    if (priorityChanged) {
+      this.updateListDisplay(false);
+    } else {
+      this.grid.setItems(this.buildGridItems());
+    }
   }
 
   setValue(ids: string[], emit = false): void {
@@ -245,6 +265,15 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
       this.updateListDisplay(true);
       return;
     }
+    if (
+      this.maxEntries !== null &&
+      this.countPrioritizedItems() >= this.maxEntries
+    ) {
+      this.syncing = true;
+      this.grid.setValue(null, false);
+      this.syncing = false;
+      return;
+    }
     const stopIndex = this.priority.indexOf(PICKUP_NONE_PRIORITY_ID);
     const insertionIndex = stopIndex === -1 ? this.priority.length : stopIndex;
     this.priority = [
@@ -259,6 +288,7 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
   };
 
   private buildGridItems(): GridSelectItem[] {
+    const prioritizedItemCount = this.countPrioritizedItems();
     return this.options.map((option) => ({
       id: option.id,
       name: option.label,
@@ -271,7 +301,11 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
         option.disabled === true ||
         (option.id === PICKUP_NONE_PRIORITY_ID &&
           this.priority.filter((id) => id === PICKUP_NONE_PRIORITY_ID).length >=
-            MAX_PICKUP_NONE_PRIORITY_ENTRIES),
+            MAX_PICKUP_NONE_PRIORITY_ENTRIES) ||
+        (this.maxEntries !== null &&
+          option.id !== PICKUP_NONE_PRIORITY_ID &&
+          !this.priority.includes(option.id) &&
+          prioritizedItemCount >= this.maxEntries),
     }));
   }
 
@@ -279,6 +313,7 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
     const seen = new Set<string>();
     const filtered: string[] = [];
     let noneCount = 0;
+    let itemCount = 0;
     for (const id of ids) {
       if (typeof id !== "string") {
         continue;
@@ -292,8 +327,13 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
           continue;
         }
         noneCount += 1;
-      } else if (seen.has(trimmed)) {
-        continue;
+      } else {
+        if (seen.has(trimmed)) {
+          continue;
+        }
+        if (this.maxEntries !== null && itemCount >= this.maxEntries) {
+          continue;
+        }
       }
       const option = this.options.find(
         (entry) => entry.id === trimmed && entry.disabled !== true
@@ -304,10 +344,17 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
         }
         continue;
       }
+      if (trimmed !== PICKUP_NONE_PRIORITY_ID) {
+        itemCount += 1;
+      }
       seen.add(trimmed);
       filtered.push(trimmed);
     }
     return filtered;
+  }
+
+  private countPrioritizedItems(): number {
+    return this.priority.filter((id) => id !== PICKUP_NONE_PRIORITY_ID).length;
   }
 
   private sameArray(a: string[], b: string[]): boolean {

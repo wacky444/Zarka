@@ -1,4 +1,5 @@
 import {
+  ItemCategory,
   ItemLibrary,
   type ItemDefinition,
   type ItemId,
@@ -87,7 +88,10 @@ export function buildCharacterPanelItemOptions(
   }
   if (character?.abilities?.includes("dexterity2")) {
     for (const definition of Object.values(ItemLibrary)) {
-      if (definition.canBeStolen === false) {
+      if (
+        definition.category === ItemCategory.Special ||
+        definition.canBeStolen === false
+      ) {
         continue;
       }
       const visual = resolveItemTexture(definition);

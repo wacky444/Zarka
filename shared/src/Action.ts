@@ -159,6 +159,7 @@ export interface ActionCondition {
 
 export const PICKUP_NONE_PRIORITY_ID = "__pickup_none__";
 export const MAX_PICKUP_NONE_PRIORITY_ENTRIES = 2;
+export const MAX_STEAL_PRIORITY_ITEMS = 3;
 
 export interface ActionSubmission {
   playerId: string;

@@ -1,7 +1,9 @@
 import type { MatchRecord } from "../../models/types";
 import {
   ActionLibrary,
+  ItemCategory,
   ItemLibrary,
+  MAX_STEAL_PRIORITY_ITEMS,
   getSkillRank,
   syncBandolierLoadCapacity,
   type ActionId,
@@ -121,6 +123,15 @@ function getCarriedItemTypes(character: PlayerCharacter): ItemId[] {
   return types;
 }
 
+function isStealPriorityItem(itemType: string): itemType is ItemId {
+  const definition = ItemLibrary[itemType as ItemId];
+  return (
+    definition !== undefined &&
+    definition.category !== ItemCategory.Special &&
+    definition.canBeStolen !== false
+  );
+}
+
 function getKnownCarriedItemTypes(
   actor: PlayerCharacter,
   targetId: string,
@@ -155,6 +166,9 @@ function chooseItemType(
       if (carriedTypes.indexOf(requestedItemType as ItemId) !== -1) {
         return requestedItemType as ItemId;
       }
+    }
+    if (requestedItemTypes.length > 0) {
+      return carriedTypes[Math.floor(Math.random() * carriedTypes.length)] ?? null;
     }
   }
   const knownTypes = getKnownCarriedItemTypes(actor, targetId, carriedTypes);
@@ -192,10 +206,9 @@ export class StealAction extends BaseAction {
         getSkillRank(participant.character, "dexterity2") > 0;
       const requestedItemTypes =
         canSpecifyUnknownItem && Array.isArray(participant.plan.targetItemIds)
-          ? participant.plan.targetItemIds.filter(
-              (itemType): itemType is string =>
-                typeof itemType === "string" && itemType.length > 0
-            )
+          ? participant.plan.targetItemIds
+              .slice(0, MAX_STEAL_PRIORITY_ITEMS)
+              .filter(isStealPriorityItem)
           : [];
       const extraExecutions = getUsableExtraExecutions(
         participant.character,
@@ -214,7 +227,7 @@ export class StealAction extends BaseAction {
             target.id,
             target.character,
             canSpecifyUnknownItem,
-            index === 0 ? requestedItemTypes : []
+            requestedItemTypes
           );
           if (!itemType) {
             break;
