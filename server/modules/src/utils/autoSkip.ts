@@ -1,18 +1,28 @@
 import { validateTime } from "./validation";
 
+const FIRST_TURN_AUTO_SKIP_DELAY_MS = 24 * 60 * 60 * 1000 + 1000;
+
 export function getInitialAutoAdvanceAt(
   roundTime: unknown,
   startedAtMs: number,
 ): number | undefined {
-  const validRoundTime = validateTime(roundTime);
-  if (!validRoundTime) {
+  if (!validateTime(roundTime)) {
     return undefined;
   }
-  const [hoursText, minutesText] = validRoundTime.split(":");
-  const targetMinutes = Number(hoursText) * 60 + Number(minutesText);
-  const startedAt = new Date(startedAtMs);
-  const startMinutes = startedAt.getHours() * 60 + startedAt.getMinutes();
-  return startMinutes >= targetMinutes
-    ? Math.floor(startedAtMs / 1000)
-    : undefined;
+  return Math.floor(startedAtMs / 1000);
+}
+
+export function hasFirstTurnAutoSkipGraceElapsed(
+  currentTurn: number,
+  startedAtSeconds: number | undefined,
+  nowMs: number,
+): boolean {
+  if (
+    currentTurn !== 0 ||
+    typeof startedAtSeconds !== "number" ||
+    !Number.isFinite(startedAtSeconds)
+  ) {
+    return true;
+  }
+  return nowMs > startedAtSeconds * 1000 + FIRST_TURN_AUTO_SKIP_DELAY_MS;
 }

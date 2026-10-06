@@ -10,6 +10,7 @@ import { resolveTurnForMatch } from "../turnResolution";
 import { sendTutorialBotMessageForTurn } from "../TutorialBotChat";
 import { isBotId } from "../botAI";
 import { validateTime } from "../../utils/validation";
+import { hasFirstTurnAutoSkipGraceElapsed } from "../../utils/autoSkip";
 import {
   isCharacterDead,
   isCharacterIncapacitated,
@@ -98,6 +99,27 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       return { state };
     }
 
+    if (
+      match.current_turn === 0 &&
+      (typeof match.started_at !== "number" ||
+        !Number.isFinite(match.started_at))
+    ) {
+      match.started_at = Math.floor(nowMs / 1000);
+      if (match.autoSkip !== false) {
+        match.lastAutoAdvanceAt = match.started_at;
+      }
+      try {
+        storage.writeMatch(match, stored.version);
+      } catch (error) {
+        logger.warn(
+          "Failed to initialize first-turn auto-skip grace for match %s: %s",
+          match.match_id,
+          String(error)
+        );
+      }
+      return { state };
+    }
+
     dispatchTurnNotificationOutbox(
       match.match_id,
       match.current_turn,
@@ -168,6 +190,15 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       }
 
       if (hasAutoAdvancedToday(match.lastAutoAdvanceAt, nowMs)) {
+        return { state };
+      }
+      if (
+        !hasFirstTurnAutoSkipGraceElapsed(
+          match.current_turn,
+          match.started_at,
+          nowMs
+        )
+      ) {
         return { state };
       }
 

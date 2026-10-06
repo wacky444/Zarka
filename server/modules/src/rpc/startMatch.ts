@@ -123,6 +123,7 @@ export function startMatchRpc(
 
   const startedAtMs = Date.now();
   match.started = true;
+  match.started_at = Math.floor(startedAtMs / 1000);
   if (match.autoSkip !== false) {
     const initialAutoAdvanceAt = getInitialAutoAdvanceAt(
       match.roundTime,

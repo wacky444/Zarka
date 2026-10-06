@@ -163,6 +163,7 @@ export class GameScene extends Phaser.Scene {
   private autoAdvanceEnabled = false;
   private autoAdvanceRoundTime: string | null = null;
   private autoAdvanceLastAt: number | undefined = undefined;
+  private autoAdvanceStartedAt: number | undefined = undefined;
   private chatService: MatchChatService | null = null;
   private chatMessages: MatchChatMessage[] = [];
   private chatUnsubscribe: (() => void) | null = null;
@@ -1567,6 +1568,7 @@ export class GameScene extends Phaser.Scene {
     this.autoAdvanceEnabled = autoSkip && !!roundTime;
     this.autoAdvanceRoundTime = this.autoAdvanceEnabled ? roundTime : null;
     this.autoAdvanceLastAt = match?.lastAutoAdvanceAt;
+    this.autoAdvanceStartedAt = match?.started_at;
 
     if (!this.autoAdvanceText) {
       return;
@@ -1628,10 +1630,22 @@ export class GameScene extends Phaser.Scene {
     const alreadyAdvancedToday =
       lastAt !== undefined && this.isInSameLocalDay(lastAt * 1000, nowMs);
 
-    const nextTargetMs =
+    let nextTargetMs =
       alreadyAdvancedToday || nowMs >= targetTodayMs
         ? targetTodayMs + 24 * 60 * 60_000
         : targetTodayMs;
+    if (
+      this.currentMatch?.current_turn === 0 &&
+      typeof this.autoAdvanceStartedAt === "number" &&
+      Number.isFinite(this.autoAdvanceStartedAt)
+    ) {
+      const startedAtMs = this.autoAdvanceStartedAt * 1000;
+      const firstDailyTarget = new Date(startedAtMs);
+      firstDailyTarget.setDate(firstDailyTarget.getDate() + 1);
+      firstDailyTarget.setHours(parsed.hours, parsed.minutes, 0, 0);
+      const firstTurnMinimumAt = startedAtMs + 24 * 60 * 60_000 + 1000;
+      nextTargetMs = Math.max(firstDailyTarget.getTime(), firstTurnMinimumAt);
+    }
 
     const diffMs = nextTargetMs - nowMs;
     const totalMinutes = Math.max(0, Math.ceil(diffMs / 60_000));

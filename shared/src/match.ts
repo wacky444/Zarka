@@ -68,6 +68,7 @@ export interface MatchRecord {
   rows?: number;
   roundTime?: string;
   autoSkip?: boolean;
+  started_at?: number;
   botPlayers?: number;
   turnsToBeAt1Tile?: number;
   created_at: number;
