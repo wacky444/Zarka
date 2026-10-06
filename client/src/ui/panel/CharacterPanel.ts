@@ -1191,6 +1191,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.logView.appendReplay(turn, maxTurn, events);
   }
 
+  notifyEliminationEvents(turn: number, events: ReplayEvent[]) {
+    this.logView.notifyEliminationEvents(turn, events);
+  }
+
   setLogError(message: string) {
     this.logView.setError(message);
   }

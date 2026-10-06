@@ -356,8 +356,7 @@ export class GameScene extends Phaser.Scene {
       this.characterPanel?.closeCurrentGridSelect();
       this.gridModalActive = false;
     } else if (this.mobileLayout && this.mobileViewMode === "sidebar") {
-      this.mobileViewMode = "map";
-      this.layoutUI();
+      this.showMobileMap();
     } else {
       if (fromBrowser && this.browserHistoryGuardInstalled) {
         this.restoreBrowserHistoryGuard();
@@ -1812,6 +1811,21 @@ export class GameScene extends Phaser.Scene {
     this.layoutUI();
   }
 
+  private showMobileMap(): void {
+    if (!this.mobileLayout) {
+      return;
+    }
+    if (this.gridModalActive) {
+      this.characterPanel?.closeCurrentGridSelect();
+      this.gridModalActive = false;
+    }
+    if (this.cellContentsPanel?.isOpen) {
+      this.cellContentsPanel.close();
+    }
+    this.mobileViewMode = "map";
+    this.layoutUI();
+  }
+
   private handleResize(gameSize: Phaser.Structs.Size) {
     const width = gameSize.width ?? this.scale.width;
     const height = gameSize.height ?? this.scale.height;
@@ -2993,7 +3007,10 @@ export class GameScene extends Phaser.Scene {
       this.autoAdvanceLastAt = payload.lastAutoAdvanceAt;
     }
     if (payload.deadCharacters) {
-      match.deadCharacters = payload.deadCharacters;
+      match.deadCharacters = {
+        ...(match.deadCharacters ?? {}),
+        ...payload.deadCharacters,
+      };
     }
     if (payload.playerCharacters) {
       match.playerCharacters = payload.playerCharacters;
@@ -3034,6 +3051,31 @@ export class GameScene extends Phaser.Scene {
     this.topBanner?.show({ text: `Turn ${turnNumber}` });
     if (replayEvents.length > 0) {
       this.logReplayCache.set(turnNumber, { events: replayEvents });
+      for (const event of replayEvents) {
+        if (event.kind === "player") {
+          if (event.action.actionId === "status_dead" && event.actorId) {
+            match.deadCharacters = match.deadCharacters ?? {};
+            match.deadCharacters[event.actorId] = true;
+          }
+          const targets = (
+            event.action as {
+              targets?: Array<{ targetId?: string; eliminated?: boolean }>;
+            }
+          ).targets;
+          if (Array.isArray(targets)) {
+            for (const target of targets) {
+              if (target.eliminated && target.targetId) {
+                match.deadCharacters = match.deadCharacters ?? {};
+                match.deadCharacters[target.targetId] = true;
+              }
+            }
+          }
+        }
+      }
+      this.characterPanel?.notifyEliminationEvents(turnNumber, replayEvents);
+      if (this.mobileLayout) {
+        this.showMobileMap();
+      }
       this.enqueueReplay(replayEvents);
     } else if (payload.playerCharacters) {
       if (!this.replayView && !this.replayPlaying) {
@@ -3073,6 +3115,9 @@ export class GameScene extends Phaser.Scene {
       const events = this.replayQueue.shift();
       if (!events || events.length === 0) {
         continue;
+      }
+      if (this.mobileLayout && this.mobileViewMode !== "map") {
+        this.showMobileMap();
       }
       await playReplayEvents(this.createMoveReplayContext(), events);
     }
@@ -3171,8 +3216,7 @@ export class GameScene extends Phaser.Scene {
     this.locationSelectionPointerId = null;
     this.setLocationSelectionPendingForTarget(target, true);
     if (this.mobileLayout) {
-      this.mobileViewMode = "map";
-      this.layoutUI();
+      this.showMobileMap();
     }
     this.refreshLocationSelectionVisuals();
     this.input.setDefaultCursor("crosshair");
@@ -3444,9 +3488,10 @@ export class GameScene extends Phaser.Scene {
     this.replayPlaybackCancelled = false;
     this.replayPaused = false;
     if (this.mobileLayout) {
-      this.mobileViewMode = "map";
+      this.showMobileMap();
+    } else {
+      this.layoutUI();
     }
-    this.layoutUI();
     this.updateReplayControls();
   }
 

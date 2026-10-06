@@ -106,7 +106,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     developed: true,
     texture: "Board Game Icons",
-    frame: "resource_apple.png",
+    frame: "breakfast.png",
     actionOrder: 1,
     actionSubOrder: 2,
     requirements: [{ description: "Debe realizarse en el restaurante." }],
@@ -193,7 +193,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       }
     ],
     texture: "Board Game Icons",
-    frame: "book_open.png",
+    frame: "talk.png",
     actionOrder: 2,
     actionSubOrder: 0,
     tags: ["Utility", "Support"]
@@ -230,7 +230,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       "En una localización adyacente, sin prismáticos o un aliado con walkie talkie, se desconoce la identidad del objetivo."
     ],
     texture: "Board Game Icons",
-    frame: "token.png",
+    frame: "place_tracker.png",
     actionOrder: 2,
     actionSubOrder: 1,
     tags: ["Recon", "Utility", "Ranged", "SingleTarget"]
@@ -413,7 +413,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requirements: [{ description: "Debe ejecutarse en la gasolinera." }],
     effects: [{ description: "Obtiene 3 unidades de combustible." }],
     texture: "Board Game Icons",
-    frame: "tokens.png",
+    frame: "refuel.png",
     actionOrder: 6,
     actionSubOrder: 0,
     tags: ["Logistics", "Economy"]
@@ -454,7 +454,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       description: "Cada repetición descubre un objeto adicional."
     },
     texture: "Board Game Icons",
-    frame: "cards_seek.png",
+    frame: "search.png",
     actionOrder: 6,
     actionSubOrder: 2,
     tags: ["Recon", "Logistics"]
@@ -473,7 +473,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       description: "Permite realizar manipulaciones adicionales."
     },
     texture: "Board Game Icons",
-    frame: "card_flip.png",
+    frame: "manipulate.png",
     actionOrder: 6,
     actionSubOrder: 3,
     tags: ["Crafting"]
@@ -531,7 +531,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       "Otorga 5 zarkans en el siguiente turno múltiplo de 5 cuando el veneno se activa sin pacto previo."
     ],
     texture: "Board Game Icons",
-    frame: "skull.png",
+    frame: "poison_food.png",
     actionOrder: 7,
     actionSubOrder: 0,
     tags: ["Attack", "Status"]
@@ -556,7 +556,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       description: "Permite dejar objetos adicionales."
     },
     texture: "Board Game Icons",
-    frame: "token_remove.png",
+    frame: "drop.png",
     actionOrder: 8,
     actionSubOrder: 0,
     tags: ["Logistics", "TargetItems"]
@@ -805,7 +805,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       }
     ],
     texture: "Board Game Icons",
-    frame: "spinner.png",
+    frame: "start_chainsaw.png",
     actionOrder: 11,
     actionSubOrder: 3,
     tags: ["Logistics"]
@@ -1022,7 +1022,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       }
     ],
     texture: "Board Game Icons",
-    frame: "cards_stack.png",
+    frame: "fabricate.png",
     actionOrder: 14,
     actionSubOrder: 0,
     tags: ["Crafting", "Logistics"]
@@ -1137,7 +1137,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       }
     ],
     texture: "Board Game Icons",
-    frame: "hand_token_open.png",
+    frame: "activate_cameras.png",
     actionOrder: 16,
     actionSubOrder: 0,
     tags: ["Recon", "Utility"]
@@ -1158,7 +1158,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       }
     ],
     texture: "Board Game Icons",
-    frame: "hexagon_question.png",
+    frame: "look_window.png",
     actionOrder: 16,
     actionSubOrder: 1,
     tags: ["Recon", "Ranged"]
@@ -1287,7 +1287,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       }
     ],
     texture: "Board Game Icons",
-    frame: "flask_half.png",
+    frame: "vaccine.png",
     actionOrder: 17,
     actionSubOrder: 2,
     tags: ["Support", "Status", "SingleTarget", "CanTargetSelf"]

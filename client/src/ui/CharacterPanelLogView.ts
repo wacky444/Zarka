@@ -132,17 +132,9 @@ export class CharacterPanelLogView {
   setReplay(turn: number, maxTurn: number, events: ReplayEvent[]): void {
     const resolvedTurn = Math.max(0, Math.floor(turn));
     this.maxTurn = Math.max(this.maxTurn, Math.floor(maxTurn), resolvedTurn);
-    if (this.selectedTurn === null) {
-      this.selectedTurn = resolvedTurn >= 0 ? resolvedTurn : this.maxTurn;
-    }
-    if (this.selectedTurn !== null) {
-      this.selectedTurn = Math.min(
-        Math.max(0, this.selectedTurn),
-        this.maxTurn
-      );
-    }
-    this.displayedTurn = this.selectedTurn;
-    this.lastRequestedTurn = this.selectedTurn;
+    this.selectedTurn = resolvedTurn;
+    this.displayedTurn = resolvedTurn;
+    this.lastRequestedTurn = resolvedTurn;
     this.loading = false;
     this.replayEventStrings = this.formatReplayEvents(events);
     this.eventStrings = [
@@ -443,6 +435,7 @@ export class CharacterPanelLogView {
       return [];
     }
     const lines: string[] = [];
+    const eliminatedInLog = new Set<string>();
     for (const event of events) {
       if (event.kind === "player") {
         const actor = this.resolvePlayerName(event.actorId);
@@ -467,7 +460,12 @@ export class CharacterPanelLogView {
           continue;
         }
         if (actionId === "status_dead") {
-          lines.push(`${actor} ${t("was eliminated")}`);
+          if (!event.actorId || !eliminatedInLog.has(event.actorId)) {
+            if (event.actorId) {
+              eliminatedInLog.add(event.actorId);
+            }
+            lines.push(`${actor} ${t("was eliminated")}`);
+          }
           continue;
         }
         if (actionId === "status_unconscious") {
@@ -1181,6 +1179,9 @@ export class CharacterPanelLogView {
                 )}`
               );
               if (target.eliminated) {
+                if (target.targetId) {
+                  eliminatedInLog.add(target.targetId);
+                }
                 const team =
                   (target.metadata as { teamId?: string })?.teamId ||
                   this.resolvePlayerTeam(target.targetId);
@@ -1190,6 +1191,9 @@ export class CharacterPanelLogView {
                 );
               }
             } else if (target.eliminated) {
+              if (target.targetId) {
+                eliminatedInLog.add(target.targetId);
+              }
               const team =
                 (target.metadata as { teamId?: string })?.teamId ||
                 this.resolvePlayerTeam(target.targetId);
@@ -1227,24 +1231,20 @@ export class CharacterPanelLogView {
     return lines;
   }
 
-  private notifyEliminationEvents(turn: number, events: ReplayEvent[]): void {
+  notifyEliminationEvents(turn: number, events: ReplayEvent[]): void {
     if (typeof this.options.onElimination !== "function") {
       return;
     }
     if (!Array.isArray(events) || events.length === 0) {
       return;
     }
-    for (const event of events) {
-      if (event.kind !== "player" || event.action.actionId !== "status_dead") {
-        continue;
-      }
-      const actorId = event.actorId;
+    const handleElimination = (actorId: string | undefined) => {
       if (typeof actorId !== "string" || actorId.length === 0) {
-        continue;
+        return;
       }
       const key = `${turn}:${actorId}`;
       if (this.eliminationKeys.has(key)) {
-        continue;
+        return;
       }
       this.eliminationKeys.add(key);
       const playerName = this.resolvePlayerName(actorId);
@@ -1253,6 +1253,27 @@ export class CharacterPanelLogView {
         playerName,
         turn,
       });
+    };
+
+    for (const event of events) {
+      if (event.kind !== "player") {
+        continue;
+      }
+      if (event.action.actionId === "status_dead") {
+        handleElimination(event.actorId);
+      }
+      const targets = (
+        event.action as {
+          targets?: Array<{ targetId?: string; eliminated?: boolean }>;
+        }
+      ).targets;
+      if (Array.isArray(targets)) {
+        for (const target of targets) {
+          if (target.eliminated && target.targetId) {
+            handleElimination(target.targetId);
+          }
+        }
+      }
     }
   }
 

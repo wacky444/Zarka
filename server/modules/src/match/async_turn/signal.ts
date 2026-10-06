@@ -17,6 +17,7 @@ import { buildMatchLabel } from "../../utils/label";
 import { normalizeMatchName } from "../../utils/normalize";
 import { clampNumber, validateTime } from "../../utils/validation";
 import { tailorReplayEvents } from "../replay/tailorReplay";
+import { isCharacterDead } from "../../utils/playerCharacter";
 import {
   tailorC4sForViewer,
   tailorMapForCharacter,
@@ -199,15 +200,20 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             }
           }
           const chars = msg.playerCharacters ?? {};
+          const deadCharacters: Record<string, boolean> = {
+            ...(msg.deadCharacters ?? {}),
+          };
           for (const id in chars) {
             if (!Object.prototype.hasOwnProperty.call(chars, id)) {
               continue;
             }
             const char = chars[id];
             const isDead =
-              msg.deadCharacters?.[id] === true ||
+              deadCharacters[id] === true ||
+              isCharacterDead(char) ||
               (typeof char?.stats?.health?.current === "number" &&
                 char.stats.health.current <= 0);
+            deadCharacters[id] = !!isDead;
             if (!isDead) {
               if (char?.teamId) {
                 teamCounts[char.teamId] = (teamCounts[char.teamId] ?? 0) + 1;
@@ -222,7 +228,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             match_id: state.game_id,
             turn: msg.turn,
             readyStates: msg.readyStates,
-            deadCharacters: msg.deadCharacters,
+            deadCharacters,
             playerCharacters: msg.playerCharacters,
             teams: msg.teams ? [...msg.teams] : Object.keys(teamCounts),
             teamCounts,

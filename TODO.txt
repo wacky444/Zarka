@@ -1,7 +1,5 @@
 - icons for, inventory, character, status, skills, players, teams, log/replay, map, chat, arrow right, left
 
-- when a player joined without doing f5, in the player list it shows a guid
-
 - end game animation, screen, stats, achievements (who killed the most, or pacifist)
 
 - crafting
@@ -10,18 +8,13 @@
 
 - train and experience
 
-- y muchas skills de atacar tienen iconos muy distintos
-
 - autoreplay after turn in mobile
 
-- not getting the logs of player eliminateds, only when log is opened
+- not getting the logs of player eliminateds, only when log is opened, also the player list is not updated with the deads until web is refreshed
 
 - on pyro, also didnt get a confirm when bought
 
 - tutorial step 6 should teach about prioritize items
-
-- look using window without target should use a random nearby cell, also log should tell what cell is looking
-
 - cant picke only one item
     - add a card that says none, so it can prioritize, item, none, none
 
@@ -98,5 +91,4 @@
 - steal with power doesn't show an extra target selector
 
 - action icons that need new icons:
-	activate cameras, start chainsaw, search, drop, breakfast, poison food, fabricate, talk, inyect vacine, manipulate, look window, place tracker, refuel,
 	use antidote, use quemical weapon, use medicine

@@ -3,7 +3,7 @@ import { MatchRecord } from "../models/types";
 import { advanceTurn } from "./advanceTurn";
 import { processBotActions } from "./botAI";
 import { planTutorialBotActions } from "./TutorialBotPlanner";
-import { isCharacterIncapacitated } from "../utils/playerCharacter";
+import { isCharacterDead, isCharacterIncapacitated } from "../utils/playerCharacter";
 
 export interface TurnResolutionResult {
   advanced: boolean;
@@ -36,6 +36,23 @@ export function resolveTurnForMatch(
   }
   match.current_turn = resolvedTurn;
   match.readyStates = resetStates;
+
+  const deadCharacters: Record<string, boolean> = {
+    ...(match.deadCharacters ?? {}),
+  };
+  for (const id in match.playerCharacters) {
+    if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, id)) {
+      continue;
+    }
+    const char = match.playerCharacters[id];
+    const isDead =
+      deadCharacters[id] === true ||
+      isCharacterDead(char) ||
+      (typeof char?.stats?.health?.current === "number" &&
+        char.stats.health.current <= 0);
+    deadCharacters[id] = !!isDead;
+  }
+  match.deadCharacters = deadCharacters;
 
   return { advanced: true, resolvedTurn, events };
 }
