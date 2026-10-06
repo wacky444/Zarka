@@ -228,6 +228,8 @@ type RexSizer = Phaser.GameObjects.GameObject & {
   ) => unknown;
   addBackground: (background: Phaser.GameObjects.GameObject) => unknown;
   layout: () => unknown;
+  setMinSize: (width: number, height: number) => unknown;
+  setOrigin: (x: number, y?: number) => unknown;
   setPosition: (x: number, y: number) => unknown;
   x: number;
   y: number;
@@ -906,24 +908,38 @@ export class GridSelect extends Phaser.GameObjects.Container {
       }
     );
 
+    const titleMaxWidth = Math.max(1, this.modalWidth - 48);
     const header = scene.add
       .text(0, 0, this.modalTitle, {
         fontSize: "22px",
         color: THEME.colors.modalHeader,
-        fontStyle: "bold"
+        fontStyle: "bold",
+        align: "center"
       })
       .setOrigin(0.5, 0.5);
+    const singleLineHeaderHeight = header.height;
+    header.setWordWrapWidth(titleMaxWidth, true);
     modal.add(header, 0, "center", { bottom: 4 }, false);
 
     const subtitle = scene.add
       .text(0, 0, this.modalSubtitle, {
         fontSize: "15px",
-        color: THEME.colors.modalText
+        color: THEME.colors.modalText,
+        align: "center"
       })
       .setOrigin(0.5, 0.5);
+    const singleLineSubtitleHeight = subtitle.height;
+    subtitle.setWordWrapWidth(titleMaxWidth, true);
     modal.add(subtitle, 0, "center", { bottom: 4 }, false);
 
-    const gridView = this.createStaticGridPanel();
+    const extraHeaderHeight =
+      Math.max(0, header.height - singleLineHeaderHeight) +
+      Math.max(0, subtitle.height - singleLineSubtitleHeight);
+    const gridView = this.createStaticGridPanel(
+      this.modalHeight -
+        (this.confirmSelection ? 190 : 140) -
+        extraHeaderHeight
+    );
     modal.add(
       gridView as unknown as Phaser.GameObjects.GameObject,
       1,
@@ -936,6 +952,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
       modal.add(this.confirmButton, 0, "center", { top: 10 }, false);
     }
 
+    modal.setMinSize(this.modalWidth, this.modalHeight);
+    modal.setOrigin(0.5, 0.5);
     modal.layout();
     modal.setPosition(width / 2, height / 2);
     overlay.add(modal);
@@ -1144,7 +1162,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     return this.modalVisible;
   }
 
-  private createStaticGridPanel(): RexScrollablePanel {
+  private createStaticGridPanel(height: number): RexScrollablePanel {
     const scene = this.scene;
     const content = scene.add.container(0, 0);
     content.setScrollFactor(0);
@@ -1153,7 +1171,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
     const panel = scene.rexUI.add.scrollablePanel({
       width: this.modalWidth - 48,
-      height: this.modalHeight - (this.confirmSelection ? 190 : 140),
+      height: Math.max(1, height),
       scrollMode: 0,
       panel: {
         child: content,
