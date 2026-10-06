@@ -126,7 +126,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     developed: true,
     texture: "Board Game Icons",
-    frame: "pouch_add.png",
+    frame: "bandage.png",
     actionOrder: 1,
     actionSubOrder: 3,
     requiredItems: ["bandage"],
@@ -590,7 +590,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       description: "Permite lanzar objetos adicionales."
     },
     texture: "Board Game Icons",
-    frame: "hand.png",
+    frame: "throw.png",
     actionOrder: 8,
     actionSubOrder: 1,
     tags: ["Attack", "Area", "Ranged", "TargetItems"]
@@ -753,7 +753,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         "Cada repetición aumenta el daño en [health-damage]1[/health-damage] punto."
     },
     texture: "Board Game Icons",
-    frame: "sword.png",
+    frame: "bat.png",
     actionOrder: 11,
     actionSubOrder: 2,
     tags: ["Attack", "Area"]
@@ -1185,7 +1185,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       description: "Permite observar una localización a 2 de distancia."
     },
     texture: "Board Game Icons",
-    frame: "card_target.png",
+    frame: "binoculars.png",
     actionOrder: 16,
     actionSubOrder: 2,
     tags: ["Recon", "Ranged"]
@@ -1264,7 +1264,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       }
     ],
     texture: "Board Game Icons",
-    frame: "flask_full.png",
+    frame: "virus.png",
     actionOrder: 17,
     actionSubOrder: 1,
     tags: ["Attack", "Area", "Status", "SingleTarget", "CanTargetSelf"]

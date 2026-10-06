@@ -100,6 +100,5 @@
 - steal with power doesn't show an extra target selector
 
 - action icons that need new icons:
-	bat attack, inyect virus, throw, use bandage, use binoculars
 	activate cameras, start chainsaw, search, drop, breakfast, poison food, fabricate, talk, inyect vacine, manipulate, look window, place tracker, refuel,
 	use antidote, use quemical weapon, use medicine
