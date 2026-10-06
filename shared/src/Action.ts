@@ -157,6 +157,9 @@ export interface ActionCondition {
   description?: string;
 }
 
+export const PICKUP_NONE_PRIORITY_ID = "__pickup_none__";
+export const MAX_PICKUP_NONE_PRIORITY_ENTRIES = 2;
+
 export interface ActionSubmission {
   playerId: string;
   actionId: ActionId;

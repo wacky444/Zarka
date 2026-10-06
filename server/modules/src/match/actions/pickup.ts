@@ -4,6 +4,8 @@ import {
   ExtraExecutionEffect,
   getSkillEffectTotal,
   ItemLibrary,
+  MAX_PICKUP_NONE_PRIORITY_ENTRIES,
+  PICKUP_NONE_PRIORITY_ID,
   syncBandolierLoadCapacity,
   type ActionId,
   type HexTileSnapshot,
@@ -29,11 +31,17 @@ function normalizePriorityIds(
   const list = Array.isArray(plan.targetItemIds) ? plan.targetItemIds : [];
   const normalized: string[] = [];
   const lookup: Record<string, true> = {};
+  let noneCount = 0;
   for (const entry of list) {
     if (typeof entry !== "string" || entry.length === 0) {
       continue;
     }
-    if (Object.prototype.hasOwnProperty.call(lookup, entry)) {
+    if (entry === PICKUP_NONE_PRIORITY_ID) {
+      if (noneCount >= MAX_PICKUP_NONE_PRIORITY_ENTRIES) {
+        continue;
+      }
+      noneCount += 1;
+    } else if (Object.prototype.hasOwnProperty.call(lookup, entry)) {
       continue;
     }
     lookup[entry] = true;
@@ -274,11 +282,19 @@ export class PickUpAction extends BaseAction {
         participant.plan,
         definition
       );
-      const limit = computePickupLimit(
+      const maxPickupLimit = computePickupLimit(
         participant.character,
         extraReps,
         definition
       );
+      const noneIndex = priorities.indexOf(PICKUP_NONE_PRIORITY_ID);
+      const limit =
+        noneIndex < 0
+          ? maxPickupLimit
+          : Math.min(maxPickupLimit, Math.max(1, noneIndex));
+      const pickupPriorities = (
+        noneIndex < 0 ? priorities : priorities.slice(0, noneIndex)
+      ).filter((id) => id !== PICKUP_NONE_PRIORITY_ID);
       const picked: PickupItem[] = [];
       const skippedByLoad: PickupItem[] = [];
       let zarkansCollected = 0;
@@ -300,15 +316,15 @@ export class PickUpAction extends BaseAction {
             : [];
           const visible = filterVisibleItems(tileItems, participant.character);
           visibleBefore = visible.slice();
-          if (priorities.length > 0) {
-            for (const id of priorities) {
+          if (pickupPriorities.length > 0) {
+            for (const id of pickupPriorities) {
               if (visible.indexOf(id) === -1) {
                 missingPriorityLookup[id] = true;
               }
             }
           }
           if (limit > 0 && visible.length > 0) {
-            const queue = buildPickupQueue(visible, priorities);
+            const queue = buildPickupQueue(visible, pickupPriorities);
             for (const itemId of queue) {
               if (picked.length >= limit) {
                 break;
@@ -387,8 +403,8 @@ export class PickUpAction extends BaseAction {
           itemType: entry.itemType,
         }));
       }
-      if (priorities.length > 0) {
-        metadata.requestedItemIds = priorities;
+      if (pickupPriorities.length > 0) {
+        metadata.requestedItemIds = pickupPriorities;
       }
       if (attempted.length > 0) {
         metadata.attemptedItemIds = attempted;

@@ -1,4 +1,8 @@
 import Phaser from "phaser";
+import {
+  MAX_PICKUP_NONE_PRIORITY_ENTRIES,
+  PICKUP_NONE_PRIORITY_ID
+} from "@shared";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
 
 export type ItemPriorityOption = {
@@ -221,6 +225,19 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
       this.syncing = false;
       return;
     }
+    if (option.id === PICKUP_NONE_PRIORITY_ID) {
+      const noneCount = this.priority.filter(
+        (id) => id === PICKUP_NONE_PRIORITY_ID
+      ).length;
+      if (noneCount < MAX_PICKUP_NONE_PRIORITY_ENTRIES) {
+        this.priority = [...this.priority, option.id];
+        this.updateListDisplay(true);
+      }
+      this.syncing = true;
+      this.grid.setValue(null, false);
+      this.syncing = false;
+      return;
+    }
     if (this.priority.indexOf(option.id) !== -1) {
       this.priority = this.priority.filter((id) => id !== option.id);
       this.syncing = true;
@@ -229,7 +246,13 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
       this.updateListDisplay(true);
       return;
     }
-    this.priority = [...this.priority, option.id];
+    const stopIndex = this.priority.indexOf(PICKUP_NONE_PRIORITY_ID);
+    const insertionIndex = stopIndex === -1 ? this.priority.length : stopIndex;
+    this.priority = [
+      ...this.priority.slice(0, insertionIndex),
+      option.id,
+      ...this.priority.slice(insertionIndex),
+    ];
     this.updateListDisplay(true);
     this.syncing = true;
     this.grid.setValue(null, false);
@@ -245,25 +268,41 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
       frame: option.frame,
       iconScale: option.iconScale,
       highlighted: this.priority.includes(option.id),
-      disabled: option.disabled,
+      disabled:
+        option.disabled === true ||
+        (option.id === PICKUP_NONE_PRIORITY_ID &&
+          this.priority.filter((id) => id === PICKUP_NONE_PRIORITY_ID).length >=
+            MAX_PICKUP_NONE_PRIORITY_ENTRIES),
     }));
   }
 
   private filterIds(ids: string[]): string[] {
     const seen = new Set<string>();
     const filtered: string[] = [];
+    let noneCount = 0;
     for (const id of ids) {
       if (typeof id !== "string") {
         continue;
       }
       const trimmed = id.trim();
-      if (!trimmed || seen.has(trimmed)) {
+      if (!trimmed) {
+        continue;
+      }
+      if (trimmed === PICKUP_NONE_PRIORITY_ID) {
+        if (noneCount >= MAX_PICKUP_NONE_PRIORITY_ENTRIES) {
+          continue;
+        }
+        noneCount += 1;
+      } else if (seen.has(trimmed)) {
         continue;
       }
       const option = this.options.find(
         (entry) => entry.id === trimmed && entry.disabled !== true
       );
       if (!option) {
+        if (trimmed === PICKUP_NONE_PRIORITY_ID) {
+          noneCount -= 1;
+        }
         continue;
       }
       seen.add(trimmed);

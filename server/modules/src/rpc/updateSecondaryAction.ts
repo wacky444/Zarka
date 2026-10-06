@@ -4,6 +4,7 @@ import {
   ActionCategory,
   ActionLibrary,
   getSkillEffectTotal,
+  PICKUP_NONE_PRIORITY_ID,
   type ActionId
 } from "@shared";
 import { MatchRecord } from "../models/types";
@@ -122,7 +123,7 @@ export function updateSecondaryActionRpc(
           continue;
         }
         const trimmed = value.trim();
-        if (!trimmed) {
+        if (!trimmed || trimmed === PICKUP_NONE_PRIORITY_ID) {
           continue;
         }
         if (Object.prototype.hasOwnProperty.call(seen, trimmed)) {

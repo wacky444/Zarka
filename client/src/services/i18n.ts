@@ -697,6 +697,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "No available players": "No hay jugadores disponibles",
   "No target": "Sin objetivo",
   "No priority": "Sin prioridad",
+  "Stops after earlier picks; if first, picks one random item.":
+    "Se detiene tras los objetos anteriores; si es el primero, recoge uno al azar.",
   "No prioritized items": "No hay objetos prioritarios",
   "No secondary action": "Sin acción secundaria",
   "Tap a player to target them": "Pulsa un jugador para seleccionarlo",

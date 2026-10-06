@@ -2,6 +2,8 @@
 
 import {
   ActionLibrary,
+  MAX_PICKUP_NONE_PRIORITY_ENTRIES,
+  PICKUP_NONE_PRIORITY_ID,
   TUTORIAL_BOT_ID,
   TUTORIAL_MATCH_METADATA_KEY,
   type ActionId
@@ -113,6 +115,7 @@ export function updateMainActionRpc(
     if (Array.isArray(rawTargetItems)) {
       const seen: Record<string, true> = {};
       const filtered: string[] = [];
+      let noneCount = 0;
       for (const value of rawTargetItems) {
         if (typeof value !== "string") {
           continue;
@@ -121,7 +124,15 @@ export function updateMainActionRpc(
         if (!trimmed) {
           continue;
         }
-        if (Object.prototype.hasOwnProperty.call(seen, trimmed)) {
+        if (trimmed === PICKUP_NONE_PRIORITY_ID) {
+          if (
+            normalizedActionId !== "pick_up" ||
+            noneCount >= MAX_PICKUP_NONE_PRIORITY_ENTRIES
+          ) {
+            continue;
+          }
+          noneCount += 1;
+        } else if (Object.prototype.hasOwnProperty.call(seen, trimmed)) {
           continue;
         }
         seen[trimmed] = true;

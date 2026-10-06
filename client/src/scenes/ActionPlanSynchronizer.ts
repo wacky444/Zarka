@@ -2,7 +2,9 @@ import type { RpcResponse } from "@heroiclabs/nakama-js";
 import {
   ActionCategory,
   ActionLibrary,
+  MAX_PICKUP_NONE_PRIORITY_ENTRIES,
   normalizeAxial,
+  PICKUP_NONE_PRIORITY_ID,
   type ActionId,
   type ActionSubmission,
   type Axial,
@@ -795,12 +797,21 @@ export class ActionPlanSynchronizer {
     }
     const seen = new Set<string>();
     const normalized: string[] = [];
+    let noneCount = 0;
     for (const entry of value) {
       if (typeof entry !== "string") {
         continue;
       }
       const trimmed = entry.trim();
-      if (!trimmed || seen.has(trimmed)) {
+      if (!trimmed) {
+        continue;
+      }
+      if (trimmed === PICKUP_NONE_PRIORITY_ID) {
+        if (noneCount >= MAX_PICKUP_NONE_PRIORITY_ENTRIES) {
+          continue;
+        }
+        noneCount += 1;
+      } else if (seen.has(trimmed)) {
         continue;
       }
       seen.add(trimmed);

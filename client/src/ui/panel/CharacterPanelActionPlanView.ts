@@ -1,6 +1,8 @@
 import Phaser from "phaser";
 import {
   ActionLibrary,
+  MAX_PICKUP_NONE_PRIORITY_ENTRIES,
+  PICKUP_NONE_PRIORITY_ID,
   type ActionId,
   type Axial,
   type MatchRecord,
@@ -2725,16 +2727,28 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     }
     const seen = new Set<string>();
     const filtered: string[] = [];
+    let noneCount = 0;
     for (const value of ids) {
       if (typeof value !== "string") {
         continue;
       }
       const trimmed = value.trim();
-      if (!trimmed || seen.has(trimmed)) {
+      if (!trimmed) {
+        continue;
+      }
+      if (trimmed === PICKUP_NONE_PRIORITY_ID) {
+        if (noneCount >= MAX_PICKUP_NONE_PRIORITY_ENTRIES) {
+          continue;
+        }
+        noneCount += 1;
+      } else if (seen.has(trimmed)) {
         continue;
       }
       const option = optionsList.find((entry) => entry.id === trimmed);
       if (!option || option.disabled) {
+        if (trimmed === PICKUP_NONE_PRIORITY_ID) {
+          noneCount -= 1;
+        }
         continue;
       }
       seen.add(trimmed);
@@ -2865,9 +2879,23 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   }
 
   private getMainActionItemOptions(): ItemPriorityOption[] {
-    return this.mainActionSelection === "steal"
-      ? this.stealItemOptions
-      : this.itemOptions;
+    if (this.mainActionSelection === "steal") {
+      return this.stealItemOptions;
+    }
+    if (this.mainActionSelection !== "pick_up") {
+      return this.itemOptions;
+    }
+    return [
+      ...this.itemOptions,
+      {
+        id: PICKUP_NONE_PRIORITY_ID,
+        label: t("None"),
+        description: t(
+          "Stops after earlier picks; if first, picks one random item."
+        ),
+        texture: ""
+      }
+    ];
   }
 
   private selectedSecondaryActionSupportsLocation(): boolean {
