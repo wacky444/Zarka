@@ -4,26 +4,17 @@ import { ActionLibrary, ItemLibrary } from "@shared";
 import type {
   ActionId,
   C4Record,
-  HexTileSnapshot,
   ReplayPlayerEvent,
 } from "@shared";
 import type { MatchRecord } from "../../models/types";
 import { getRequestedExtraExecutions, getUsableExtraExecutions } from "../../utils/energy";
+import { findTileAtCoord } from "../../utils/location";
 import {
   consumeCarriedItem,
   countCarriedItem,
   type PlannedActionParticipant,
 } from "./utils";
 import { BaseAction } from "./classes/BaseAction";
-
-function findTileAtCoord(
-  match: MatchRecord,
-  coord: { q: number; r: number },
-): HexTileSnapshot | undefined {
-  return match.map?.tiles.find(
-    (tile) => tile.coord.q === coord.q && tile.coord.r === coord.r,
-  );
-}
 
 function createC4Id(match: MatchRecord, ownerId: string, turn: number): string {
   const existing = new Set((match.c4s ?? []).map((charge) => charge.id));
@@ -67,7 +58,7 @@ export class PlaceC4Action extends BaseAction {
     const events: ReplayPlayerEvent[] = [];
     for (const participant of roster) {
       const coord = participant.character.position?.coord;
-      const tile = coord ? findTileAtCoord(match, coord) : undefined;
+      const tile = findTileAtCoord(match.map?.tiles, coord);
       if (
         !coord ||
         !tile ||

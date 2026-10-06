@@ -10,6 +10,7 @@ import type {
 import { ActionLibrary, axialDistance, neighbors } from "@shared";
 import type { MatchRecord } from "../../models/types";
 import { isCharacterDead } from "../../utils/playerCharacter";
+import { findTileAtCoord } from "../../utils/location";
 import {
   getRequestedExtraExecutions,
   getUsableExtraExecutions,
@@ -24,18 +25,6 @@ import {
 import { BaseAction } from "./classes/BaseAction";
 
 const TRAP_DAMAGE = 7;
-
-function findTileAtCoord(
-  match: MatchRecord,
-  coord: Axial,
-): HexTileSnapshot | undefined {
-  for (const tile of match.map?.tiles ?? []) {
-    if (tile.coord.q === coord.q && tile.coord.r === coord.r) {
-      return tile;
-    }
-  }
-  return undefined;
-}
 
 interface TransitionLocation {
   tileId: string;
@@ -94,11 +83,11 @@ export class PlaceTrapAction extends BaseAction {
     for (const participant of roster) {
       const origin = participant.character.position;
       const originTile = origin?.coord
-        ? findTileAtCoord(match, origin.coord)
+        ? findTileAtCoord(match.map?.tiles, origin.coord)
         : undefined;
       const destination = resolvePlanDestination(match, participant.plan);
       const destinationTile = destination
-        ? findTileAtCoord(match, destination.coord)
+        ? findTileAtCoord(match.map?.tiles, destination.coord)
         : undefined;
       const invalidReason =
         !origin?.coord
@@ -157,7 +146,7 @@ export class PlaceTrapAction extends BaseAction {
           })
         : validDestination;
       const secondDestinationTile = secondDestination
-        ? findTileAtCoord(match, secondDestination.coord)
+        ? findTileAtCoord(match.map?.tiles, secondDestination.coord)
         : undefined;
       const secondDestinationIsValid =
         !!secondDestination &&

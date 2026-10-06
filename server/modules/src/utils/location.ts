@@ -1,7 +1,24 @@
 import type { Axial, HexTileSnapshot } from "@shared";
-import { axialDistance, neighbors, offsetToCube } from "@shared";
+import { axialDistance, offsetToCube } from "@shared";
 
 export { axialDistance, offsetToCube };
+
+export function areSameLocation(
+  first: Axial | null | undefined,
+  second: Axial | null | undefined,
+): boolean {
+  return !!first && !!second && first.q === second.q && first.r === second.r;
+}
+
+export function findTileAtCoord(
+  tiles: readonly HexTileSnapshot[] | undefined,
+  coord: Axial | null | undefined,
+): HexTileSnapshot | undefined {
+  if (!coord) {
+    return undefined;
+  }
+  return tiles?.find((tile) => areSameLocation(tile.coord, coord));
+}
 
 export function adjacentDestinationToward(
   tiles: readonly HexTileSnapshot[] | undefined,
@@ -15,15 +32,15 @@ export function adjacentDestinationToward(
   let closest:
     | { tileId: string; coord: Axial; distance: number }
     | undefined;
-  for (const coord of neighbors(origin)) {
-    const tile = tiles?.find(
-      (candidate) =>
-        candidate.coord.q === coord.q && candidate.coord.r === coord.r,
-    );
-    if (!tile || tile.walkable === false || tile.meta?.destroyed === true) {
+  for (const tile of tiles ?? []) {
+    if (
+      axialDistance(origin, tile.coord) !== 1 ||
+      tile.walkable === false ||
+      tile.meta?.destroyed === true
+    ) {
       continue;
     }
-    const distance = axialDistance(coord, requestedDestination);
+    const distance = axialDistance(tile.coord, requestedDestination);
     if (!closest || distance < closest.distance) {
       closest = {
         tileId: tile.id,

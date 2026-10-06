@@ -1,13 +1,9 @@
 import type { ReplayEvent, ReplayPlayerEvent, PlayerCharacter } from "@shared";
 import type { MatchRecord } from "../../models/types";
 import { applyHealthDelta, mergeCharacterState } from "./utils";
+import { areSameLocation } from "../../utils/location";
 import { isCharacterDead, isCharacterIncapacitated } from "../../utils/playerCharacter";
-
-function sameLocation(a: PlayerCharacter, b: PlayerCharacter): boolean {
-  const first = a.position?.coord;
-  const second = b.position?.coord;
-  return !!first && !!second && first.q === second.q && first.r === second.r;
-}
+import { isVirusInfected } from "../../utils/virus";
 
 export function applyVirusInfection(
   match: MatchRecord,
@@ -22,10 +18,7 @@ export function applyVirusInfection(
     }
     const character = characters[playerId];
     if (
-      character &&
-      !isCharacterDead(character) &&
-      (character.statuses?.virus?.containsVirus === true ||
-        character.statuses?.virus?.contagious === true)
+      character && !isCharacterDead(character) && isVirusInfected(character)
     ) {
       infectedSources.push([playerId, character]);
     }
@@ -48,7 +41,7 @@ export function applyVirusInfection(
         !target ||
         isCharacterIncapacitated(target) ||
         target.statuses?.vaccine?.immune === true ||
-        !sameLocation(source, target)
+        !areSameLocation(source.position?.coord, target.position?.coord)
       ) {
         continue;
       }

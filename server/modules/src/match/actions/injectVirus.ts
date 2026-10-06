@@ -8,6 +8,7 @@ import type {
   ReplayPlayerEvent,
 } from "@shared";
 import { ReplayActionEffect } from "@shared";
+import { areSameLocation } from "../../utils/location";
 import {
   collectPlanTargetIds,
   consumeCarriedItem,
@@ -63,11 +64,7 @@ export class InjectVirusAction extends BaseAction {
         : undefined;
       const origin = participant.character.position?.coord;
       const targetCoord = target?.position?.coord;
-      const sameLocation =
-        !!origin &&
-        !!targetCoord &&
-        origin.q === targetCoord.q &&
-        origin.r === targetCoord.r;
+      const sameLocation = areSameLocation(origin, targetCoord);
       if (!target || !sameLocation) {
         this.clearPlan(participant);
         events.push(

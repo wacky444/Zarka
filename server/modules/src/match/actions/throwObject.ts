@@ -9,7 +9,6 @@ import {
   ReplayActionEffect,
   type ActionId,
   type Axial,
-  type HexTileSnapshot,
   type ItemId,
   type PlayerCharacter,
   type ReplayActionDone,
@@ -18,6 +17,7 @@ import {
 } from "@shared";
 import type { MatchRecord } from "../../models/types";
 import { getUsableExtraExecutions } from "../../utils/energy";
+import { findTileAtCoord } from "../../utils/location";
 import { collectTargets } from "./targeting";
 import {
   applyHealthDelta,
@@ -36,18 +36,6 @@ import { BaseAction } from "./classes/BaseAction";
 interface ThrownItem {
   itemType: ItemId;
   itemId: string;
-}
-
-function findTileAtCoord(
-  match: MatchRecord,
-  coord: Axial
-): HexTileSnapshot | undefined {
-  for (const tile of match.map?.tiles ?? []) {
-    if (tile.coord.q === coord.q && tile.coord.r === coord.r) {
-      return tile;
-    }
-  }
-  return undefined;
 }
 
 function addDiscoveredItem(
@@ -147,9 +135,7 @@ export class ThrowObjectAction extends BaseAction {
     for (const participant of roster) {
       const origin = participant.character.position?.coord;
       const targetCoord = participant.plan.targetLocationId ?? origin;
-      const targetTile = targetCoord
-        ? findTileAtCoord(match, targetCoord)
-        : undefined;
+      const targetTile = findTileAtCoord(match.map?.tiles, targetCoord);
       const distance = origin && targetCoord
         ? axialDistance(origin, targetCoord)
         : -1;

@@ -2,12 +2,11 @@ import {
   ActionLibrary,
   axialDistance,
   type ActionId,
-  type Axial,
-  type HexTileSnapshot,
   type ReplayPlayerEvent,
 } from "@shared";
 import type { MatchRecord } from "../../models/types";
 import { collectFireObserverIds } from "../../utils/fireVisibility";
+import { findTileAtCoord } from "../../utils/location";
 import {
   consumeCarriedItem,
   createFailedActionEvent,
@@ -18,19 +17,6 @@ import { BaseAction } from "./classes/BaseAction";
 const FIRE_DURATION_TURNS = 3;
 const LOCAL_FUEL_COST = 2;
 const ADJACENT_FUEL_COST = 5;
-
-function findTileAtCoord(
-  match: MatchRecord,
-  coord: Axial
-): HexTileSnapshot | undefined {
-  const tiles = match.map?.tiles ?? [];
-  for (const tile of tiles) {
-    if (tile.coord.q === coord.q && tile.coord.r === coord.r) {
-      return tile;
-    }
-  }
-  return undefined;
-}
 
 function countFuel(character: PlannedActionParticipant["character"]): number {
   return (character.inventory?.carriedItems ?? []).reduce(
@@ -91,8 +77,10 @@ export class CreateFireAction extends BaseAction {
     for (const participant of roster) {
       const origin = participant.character.position?.coord;
       const target = participant.plan.targetLocationId ?? origin;
-      const originTile = origin ? findTileAtCoord(match, origin) : undefined;
-      const targetTile = target ? findTileAtCoord(match, target) : undefined;
+      const originTile = findTileAtCoord(match.map?.tiles, origin);
+      const targetTile = target
+        ? findTileAtCoord(match.map?.tiles, target)
+        : undefined;
       const distance = origin && target ? axialDistance(origin, target) : -1;
       const invalidTarget =
         !origin ||

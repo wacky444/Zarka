@@ -1,9 +1,10 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import type { HexTileSnapshot, ReplayEvent } from "@shared";
+import type { ReplayEvent } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { applyHealthDelta } from "./actions/utils";
 import { isCharacterDead } from "../utils/playerCharacter";
+import { findTileAtCoord } from "../utils/location";
 
 export function applyScheduledDestruction(
   match: MatchRecord,
@@ -45,13 +46,7 @@ export function applyScheduledDestruction(
     if (!coord) {
       continue;
     }
-    let standingTile: HexTileSnapshot | undefined;
-    for (const tile of match.map?.tiles ?? []) {
-      if (tile.coord.q === coord.q && tile.coord.r === coord.r) {
-        standingTile = tile;
-        break;
-      }
-    }
+    const standingTile = findTileAtCoord(match.map?.tiles, coord);
     if (
       !standingTile ||
       (standingTile.meta?.destroyed !== true &&

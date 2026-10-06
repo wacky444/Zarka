@@ -70,7 +70,9 @@ function createMatch(
 function scareEvents(events: ReplayEvent[]) {
   return events.filter(
     (event) =>
-      event.kind === "player" && event.action.actionId === ActionLibrary.scare.id
+      event.kind === "player" &&
+      event.action.actionId === ActionLibrary.scare.id &&
+      (event.targets?.length ?? 0) > 0
   );
 }
 

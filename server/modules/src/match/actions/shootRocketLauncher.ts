@@ -3,7 +3,6 @@
 import type { MatchRecord } from "../../models/types";
 import type {
   ActionId,
-  HexTileSnapshot,
   ReplayActionDone,
   ReplayActionTarget,
   ReplayPlayerEvent,
@@ -15,6 +14,7 @@ import {
   getDamageReduction,
   isCharacterHidden,
 } from "@shared";
+import { findTileAtCoord } from "../../utils/location";
 import {
   applyHealthDelta,
   buildGuardedEffectMask,
@@ -30,18 +30,6 @@ import { maybeTriggerVengefulCounterAttack } from "./vengeful";
 import { BaseAction } from "./classes/BaseAction";
 
 const ROCKET_DAMAGE = 20;
-
-function findTileAtCoord(
-  match: MatchRecord,
-  coord: { q: number; r: number },
-): HexTileSnapshot | undefined {
-  for (const tile of match.map?.tiles ?? []) {
-    if (tile.coord.q === coord.q && tile.coord.r === coord.r) {
-      return tile;
-    }
-  }
-  return undefined;
-}
 
 export class ShootRocketLauncherAction extends BaseAction {
   protected processRoster(
@@ -59,7 +47,7 @@ export class ShootRocketLauncherAction extends BaseAction {
 
       const origin = participant.character.position?.coord;
       const target = participant.plan.targetLocationId;
-      const targetTile = target ? findTileAtCoord(match, target) : undefined;
+      const targetTile = findTileAtCoord(match.map?.tiles, target);
       const validTarget =
         !!origin &&
         !!target &&

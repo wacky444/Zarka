@@ -8,7 +8,7 @@ import type {
   Axial,
   HexTileSnapshot,
 } from "@shared";
-import { ActionLibrary, getSkillEffectTotal, neighbors } from "@shared";
+import { ActionLibrary, axialDistance, getSkillEffectTotal } from "@shared";
 import {
   isTargetProtected,
   type PlannedActionParticipant,
@@ -42,18 +42,16 @@ function randomAdjacentDestination(
   avoid?: Axial
 ): { tileId: string; coord: Axial } | undefined {
   const candidates: HexTileSnapshot[] = [];
-  for (const coord of neighbors(origin)) {
-    for (const tile of match.map?.tiles ?? []) {
-      if (
-        sameCoord(tile.coord, coord) &&
-        (!avoid || !sameCoord(tile.coord, avoid)) &&
-        tile.walkable !== false &&
-        tile.meta?.destroyed !== true
-      ) {
-        candidates.push(tile);
-        break;
-      }
+  for (const tile of match.map?.tiles ?? []) {
+    if (
+      axialDistance(origin, tile.coord) !== 1 ||
+      (avoid && sameCoord(tile.coord, avoid)) ||
+      tile.walkable === false ||
+      tile.meta?.destroyed === true
+    ) {
+      continue;
     }
+    candidates.push(tile);
   }
   const tile = candidates[Math.floor(Math.random() * candidates.length)];
   return tile

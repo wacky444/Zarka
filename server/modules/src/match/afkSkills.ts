@@ -1,4 +1,10 @@
-import { SkillLibrary, type SkillId, type PlayerCharacter } from "@shared";
+import {
+  SkillLibrary,
+  type PlayerCharacter,
+  type SkillCategory,
+  type SkillDefinition,
+  type SkillId
+} from "@shared";
 import type { MatchRecord } from "../models/types";
 import { isCharacterDead } from "../utils/playerCharacter";
 
@@ -85,9 +91,41 @@ export function applySkillToCharacter(
   }
 }
 
+export interface RandomSkillAssignmentOptions {
+  allowedCategories?: readonly SkillCategory[];
+  categoryWeights?: Partial<Record<SkillCategory, number>>;
+  random?: () => number;
+}
+
+function chooseWeightedSkill(
+  candidates: SkillDefinition[],
+  categoryWeights: Partial<Record<SkillCategory, number>> | undefined,
+  random: () => number
+): SkillDefinition | undefined {
+  const totalWeight = candidates.reduce(
+    (sum, candidate) =>
+      sum + (categoryWeights?.[candidate.category] ?? 1),
+    0
+  );
+  if (totalWeight <= 0) {
+    return undefined;
+  }
+  const threshold = random() * totalWeight;
+  let accumulated = 0;
+  for (const candidate of candidates) {
+    accumulated += categoryWeights?.[candidate.category] ?? 1;
+    if (threshold < accumulated) {
+      return candidate;
+    }
+  }
+  return candidates[candidates.length - 1];
+}
+
 export function assignRandomSkillsUntilZero(
-  character: PlayerCharacter
+  character: PlayerCharacter,
+  options: RandomSkillAssignmentOptions = {}
 ): SkillId[] {
+  const random = options.random ?? Math.random;
   const assigned: SkillId[] = [];
   while ((character.progression?.availableSkillPoints ?? 0) > 0) {
     const available = character.progression!.availableSkillPoints;
@@ -98,21 +136,27 @@ export function assignRandomSkillsUntilZero(
     }
 
     const candidates = Object.values(SkillLibrary).filter((def) => {
-      if (!def.implemented) {
+      if (
+        !def.implemented ||
+        def.cost > available ||
+        (options.allowedCategories &&
+          !options.allowedCategories.includes(def.category))
+      ) {
         return false;
       }
-      if (def.cost > available) {
-        return false;
-      }
+      const weight = options.categoryWeights?.[def.category] ?? 1;
       const count = abilityCounts[def.id] ?? 0;
-      return count < def.max;
+      return Number.isFinite(weight) && weight > 0 && count < def.max;
     });
 
-    if (candidates.length === 0) {
+    const chosen = chooseWeightedSkill(
+      candidates,
+      options.categoryWeights,
+      random
+    );
+    if (!chosen) {
       break;
     }
-
-    const chosen = candidates[Math.floor(Math.random() * candidates.length)];
     applySkillToCharacter(character, chosen.id);
     assigned.push(chosen.id);
   }

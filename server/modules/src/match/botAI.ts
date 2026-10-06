@@ -4,13 +4,17 @@ import {
   neighbors,
   axialDistance,
   getActionEnergyDiscount,
+  getSkillEffectTotal,
+  ItemLibrary,
   type ActionDefinition,
   type ActionId,
   type ActionTag,
+  type ItemId,
   type Axial,
   type HexTileSnapshot,
   type PlayerCharacter,
-  type PlayerPlannedAction
+  type PlayerPlannedAction,
+  type SkillCategory
 } from "@shared";
 import { MatchRecord } from "../models/types";
 import { hasFeedConsumable } from "./actions/feed";
@@ -18,8 +22,15 @@ import {
   isActionOnCooldown,
   updateCharacterCooldowns
 } from "./actions/cooldowns";
-import { isCharacterIncapacitated } from "../utils/playerCharacter";
-import { hasCarriedItem } from "./actions/utils";
+import {
+  isCharacterDead,
+  isCharacterIncapacitated
+} from "../utils/playerCharacter";
+import { isVirusInfected } from "../utils/virus";
+import { areSameLocation } from "../utils/location";
+import { assignRandomSkillsUntilZero } from "./afkSkills";
+import { buildItemLookup } from "./actions/search";
+import { hasCarriedItem, isTargetProtected } from "./actions/utils";
 
 export enum BotPersonality {
   Safe = "Safe",
@@ -51,6 +62,32 @@ const DEFAULT_TAG_WEIGHTS: Partial<Record<ActionTag, number>> = {
   TargetItems: 1.1
 };
 
+const PERSONALITY_SKILL_CATEGORY_WEIGHTS: Record<
+  BotPersonality,
+  Partial<Record<SkillCategory, number>>
+> = {
+  [BotPersonality.Safe]: {
+    offensive: 0.5,
+    defense: 2,
+    utility: 1
+  },
+  [BotPersonality.Aggressive]: {
+    offensive: 4,
+    defense: 1,
+    utility: 0.75
+  },
+  [BotPersonality.Hoarder]: {
+    offensive: 0.75,
+    defense: 1,
+    utility: 2
+  },
+  [BotPersonality.Random]: {
+    offensive: 1,
+    defense: 1,
+    utility: 1
+  }
+};
+
 const PERSONALITY_TAG_MULTIPLIERS: Record<
   BotPersonality,
   Partial<Record<ActionTag, number>>
@@ -78,6 +115,13 @@ const PERSONALITY_TAG_MULTIPLIERS: Record<
 };
 
 const SUPPORTED_ACTION_IDS: ActionId[] = [
+  ActionLibrary.create_fire.id,
+  ActionLibrary.breakfast.id,
+  ActionLibrary.refuel.id,
+  ActionLibrary.place_c4.id,
+  ActionLibrary.detonate_c4.id,
+  ActionLibrary.place_trap.id,
+  ActionLibrary.dodge.id,
   ActionLibrary.move.id,
   ActionLibrary.pick_up.id,
   ActionLibrary.search.id,
@@ -89,6 +133,12 @@ const SUPPORTED_ACTION_IDS: ActionId[] = [
   ActionLibrary.sleep.id,
   ActionLibrary.recover.id,
   ActionLibrary.scare.id,
+  ActionLibrary.drop.id,
+  ActionLibrary.throw_object.id,
+  ActionLibrary.steal.id,
+  ActionLibrary.black_market_trade.id,
+  ActionLibrary.inject_virus.id,
+  ActionLibrary.inject_vaccine.id,
   ActionLibrary.punch.id,
   ActionLibrary.knife_attack.id,
   ActionLibrary.axe_attack.id,
@@ -155,6 +205,17 @@ export function processBotActions(match: MatchRecord, logger: any): void {
     if (!character) {
       continue;
     }
+    const personality = determinePersonality(playerId);
+    if (
+      !isCharacterDead(character) &&
+      (character.progression?.availableSkillPoints ?? 0) > 0
+    ) {
+      assignRandomSkillsUntilZero(character, {
+        allowedCategories: ["offensive", "defense", "utility"],
+        categoryWeights: PERSONALITY_SKILL_CATEGORY_WEIGHTS[personality],
+        random: rng
+      });
+    }
     if (isCharacterIncapacitated(character)) {
       clearBotPlans(character);
       match.playerCharacters[playerId] = character;
@@ -162,7 +223,6 @@ export function processBotActions(match: MatchRecord, logger: any): void {
     }
 
     updateCharacterCooldowns(character, currentTurn);
-    const personality = determinePersonality(playerId);
     const context: BotActionContext = {
       match,
       playerId,
@@ -344,10 +404,36 @@ function createCandidateForAction(
   context: BotActionContext
 ): BotActionCandidate | null {
   switch (definition.id) {
+    case "create_fire":
+      return createFireCandidate(definition, context);
+    case "breakfast":
+      return createBreakfastCandidate(definition, context);
+    case "refuel":
+      return createRefuelCandidate(definition, context);
+    case "place_c4":
+      return createPlaceC4Candidate(definition, context);
+    case "detonate_c4":
+      return createDetonateC4Candidate(definition, context);
+    case "place_trap":
+      return createPlaceTrapCandidate(definition, context);
+    case "dodge":
+      return createDodgeCandidate(definition, context);
     case "move":
       return createMoveCandidate(definition, context);
     case "pick_up":
       return createPickUpCandidate(definition, context);
+    case "drop":
+      return createDropCandidate(definition, context);
+    case "throw_object":
+      return createThrowCandidate(definition, context);
+    case "steal":
+      return createStealCandidate(definition, context);
+    case "black_market_trade":
+      return createBlackMarketTradeCandidate(definition, context);
+    case "inject_virus":
+      return createInjectVirusCandidate(definition, context);
+    case "inject_vaccine":
+      return createInjectVaccineCandidate(definition, context);
     case "search":
       return createSearchCandidate(definition, context);
     case "feed":
@@ -408,6 +494,239 @@ function isTileMarked(
   return false;
 }
 
+function createFireCandidate(
+  definition: ActionDefinition,
+  context: BotActionContext
+): BotActionCandidate | null {
+  const origin = context.character.position?.coord;
+  if (!origin || countCarriedItem(context.character, "fuel") < 2) {
+    return null;
+  }
+  const targets = getAttackTargets(context, definition).filter((target) => {
+    const coord = target.character.position?.coord;
+    if (!coord) {
+      return false;
+    }
+    const distance = axialDistance(origin, coord);
+    const fuelCost = distance === 0 ? 2 : distance === 1 ? 5 : 0;
+    const tile = context.map.byCoord[coordKey(coord)];
+    return (
+      fuelCost > 0 &&
+      countCarriedItem(context.character, "fuel") >= fuelCost &&
+      !!tile &&
+      tile.walkable !== false &&
+      !isTileMarked(tile, context.currentTurn) &&
+      !hasTeammateAtCoord(context, coord)
+    );
+  });
+  const target = selectTarget(targets, context);
+  const targetCoord = target?.character.position?.coord;
+  if (!target || !targetCoord) {
+    return null;
+  }
+  const enemiesAtLocation = targets.filter(
+    (candidate) =>
+      coordKey(candidate.character.position?.coord) === coordKey(targetCoord)
+  ).length;
+  return {
+    definition,
+    plan: {
+      actionId: definition.id,
+      targetLocationId: { ...targetCoord }
+    },
+    weight:
+      computeBaseWeight(definition, context.personality) *
+      (1 + enemiesAtLocation),
+    attackScore: 5
+  };
+}
+
+function createBreakfastCandidate(
+  definition: ActionDefinition,
+  context: BotActionContext
+): BotActionCandidate | null {
+  const energy = getEnergyStats(context.character);
+  if (
+    !isActionAllowedAtLocation(context, definition.id) ||
+    energy.max <= 0 ||
+    energy.current / energy.max >= 0.5
+  ) {
+    return null;
+  }
+  const deficit = energy.max - energy.current;
+  return {
+    definition,
+    plan: { actionId: definition.id },
+    weight:
+      computeBaseWeight(definition, context.personality) *
+      (1 + deficit / energy.max)
+  };
+}
+
+function createRefuelCandidate(
+  definition: ActionDefinition,
+  context: BotActionContext
+): BotActionCandidate | null {
+  const load = getLoadUsage(context.character);
+  const refuelWeight = ItemLibrary.fuel.weight * 3;
+  if (
+    !isActionAllowedAtLocation(context, definition.id) ||
+    !load ||
+    load.current + refuelWeight > load.max
+  ) {
+    return null;
+  }
+  return {
+    definition,
+    plan: { actionId: definition.id },
+    weight:
+      computeBaseWeight(definition, context.personality) *
+      (1 + (load.max - load.current - refuelWeight) / load.max)
+  };
+}
+
+function createPlaceC4Candidate(
+  definition: ActionDefinition,
+  context: BotActionContext
+): BotActionCandidate | null {
+  const origin = context.character.position?.coord;
+  const tile = getCurrentTile(context);
+  if (
+    !origin ||
+    !tile ||
+    tile.walkable === false ||
+    isTileMarked(tile, context.currentTurn) ||
+    countCarriedItem(context.character, "c4") <= 0 ||
+    context.match.c4s?.some(
+      (charge) =>
+        charge.ownerId === context.playerId &&
+        areSameLocation(charge.coord, origin)
+    )
+  ) {
+    return null;
+  }
+  const nearbyEnemies = getNearbyEnemies(context, origin, 1);
+  if (nearbyEnemies.length === 0) {
+    return null;
+  }
+  return {
+    definition,
+    plan: { actionId: definition.id },
+    weight:
+      computeBaseWeight(definition, context.personality) *
+      (1 + nearbyEnemies.length),
+    attackScore: 3,
+  };
+}
+
+function createDetonateC4Candidate(
+  definition: ActionDefinition,
+  context: BotActionContext
+): BotActionCandidate | null {
+  if (countCarriedItem(context.character, "detonator") <= 0) {
+    return null;
+  }
+  const origin = context.character.position?.coord;
+  const chargeOptions = (context.match.c4s ?? [])
+    .filter((charge) => charge.ownerId === context.playerId)
+    .map((charge) => ({
+      charge,
+      targets: getNearbyEnemies(context, charge.coord, 0),
+    }))
+    .filter(({ charge, targets }) => {
+      const canSelfDestruct =
+        context.personality === BotPersonality.Aggressive && targets.length >= 2;
+      return (
+        targets.length > 0 &&
+        (canSelfDestruct || !areSameLocation(origin, charge.coord)) &&
+        !hasTeammateAtCoord(context, charge.coord)
+      );
+    });
+  const selected = pickRandom(chargeOptions, context.rng);
+  if (!selected) {
+    return null;
+  }
+  return {
+    definition,
+    plan: {
+      actionId: definition.id,
+      targetLocationId: { ...selected.charge.coord },
+    },
+    weight:
+      computeBaseWeight(definition, context.personality) *
+      (1 + selected.targets.length * 2),
+    attackScore: 12,
+  };
+}
+
+function createPlaceTrapCandidate(
+  definition: ActionDefinition,
+  context: BotActionContext
+): BotActionCandidate | null {
+  const origin = context.character.position?.coord;
+  if (!origin || countCarriedItem(context.character, "trap") <= 0) {
+    return null;
+  }
+  const destinations = neighbors(origin)
+    .map((coord) => context.map.byCoord[coordKey(coord)])
+    .filter(
+      (tile): tile is HexTileSnapshot =>
+        !!tile &&
+        tile.walkable !== false &&
+        tile.meta?.destroyed !== true &&
+        axialDistance(origin, tile.coord) === 1 &&
+        !hasTeammateAtCoord(context, tile.coord) &&
+        !hasOwnedTrapOnEdge(context, origin, tile.coord)
+    );
+  if (destinations.length === 0) {
+    return null;
+  }
+  const enemyOccupied = destinations.filter(
+    (tile) => getNearbyEnemies(context, tile.coord, 0).length > 0
+  );
+  const preferredDestinations =
+    enemyOccupied.length > 0 ? enemyOccupied : destinations;
+  const destination = pickRandom(preferredDestinations, context.rng);
+  if (!destination) {
+    return null;
+  }
+  return {
+    definition,
+    plan: {
+      actionId: definition.id,
+      targetLocationId: { ...destination.coord },
+    },
+    weight:
+      computeBaseWeight(definition, context.personality) *
+      (1 + enemyOccupied.length),
+    ...(enemyOccupied.length > 0 ? { attackScore: 2 } : {}),
+  };
+}
+
+function createDodgeCandidate(
+  definition: ActionDefinition,
+  context: BotActionContext
+): BotActionCandidate | null {
+  if ((context.character.statuses?.dodgeAttempts ?? 0) > 0) {
+    return null;
+  }
+  const origin = context.character.position?.coord;
+  const threats = origin ? getNearbyEnemies(context, origin, 1) : [];
+  if (threats.length === 0) {
+    return null;
+  }
+  const health = getHealthStats(context.character);
+  const healthDeficit =
+    health.max > 0 ? (health.max - health.current) / health.max : 0;
+  return {
+    definition,
+    plan: { actionId: definition.id },
+    weight:
+      computeBaseWeight(definition, context.personality) *
+      (1 + threats.length + Math.max(0, healthDeficit)),
+  };
+}
+
 function createMoveCandidate(
   definition: ActionDefinition,
   context: BotActionContext
@@ -420,7 +739,10 @@ function createMoveCandidate(
     .map((coord) => context.map.byCoord[coordKey(coord)])
     .filter(
       (tile): tile is HexTileSnapshot =>
-        !!tile && tile.walkable && tile.meta?.destroyed !== true
+        !!tile &&
+        tile.walkable &&
+        tile.meta?.destroyed !== true &&
+        !hasOwnedTrapOnEdge(context, origin, tile.coord)
     );
   if (destinations.length === 0) {
     return null;
@@ -454,14 +776,252 @@ function createPickUpCandidate(
   if (visibleItems.length === 0) {
     return null;
   }
+  const itemLookup = buildItemLookup(context.match);
+  const load = getLoadUsage(context.character);
+  let currentLoad = load?.current ?? 0;
+  let maxLoad = load?.max ?? Number.POSITIVE_INFINITY;
+  let hasBandolier = hasCarriedItem(context.character, "bandolier");
+  const pickupLimit =
+    3 + Math.max(0, Math.floor(getSkillEffectTotal(context.character, "pickup_scope_increase")));
+  const pickupQueue = visibleItems
+    .filter((itemId) => itemLookup[itemId] !== undefined)
+    .sort((left, right) => {
+      const leftIsBandolier = itemLookup[left]?.item_type === "bandolier";
+      const rightIsBandolier = itemLookup[right]?.item_type === "bandolier";
+      return Number(rightIsBandolier) - Number(leftIsBandolier);
+    });
+  const pickableItems: string[] = [];
+  for (const itemId of pickupQueue) {
+    if (pickableItems.length >= pickupLimit) {
+      break;
+    }
+    const itemType = itemLookup[itemId].item_type;
+    const item = ItemLibrary[itemType];
+    if (!item || item.canBePickedUp === false) {
+      continue;
+    }
+    const itemWeight =
+      typeof item.weight === "number" && Number.isFinite(item.weight)
+        ? Math.max(0, item.weight)
+        : 0;
+    const addedCapacity =
+      itemType === "bandolier" && !hasBandolier ? 5 : 0;
+    if (currentLoad + itemWeight > maxLoad + addedCapacity) {
+      continue;
+    }
+    pickableItems.push(itemId);
+    currentLoad += itemWeight;
+    maxLoad += addedCapacity;
+    if (addedCapacity > 0) {
+      hasBandolier = true;
+    }
+  }
+  if (pickableItems.length === 0) {
+    return null;
+  }
   const plan: PlayerPlannedAction = {
     actionId: definition.id,
-    targetItemIds: visibleItems.slice(0, 3)
+    targetItemIds: pickableItems
   };
   const weight =
     computeBaseWeight(definition, context.personality) *
-    (1 + visibleItems.length / 3);
+    (1 + pickableItems.length / 3);
   return { definition, plan, weight };
+}
+
+function createDropCandidate(
+  definition: ActionDefinition,
+  context: BotActionContext
+): BotActionCandidate | null {
+  const load = getLoadUsage(context.character);
+  if (!load || load.ratio <= 0.75) {
+    return null;
+  }
+  const item = getCarriedItemOptions(context.character)
+    .filter(
+      (candidate) => candidate.weight > 0 && candidate.itemId !== "bandolier"
+    )
+    .sort((left, right) => right.weight - left.weight)[0];
+  if (!item) {
+    return null;
+  }
+  return {
+    definition,
+    plan: { actionId: definition.id, targetItemIds: [item.itemId] },
+    weight:
+      computeBaseWeight(definition, context.personality) *
+      (1 + Math.max(0, load.ratio - 0.75) * 4)
+  };
+}
+
+function createThrowCandidate(
+  definition: ActionDefinition,
+  context: BotActionContext
+): BotActionCandidate | null {
+  const items = getCarriedItemOptions(context.character).filter(
+    (item) => item.itemId !== "zarkans" && item.itemId !== "zarkan3"
+  );
+  const molotov = items.find((item) => item.itemId === "molotov");
+  const load = getLoadUsage(context.character);
+  if (!molotov && (!load || load.ratio <= 0.75)) {
+    return null;
+  }
+  const targets = getAttackTargets(context, definition).filter((target) => {
+    const coord = target.character.position?.coord;
+    return !!coord && !hasTeammateAtCoord(context, coord);
+  });
+  const target = selectTarget(targets, context);
+  const targetCoord = target?.character.position?.coord;
+  if (!target || !targetCoord) {
+    return null;
+  }
+  const throwable =
+    molotov ?? items.slice().sort((left, right) => right.weight - left.weight)[0];
+  if (!throwable) {
+    return null;
+  }
+  return {
+    definition,
+    plan: {
+      actionId: definition.id,
+      targetLocationId: { ...targetCoord },
+      targetItemIds: [throwable.itemId]
+    },
+    weight:
+      computeBaseWeight(definition, context.personality) *
+      (1 + targets.length / 2),
+    attackScore: throwable.itemId === "molotov" ? 4 : 1
+  };
+}
+
+function createStealCandidate(
+  definition: ActionDefinition,
+  context: BotActionContext
+): BotActionCandidate | null {
+  const load = getLoadUsage(context.character);
+  if (!load || load.ratio >= 0.5) {
+    return null;
+  }
+  const targets = getSameTileTargets(context, { excludeProtected: true }).filter(
+    (target) =>
+      getCarriedItemOptions(target.character).some(
+        (item) => ItemLibrary[item.itemId]?.canBeStolen !== false
+      )
+  );
+  const target = selectTarget(targets, context);
+  if (!target) {
+    return null;
+  }
+  return {
+    definition,
+    plan: { actionId: definition.id, targetPlayerIds: [target.id] },
+    weight:
+      computeBaseWeight(definition, context.personality) *
+      (1 + targets.length / 2 + (0.5 - load.ratio))
+  };
+}
+
+function createBlackMarketTradeCandidate(
+  definition: ActionDefinition,
+  context: BotActionContext
+): BotActionCandidate | null {
+  const load = getLoadUsage(context.character);
+  if (
+    !load ||
+    load.ratio <= 0.5 ||
+    !isActionAllowedAtLocation(context, definition.id)
+  ) {
+    return null;
+  }
+  const item = getCarriedItemOptions(context.character)
+    .filter((candidate) => candidate.weight > 0)
+    .sort((left, right) => right.weight - left.weight)[0];
+  if (!item) {
+    return null;
+  }
+  return {
+    definition,
+    plan: { actionId: definition.id, targetItemIds: [item.itemId] },
+    weight:
+      computeBaseWeight(definition, context.personality) *
+      (1 + load.ratio)
+  };
+}
+
+function createInjectVirusCandidate(
+  definition: ActionDefinition,
+  context: BotActionContext
+): BotActionCandidate | null {
+  if (!hasCarriedItem(context.character, "virus")) {
+    return null;
+  }
+  const targets = getSameTileTargets(context, { excludeProtected: false }).filter(
+    (target) =>
+      !isVirusInfected(target.character) &&
+      target.character.statuses?.vaccine?.immune !== true
+  );
+  const target = selectTarget(targets, context);
+  if (!target) {
+    return null;
+  }
+  return {
+    definition,
+    plan: { actionId: definition.id, targetPlayerIds: [target.id] },
+    weight:
+      computeBaseWeight(definition, context.personality) *
+      (1 + targets.length / 2),
+    attackScore: 4
+  };
+}
+
+function createInjectVaccineCandidate(
+  definition: ActionDefinition,
+  context: BotActionContext
+): BotActionCandidate | null {
+  if (!hasCarriedItem(context.character, "vaccine")) {
+    return null;
+  }
+  const tileId = context.character.position?.tileId;
+  if (!tileId) {
+    return null;
+  }
+  const teamId = getEffectiveTeamId(context.character);
+  const occupants = Object.entries(context.match.playerCharacters ?? {}).filter(
+    ([, character]) =>
+      !!character &&
+      character.position?.tileId === tileId &&
+      !isCharacterIncapacitated(character)
+  );
+  const contagiousPresent = occupants.some(
+    ([, character]) => isVirusInfected(character)
+  );
+  if (!contagiousPresent) {
+    return null;
+  }
+  let targetId: string | undefined;
+  if (
+    context.character.statuses?.vaccine?.immune !== true &&
+    (isVirusInfected(context.character) || contagiousPresent)
+  ) {
+    targetId = context.playerId;
+  } else {
+    targetId = occupants.find(
+      ([playerId, character]) =>
+        playerId !== context.playerId &&
+        teamId !== undefined &&
+        getEffectiveTeamId(character) === teamId &&
+        isVirusInfected(character) &&
+        character.statuses?.vaccine?.immune !== true
+    )?.[0];
+  }
+  if (!targetId) {
+    return null;
+  }
+  return {
+    definition,
+    plan: { actionId: definition.id, targetPlayerIds: [targetId] },
+    weight: computeBaseWeight(definition, context.personality) * 1.5
+  };
 }
 
 function createSearchCandidate(
@@ -969,6 +1529,81 @@ function getEnergyStats(character: PlayerCharacter): {
   return { current, max };
 }
 
+interface LoadUsage {
+  current: number;
+  max: number;
+  ratio: number;
+}
+
+interface CarriedItemOption {
+  itemId: ItemId;
+  quantity: number;
+  weight: number;
+  sellValue: number;
+}
+
+function getLoadUsage(character: PlayerCharacter): LoadUsage | undefined {
+  const load = character.stats?.load;
+  const current = load?.current;
+  const max = load?.max;
+  if (
+    typeof current !== "number" ||
+    !Number.isFinite(current) ||
+    typeof max !== "number" ||
+    !Number.isFinite(max) ||
+    max <= 0
+  ) {
+    return undefined;
+  }
+  const safeCurrent = Math.max(0, current);
+  return { current: safeCurrent, max, ratio: safeCurrent / max };
+}
+
+function countCarriedItem(character: PlayerCharacter, itemId: string): number {
+  return (character.inventory?.carriedItems ?? []).reduce(
+    (total, stack) =>
+      stack?.itemId === itemId &&
+      typeof stack.quantity === "number" &&
+      Number.isFinite(stack.quantity)
+        ? total + Math.max(0, Math.floor(stack.quantity))
+        : total,
+    0
+  );
+}
+
+function getCarriedItemOptions(character: PlayerCharacter): CarriedItemOption[] {
+  const options: CarriedItemOption[] = [];
+  for (const stack of character.inventory?.carriedItems ?? []) {
+    const itemId = stack?.itemId;
+    const definition =
+      typeof itemId === "string" ? ItemLibrary[itemId as ItemId] : undefined;
+    const quantity = stack?.quantity;
+    if (
+      !definition ||
+      typeof quantity !== "number" ||
+      !Number.isFinite(quantity) ||
+      Math.floor(quantity) <= 0
+    ) {
+      continue;
+    }
+    options.push({
+      itemId: itemId as ItemId,
+      quantity: Math.floor(quantity),
+      weight:
+        typeof definition.weight === "number" &&
+        Number.isFinite(definition.weight)
+          ? Math.max(0, definition.weight)
+          : 0,
+      sellValue:
+        typeof definition.sellValue === "number" &&
+        Number.isFinite(definition.sellValue)
+          ? Math.max(0, definition.sellValue)
+          : 0
+    });
+  }
+  return options;
+}
+
 function hasBandage(character: PlayerCharacter): boolean {
   const stacks = character.inventory?.carriedItems;
   if (!Array.isArray(stacks)) {
@@ -1070,6 +1705,52 @@ function getSameTileTargets(
       contender.statuses?.conditions &&
       contender.statuses.conditions.indexOf("protected") !== -1;
     if (options.excludeProtected && isProtected) {
+      continue;
+    }
+    results.push({ id, character: contender });
+  }
+  return results;
+}
+
+function hasOwnedTrapOnEdge(
+  context: BotActionContext,
+  from: Axial,
+  to: Axial
+): boolean {
+  return (context.match.traps ?? []).some(
+    (trap) =>
+      trap.ownerId === context.playerId &&
+      ((areSameLocation(trap.from.coord, from) &&
+        areSameLocation(trap.to.coord, to)) ||
+        (areSameLocation(trap.from.coord, to) &&
+          areSameLocation(trap.to.coord, from)))
+  );
+}
+
+function getNearbyEnemies(
+  context: BotActionContext,
+  center: Axial,
+  maxDistance: number
+): TargetOption[] {
+  const actorTeamId = getEffectiveTeamId(context.character);
+  const roster = context.match.playerCharacters ?? {};
+  const results: TargetOption[] = [];
+  for (const id in roster) {
+    if (!Object.prototype.hasOwnProperty.call(roster, id)) {
+      continue;
+    }
+    const contender = roster[id];
+    const coord = contender?.position?.coord;
+    if (
+      !contender ||
+      id === context.playerId ||
+      !coord ||
+      axialDistance(center, coord) > maxDistance ||
+      isCharacterIncapacitated(contender)
+    ) {
+      continue;
+    }
+    if (actorTeamId && getEffectiveTeamId(contender) === actorTeamId) {
       continue;
     }
     results.push({ id, character: contender });
