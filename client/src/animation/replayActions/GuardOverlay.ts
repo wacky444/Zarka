@@ -1,5 +1,6 @@
 import type Phaser from "phaser";
 import {
+  ActionLibrary,
   ReplayActionEffect,
   type ReplayActionEffectMask,
   type ReplayPlayerEvent,
@@ -7,10 +8,21 @@ import {
 import { deriveBoardIconKey } from "../../ui/actionIcons";
 import type { MoveReplayContext } from "../MoveReplayContext";
 
-export const SHIELD_TEXTURE_KEY = deriveBoardIconKey("shield.png");
-export const HEAL_TEXTURE_KEY = deriveBoardIconKey("suit_hearts.png");
-export const FEED_TEXTURE_KEY = deriveBoardIconKey("resource_apple.png");
-export const FOCUS_TEXTURE_KEY = deriveBoardIconKey("hourglass.png");
+export const SHIELD_TEXTURE_KEY = deriveBoardIconKey(
+  ActionLibrary.protect?.frame ?? "shield.png"
+);
+export const HEAL_TEXTURE_KEY = deriveBoardIconKey(
+  ActionLibrary.recover?.frame ?? "suit_hearts.png"
+);
+export const FEED_TEXTURE_KEY = deriveBoardIconKey(
+  ActionLibrary.feed?.frame ?? "resource_apple.png"
+);
+export const FOCUS_TEXTURE_KEY = deriveBoardIconKey(
+  ActionLibrary.focus?.frame ?? "focus.png"
+);
+export const BREAKFAST_TEXTURE_KEY = deriveBoardIconKey(
+  ActionLibrary.breakfast?.frame ?? "breakfast.png"
+);
 
 export function hasEffect(
   effects: ReplayActionEffectMask | undefined,
@@ -34,6 +46,9 @@ export async function showGuardOverlay(
   for (const playerId of playerIds) {
     const sprite = context.getSprite(playerId);
     if (!sprite) {
+      continue;
+    }
+    if (!scene.textures.exists(textureKey)) {
       continue;
     }
     const overlay = scene.add.image(sprite.x, sprite.y, textureKey);

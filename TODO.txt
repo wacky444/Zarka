@@ -8,10 +8,6 @@
 
 - train and experience
 
-- autoreplay after turn in mobile
-
-- not getting the logs of player eliminateds, only when log is opened, also the player list is not updated with the deads until web is refreshed
-
 - on pyro, also didnt get a confirm when bought
 
 - tutorial step 6 should teach about prioritize items
@@ -33,34 +29,20 @@
 
 - protect, dodge and sleep in case the turn is skipped
 
-- pressing tab in the register view goes from position 1 to 3 then to 2, swap username and password position visually
-
 - step 1 2 and 3 are not saved, after doing them it resumes where the tutorial left off, but the 3 first steps have to be repeated every time the web reloads in the middle of tutorial
-
-- character panel has too many code lines
 
 - review scare tutorial hint
 
 - changing window size doesn't swap between mobile and pc, like its calculated once, making the gui show incorrect modal positions
 
-- use the fast new modals that was for mobile also in pc
-    - the scrollwheel only works hivering the gaps between cards
-
-- when starting a match, don't allow less than 24 hours in the first turn
+- in pc, the select target character, object priotize, action selector modals, can have more items per row
+    calculate it and make it responsive, leave margin at sides to click to cancel
 
 - in 3g mode, blue screen while loading, also the music takes 1 minute to load(make it so the music is the last to load and give it a 5 sec timeout)
-
-- when selecting an action like pick_up, changing tab and coming back, the selector for prioritize is not there
-
-- creating a new match, i see the skulls of destruction inminent from another game, it didnt cleared
-
-- scare action without setting anything scared at 2 distance
 
 - donate doesnt work with bots
 
 - bots doesnt buy
-
-- if the phone is locked the turn doesnt advance, and it doesnt refresh until f5
 
 - achievements, kill throwing food
 

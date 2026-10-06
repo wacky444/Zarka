@@ -1,7 +1,7 @@
 import type { ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
 import {
-  FEED_TEXTURE_KEY,
+  BREAKFAST_TEXTURE_KEY,
   collectTargetIds,
   showGuardOverlay,
 } from "./GuardOverlay";
@@ -15,5 +15,5 @@ export async function animateBreakfastEvent(
 ): Promise<void> {
   const targets = collectTargetIds(event);
   playRandomSound(context.scene, BREAKFAST_SOUNDS);
-  await showGuardOverlay(context, targets, 520, FEED_TEXTURE_KEY);
+  await showGuardOverlay(context, targets, 520, BREAKFAST_TEXTURE_KEY);
 }

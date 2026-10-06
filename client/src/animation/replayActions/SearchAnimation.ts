@@ -1,12 +1,19 @@
 import type Phaser from "phaser";
-import { type ItemId, type MatchRecord, type ReplayPlayerEvent } from "@shared";
+import {
+  ActionLibrary,
+  type ItemId,
+  type MatchRecord,
+  type ReplayPlayerEvent,
+} from "@shared";
 import { deriveBoardIconKey } from "../../ui/actionIcons";
 import type { MoveReplayContext } from "../MoveReplayContext";
 import { resolveItemLabel, resolveItemVisual } from "./ItemVisuals";
 import { playRandomSound } from "../soundPlayer";
 
 const SEARCH_SOUNDS = ["page_turn", "paper_move", "paper_scrunch"];
-const SEARCH_TEXTURE_KEY = deriveBoardIconKey("cards_seek.png");
+const SEARCH_TEXTURE_KEY = deriveBoardIconKey(
+  ActionLibrary.search?.frame ?? "search.png"
+);
 
 type ReplaySearchItemMetadata = {
   id: string | null;
@@ -90,24 +97,26 @@ export async function animateSearchEvent(
 
   const overlays: Phaser.GameObjects.GameObject[] = [];
 
-  const indicator = scene.add.image(base.x, base.y, SEARCH_TEXTURE_KEY);
-  indicator.setOrigin(0.5, 0.5);
-  indicator.setAlpha(0);
-  indicator.setScale(0.8);
-  indicator.setDepth(baseDepth);
-  context.ignoreUI(indicator);
-  overlays.push(indicator);
+  if (scene.textures.exists(SEARCH_TEXTURE_KEY)) {
+    const indicator = scene.add.image(base.x, base.y, SEARCH_TEXTURE_KEY);
+    indicator.setOrigin(0.5, 0.5);
+    indicator.setAlpha(0);
+    indicator.setScale(0.8);
+    indicator.setDepth(baseDepth);
+    context.ignoreUI(indicator);
+    overlays.push(indicator);
 
-  await new Promise<void>((resolve) => {
-    context.tweens.add({
-      targets: indicator,
-      alpha: 1,
-      scale: 1,
-      duration: 200,
-      ease: "Sine.easeOut",
-      onComplete: () => resolve(),
+    await new Promise<void>((resolve) => {
+      context.tweens.add({
+        targets: indicator,
+        alpha: 1,
+        scale: 1,
+        duration: 200,
+        ease: "Sine.easeOut",
+        onComplete: () => resolve(),
+      });
     });
-  });
+  }
 
   const verticalSpacing = 26;
   const startY = base.y - 32;
