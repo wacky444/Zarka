@@ -747,6 +747,8 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   "Detecta incendios a cualquier distancia e identifica a los jugadores en la misma localización o hasta 1 localización de distancia":
     "Detects fires at any distance and identifies players in the same or an adjacent location",
   "Crear un incendio": "Start a fire",
+  "Consume 2 unidades de combustible. Gastando 3 combustibles adicionales, el incendio puede iniciarse en una localización adyacente.":
+    "Consume 2 units of fuel. Spend 3 additional fuel to start the fire at an adjacent location.",
   "Daño por incendio": "Fire damage",
   Recuperarse: "Recover",
   Alimentar: "Feed",

@@ -22,7 +22,11 @@ export const ActionLibrary: ActionLibraryDefinition = {
     developed: true,
     requiredItems: ["fuel"],
     requirements: [
-      { description: "Consume 2 combustibles.", consumesResource: true }
+      {
+        description:
+          "Consume 2 unidades de combustible. Gastando 3 combustibles adicionales, el incendio puede iniciarse en una localización adyacente.",
+        consumesResource: true
+      }
     ],
     effects: [
       {
