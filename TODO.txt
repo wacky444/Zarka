@@ -32,6 +32,7 @@
 - bombard has animation? it should have it similar to cell destroyed
 
 - help screen with action orders
+	- highlights current selected actions
 
 - i never got hero team
 
@@ -54,7 +55,7 @@
 
 - when starting a match, don't allow less than 24 hours in the first turn
 
-- in 3g mode, blue screen while loading, also the music takes 1 minute to load
+- in 3g mode, blue screen while loading, also the music takes 1 minute to load(make it so the music is the last to load and give it a 5 sec timeout)
 
 - when selecting an action like pick_up, changing tab and coming back, the selector for prioritize is not there
 
@@ -71,3 +72,35 @@
 - if the phone is locked the turn doesnt advance, and it doesnt refresh until f5
 
 - achievements, kill throwing food
+
+"npm:pi-mcp-adapter",
+"npm:pi-web-access",
+"npm:@juicesharp/rpiv-ask-user-question",
+ "npm:@mjasnikovs/pi-task",
+"npm:pi-powerline-footer",
+"npm:@xynogen/pix-optimizer",
+"git:github.com/jonjonrankin/pi-caveman"
+
+- warning when pick up will leave with overweight, weight number in warning/error color
+
+- warning when there is extra power set and there isnt enough energy
+
+- use action order to order the list of the actions
+
+- i have created a game at 11:30 am with skip 12:00 and it says turn auto skips in 30 mins
+
+- missing translations to spanish:
+	tap an action to select it
+	select secondary action
+	removes the current
+
+- dexterity 2, when stealing should show a list of all possible items in the game, allowing max 3
+	- extra power should show two selectors
+
+- steal with power doesn't show an extra target selector
+
+- action icons that need new icons:
+	concentrate, knife attack, steal, axe attack, motorsaw attack, place c4, place trap, give, detect, explode c4, shoot rocket launcher, shoot pistol,
+	bat attack, inyect virus, throw, use bandage, use binoculars
+	activate cameras, start motorsaw, search, drop, breakfast, poison food, fabricate, talk, inyect vacine, manipulate, look window, place tracker, refuel,
+	use antidote, use quemical weapon, use medicine

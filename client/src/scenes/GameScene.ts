@@ -1240,6 +1240,7 @@ export class GameScene extends Phaser.Scene {
       if (
         !p.isDown ||
         this.pointerDownInUI ||
+        this.isPointOverUI(p.downX, p.downY) ||
         this.gridModalActive ||
         this.cellContentsPanel?.isOpen ||
         this.pinchActive
@@ -3250,22 +3251,26 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private isPointerOverUI(pointer: Phaser.Input.Pointer) {
+  private isPointerOverUI(pointer: Phaser.Input.Pointer): boolean {
+    return this.isPointOverUI(pointer.x, pointer.y);
+  }
+
+  private isPointOverUI(x: number, y: number): boolean {
     if (
-      this.tutorialInstructionView?.containsPoint(pointer.x, pointer.y) ||
+      this.tutorialInstructionView?.containsPoint(x, y) ||
       this.cellContentsPanel?.isOpen
     ) {
       return true;
     }
     if (this.viewModeButton?.visible) {
       const bounds = this.viewModeButton.getBounds();
-      if (bounds.contains(pointer.x, pointer.y)) {
+      if (bounds.contains(x, y)) {
         return true;
       }
     }
     if (this.menuButton?.visible) {
       const bounds = this.menuButton.getBounds();
-      if (bounds.contains(pointer.x, pointer.y)) {
+      if (bounds.contains(x, y)) {
         return true;
       }
     }
@@ -3277,10 +3282,10 @@ export class GameScene extends Phaser.Scene {
     const width = this.characterPanel.getPanelWidth();
     const height = this.uiCam.height;
     return (
-      pointer.x >= panelX &&
-      pointer.x <= panelX + width &&
-      pointer.y >= panelY &&
-      pointer.y <= panelY + height
+      x >= panelX &&
+      x <= panelX + width &&
+      y >= panelY &&
+      y <= panelY + height
     );
   }
 
