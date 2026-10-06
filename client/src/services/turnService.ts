@@ -503,6 +503,15 @@ export class TurnService {
     }
   }
 
+  // Recreate the realtime socket after a mobile browser suspends its connection.
+  async reconnectRealtimeMatch(match_id: string): Promise<void> {
+    const staleSocket = this.socket;
+    this.socket = null;
+    staleSocket?.disconnect(false);
+    const socket = await this.ensureSocketConnected();
+    await socket.joinMatch(match_id);
+  }
+
   // Leave the authoritative match over the realtime socket.
   async leaveRealtimeMatch(match_id: string) {
     if (!this.socket) return;

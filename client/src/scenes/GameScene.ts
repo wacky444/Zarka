@@ -181,6 +181,8 @@ export class GameScene extends Phaser.Scene {
   private previousCurrentMatchId: string | null = null;
   private reportReplayAutoplayTurn: number | null = null;
   private sceneShuttingDown = false;
+  private foregroundSyncRunning = false;
+  private lastForegroundSyncAt = 0;
   private loadingOverlay: Phaser.GameObjects.Container | null = null;
   private loadingTrack: Phaser.GameObjects.Rectangle | null = null;
   private loadingFill: Phaser.GameObjects.Rectangle | null = null;
@@ -203,6 +205,17 @@ export class GameScene extends Phaser.Scene {
   private pinchStartCenterY = 0;
   private mapTouchPointerIds = new Set<number>();
 
+  private readonly foregroundResumeHandler = () => {
+    if (document.visibilityState !== "visible" || this.sceneShuttingDown) {
+      return;
+    }
+    const now = Date.now();
+    if (this.foregroundSyncRunning || now - this.lastForegroundSyncAt < 1000) {
+      return;
+    }
+    this.lastForegroundSyncAt = now;
+    void this.refreshStateAfterForeground();
+  };
   private readonly turnAdvancedHandler = (
     payload: TurnAdvancedMessagePayload
   ) => {
@@ -522,6 +535,8 @@ export class GameScene extends Phaser.Scene {
 
   async create(data?: GameSceneStartData) {
     this.sceneShuttingDown = false;
+    this.foregroundSyncRunning = false;
+    this.lastForegroundSyncAt = 0;
     this.reportReplayMode = data?.reportReplay === true && !!data.matchId;
     this.reportReplayMatchId = this.reportReplayMode ? data?.matchId ?? null : null;
     this.reportReplayAutoplayTurn = null;
@@ -831,8 +846,20 @@ export class GameScene extends Phaser.Scene {
     this.updateTutorialGuidance();
     this.hideLoadingOverlay();
     this.scale.on("resize", this.handleResize, this);
+    document.addEventListener(
+      "visibilitychange",
+      this.foregroundResumeHandler
+    );
+    window.addEventListener("pageshow", this.foregroundResumeHandler);
+    window.addEventListener("online", this.foregroundResumeHandler);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.sceneShuttingDown = true;
+      document.removeEventListener(
+        "visibilitychange",
+        this.foregroundResumeHandler
+      );
+      window.removeEventListener("pageshow", this.foregroundResumeHandler);
+      window.removeEventListener("online", this.foregroundResumeHandler);
       this.replayPlaybackCancelled = true;
       this.resolveReplayResumeWaiters();
       this.actionPlanSynchronizer?.destroy();
@@ -1025,6 +1052,107 @@ export class GameScene extends Phaser.Scene {
     );
     this.tutorialController.restorePresentationSteps(steps);
     this.updateTutorialGuidance();
+  }
+
+  private async refreshStateAfterForeground(): Promise<void> {
+    const service = this.turnService;
+    const currentMatch = this.currentMatch;
+    if (!service || !currentMatch || this.reportReplayMode) {
+      return;
+    }
+
+    this.foregroundSyncRunning = true;
+    const matchId = currentMatch.match_id;
+    try {
+      let refreshedMatch: MatchRecord | null = null;
+      for (const delayMs of [0, 500, 1500]) {
+        if (delayMs > 0) {
+          await new Promise<void>((resolve) =>
+            window.setTimeout(resolve, delayMs)
+          );
+        }
+        if (
+          this.sceneShuttingDown ||
+          document.visibilityState !== "visible"
+        ) {
+          return;
+        }
+        const candidate = await this.fetchMatchFromServer();
+        if (
+          candidate?.match_id === matchId &&
+          (candidate.current_turn ?? 0) >=
+            (this.currentMatch?.current_turn ?? 0)
+        ) {
+          refreshedMatch = candidate;
+          break;
+        }
+      }
+
+      if (refreshedMatch) {
+        this.applyAuthoritativeMatchState(refreshedMatch);
+      }
+
+      const matchForReconnect = refreshedMatch ?? this.currentMatch;
+      const runtimeMatchId =
+        matchForReconnect?.runtime_match_id ?? matchId;
+      if (
+        matchForReconnect?.started !== false &&
+        (matchForReconnect?.removed ?? 0) === 0
+      ) {
+        await service.reconnectRealtimeMatch(runtimeMatchId);
+        if (
+          this.sceneShuttingDown ||
+          document.visibilityState !== "visible"
+        ) {
+          return;
+        }
+        const latestMatch = await this.fetchMatchFromServer();
+        if (
+          latestMatch?.match_id === matchId &&
+          (latestMatch.current_turn ?? 0) >=
+            (this.currentMatch?.current_turn ?? 0)
+        ) {
+          this.applyAuthoritativeMatchState(latestMatch);
+        }
+      }
+    } catch (error) {
+      console.warn("Foreground match refresh failed", error);
+    } finally {
+      this.foregroundSyncRunning = false;
+    }
+  }
+
+  private applyAuthoritativeMatchState(match: MatchRecord): void {
+    const currentMatch = this.currentMatch;
+    if (
+      !currentMatch ||
+      match.match_id !== currentMatch.match_id ||
+      (match.current_turn ?? 0) < (currentMatch.current_turn ?? 0)
+    ) {
+      return;
+    }
+
+    const oldTurn = currentMatch.current_turn ?? 0;
+    const scrollX = this.cam.scrollX;
+    const scrollY = this.cam.scrollY;
+    this.currentMatch = match;
+    this.logReplayCache.clear();
+
+    if (!this.replayView && !this.replayPlaying && !this.manualReplayPlaying) {
+      if (match.map) {
+        this.renderMap(match.map);
+      }
+      this.renderPlayerCharacters(match);
+      this.cam.setScroll(scrollX, scrollY);
+    }
+
+    this.updateCharacterPanel(match);
+    this.configureAutoAdvanceTimer(match);
+    this.boardRenderer?.refreshTurnDependentUi();
+    const newTurn = match.current_turn ?? 0;
+    if (newTurn > oldTurn) {
+      this.topBanner?.show({ text: `Turn ${newTurn}` });
+    }
   }
 
   private async fetchMatchFromServer(): Promise<MatchRecord | null> {
