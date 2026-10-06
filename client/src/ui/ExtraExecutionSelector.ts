@@ -112,6 +112,7 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
     description: string;
     energy: number;
     discount?: number;
+    accentColor?: number;
   }): void {
     if (this.disposed) {
       return;
@@ -121,6 +122,9 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
     this.extraCostPerRep = opts.extraCostPerRep;
     this.maxReps = Math.max(0, opts.maxReps);
     this.discount = Math.max(0, opts.discount ?? 0);
+    this.totalCostFill.setFillStyle(
+      opts.accentColor ?? THEME.colors.energyAccent
+    );
     this.maxTotalCost = Math.max(
       0,
       this.baseCost + this.maxReps * this.extraCostPerRep - this.discount

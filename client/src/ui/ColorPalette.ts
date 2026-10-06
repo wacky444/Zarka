@@ -19,6 +19,7 @@ export const THEME = {
     zarkanGold: "#facc15",
     energyCost: "#fafa15",
     energyAccent: 0xfafa15,
+    healthDamageAccent: 0xf97373,
     energyDamage: "#fafa15",
     energyRecover: "#fafa15",
     healthAccent: 0x4ade80,

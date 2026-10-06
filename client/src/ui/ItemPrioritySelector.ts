@@ -86,6 +86,14 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
     this.updateState();
   }
 
+  setLabel(label: string): void {
+    if (this.disposed) {
+      return;
+    }
+    this.label.setText(label);
+    this.refreshSize();
+  }
+
   setOptions(options: ItemPriorityOption[]): void {
     if (this.disposed) {
       return;

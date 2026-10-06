@@ -15,7 +15,7 @@ import {
   type ReplayPlayerEvent,
 } from "@shared";
 import { getUsableExtraExecutions } from "../../utils/energy";
-import { collectTargets } from "./targeting";
+import { collectTargets, type TargetCandidate } from "./targeting";
 import {
   isTargetProtected,
   type PlannedActionParticipant,
@@ -132,6 +132,25 @@ function isStealPriorityItem(itemType: string): itemType is ItemId {
   );
 }
 
+function collectStealTarget(
+  actionId: ActionId,
+  participant: PlannedActionParticipant,
+  match: MatchRecord,
+  targetPlayerId: string | undefined
+): TargetCandidate | undefined {
+  const targetParticipant: PlannedActionParticipant = {
+    ...participant,
+    plan: {
+      ...participant.plan,
+      targetPlayerIds: targetPlayerId ? [targetPlayerId] : []
+    }
+  };
+  return collectTargets(actionId, targetParticipant, match, {
+    deadCharacterPolicy: "include",
+    allowMultiple: false
+  })[0];
+}
+
 function getKnownCarriedItemTypes(
   actor: PlayerCharacter,
   targetId: string,
@@ -192,21 +211,18 @@ export class StealAction extends BaseAction {
         continue;
       }
 
-      const targetCandidate = collectTargets(actionId, participant, match, {
-        deadCharacterPolicy: "include",
-        allowMultiple: false,
-      })[0];
-      const target =
-        targetCandidate && !isTargetProtected(targetCandidate.character)
-          ? targetCandidate
-          : undefined;
-      const blockedByProtection =
-        targetCandidate !== undefined && target === undefined;
       const canSpecifyUnknownItem =
         getSkillRank(participant.character, "dexterity2") > 0;
       const requestedItemTypes =
         canSpecifyUnknownItem && Array.isArray(participant.plan.targetItemIds)
           ? participant.plan.targetItemIds
+              .slice(0, MAX_STEAL_PRIORITY_ITEMS)
+              .filter(isStealPriorityItem)
+          : [];
+      const requestedSecondItemTypes =
+        canSpecifyUnknownItem &&
+        Array.isArray(participant.plan.secondTargetItemIds)
+          ? participant.plan.secondTargetItemIds
               .slice(0, MAX_STEAL_PRIORITY_ITEMS)
               .filter(isStealPriorityItem)
           : [];
@@ -216,70 +232,122 @@ export class StealAction extends BaseAction {
         ActionLibrary.steal
       );
       const stealCount = 1 + extraExecutions;
+      const requestedTargetPlayerId = participant.plan.targetPlayerIds?.[0];
+      const requestedSecondTargetPlayerId =
+        participant.plan.secondTargetPlayerId;
+      let firstTargetCandidate: TargetCandidate | undefined;
+      let secondTargetCandidate: TargetCandidate | undefined;
+      let blockedByProtection = false;
+      let targetHadNoMoreItems = false;
       const stolenItems: ItemId[] = [];
-      let targetId: string | undefined;
+      const targetResults = new Map<
+        string,
+        { candidate: TargetCandidate; stolenItems: ItemId[] }
+      >();
 
-      if (target) {
-        targetId = target.id;
-        for (let index = 0; index < stealCount; index += 1) {
-          const itemType = chooseItemType(
-            participant.character,
-            target.id,
-            target.character,
-            canSpecifyUnknownItem,
-            requestedItemTypes
-          );
-          if (!itemType) {
-            break;
-          }
-          const weight = itemWeight(itemType);
-          if (!removeItem(target.character, itemType, weight)) {
-            break;
-          }
-          addItem(participant.character, itemType, weight);
-          stolenItems.push(itemType);
+      for (let index = 0; index < stealCount; index += 1) {
+        const targetPlayerId =
+          index === 0
+            ? requestedTargetPlayerId
+            : requestedSecondTargetPlayerId ??
+              firstTargetCandidate?.id ??
+              requestedTargetPlayerId;
+        const candidate = collectStealTarget(
+          actionId,
+          participant,
+          match,
+          targetPlayerId
+        );
+        if (index === 0) {
+          firstTargetCandidate = candidate;
+        } else {
+          secondTargetCandidate = candidate;
         }
-        syncBandolierLoadCapacity(target.character);
-        syncBandolierLoadCapacity(participant.character);
-        match.playerCharacters![target.id] = target.character;
+        if (!candidate) {
+          continue;
+        }
+
+        if (isTargetProtected(candidate.character)) {
+          blockedByProtection = true;
+          continue;
+        }
+        const result = targetResults.get(candidate.id) ?? {
+          candidate,
+          stolenItems: []
+        };
+        targetResults.set(candidate.id, result);
+
+        const itemPriorities = index === 0
+          ? requestedItemTypes
+          : requestedSecondItemTypes;
+        const itemType = chooseItemType(
+          participant.character,
+          candidate.id,
+          candidate.character,
+          canSpecifyUnknownItem,
+          itemPriorities
+        );
+        if (!itemType) {
+          targetHadNoMoreItems = true;
+          continue;
+        }
+        const weight = itemWeight(itemType);
+        if (!removeItem(candidate.character, itemType, weight)) {
+          targetHadNoMoreItems = true;
+          continue;
+        }
+        addItem(participant.character, itemType, weight);
+        stolenItems.push(itemType);
+        result.stolenItems.push(itemType);
+        match.playerCharacters![candidate.id] = candidate.character;
       }
 
+      for (const { candidate } of targetResults.values()) {
+        syncBandolierLoadCapacity(candidate.character);
+      }
+      syncBandolierLoadCapacity(participant.character);
       this.clearPlan(participant);
       match.playerCharacters![participant.playerId] = participant.character;
 
       const metadata: Record<string, unknown> = {
-        targetPlayerId: targetId ?? targetCandidate?.id,
+        targetPlayerId: firstTargetCandidate?.id,
+        targetPlayerIds: [...targetResults.keys()],
+        secondTargetPlayerId: secondTargetCandidate?.id,
         stolenCount: stolenItems.length,
         stolenItems: stolenItems.map((itemType) => ({ itemType })),
-        extraExecutions,
+        extraExecutions
       };
       if (blockedByProtection) {
         metadata.blockedByProtection = true;
       }
-      if (target && stolenItems.length < stealCount) {
+      if (targetHadNoMoreItems) {
         metadata.targetHadNoMoreItems = true;
       }
 
       const action: ReplayActionDone = {
         actionId,
         originLocation: participant.character.position?.coord,
-        targetLocation: targetCandidate?.coord,
-        metadata,
+        targetLocation: firstTargetCandidate?.coord,
+        metadata
       };
       const replayEvent: ReplayPlayerEvent = {
         kind: "player",
         actorId: participant.playerId,
-        action,
+        action
       };
-      if (target) {
-        const replayTarget: ReplayActionTarget = {
-          targetId: target.id,
-          metadata: {
-            stolenCount: stolenItems.length,
-            stolenItems: stolenItems.map((itemType) => ({ itemType })),
-          },
-        };
-        replayEvent.targets = [replayTarget];
+      if (targetResults.size > 0) {
+        replayEvent.targets = [...targetResults.values()].map(
+          ({ candidate, stolenItems: targetStolenItems }) => {
+            const replayTarget: ReplayActionTarget = {
+              targetId: candidate.id,
+              metadata: {
+                stolenCount: targetStolenItems.length,
+                stolenItems: targetStolenItems.map((itemType) => ({ itemType }))
+              }
+            };
+            return replayTarget;
+          }
+        );
       }
       events.push(replayEvent);
     }

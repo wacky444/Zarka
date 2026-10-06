@@ -177,6 +177,7 @@ export interface ActionSubmission {
   conditions?: ActionCondition[];
   notes?: string;
   targetItemIds?: string[];
+  secondTargetItemIds?: string[];
 }
 
 export enum ExtraExecutionEffect {

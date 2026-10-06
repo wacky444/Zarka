@@ -87,13 +87,14 @@ test("Dexterity 2 steals first available item in selected priority order", () =>
   );
 });
 
-test("extra steal execution continues through the priority list", () => {
+test("extra steal uses independent item priorities on the same target", () => {
   const fixture = createFixture(
     ["knife", "food"],
-    ["knife", "food"],
+    ["knife"],
     undefined,
     1
   );
+  fixture.participant.plan.secondTargetItemIds = ["food"];
 
   executeStealAction([fixture.participant], fixture.match);
 
@@ -102,6 +103,28 @@ test("extra steal execution continues through the priority list", () => {
     ["knife", "food"]
   );
   assert.equal(fixture.target.inventory.carriedItems.length, 0);
+});
+
+test("extra steal can target another player with separate priorities", () => {
+  const fixture = createFixture(["knife"], ["knife"], undefined, 1);
+  const secondTarget = createDefaultCharacter("target2");
+  secondTarget.position = { tileId: "tile", coord: { q: 0, r: 0 } };
+  secondTarget.inventory.carriedItems = [
+    { itemId: "medicine", quantity: 1, weight: ItemLibrary.medicine.weight }
+  ];
+  fixture.match.players.push(secondTarget.id);
+  fixture.match.playerCharacters[secondTarget.id] = secondTarget;
+  fixture.participant.plan.secondTargetPlayerId = secondTarget.id;
+  fixture.participant.plan.secondTargetItemIds = ["medicine"];
+
+  executeStealAction([fixture.participant], fixture.match);
+
+  assert.deepEqual(
+    fixture.actor.inventory.carriedItems.map((stack) => stack.itemId),
+    ["knife", "medicine"]
+  );
+  assert.equal(fixture.target.inventory.carriedItems.length, 0);
+  assert.equal(secondTarget.inventory.carriedItems.length, 0);
 });
 
 test("Dexterity 2 randomly chooses when none of its priorities are carried", () => {
@@ -147,7 +170,7 @@ test("Dexterity 2 ignores priorities after the first three", () => {
   );
 });
 
-test("main-action RPC stores at most three steal priorities", () => {
+test("main-action RPC caps both steal priority lists and stores second target", () => {
   const fixture = createFixture([], []);
   let storedMatch = fixture.match;
   const nakama = {
@@ -173,7 +196,10 @@ test("main-action RPC stores at most three steal priorities", () => {
       match_id: fixture.match.match_id,
       submission: {
         actionId: ActionLibrary.steal.id,
-        targetItemIds: ["axe", "knife", "bat", "medicine"]
+        extraExecutions: 1,
+        secondTargetPlayerId: "target",
+        targetItemIds: ["axe", "knife", "bat", "medicine"],
+        secondTargetItemIds: ["food", "medicine", "knife", "axe"]
       }
     })
   );
@@ -181,6 +207,14 @@ test("main-action RPC stores at most three steal priorities", () => {
   assert.deepEqual(
     storedMatch.playerCharacters.thief.actionPlan?.main?.targetItemIds,
     ["axe", "knife", "bat"]
+  );
+  assert.deepEqual(
+    storedMatch.playerCharacters.thief.actionPlan?.main?.secondTargetItemIds,
+    ["food", "medicine", "knife"]
+  );
+  assert.equal(
+    storedMatch.playerCharacters.thief.actionPlan?.main?.secondTargetPlayerId,
+    "target"
   );
 });
 

@@ -1028,11 +1028,30 @@ export class CharacterPanelLogView {
             const stolenItems = this.extractStolenItemNames(
               event.action.metadata
             );
+            const replayTargets = event.targets ?? [];
+            const targetsWithItems = replayTargets.filter((target) => {
+              const stolenCount = (
+                target.metadata as { stolenCount?: unknown } | undefined
+              )?.stolenCount;
+              return typeof stolenCount === "number" && stolenCount > 0;
+            });
+            const targetIds = [
+              ...new Set(
+                (targetsWithItems.length > 0
+                  ? targetsWithItems
+                  : replayTargets
+                ).map((target) => target.targetId)
+              )
+            ];
             const targetId = (
               event.action.metadata as { targetPlayerId?: unknown } | undefined
             )?.targetPlayerId;
-            const targetName =
-              typeof targetId === "string"
+            const targetNames = targetIds.map((id) =>
+              this.resolvePlayerName(id)
+            );
+            const targetName = targetNames.length > 0
+              ? targetNames.join(", ")
+              : typeof targetId === "string"
                 ? this.resolvePlayerName(targetId)
                 : t("the target");
             lines.push(

@@ -59,6 +59,7 @@ export function updateMainActionRpc(
   let targetPlayerIds: string[] | undefined;
   let secondTargetPlayerId: string | undefined;
   let targetItemIds: string[] | undefined;
+  let secondTargetItemIds: string[] | undefined;
   let extraExecutions: number | undefined;
   if (submission) {
     actionId = normalizeActionId(submission.actionId);
@@ -145,6 +146,27 @@ export function updateMainActionRpc(
           : filtered;
       targetItemIds = selectedItems.length > 0 ? selectedItems : undefined;
     }
+    const rawSecondTargetItems = submission.secondTargetItemIds;
+    if (normalizedActionId === "steal" && Array.isArray(rawSecondTargetItems)) {
+      const seen: Record<string, true> = {};
+      const filtered: string[] = [];
+      for (const value of rawSecondTargetItems) {
+        if (typeof value !== "string") {
+          continue;
+        }
+        const trimmed = value.trim();
+        if (
+          !trimmed ||
+          trimmed === PICKUP_NONE_PRIORITY_ID ||
+          Object.prototype.hasOwnProperty.call(seen, trimmed)
+        ) {
+          continue;
+        }
+        seen[trimmed] = true;
+        filtered.push(trimmed);
+      }
+      secondTargetItemIds = filtered.slice(0, MAX_STEAL_PRIORITY_ITEMS);
+    }
     const rawExtraExecutions = submission.extraExecutions;
     if (
       typeof rawExtraExecutions === "number" &&
@@ -170,8 +192,14 @@ export function updateMainActionRpc(
     ) {
       secondTargetLocation = undefined;
     }
-    if (normalizedActionId !== "shoot_pistol" || !extraExecutions) {
+    if (
+      !extraExecutions ||
+      (normalizedActionId !== "shoot_pistol" && normalizedActionId !== "steal")
+    ) {
       secondTargetPlayerId = undefined;
+    }
+    if (normalizedActionId !== "steal" || !extraExecutions) {
+      secondTargetItemIds = undefined;
     }
   }
   const clearAction = !submission;
@@ -257,6 +285,11 @@ export function updateMainActionRpc(
     } else if (nextPlan.targetItemIds) {
       delete nextPlan.targetItemIds;
     }
+    if (secondTargetItemIds && secondTargetItemIds.length > 0) {
+      nextPlan.secondTargetItemIds = secondTargetItemIds;
+    } else if (nextPlan.secondTargetItemIds) {
+      delete nextPlan.secondTargetItemIds;
+    }
     if (extraExecutions !== undefined) {
       if (extraExecutions > 0) {
         nextPlan.extraExecutions = extraExecutions;
@@ -308,6 +341,10 @@ export function updateMainActionRpc(
       clearAction || !targetItemIds || targetItemIds.length === 0
         ? undefined
         : targetItemIds,
+    secondTargetItemIds:
+      clearAction || !secondTargetItemIds || secondTargetItemIds.length === 0
+        ? undefined
+        : secondTargetItemIds,
     extraExecutions: clearAction ? undefined : extraExecutions
   };
   return JSON.stringify(response);

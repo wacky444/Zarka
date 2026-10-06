@@ -177,6 +177,7 @@ export interface PlayerPlannedAction {
   targetPlayerIds?: string[];
   secondTargetPlayerId?: string;
   targetItemIds?: string[];
+  secondTargetItemIds?: string[];
 }
 
 export type PlayerConditionFlag =

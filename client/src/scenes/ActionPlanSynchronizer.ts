@@ -158,6 +158,9 @@ export class ActionPlanSynchronizer {
     const normalizedItems = this.normalizeTargetItems(
       selection?.targetItemIds ?? undefined,
     );
+    const normalizedSecondItems = this.normalizeTargetItems(
+      selection?.secondTargetItemIds ?? undefined,
+    );
     const normalizedSelection: MainActionSelection = {
       actionId: selection?.actionId ?? null,
       targetLocation: normalizeAxial(selection?.targetLocation),
@@ -169,6 +172,7 @@ export class ActionPlanSynchronizer {
         selection?.secondTargetPlayerId,
       ),
       targetItemIds: normalizedItems,
+      secondTargetItemIds: normalizedSecondItems,
       extraExecutions:
         typeof selection?.extraExecutions === "number"
           ? selection.extraExecutions
@@ -191,6 +195,9 @@ export class ActionPlanSynchronizer {
     const previousItems = this.normalizeTargetItems(
       previousPlan?.targetItemIds ?? undefined,
     );
+    const previousSecondItems = this.normalizeTargetItems(
+      previousPlan?.secondTargetItemIds ?? undefined,
+    );
     if (
       normalizedSelection.actionId === previousActionId &&
       this.isSameAxial(normalizedSelection.targetLocation, previousTarget) &&
@@ -207,6 +214,10 @@ export class ActionPlanSynchronizer {
       this.isSameTargetItems(
         normalizedSelection.targetItemIds,
         previousItems,
+      ) &&
+      this.isSameTargetItems(
+        normalizedSelection.secondTargetItemIds,
+        previousSecondItems,
       ) &&
       (normalizedSelection.extraExecutions ?? 0) ===
         (previousPlan?.extraExecutions ?? 0)
@@ -228,6 +239,7 @@ export class ActionPlanSynchronizer {
             normalizedSelection.targetPlayerIds,
             normalizedSelection.secondTargetPlayerId ?? undefined,
             normalizedSelection.targetItemIds,
+            normalizedSelection.secondTargetItemIds,
             normalizedSelection.extraExecutions,
           )
         : null;
@@ -288,6 +300,14 @@ export class ActionPlanSynchronizer {
           nextPlan.targetItemIds = [...payload.targetItemIds];
         } else if (nextPlan.targetItemIds) {
           delete nextPlan.targetItemIds;
+        }
+        if (
+          payload.secondTargetItemIds &&
+          payload.secondTargetItemIds.length > 0
+        ) {
+          nextPlan.secondTargetItemIds = [...payload.secondTargetItemIds];
+        } else if (nextPlan.secondTargetItemIds) {
+          delete nextPlan.secondTargetItemIds;
         }
         if (
           typeof payload.extraExecutions === "number" &&
@@ -669,6 +689,7 @@ export class ActionPlanSynchronizer {
     targetPlayerIds: string[] | undefined,
     secondTargetPlayerId: string | undefined,
     targetItemIds: string[] | undefined,
+    secondTargetItemIds: string[] | undefined,
     extraExecutions?: number,
   ): ActionSubmission {
     const typedId = actionId as ActionId;
@@ -698,6 +719,10 @@ export class ActionPlanSynchronizer {
     if (targetItemIds !== undefined) {
       submission.targetItemIds =
         targetItemIds.length > 0 ? [...targetItemIds] : [];
+    }
+    if (secondTargetItemIds !== undefined) {
+      submission.secondTargetItemIds =
+        secondTargetItemIds.length > 0 ? [...secondTargetItemIds] : [];
     }
     if (typeof extraExecutions === "number" && extraExecutions > 0) {
       submission.extraExecutions = extraExecutions;

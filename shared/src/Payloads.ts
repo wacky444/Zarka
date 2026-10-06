@@ -69,6 +69,7 @@ export type UpdateMainActionPayload = {
   targetPlayerIds?: string[];
   secondTargetPlayerId?: string;
   targetItemIds?: string[];
+  secondTargetItemIds?: string[];
   extraExecutions?: number;
   singleTarget?: boolean;
   error?: string;

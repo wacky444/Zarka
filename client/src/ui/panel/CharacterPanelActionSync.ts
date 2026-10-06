@@ -73,6 +73,7 @@ export interface LocalMainActionSyncState {
   targetPlayerId: string | null;
   secondTargetPlayerId: string | null;
   priorityItems: string[];
+  secondPriorityItems: string[];
 }
 
 export interface ServerMainActionSyncState {
@@ -82,6 +83,7 @@ export interface ServerMainActionSyncState {
   targetPlayerId: string | null;
   secondTargetPlayerId: string | null;
   targetItems: string[] | null;
+  secondTargetItems: string[] | null;
 }
 
 export function shouldSyncMainActionWithServer(
@@ -100,6 +102,10 @@ export function shouldSyncMainActionWithServer(
     (local.secondTargetPlayerId ?? null) ===
     (server.secondTargetPlayerId ?? null);
   const matchesItems = isSameTargetItems(local.priorityItems, server.targetItems);
+  const matchesSecondItems = isSameTargetItems(
+    local.secondPriorityItems,
+    server.secondTargetItems
+  );
 
   return (
     !matchesSelection ||
@@ -107,7 +113,8 @@ export function shouldSyncMainActionWithServer(
     !matchesSecondLocation ||
     !matchesPlayer ||
     !matchesSecondPlayer ||
-    !matchesItems
+    !matchesItems ||
+    !matchesSecondItems
   );
 }
 

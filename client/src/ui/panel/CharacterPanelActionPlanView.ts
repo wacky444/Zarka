@@ -15,6 +15,7 @@ import {
 import { GridSelect, type GridSelectItem } from "../GridSelect";
 import { LocationSelector } from "../LocationSelector";
 import { ExtraExecutionSelector } from "../ExtraExecutionSelector";
+import { THEME } from "../ColorPalette";
 import { PlayerSelector, type PlayerOption } from "../PlayerSelector";
 import {
   ItemPrioritySelector,
@@ -46,6 +47,7 @@ export type MainActionSelection = {
   targetPlayerIds?: string[];
   secondTargetPlayerId?: string | null;
   targetItemIds?: string[];
+  secondTargetItemIds?: string[];
   extraExecutions?: number;
 };
 
@@ -68,14 +70,17 @@ export interface MainActionPlanSnapshot {
   targetPlayerId: string | null;
   secondTargetPlayerId: string | null;
   targetItemIds: string[];
+  secondTargetItemIds: string[];
   extraExecutions: number;
   supportsLocation: boolean;
   supportsSecondLocation: boolean;
   supportsPlayer: boolean;
   supportsItems: boolean;
+  supportsSecondItems: boolean;
   supportsExtra: boolean;
   secondTargetPlayerIsPistolTarget: boolean;
   secondTargetPlayerIsScareTarget: boolean;
+  secondTargetPlayerIsStealTarget: boolean;
 }
 
 export interface SecondaryActionPlanSnapshot {
@@ -119,10 +124,15 @@ export function buildMainActionSelection(
             : null
         ].filter((id): id is string => id !== null)
       : undefined,
-    secondTargetPlayerId: state.secondTargetPlayerIsPistolTarget
-      ? state.secondTargetPlayerId ?? undefined
-      : undefined,
+    secondTargetPlayerId:
+      state.secondTargetPlayerIsPistolTarget ||
+      state.secondTargetPlayerIsStealTarget
+        ? state.secondTargetPlayerId ?? undefined
+        : undefined,
     targetItemIds: state.supportsItems ? [...state.targetItemIds] : undefined,
+    secondTargetItemIds: state.supportsSecondItems
+      ? [...state.secondTargetItemIds]
+      : undefined,
     extraExecutions: state.supportsExtra ? state.extraExecutions : undefined
   };
 }
@@ -294,6 +304,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   private readonly playerSelector: PlayerSelector;
   private readonly scareSecondPlayerSelector: PlayerSelector;
   private readonly itemSelector: ItemPrioritySelector;
+  private readonly secondStealItemSelector: ItemPrioritySelector;
 
   private readonly secondaryActionBox: Phaser.GameObjects.Rectangle;
   private readonly secondaryActionLabel: Phaser.GameObjects.Text;
@@ -338,6 +349,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   private secondaryInspectSecondTargetPlayerId: string | null = null;
   private extraSecondaryActionTargetPlayerId: string | null = null;
   private mainActionPriorityItems: string[] = [];
+  private secondStealPriorityItems: string[] = [];
   private secondaryActionPriorityItems: string[] = [];
   private secondaryPrioritizeFoodDrink = false;
   private secondaryChemicalSingleTarget = false;
@@ -549,6 +561,24 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.itemSelector.on("modal-open", this.handleModalOpen);
     this.itemSelector.on("modal-close", this.handleModalClose);
     this.scrollContent.add(this.itemSelector);
+
+    this.secondStealItemSelector = new ItemPrioritySelector(
+      scene,
+      0,
+      0,
+      this.mainActionDropdownWidth
+    );
+    this.secondStealItemSelector.setLabel("Second Steal Item Priorities");
+    this.secondStealItemSelector.setMaxEntries(MAX_STEAL_PRIORITY_ITEMS);
+    this.secondStealItemSelector.setEnabled(false);
+    this.secondStealItemSelector.setVisible(false);
+    this.secondStealItemSelector.setActive(false);
+    this.secondStealItemSelector.on("change", (itemIds: string[]) =>
+      this.setSecondStealPriorityItems(itemIds ?? [], true)
+    );
+    this.secondStealItemSelector.on("modal-open", this.handleModalOpen);
+    this.secondStealItemSelector.on("modal-close", this.handleModalClose);
+    this.scrollContent.add(this.secondStealItemSelector);
 
     this.secondaryActionBox = scene.add
       .rectangle(0, 0, boxWidth, BOX_HEIGHT, 0x1b2440)
@@ -825,6 +855,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.parent.bringToTop(this.secondLocationSelector);
     this.parent.bringToTop(this.playerSelector);
     this.parent.bringToTop(this.scareSecondPlayerSelector);
+    this.parent.bringToTop(this.itemSelector);
+    this.parent.bringToTop(this.secondStealItemSelector);
     this.parent.bringToTop(this.secondaryActionDropdown);
     this.parent.bringToTop(this.secondaryLocationSelector);
     this.parent.bringToTop(this.secondaryPlayerSelector);
@@ -893,6 +925,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       this.extraSecondaryPlayerSelector.setPending(false);
       this.extraSecondaryPlayerSelector.hideDropdown();
       this.itemSelector.hideDropdown();
+      this.secondStealItemSelector.hideDropdown();
       this.secondaryItemSelector.hideDropdown();
       this.extraSecondaryItemSelector.hideDropdown();
       this.scrollPanel?.setMouseWheelScrollerEnable?.(false);
@@ -929,6 +962,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.stealItemOptions = stealItemOptions;
     this.inventoryItemOptions = inventoryItemOptions;
     this.refreshItemSelectorState();
+    this.refreshSecondStealItemSelectorState();
     this.refreshSecondaryItemSelectorState();
     this.refreshExtraSecondaryItemSelectorState();
   }
@@ -979,7 +1013,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.setMainActionTargetPlayer(serverTargetPlayerId, false);
 
     const serverSecondTargetPlayerId = normalizePlayerId(
-      mainActionId === "shoot_pistol"
+      mainActionId === "shoot_pistol" || mainActionId === "steal"
         ? character.actionPlan?.main?.secondTargetPlayerId
         : Array.isArray(targetPlayers) && targetPlayers.length > 1
           ? targetPlayers[1]
@@ -991,6 +1025,12 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       ? (character.actionPlan?.main?.targetItemIds as string[])
       : [];
     this.setMainActionPriorityItems(targetItems, false);
+    const secondTargetItems = Array.isArray(
+      character.actionPlan?.main?.secondTargetItemIds
+    )
+      ? character.actionPlan.main.secondTargetItemIds
+      : [];
+    this.setSecondStealPriorityItems(secondTargetItems, false);
     this.setMainActionLocationSelectionPending(false);
     this.playerSelector.setPending(false);
 
@@ -1118,7 +1158,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       normalizedSecondTargetLocation,
       serverTargetPlayerId,
       serverSecondTargetPlayerId,
-      targetItems
+      targetItems,
+      secondTargetItems
     );
     this.syncSecondaryActionWithServer(
       secondaryId,
@@ -1197,6 +1238,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.playerSelector.setEnabled(false);
     this.scareSecondPlayerSelector.setEnabled(false);
     this.itemSelector.setEnabled(false);
+    this.secondStealItemSelector.setEnabled(false);
     this.secondaryLocationSelector.setEnabled(false);
     this.secondaryPlayerSelector.setEnabled(false);
     this.secondaryInspectSecondPlayerSelector.setEnabled(false);
@@ -1211,6 +1253,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.playerSelector.hideDropdown();
     this.scareSecondPlayerSelector.hideDropdown();
     this.itemSelector.hideDropdown();
+    this.secondStealItemSelector.hideDropdown();
     this.secondaryActionDropdown.hideModal();
     this.secondaryPlayerSelector.hideDropdown();
     this.secondaryInspectSecondPlayerSelector.hideDropdown();
@@ -1248,16 +1291,23 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       targetPlayerId: this.mainActionTargetPlayerId,
       secondTargetPlayerId: this.scareSecondTargetPlayerId,
       targetItemIds: this.mainActionPriorityItems,
+      secondTargetItemIds: this.secondStealPriorityItems,
       extraExecutions: this.mainExtraExecutions,
       supportsLocation: this.selectedMainActionSupportsLocation(),
       supportsSecondLocation: this.selectedMainActionSupportsSecondLocation(),
       supportsPlayer: this.selectedActionSupportsSingleTarget(),
       supportsItems: this.selectedActionSupportsItemPriority(),
+      supportsSecondItems:
+        this.mainActionSelection === "steal" &&
+        this.hasDexterity2() &&
+        this.mainExtraExecutions > 0,
       supportsExtra: this.selectedActionSupportsExtraExecution(),
       secondTargetPlayerIsPistolTarget:
         this.mainActionSelection === "shoot_pistol" && this.mainExtraExecutions > 0,
       secondTargetPlayerIsScareTarget:
-        this.mainActionSelection === "scare" && this.mainExtraExecutions > 0
+        this.mainActionSelection === "scare" && this.mainExtraExecutions > 0,
+      secondTargetPlayerIsStealTarget:
+        this.mainActionSelection === "steal" && this.mainExtraExecutions > 0
     });
   }
 
@@ -1488,6 +1538,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.extraSecondaryPlayerSelector.off("modal-close", this.handleModalClose);
     this.itemSelector.off("modal-open", this.handleModalOpen);
     this.itemSelector.off("modal-close", this.handleModalClose);
+    this.secondStealItemSelector.off("modal-open", this.handleModalOpen);
+    this.secondStealItemSelector.off("modal-close", this.handleModalClose);
     this.secondaryItemSelector.off("modal-open", this.handleModalOpen);
     this.secondaryItemSelector.off("modal-close", this.handleModalClose);
     this.extraSecondaryItemSelector.off("modal-open", this.handleModalOpen);
@@ -1515,8 +1567,10 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
 
   private readonly handleMainExtraExecutionChange = (reps: number) => {
     this.mainExtraExecutions = reps;
+    this.refreshPlayerOptionsForSelectors();
     this.refreshLocationSelectorState();
     this.refreshScareSecondPlayerSelectorState();
+    this.refreshSecondStealItemSelectorState();
     this.emit("ready-refresh-request");
     this.emitMainActionChange();
   };
@@ -1546,7 +1600,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.refreshExtraExecutionSelectorState();
     this.refreshLocationSelectorState();
     this.refreshPlayerSelectorState();
+    this.refreshScareSecondPlayerSelectorState();
     this.refreshItemSelectorState();
+    this.refreshSecondStealItemSelectorState();
     this.emit("ready-refresh-request");
     this.emitMainActionChange();
   };
@@ -1731,13 +1787,14 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       this.setMainActionTargetPlayer(null, false);
       this.setScareSecondTargetPlayer(null, false);
     }
-    this.refreshPlayerOptionsForSelectors();
     this.refreshExtraExecutionSelectorState(storedExtraExecutions);
+    this.refreshPlayerOptionsForSelectors();
     this.refreshLocationSelectorState();
     this.refreshSecondLocationSelectorState();
     this.refreshPlayerSelectorState();
     this.refreshScareSecondPlayerSelectorState();
     this.refreshItemSelectorState();
+    this.refreshSecondStealItemSelectorState();
   }
 
   private applySecondaryActions(
@@ -1891,7 +1948,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       maxReps: extraExecution.maxRepetitions ?? 1,
       description: extraExecution.description,
       energy: this.getCurrentEnergy(),
-      discount
+      discount,
+      accentColor:
+        actionId === "focus"
+          ? THEME.colors.healthDamageAccent
+          : THEME.colors.energyAccent
     });
     if (initialReps > 0) {
       this.mainExtraExecutions = initialReps;
@@ -1925,7 +1986,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       maxReps: extraExecution.maxRepetitions ?? 1,
       description: extraExecution.description,
       energy: this.getCurrentEnergy(),
-      discount
+      discount,
+      accentColor:
+        actionId === "focus"
+          ? THEME.colors.healthDamageAccent
+          : THEME.colors.energyAccent
     });
     if (initialReps > 0) {
       this.secondaryExtraExecutions = initialReps;
@@ -1963,7 +2028,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       maxReps: extraExecution.maxRepetitions ?? 1,
       description: extraExecution.description,
       energy: this.getCurrentEnergy(),
-      discount
+      discount,
+      accentColor:
+        actionId === "focus"
+          ? THEME.colors.healthDamageAccent
+          : THEME.colors.energyAccent
     });
     if (initialReps > 0) {
       this.extraSecondaryExtraExecutions = initialReps;
@@ -2218,10 +2287,12 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
 
   private refreshScareSecondPlayerSelectorState(): void {
     const supports =
-      (this.mainActionSelection === "scare" ||
-        this.mainActionSelection === "shoot_pistol") &&
       this.mainExtraExecutions > 0 &&
-      this.mainPlayerOptions.length > 1;
+      ((this.mainActionSelection === "steal" &&
+        this.mainPlayerOptions.length > 0) ||
+        ((this.mainActionSelection === "scare" ||
+          this.mainActionSelection === "shoot_pistol") &&
+          this.mainPlayerOptions.length > 1));
     this.scareSecondPlayerSelector.setVisible(supports);
     this.scareSecondPlayerSelector.setActive(supports);
     if (!supports) {
@@ -2236,7 +2307,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.scareSecondPlayerSelector.setLabel(
       this.mainActionSelection === "shoot_pistol"
         ? t("Second Shot Target Player")
-        : t("Second Target Player")
+        : this.mainActionSelection === "steal"
+          ? "Second Steal Target Player"
+          : t("Second Target Player")
     );
     this.scareSecondPlayerSelector.setEnabled(this.mainActionSelection !== null);
     this.updateScrollLayout();
@@ -2269,6 +2342,38 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.mainActionPriorityItems = filtered;
     this.itemSelector.setValue(filtered, false);
     this.itemSelector.setEnabled(this.mainActionSelection !== null);
+    this.updateScrollLayout();
+  }
+
+  private refreshSecondStealItemSelectorState(): void {
+    const supports =
+      this.mainActionSelection === "steal" &&
+      this.hasDexterity2() &&
+      this.mainExtraExecutions > 0;
+    const availableOptions = this.stealItemOptions;
+    const shouldShow = supports && availableOptions.length > 0;
+    if (!shouldShow) {
+      this.secondStealItemSelector.setVisible(false);
+      this.secondStealItemSelector.setActive(false);
+      this.secondStealPriorityItems = [];
+      this.secondStealItemSelector.setValue([], false);
+      this.secondStealItemSelector.setEnabled(false);
+      this.secondStealItemSelector.setPending(false);
+      this.secondStealItemSelector.hideDropdown();
+      this.updateScrollLayout();
+      return;
+    }
+    this.secondStealItemSelector.setOptions(availableOptions);
+    this.secondStealItemSelector.setVisible(true);
+    this.secondStealItemSelector.setActive(true);
+    const filtered = this.filterPriorityIds(
+      this.secondStealPriorityItems,
+      availableOptions,
+      MAX_STEAL_PRIORITY_ITEMS
+    );
+    this.secondStealPriorityItems = filtered;
+    this.secondStealItemSelector.setValue(filtered, false);
+    this.secondStealItemSelector.setEnabled(true);
     this.updateScrollLayout();
   }
 
@@ -2424,6 +2529,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
         secondLocationSelector: this.secondLocationSelector,
         playerSelector: this.playerSelector,
         itemSelector: this.itemSelector,
+        secondItemSelector: this.secondStealItemSelector,
         searchPriorityToggle: null,
         additionalPlayerSelector: this.scareSecondPlayerSelector
       },
@@ -2482,7 +2588,10 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.mainActionTargetPlayerId = normalized;
     this.playerSelector.setValue(normalized);
     this.playerSelector.setPending(false);
-    if (this.scareSecondTargetPlayerId === normalized) {
+    if (
+      this.scareSecondTargetPlayerId === normalized &&
+      this.mainActionSelection !== "steal"
+    ) {
       this.setScareSecondTargetPlayer(null, false);
     }
     this.refreshScareSecondPlayerSelectorState();
@@ -2494,10 +2603,12 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
 
   private setScareSecondTargetPlayer(playerId: string | null, emit = false): boolean {
     const supports =
-      (this.mainActionSelection === "scare" ||
-        this.mainActionSelection === "shoot_pistol") &&
       this.mainExtraExecutions > 0 &&
-      this.mainPlayerOptions.length > 1;
+      ((this.mainActionSelection === "steal" &&
+        this.mainPlayerOptions.length > 0) ||
+        ((this.mainActionSelection === "scare" ||
+          this.mainActionSelection === "shoot_pistol") &&
+          this.mainPlayerOptions.length > 1));
     if (!supports) {
       const hadValue = this.scareSecondTargetPlayerId !== null;
       if (hadValue) {
@@ -2645,6 +2756,22 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     ) {
       this.mainActionTargetPlayerId = mainOptions[0].id;
     }
+    const secondTargetOptions =
+      (this.mainActionSelection === "shoot_pistol" ||
+        this.mainActionSelection === "steal") &&
+      this.mainExtraExecutions > 0
+        ? mainOptions
+        : mainOptions.filter(
+            (option) => option.id !== this.mainActionTargetPlayerId
+          );
+    if (
+      this.scareSecondTargetPlayerId &&
+      !secondTargetOptions.some(
+        (option) => option.id === this.scareSecondTargetPlayerId
+      )
+    ) {
+      this.scareSecondTargetPlayerId = null;
+    }
     if (
       this.secondaryActionTargetPlayerId &&
       !secondaryOptions.some(
@@ -2663,14 +2790,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     }
 
     this.playerSelector.setOptions(mainOptions);
-    this.scareSecondPlayerSelector.setOptions(
-      this.mainActionSelection === "shoot_pistol" &&
-        this.mainExtraExecutions > 0
-        ? mainOptions
-        : mainOptions.filter(
-            (option) => option.id !== this.mainActionTargetPlayerId
-          )
-    );
+    this.scareSecondPlayerSelector.setOptions(secondTargetOptions);
     this.secondaryPlayerSelector.setOptions(secondaryOptions);
     this.secondaryInspectSecondPlayerSelector.setOptions(
       secondaryOptions.filter(
@@ -2792,6 +2912,42 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     }
     this.mainActionPriorityItems = filtered;
     this.itemSelector.setValue(filtered, false);
+    if (emit) {
+      this.emitMainActionChange();
+    }
+    return true;
+  }
+
+  private setSecondStealPriorityItems(
+    ids: string[],
+    emit = false
+  ): boolean {
+    const supports =
+      this.mainActionSelection === "steal" &&
+      this.hasDexterity2() &&
+      this.mainExtraExecutions > 0;
+    if (!supports) {
+      const hadValues = this.secondStealPriorityItems.length > 0;
+      if (hadValues) {
+        this.secondStealPriorityItems = [];
+      }
+      this.secondStealItemSelector.setValue([], false);
+      if (emit && hadValues) {
+        this.emitMainActionChange();
+      }
+      return hadValues;
+    }
+    const filtered = this.filterPriorityIds(
+      ids,
+      this.stealItemOptions,
+      MAX_STEAL_PRIORITY_ITEMS
+    );
+    if (isSameTargetItems(this.secondStealPriorityItems, filtered)) {
+      this.secondStealItemSelector.setValue(filtered, false);
+      return false;
+    }
+    this.secondStealPriorityItems = filtered;
+    this.secondStealItemSelector.setValue(filtered, false);
     if (emit) {
       this.emitMainActionChange();
     }
@@ -2989,7 +3145,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     serverSecondTargetLocation: Axial | null,
     serverTargetPlayerId: string | null,
     serverSecondTargetPlayerId: string | null,
-    serverTargetItems: string[] | null
+    serverTargetItems: string[] | null,
+    serverSecondTargetItems: string[] | null
   ): void {
     if (
       shouldSyncMainActionWithServer(
@@ -2999,7 +3156,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
           secondTargetLocation: this.mainActionSecondTarget,
           targetPlayerId: this.mainActionTargetPlayerId,
           secondTargetPlayerId: this.scareSecondTargetPlayerId,
-          priorityItems: this.mainActionPriorityItems
+          priorityItems: this.mainActionPriorityItems,
+          secondPriorityItems: this.secondStealPriorityItems
         },
         {
           actionId: serverActionId,
@@ -3007,7 +3165,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
           secondTargetLocation: serverSecondTargetLocation,
           targetPlayerId: serverTargetPlayerId,
           secondTargetPlayerId: serverSecondTargetPlayerId,
-          targetItems: serverTargetItems
+          targetItems: serverTargetItems,
+          secondTargetItems: serverSecondTargetItems
         }
       )
     ) {
@@ -3089,6 +3248,7 @@ export interface ActionPlanBlockLayout {
   secondLocationSelector: LocationSelector | null;
   playerSelector: PlayerSelector;
   itemSelector: ItemPrioritySelector;
+  secondItemSelector?: ItemPrioritySelector | null;
   searchPriorityToggle: Phaser.GameObjects.Text | null;
   chemicalTargetToggle?: Phaser.GameObjects.Text | null;
   dropSellToggle?: Phaser.GameObjects.Text | null;
@@ -3120,6 +3280,7 @@ export function layoutActionPlan(options: {
       secondLocationSelector,
       playerSelector,
       itemSelector,
+      secondItemSelector,
       searchPriorityToggle,
       chemicalTargetToggle,
       dropSellToggle,
@@ -3180,6 +3341,13 @@ export function layoutActionPlan(options: {
     itemSelector.setPosition(padding, innerCursor);
     if (itemSelector.visible) {
       innerCursor += itemSelector.height + 8;
+    }
+    if (secondItemSelector) {
+      secondItemSelector.setSelectorWidth(options.width - padding * 2);
+      secondItemSelector.setPosition(padding, innerCursor);
+      if (secondItemSelector.visible) {
+        innerCursor += secondItemSelector.height + 8;
+      }
     }
     if (searchPriorityToggle) {
       searchPriorityToggle.setPosition(padding, innerCursor);
