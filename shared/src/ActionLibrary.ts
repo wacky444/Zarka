@@ -260,7 +260,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       description: "Permite colocar una segunda carga de C4."
     },
     texture: "Board Game Icons",
-    frame: "exploding.png",
+    frame: "c4.png",
     actionOrder: 2,
     actionSubOrder: 2,
     tags: ["Attack", "Area", "Logistics"]
@@ -289,7 +289,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         "Permite colocar una trampa adicional en la misma entrada o en otra adyacente que se elija."
     },
     texture: "Board Game Icons",
-    frame: "puzzle.png",
+    frame: "trap.png",
     actionOrder: 2,
     actionSubOrder: 3,
     tags: ["Attack", "Logistics", "Ranged"]
@@ -375,7 +375,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         "Cada repetición aumenta el daño en [health-damage]1[/health-damage] punto, hasta +[health-damage]3[/health-damage]."
     },
     texture: "Board Game Icons",
-    frame: "hand_cross.png",
+    frame: "knife.png",
     actionOrder: 4,
     actionSubOrder: 0,
     tags: ["Attack", "SingleTarget"]
@@ -493,7 +493,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       description: "Permite entregar objetos adicionales en la misma acción."
     },
     texture: "Board Game Icons",
-    frame: "token_give.png",
+    frame: "give.png",
     actionOrder: 6,
     actionSubOrder: 4,
     tags: ["Support", "Logistics", "SingleTarget", "TargetItems"]
@@ -681,7 +681,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       description: "Permite detonar una segunda carga de C4 independiente."
     },
     texture: "Board Game Icons",
-    frame: "exploding_6.png",
+    frame: "detonate_c4.png",
     actionOrder: 11,
     actionSubOrder: 0,
     tags: ["Attack", "Area", "Ranged"]
@@ -716,7 +716,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         "Cada repetición añade [health-damage]1[/health-damage] punto de daño adicional hasta +[health-damage]3[/health-damage]."
     },
     texture: "Board Game Icons",
-    frame: "sword.png",
+    frame: "axe.png",
     actionOrder: 11,
     actionSubOrder: 1,
     tags: ["Attack", "SingleTarget"]
@@ -780,7 +780,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     effects: [{ description: "Elimina de inmediato al objetivo." }],
     texture: "Board Game Icons",
-    frame: "sword.png",
+    frame: "chainsaw.png",
     actionOrder: 11,
     actionSubOrder: 4,
     tags: ["Attack", "SingleTarget"]
@@ -844,7 +844,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
         "Permite realizar un segundo disparo, con objetivo y destino independientes."
     },
     texture: "Board Game Icons",
-    frame: "dice_sword.png",
+    frame: "pistol.png",
     actionOrder: 11,
     actionSubOrder: 5,
     tags: ["Attack", "Ranged", "SingleTarget"]
@@ -913,7 +913,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       }
     ],
     texture: "Board Game Icons",
-    frame: "exploding.png",
+    frame: "rocket_launcher.png",
     actionOrder: 11,
     actionSubOrder: 7,
     tags: ["Attack", "Area", "Ranged"]
@@ -998,7 +998,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       description: "Permite realizar un segundo robo en la misma acción."
     },
     texture: "Board Game Icons",
-    frame: "pouch_remove.png",
+    frame: "steal.png",
     actionOrder: 13,
     actionSubOrder: 0,
     tags: ["Attack", "Economy", "SingleTarget", "TargetItems"]
@@ -1099,7 +1099,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       "Concentrarse no provoca pérdida de vida adicional si se está intoxicado."
     ],
     texture: "Board Game Icons",
-    frame: "hourglass.png",
+    frame: "focus.png",
     actionOrder: 15,
     actionSubOrder: 0,
     tags: ["Support", "Status"]
@@ -1211,7 +1211,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       description: "Permite detectar también a distancia 2."
     },
     texture: "Board Game Icons",
-    frame: "hexagon_tile.png",
+    frame: "detect.png",
     actionOrder: 16,
     actionSubOrder: 3,
     tags: ["Recon"]

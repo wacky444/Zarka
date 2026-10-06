@@ -100,7 +100,6 @@
 - steal with power doesn't show an extra target selector
 
 - action icons that need new icons:
-	concentrate, knife attack, steal, axe attack, motorsaw attack, place c4, place trap, give, detect, explode c4, shoot rocket launcher, shoot pistol,
 	bat attack, inyect virus, throw, use bandage, use binoculars
-	activate cameras, start motorsaw, search, drop, breakfast, poison food, fabricate, talk, inyect vacine, manipulate, look window, place tracker, refuel,
+	activate cameras, start chainsaw, search, drop, breakfast, poison food, fabricate, talk, inyect vacine, manipulate, look window, place tracker, refuel,
 	use antidote, use quemical weapon, use medicine
