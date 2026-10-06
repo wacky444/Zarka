@@ -797,8 +797,7 @@ export class SettingsScene extends Phaser.Scene {
         modalWidth: 500,
         modalHeight: 380,
         autoSelectFirst: false,
-        mobileCellContent: "image",
-        mobileImageLabels: true
+        mobileCellContent: "image"
       });
 
       const items = buildSkinItems(cat);

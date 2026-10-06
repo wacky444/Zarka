@@ -460,8 +460,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       emptyLabel: "Unknown",
       columns: 3,
       cellHeight: 260,
-      mobileCellIcons: true,
-      prebuildMobileCells: true
+      mobileCellIcons: true
     });
     this.scrollContent.add(this.mainActionDropdown);
     this.mainActionDropdown.on("change", this.handleMainActionSelection);
@@ -572,8 +571,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       includeEmptyOption: true,
       emptyOptionLabel: "No secondary action",
       emptyOptionDescription: "Removes the planned secondary action.",
-      mobileCellIcons: true,
-      prebuildMobileCells: true
+      mobileCellIcons: true
     });
     this.scrollContent.add(this.secondaryActionDropdown);
     this.secondaryActionDropdown.on("change", this.handleSecondaryActionSelection);
@@ -719,8 +717,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       includeEmptyOption: true,
       emptyOptionLabel: "No extra secondary action",
       emptyOptionDescription: "Removes the extra secondary action.",
-      mobileCellIcons: true,
-      prebuildMobileCells: true
+      mobileCellIcons: true
     });
     this.extraSecondaryActionDropdown.setVisible(false);
     this.scrollContent.add(this.extraSecondaryActionDropdown);

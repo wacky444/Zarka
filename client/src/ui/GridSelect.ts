@@ -216,8 +216,6 @@ interface GridSelectConfig {
   iconTextGap?: number;
   mobileCellContent?: MobileGridCellContent;
   mobileCellIcons?: boolean;
-  mobileImageLabels?: boolean;
-  prebuildMobileCells?: boolean;
 }
 
 type RexSizer = Phaser.GameObjects.GameObject & {
@@ -245,27 +243,6 @@ type RexScrollablePanel = Phaser.GameObjects.GameObject & {
   ) => Phaser.GameObjects.GameObject;
   setMouseWheelScrollerEnable?: (enabled: boolean) => void;
   setScrollerEnable?: (enabled: boolean) => void;
-  setScrollFactor?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
-  addChildOY?: (inc: number, clamp?: boolean) => void;
-};
-
-type RexGridTable = Phaser.GameObjects.GameObject & {
-  setItems: (items?: unknown[]) => unknown;
-  refresh?: () => unknown;
-  layout?: () => unknown;
-  getBounds?: () => Phaser.Geom.Rectangle;
-  on: (
-    event: string,
-    callback: (...args: unknown[]) => void,
-    context?: unknown
-  ) => unknown;
-  resetAllCellsSize?: (width: number, height: number) => unknown;
-  setMask?: (
-    mask: Phaser.Display.Masks.BitmapMask | Phaser.Display.Masks.GeometryMask
-  ) => Phaser.GameObjects.GameObject;
-  clearMask?: (destroyMask?: boolean) => Phaser.GameObjects.GameObject;
-  setScrollerEnable?: (enabled: boolean) => void;
-  setMouseWheelScrollerEnable?: (enabled: boolean) => void;
   setScrollFactor?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
   addChildOY?: (inc: number, clamp?: boolean) => void;
 };
@@ -312,8 +289,6 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private readonly cellHeight: number;
   private readonly mobileCellContent: MobileGridCellContent;
   private readonly mobileCellIcons: boolean;
-  private readonly mobileImageLabels: boolean;
-  private readonly prebuildMobileCells: boolean;
   private readonly hitAreaZone: Phaser.GameObjects.Zone;
   private readonly emptyOptionItem: GridSelectItem | null;
   private readonly autoSelectFirst: boolean;
@@ -325,13 +300,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private overlay: Phaser.GameObjects.Container | null = null;
   private modalCover: Phaser.GameObjects.Rectangle | null = null;
   private modalCloseButton: Phaser.GameObjects.Container | null = null;
-  private gridTable: RexGridTable | null = null;
-  private mobileGridPanel: RexScrollablePanel | null = null;
-  private mobileGridContent: Phaser.GameObjects.Container | null = null;
-  private mobileGridCells: StaticGridCell[] = [];
+  private staticGridPanel: RexScrollablePanel | null = null;
+  private staticGridContent: Phaser.GameObjects.Container | null = null;
+  private staticGridCells: StaticGridCell[] = [];
   private readonly longPressTimers = new Set<Phaser.Time.TimerEvent>();
-  private gridTableMask: Phaser.Display.Masks.GeometryMask | null = null;
-  private gridTableMaskShape: Phaser.GameObjects.Rectangle | null = null;
+  private gridViewportMask: Phaser.Display.Masks.GeometryMask | null = null;
+  private gridViewportMaskShape: Phaser.GameObjects.Rectangle | null = null;
   private tooltip: ItemTooltipManager | null = null;
   private enabled = true;
   private tutorialHighlighted = false;
@@ -399,8 +373,6 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.cellHeight = Math.max(96, config.cellHeight ?? 240);
     this.mobileCellContent = config.mobileCellContent ?? "name";
     this.mobileCellIcons = config.mobileCellIcons === true;
-    this.mobileImageLabels = config.mobileImageLabels === true;
-    this.prebuildMobileCells = config.prebuildMobileCells === true;
     this.autoSelectFirst = config.autoSelectFirst !== false;
     this.confirmSelection = config.confirmSelection === true;
     this.confirmLabel = config.confirmLabel ?? "Confirm";
@@ -574,14 +546,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       }
     }
     if (this.modalVisible) {
-      if (this.gridTable) {
-        this.gridTable.setItems(this.items);
-        this.gridTable.refresh?.();
-        this.gridTable.layout?.();
-      }
-      if (this.mobileGridPanel) {
-        this.rebuildMobileGridContent();
-      }
+      this.rebuildStaticGridContent();
     }
     return this;
   }
@@ -723,8 +688,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.emit("change", item.isEmptyOption ? null : item.id, item);
     }
     if (this.modalVisible) {
-      this.gridTable?.refresh?.();
-      this.refreshMobileGridCells();
+      this.refreshStaticGridCells();
     }
   }
 
@@ -801,17 +765,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.updateConfirmButton();
       this.modalCover?.setVisible(true);
       this.modalCover?.setInteractive();
-      this.gridTable?.setItems(this.items);
-      this.gridTable?.setScrollerEnable?.(true);
-      this.gridTable?.setMouseWheelScrollerEnable?.(true);
-      this.gridTable?.refresh?.();
-      this.gridTable?.layout?.();
-      if (this.mobileGridPanel) {
-        this.rebuildMobileGridContent();
-        this.mobileGridPanel.setScrollerEnable?.(true);
-        this.mobileGridPanel.setMouseWheelScrollerEnable?.(true);
-        this.mobileGridPanel.layout?.();
-      }
+      this.rebuildStaticGridContent();
+      this.staticGridPanel?.setScrollerEnable?.(true);
+      this.staticGridPanel?.setMouseWheelScrollerEnable?.(true);
+      this.staticGridPanel?.layout?.();
       this.tooltip?.hide();
       return;
     }
@@ -945,8 +902,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
         event: WheelEvent
       ) => {
         event?.stopPropagation?.();
-        this.mobileGridPanel?.addChildOY?.(-dy, true);
-        this.gridTable?.addChildOY?.(-dy, true);
+        this.staticGridPanel?.addChildOY?.(-dy, true);
       }
     );
 
@@ -967,10 +923,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       .setOrigin(0.5, 0.5);
     modal.add(subtitle, 0, "center", { bottom: 4 }, false);
 
-    const useStaticMobileGrid = mobile && this.prebuildMobileCells;
-    const gridView = useStaticMobileGrid
-      ? this.createStaticMobileGridPanel()
-      : this.createGridTable();
+    const gridView = this.createStaticGridPanel();
     modal.add(
       gridView as unknown as Phaser.GameObjects.GameObject,
       1,
@@ -987,10 +940,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
     modal.setPosition(width / 2, height / 2);
     overlay.add(modal);
 
-    this.gridTableMaskShape?.destroy();
-    this.gridTableMaskShape = null;
-    this.gridTableMask?.destroy();
-    this.gridTableMask = null;
+    this.gridViewportMaskShape?.destroy();
+    this.gridViewportMaskShape = null;
+    this.gridViewportMask?.destroy();
+    this.gridViewportMask = null;
 
     const bounds =
       gridView.getBounds?.() ??
@@ -1000,14 +953,14 @@ export class GridSelect extends Phaser.GameObjects.Container {
         (gridView as unknown as { width?: number }).width ?? 0,
         (gridView as unknown as { height?: number }).height ?? 0
       );
-    this.gridTableMaskShape = scene.add
+    this.gridViewportMaskShape = scene.add
       .rectangle(bounds.x, bounds.y, bounds.width, bounds.height, 0xffffff, 1)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setAlpha(0.0001);
-    overlay.add(this.gridTableMaskShape);
-    this.gridTableMask = this.gridTableMaskShape.createGeometryMask();
-    gridView.setMask?.(this.gridTableMask);
+    overlay.add(this.gridViewportMaskShape);
+    this.gridViewportMask = this.gridViewportMaskShape.createGeometryMask();
+    gridView.setMask?.(this.gridViewportMask);
 
     if (mobile) {
       this.modalCloseButton = this.createMobileCloseButton(
@@ -1022,16 +975,9 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.modalViewportWidth = width;
     this.modalViewportHeight = height;
     this.modalViewportIsMobile = mobile;
-    this.gridTable = useStaticMobileGrid ? null : (gridView as RexGridTable);
-    this.mobileGridPanel = useStaticMobileGrid
-      ? (gridView as RexScrollablePanel)
-      : null;
+    this.staticGridPanel = gridView as RexScrollablePanel;
     this.updateConfirmButton();
-    scene.time.delayedCall(0, () => {
-      this.gridTable?.refresh?.();
-      this.gridTable?.layout?.();
-      this.mobileGridPanel?.layout?.();
-    });
+    scene.time.delayedCall(0, () => this.staticGridPanel?.layout?.());
   }
 
   private createConfirmButton(
@@ -1152,22 +1098,20 @@ export class GridSelect extends Phaser.GameObjects.Container {
     }
 
     if (forceDestroy) {
-      this.gridTable?.clearMask?.();
-      this.mobileGridPanel?.clearMask?.();
-      this.gridTableMask?.destroy();
-      this.gridTableMask = null;
-      this.gridTableMaskShape?.destroy();
-      this.gridTableMaskShape = null;
+      this.staticGridPanel?.clearMask?.();
+      this.gridViewportMask?.destroy();
+      this.gridViewportMask = null;
+      this.gridViewportMaskShape?.destroy();
+      this.gridViewportMaskShape = null;
 
       this.overlay.destroy(true);
       this.overlay = null;
       this.confirmButton = null;
       this.modalCover = null;
       this.modalCloseButton = null;
-      this.gridTable = null;
-      this.mobileGridPanel = null;
-      this.mobileGridContent = null;
-      this.mobileGridCells = [];
+      this.staticGridPanel = null;
+      this.staticGridContent = null;
+      this.staticGridCells = [];
       this.modalViewportWidth = 0;
       this.modalViewportHeight = 0;
       this.modalViewportIsMobile = false;
@@ -1176,10 +1120,8 @@ export class GridSelect extends Phaser.GameObjects.Container {
     } else {
       this.overlay.setVisible(false);
       this.overlay.setActive(false);
-      this.gridTable?.setScrollerEnable?.(false);
-      this.gridTable?.setMouseWheelScrollerEnable?.(false);
-      this.mobileGridPanel?.setScrollerEnable?.(false);
-      this.mobileGridPanel?.setMouseWheelScrollerEnable?.(false);
+      this.staticGridPanel?.setScrollerEnable?.(false);
+      this.staticGridPanel?.setMouseWheelScrollerEnable?.(false);
       const coverScene = this.modalCover?.scene as unknown as
         | { sys?: unknown }
         | undefined;
@@ -1202,12 +1144,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
     return this.modalVisible;
   }
 
-  private createStaticMobileGridPanel(): RexScrollablePanel {
+  private createStaticGridPanel(): RexScrollablePanel {
     const scene = this.scene;
     const content = scene.add.container(0, 0);
     content.setScrollFactor(0);
-    this.mobileGridContent = content;
-    this.rebuildMobileGridContent();
+    this.staticGridContent = content;
+    this.rebuildStaticGridContent();
 
     const panel = scene.rexUI.add.scrollablePanel({
       width: this.modalWidth - 48,
@@ -1240,15 +1182,15 @@ export class GridSelect extends Phaser.GameObjects.Container {
     return panel;
   }
 
-  private rebuildMobileGridContent(): void {
-    const content = this.mobileGridContent;
+  private rebuildStaticGridContent(): void {
+    const content = this.staticGridContent;
     if (!content) {
       return;
     }
     this.clearLongPressTimers();
     this.tooltip?.hide();
     content.removeAll(true);
-    this.mobileGridCells = [];
+    this.staticGridCells = [];
 
     const gridWidth = this.modalWidth - 48;
     const columnGap = 12;
@@ -1268,12 +1210,16 @@ export class GridSelect extends Phaser.GameObjects.Container {
           y,
           cellWidth,
           this.cellHeight,
-          this.getMobileCellBackground(item)
+          this.getGridCellBackground(item)
         )
         .setOrigin(0, 0)
         .setStrokeStyle(1, 0x2d3a60, 0.9);
       const hasActionIcon =
-        this.mobileCellIcons &&
+        shouldShowGridSelectImages(
+          this.scene,
+          this.mobileCellContent,
+          this.mobileCellIcons
+        ) &&
         item.isEmptyOption !== true &&
         this.scene.textures.exists(item.texture) &&
         (!item.frame || this.scene.textures.get(item.texture).has(item.frame));
@@ -1539,7 +1485,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       background.on(
         Phaser.Input.Events.POINTER_WHEEL,
         (_pointer: Phaser.Input.Pointer, _dx: number, dy: number) => {
-          this.mobileGridPanel?.addChildOY?.(-dy, true);
+          this.staticGridPanel?.addChildOY?.(-dy, true);
         }
       );
 
@@ -1560,7 +1506,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       if (description) {
         content.add(description);
       }
-      this.mobileGridCells.push({
+      this.staticGridCells.push({
         item,
         background,
         label,
@@ -1577,13 +1523,13 @@ export class GridSelect extends Phaser.GameObjects.Container {
       gridWidth,
       rowCount === 0 ? 0 : rowCount * (this.cellHeight + rowGap) - rowGap
     );
-    this.refreshMobileGridCells();
-    this.mobileGridPanel?.layout?.();
+    this.refreshStaticGridCells();
+    this.staticGridPanel?.layout?.();
   }
 
-  private refreshMobileGridCells(): void {
-    for (const cell of this.mobileGridCells) {
-      cell.background.setFillStyle(this.getMobileCellBackground(cell.item), 1);
+  private refreshStaticGridCells(): void {
+    for (const cell of this.staticGridCells) {
+      cell.background.setFillStyle(this.getGridCellBackground(cell.item), 1);
       cell.label.setColor(
         cell.item.disabled
           ? THEME.colors.textDisabled
@@ -1607,142 +1553,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
     }
   }
 
-  private createGridTable() {
-    const scene = this.scene;
-    const cellWidth =
-      (this.modalWidth - 48 - (this.columns - 1) * 12) / this.columns;
-    const cellHeight = this.cellHeight;
-
-    const gridTable = scene.rexUI.add.gridTable({
-      width: this.modalWidth - 48,
-      height: this.modalHeight - (this.confirmSelection ? 190 : 140),
-      scrollMode: 0,
-      background: scene.rexUI.add.roundRectangle(0, 0, 10, 10, 8, 0x121c34),
-      table: {
-        columns: this.columns,
-        reuseCellContainer: false,
-        mask: { padding: 2 },
-        cellWidth,
-        cellHeight
-      },
-      slider: {
-        track: scene.rexUI.add.roundRectangle(0, 0, 4, 120, 4, 0x1f2a4a),
-        thumb: scene.rexUI.add.roundRectangle(0, 0, 8, 36, 4, 0x3b82f6)
-      },
-      scroller: {
-        threshold: 10,
-        rectBoundsInteractive: true,
-        slidingDeceleration: 5000,
-        backDeceleration: 2000,
-        pointerOutRelease: true
-      },
-      mouseWheelScroller: {
-        focus: true,
-        speed: 1
-      },
-      space: {
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-        table: 10
-      },
-      createCellContainerCallback: (
-        cell: {
-          scene: Phaser.Scene;
-          index: number;
-          width: number;
-          height: number;
-          item: GridSelectItem;
-        },
-        cellContainer: Phaser.GameObjects.GameObject | undefined
-      ) => this.buildCellContainer(cell, cellContainer)
-    }) as RexGridTable;
-
-    gridTable.setScrollFactor?.(0);
-    gridTable.setItems(this.items);
-    gridTable.resetAllCellsSize?.(cellWidth, cellHeight);
-
-    gridTable.on(
-      "cell.click",
-      (_cellContainer: Phaser.GameObjects.GameObject, cellIndex: number) => {
-        const item = this.items[cellIndex];
-        if (!item || item.disabled) {
-          this.tooltip?.hide();
-          return;
-        }
-        this.applySelection(item, !this.confirmSelection);
-        if (!this.confirmSelection) {
-          this.closeModal();
-        }
-      },
-      this
-    );
-
-    gridTable.on(
-      "cell.over",
-      (
-        cellContainer: Phaser.GameObjects.GameObject,
-        cellIndex: number,
-        pointer?: Phaser.Input.Pointer
-      ) => {
-        if (!pointer || pointer.wasTouch) {
-          this.tooltip?.hide();
-          return;
-        }
-        const shouldShow =
-          (
-            cellContainer as Phaser.GameObjects.GameObject & {
-              getData?: (key: string) => unknown;
-            }
-          ).getData?.("showTooltip") === true;
-        if (!shouldShow) {
-          this.tooltip?.hide();
-          return;
-        }
-        if (!this.tooltip) {
-          this.ensureTooltip();
-        }
-        const item = this.items[cellIndex];
-        if (!item) {
-          return;
-        }
-        const tooltipInstance = this.tooltip;
-        if (!tooltipInstance) {
-          return;
-        }
-        const tooltipBody =
-          typeof item.description === "string" &&
-          item.description.trim().length > 0
-            ? stripActionDescriptionMarkup(item.description)
-            : undefined;
-        const tooltipTitle = item.name?.length ? item.name : undefined;
-        if (!tooltipTitle && !tooltipBody) {
-          tooltipInstance.hide();
-          return;
-        }
-        tooltipInstance.show(
-          pointer.x,
-          pointer.y,
-          tooltipTitle ?? "",
-          tooltipBody ?? ""
-        );
-      },
-      this
-    );
-
-    gridTable.on(
-      "cell.out",
-      () => {
-        this.tooltip?.hide();
-      },
-      this
-    );
-
-    return gridTable;
-  }
-
-  private getMobileCellBackground(item: GridSelectItem): number {
+  private getGridCellBackground(item: GridSelectItem): number {
     if (item.disabled) {
       return THEME.colors.cardDisabled;
     }
@@ -1753,658 +1564,6 @@ export class GridSelect extends Phaser.GameObjects.Container {
       return THEME.colors.cardPrioritized;
     }
     return THEME.colors.cardBackground;
-  }
-
-  private buildMobileCellContainer(
-    cell: {
-      width: number;
-      height: number;
-      item: GridSelectItem;
-    },
-    existing: Phaser.GameObjects.GameObject | undefined
-  ): Phaser.GameObjects.GameObject {
-    const scene = this.scene;
-    const item = cell.item;
-    const container =
-      existing instanceof Phaser.GameObjects.Container
-        ? existing
-        : scene.add.container(0, 0);
-    let background = container.getData("mobileBackground") as
-      | Phaser.GameObjects.Rectangle
-      | undefined;
-    if (!background) {
-      background = scene.add
-        .rectangle(0, 0, cell.width, cell.height, THEME.colors.cardBackground)
-        .setOrigin(0, 0)
-        .setStrokeStyle(1, 0x2d3a60, 0.9);
-      container.add(background);
-      container.setData("mobileBackground", background);
-    }
-    background.setSize(cell.width, cell.height);
-    background.setFillStyle(this.getMobileCellBackground(item), 1);
-
-    const canShowImage =
-      this.mobileCellContent === "image" &&
-      !item.isEmptyOption &&
-      scene.textures.exists(item.texture) &&
-      (!item.frame || scene.textures.get(item.texture).has(item.frame));
-    let icon = container.getData("mobileIcon") as
-      | Phaser.GameObjects.Image
-      | undefined;
-    let label = container.getData("mobileLabel") as
-      | Phaser.GameObjects.Text
-      | undefined;
-    if (canShowImage) {
-      if (!icon) {
-        icon = scene.add.image(0, 0, item.texture, item.frame);
-        container.add(icon);
-        container.setData("mobileIcon", icon);
-      } else if (item.frame) {
-        icon.setTexture(item.texture, item.frame);
-      } else {
-        icon.setTexture(item.texture);
-      }
-      const iconScale = Phaser.Math.Clamp(item.iconScale ?? 1, 0.1, 4);
-      const iconSize = Math.max(
-        1,
-        Math.min(
-          cell.width - 12,
-          this.resolveIconSize(cell.height) * iconScale,
-          this.resolveMaxIconDimension(cell.height)
-        )
-      );
-      const showLabel = this.mobileImageLabels;
-      let labelHeight = 0;
-      if (showLabel) {
-        if (!label) {
-          label = scene.add
-            .text(0, 0, "", {
-              fontSize: "11px",
-              color: THEME.colors.textPrimary,
-              align: "center",
-              wordWrap: { width: Math.max(1, cell.width - 4) }
-            })
-            .setOrigin(0.5);
-          container.add(label);
-          container.setData("mobileLabel", label);
-        }
-        label.setText(item.shortName ?? item.name);
-        label.setWordWrapWidth(Math.max(1, cell.width - 4), true);
-        label.setColor(
-          item.disabled
-            ? THEME.colors.textDisabled
-            : (item.labelColor ?? THEME.colors.textPrimary)
-        );
-        label.setVisible(true);
-        labelHeight = label.height;
-      } else {
-        label?.setVisible(false);
-      }
-      const labelGap = labelHeight > 0 ? 3 : 0;
-      const contentHeight = iconSize + labelGap + labelHeight;
-      const contentTop = (cell.height - contentHeight) / 2;
-      icon.setPosition(cell.width / 2, contentTop + iconSize / 2);
-      icon.setDisplaySize(iconSize, iconSize);
-      icon.setAlpha(item.disabled ? 0.5 : 1);
-      icon.setVisible(true);
-      if (showLabel && label) {
-        label.setPosition(
-          cell.width / 2,
-          contentTop + iconSize + labelGap + labelHeight / 2
-        );
-      }
-    } else {
-      icon?.setVisible(false);
-      if (!label) {
-        label = scene.add
-          .text(cell.width / 2, cell.height / 2, item.name, {
-            fontSize: "15px",
-            color: THEME.colors.textPrimary,
-            align: "center",
-            wordWrap: { width: cell.width - 16 }
-          })
-          .setOrigin(0.5);
-        container.add(label);
-        container.setData("mobileLabel", label);
-      }
-      label.setText(item.name);
-      label.setPosition(cell.width / 2, cell.height / 2);
-      label.setWordWrapWidth(Math.max(1, cell.width - 16), true);
-      label.setColor(
-        item.disabled
-          ? THEME.colors.textDisabled
-          : (item.labelColor ?? THEME.colors.textPrimary)
-      );
-      label.setVisible(true);
-    }
-
-    container.setSize(cell.width, cell.height);
-    container.setData("id", item.id);
-    container.setData("showTooltip", false);
-    return container;
-  }
-
-  private buildCellContainer(
-    cell: {
-      index: number;
-      width: number;
-      height: number;
-      item: GridSelectItem;
-    },
-    existing: Phaser.GameObjects.GameObject | undefined
-  ) {
-    const scene = this.scene;
-    const item = cell.item;
-    if (isMobile(scene.scale.width)) {
-      return this.buildMobileCellContainer(cell, existing);
-    }
-    let container = existing as unknown as RexSizer | undefined;
-    const cellWidth = cell.width;
-    const cellHeight = cell.height;
-    const layoutSpace = this.resolveLayoutSpace(cellHeight);
-    const usableTextWidth =
-      cellWidth - layoutSpace.padding.left - layoutSpace.padding.right;
-    const maxDescriptionLines = this.resolveMaxDescriptionLines(cellHeight);
-
-    if (!container) {
-      container = scene.rexUI.add.sizer({
-        orientation: 1,
-        space: {
-          item: 0,
-          left: layoutSpace.padding.left,
-          right: layoutSpace.padding.right,
-          top: layoutSpace.padding.top,
-          bottom: layoutSpace.padding.bottom
-        }
-      }) as RexSizer;
-
-      const bg = scene.rexUI.add.roundRectangle(
-        0,
-        0,
-        cellWidth,
-        cellHeight,
-        12,
-        THEME.colors.cardBackground
-      ) as RexRoundRectangle;
-      bg.setSize?.(cellWidth, cellHeight);
-      bg.setDisplaySize?.(cellWidth, cellHeight);
-      container.addBackground(bg);
-
-      const icon = shouldShowGridSelectImages(
-        scene,
-        this.mobileCellContent,
-        this.mobileCellIcons
-      )
-        ? scene.add.image(0, 0, item.texture, item.frame).setOrigin(0.5, 0.5)
-        : null;
-      const iconSlot =
-        item.centerOpaquePixels && icon ? scene.add.container(0, 0) : null;
-      const iconSpacer = icon
-        ? null
-        : scene.add.zone(0, 0, 0, 0).setOrigin(0.5);
-      let resolvedIconSize = 0;
-      if (item.isEmptyOption) {
-        icon?.setVisible(false);
-        icon?.setActive(false);
-        icon?.setDisplaySize(0, 0);
-        iconSpacer?.setSize(0, 0);
-      } else {
-        const baseIconSize = this.resolveIconSize(cellHeight);
-        const iconScale = Phaser.Math.Clamp(item.iconScale ?? 1, 0.1, 4);
-        const maxIconSize = this.resolveMaxIconDimension(cellHeight);
-        resolvedIconSize = Math.min(baseIconSize * iconScale, maxIconSize);
-        icon?.setDisplaySize(resolvedIconSize, resolvedIconSize);
-        if (icon) {
-          const offset = getOpaqueCenterOffset(
-            scene,
-            item,
-            resolvedIconSize,
-            resolvedIconSize
-          );
-          icon.setPosition(offset.x, offset.y);
-          icon.setActive(true);
-        }
-        iconSpacer?.setSize(resolvedIconSize, resolvedIconSize);
-      }
-      if (iconSlot && icon) {
-        iconSlot.setSize(resolvedIconSize, resolvedIconSize);
-        iconSlot.add(icon);
-      }
-
-      const nameText = scene.add
-        .text(0, 0, item.name, {
-          fontSize: "17px",
-          color: item.labelColor ?? "#ffffff",
-          align: "center"
-        })
-        .setOrigin(0.5, 0.5);
-
-      const energyText = scene.add
-        .text(0, 0, "", {
-          fontSize: "14px",
-          color: THEME.colors.energyCost,
-          align: "center"
-        })
-        .setOrigin(0.5, 0.5)
-        .setVisible(false);
-      energyText.setFixedSize(0, 0);
-
-      const descText = scene.rexUI.add.BBCodeText(0, 0, "", {
-        fontSize: "13px",
-        color: THEME.colors.modalText,
-        align: "center",
-        wrap: {
-          mode: "word",
-          width: usableTextWidth
-        },
-        maxLines: maxDescriptionLines
-      }) as Phaser.GameObjects.Text;
-      descText.setOrigin(0.5, 0.5);
-
-      const cooldownText = (
-        scene.rexUI?.add?.BBCodeText
-          ? scene.rexUI.add.BBCodeText(0, 0, "", {
-              fontSize: "12px",
-              fontStyle: "bold",
-              align: "right",
-              wrap: {
-                mode: "word",
-                width: 95
-              }
-            })
-          : scene.add.text(0, 0, "", {
-              fontSize: "12px",
-              color: THEME.colors.cooldown,
-              fontStyle: "bold",
-              align: "right",
-              wordWrap: {
-                width: 95
-              }
-            })
-      ) as Phaser.GameObjects.Text;
-      cooldownText.setOrigin(0, 0);
-      cooldownText.setVisible(false);
-
-      const warningText = (
-        scene.rexUI?.add?.BBCodeText
-          ? scene.rexUI.add.BBCodeText(0, 0, "", {
-              fontSize: "12px",
-              fontStyle: "bold",
-              align: "left",
-              wrap: {
-                mode: "word",
-                width: 95
-              }
-            })
-          : scene.add.text(0, 0, "", {
-              fontSize: "12px",
-              color: THEME.colors.warning,
-              fontStyle: "bold",
-              align: "left",
-              wordWrap: {
-                width: 95
-              }
-            })
-      ) as Phaser.GameObjects.Text;
-      warningText.setOrigin(0, 0);
-      warningText.setVisible(false);
-
-      const nameTruncated = this.applySingleLineText(
-        nameText,
-        item.name,
-        usableTextWidth
-      );
-      const descTruncated = this.applyDescriptionText(
-        descText,
-        item.description,
-        usableTextWidth,
-        maxDescriptionLines
-      );
-
-      const iconMarginBottom = item.isEmptyOption ? 0 : layoutSpace.iconGap;
-      const iconLayoutChild = iconSlot ?? icon ?? iconSpacer;
-      if (iconLayoutChild) {
-        container.add(
-          iconLayoutChild,
-          0,
-          "center",
-          { bottom: iconMarginBottom },
-          false
-        );
-      }
-      container.add(
-        nameText,
-        0,
-        "center",
-        { bottom: layoutSpace.labelGap },
-        false
-      );
-      container.add(
-        energyText,
-        0,
-        "center",
-        { bottom: layoutSpace.labelGap },
-        false
-      );
-      container.add(descText, 0, "center", 0, false);
-      container.add(
-        cooldownText,
-        0,
-        "right-top",
-        { right: 12, top: 12 },
-        false
-      );
-      container.add(warningText, 0, "left-top", { left: 12, top: 12 }, false);
-
-      (container as unknown as Phaser.GameObjects.GameObject).setData("bg", bg);
-      (container as unknown as Phaser.GameObjects.GameObject).setData(
-        "icon",
-        icon
-      );
-      (container as unknown as Phaser.GameObjects.GameObject).setData(
-        "iconSlot",
-        iconSlot
-      );
-      (container as unknown as Phaser.GameObjects.GameObject).setData(
-        "iconSpacer",
-        iconSpacer
-      );
-      (container as unknown as Phaser.GameObjects.GameObject).setData(
-        "name",
-        nameText
-      );
-      (container as unknown as Phaser.GameObjects.GameObject).setData(
-        "desc",
-        descText
-      );
-      (container as unknown as Phaser.GameObjects.GameObject).setData(
-        "energy",
-        energyText
-      );
-      (container as unknown as Phaser.GameObjects.GameObject).setData(
-        "id",
-        item.id
-      );
-      (container as unknown as Phaser.GameObjects.GameObject).setData(
-        "showTooltip",
-        nameTruncated || descTruncated
-      );
-      (container as unknown as Phaser.GameObjects.GameObject).setData(
-        "cooldown",
-        cooldownText
-      );
-      (container as unknown as Phaser.GameObjects.GameObject).setData(
-        "warning",
-        warningText
-      );
-
-      (
-        container as unknown as { setMinSize?: (w: number, h: number) => void }
-      ).setMinSize?.(cellWidth, cellHeight);
-
-      const created = container as unknown as Phaser.GameObjects.GameObject;
-      this.updateCellAppearance(created, {
-        item,
-        bg,
-        icon,
-        nameText,
-        energyText,
-        descText,
-        cellWidth,
-        cellHeight,
-        textWidth: usableTextWidth,
-        isSelected: this.selectedItem?.id === item.id
-      });
-      container.layout();
-      return created;
-    }
-
-    const containerGO = container as unknown as Phaser.GameObjects.GameObject;
-    const bg = containerGO.getData("bg") as RexRoundRectangle | undefined;
-    const icon = containerGO.getData("icon") as
-      | Phaser.GameObjects.Image
-      | null
-      | undefined;
-    const iconSlot = containerGO.getData("iconSlot") as
-      | Phaser.GameObjects.Container
-      | undefined;
-    const iconSpacer = containerGO.getData("iconSpacer") as
-      | Phaser.GameObjects.Zone
-      | undefined;
-    const nameText = containerGO.getData("name") as
-      | Phaser.GameObjects.Text
-      | undefined;
-    const descText = containerGO.getData("desc") as
-      | Phaser.GameObjects.Text
-      | undefined;
-    const energyText = containerGO.getData("energy") as
-      | Phaser.GameObjects.Text
-      | undefined;
-    const cooldownText = containerGO.getData("cooldown") as
-      | Phaser.GameObjects.Text
-      | undefined;
-    const warningText = containerGO.getData("warning") as
-      | Phaser.GameObjects.Text
-      | undefined;
-
-    const layoutSpaceExisting = this.resolveLayoutSpace(cellHeight);
-    let iconMarginBottom = 0;
-    if (icon) {
-      const textureManager = scene.textures;
-      const hasTexture = textureManager.exists(item.texture);
-      const texture = hasTexture ? textureManager.get(item.texture) : null;
-      const hasFrame = item.frame ? texture?.has(item.frame) : true;
-      if (item.isEmptyOption) {
-        icon.setVisible(false);
-        icon.setActive(false);
-        icon.setDisplaySize(0, 0);
-        iconSlot?.setSize(0, 0);
-      } else if (hasTexture && hasFrame) {
-        if (item.frame) {
-          icon.setTexture(item.texture, item.frame);
-        } else {
-          icon.setTexture(item.texture);
-        }
-        const scale = Phaser.Math.Clamp(item.iconScale ?? 1, 0.1, 4);
-        const baseIconSize = this.resolveIconSize(cellHeight);
-        const maxIconSize = this.resolveMaxIconDimension(cellHeight);
-        const resolvedIconSize = Math.min(baseIconSize * scale, maxIconSize);
-        icon.setDisplaySize(resolvedIconSize, resolvedIconSize);
-        if (iconSlot) {
-          iconSlot.setSize(resolvedIconSize, resolvedIconSize);
-          const offset = getOpaqueCenterOffset(
-            scene,
-            item,
-            resolvedIconSize,
-            resolvedIconSize
-          );
-          icon.setPosition(offset.x, offset.y);
-        }
-        icon.setVisible(true);
-        icon.setActive(true);
-        iconMarginBottom = layoutSpaceExisting.iconGap;
-      } else {
-        icon.setVisible(false);
-        icon.setActive(false);
-        icon.setDisplaySize(0, 0);
-        iconSlot?.setSize(0, 0);
-      }
-    } else if (iconSpacer) {
-      const iconScale = Phaser.Math.Clamp(item.iconScale ?? 1, 0.1, 4);
-      const baseIconSize = this.resolveIconSize(cellHeight);
-      const maxIconSize = this.resolveMaxIconDimension(cellHeight);
-      const spacerSize = item.isEmptyOption
-        ? 0
-        : Math.min(baseIconSize * iconScale, maxIconSize);
-      iconSpacer.setSize(spacerSize, spacerSize);
-      iconMarginBottom = spacerSize > 0 ? layoutSpaceExisting.iconGap : 0;
-    }
-    const iconLayoutChild = iconSlot ?? icon ?? iconSpacer;
-    const iconSizerConfig = (
-      iconLayoutChild as unknown as {
-        sizerConfig?: { margin?: { bottom?: number } };
-      } | null
-    )?.sizerConfig;
-    if (iconSizerConfig) {
-      iconSizerConfig.margin = iconSizerConfig.margin ?? {};
-      iconSizerConfig.margin.bottom = iconMarginBottom;
-    }
-    const nameTruncated = nameText
-      ? this.applySingleLineText(nameText, item.name, usableTextWidth)
-      : false;
-    const descTruncated = descText
-      ? this.applyDescriptionText(
-          descText,
-          item.description,
-          usableTextWidth,
-          maxDescriptionLines
-        )
-      : false;
-    containerGO.setData("id", item.id);
-    containerGO.setData("showTooltip", nameTruncated || descTruncated);
-    if (cooldownText) {
-      cooldownText.setVisible(false);
-    }
-    if (warningText) {
-      warningText.setVisible(false);
-    }
-
-    (
-      container as unknown as { setMinSize?: (w: number, h: number) => void }
-    ).setMinSize?.(cellWidth, cellHeight);
-
-    this.updateCellAppearance(containerGO, {
-      item,
-      bg,
-      icon,
-      nameText,
-      descText,
-      energyText,
-      cellWidth,
-      cellHeight,
-      textWidth: usableTextWidth,
-      isSelected: this.selectedItem?.id === item.id
-    });
-
-    container.layout();
-    return containerGO;
-  }
-
-  private updateCellAppearance(
-    container: Phaser.GameObjects.GameObject,
-    config: {
-      item: GridSelectItem;
-      bg?: RexRoundRectangle;
-      icon?: Phaser.GameObjects.Image | null;
-      nameText?: Phaser.GameObjects.Text;
-      descText?: Phaser.GameObjects.Text;
-      energyText?: Phaser.GameObjects.Text;
-      cellWidth: number;
-      cellHeight: number;
-      textWidth: number;
-      isSelected: boolean;
-    }
-  ) {
-    const disabled = config.item.disabled === true;
-    const selected = config.isSelected && !disabled;
-    const highlighted = config.item.highlighted === true && !disabled;
-    const baseColor = selected
-      ? THEME.colors.cardSelected
-      : highlighted
-        ? THEME.colors.cardPrioritized
-        : disabled
-          ? THEME.colors.cardDisabled
-          : THEME.colors.cardBackground;
-    config.bg?.setFillStyle?.(baseColor, 1);
-    config.bg?.setSize?.(config.cellWidth, config.cellHeight);
-    config.bg?.setDisplaySize?.(config.cellWidth, config.cellHeight);
-
-    if (config.icon) {
-      config.icon.setAlpha(disabled ? 0.5 : 1);
-    }
-    config.nameText?.setColor(
-      disabled
-        ? THEME.colors.textDisabled
-        : highlighted
-          ? THEME.colors.healthRecover
-          : (config.item.labelColor ?? THEME.colors.textPrimary)
-    );
-    config.descText?.setColor(
-      disabled ? THEME.colors.textDisabled : THEME.colors.modalText
-    );
-    if (config.energyText) {
-      const hasCost =
-        typeof config.item.energyCost === "number" &&
-        Number.isFinite(config.item.energyCost);
-      const shouldShow = hasCost && config.item.isEmptyOption !== true;
-      if (shouldShow) {
-        const label = `${t("Energy")}: ${config.item.energyCost}`;
-        this.applySingleLineText(config.energyText, label, config.textWidth);
-        config.energyText.setColor(
-          disabled ? THEME.colors.textDisabled : THEME.colors.energyCost
-        );
-        config.energyText.setVisible(true);
-      } else {
-        config.energyText.setText("");
-        config.energyText.setFixedSize(0, 0);
-        config.energyText.setVisible(false);
-      }
-    }
-
-    const cooldownText = container.getData("cooldown") as
-      | Phaser.GameObjects.Text
-      | undefined;
-    if (cooldownText) {
-      const remaining = config.item.cooldownRemaining ?? 0;
-      const isBBCode =
-        typeof (cooldownText as unknown as { getWrappedText?: unknown })
-          .getWrappedText === "function";
-
-      if (remaining > 0) {
-        cooldownText.setText(
-          isBBCode
-            ? `[color=${THEME.colors.cooldown}]CD: ${remaining}[/color]`
-            : `CD: ${remaining}`
-        );
-        if (!isBBCode) {
-          cooldownText.setColor(THEME.colors.cooldown);
-        }
-        cooldownText.setVisible(true);
-      } else {
-        cooldownText.setText("");
-        cooldownText.setVisible(false);
-      }
-    }
-
-    const warningText = container.getData("warning") as
-      | Phaser.GameObjects.Text
-      | undefined;
-    if (warningText) {
-      const missing = config.item.missingRequirement?.trim();
-      const isBBCode =
-        typeof (warningText as unknown as { getWrappedText?: unknown })
-          .getWrappedText === "function";
-
-      if (missing) {
-        warningText.setText(
-          isBBCode
-            ? `[color=${THEME.colors.warning}]${missing}[/color]`
-            : missing
-        );
-        if (!isBBCode) {
-          warningText.setColor(THEME.colors.warning);
-        }
-        warningText.setVisible(true);
-      } else {
-        warningText.setText("");
-        warningText.setVisible(false);
-      }
-    }
-
-    const typed = container as Phaser.GameObjects.GameObject & {
-      setAlpha?: (value: number) => Phaser.GameObjects.GameObject;
-    };
-    typed.setAlpha?.(disabled ? 0.9 : 1);
   }
 
   private applyDescriptionText(
@@ -2485,28 +1644,6 @@ export class GridSelect extends Phaser.GameObjects.Container {
       return 3;
     }
     return 2;
-  }
-
-  private resolveLayoutSpace(cellHeight: number) {
-    if (cellHeight <= 132) {
-      return {
-        padding: { left: 10, right: 10, top: 10, bottom: 10 },
-        iconGap: 2,
-        labelGap: 1
-      } as const;
-    }
-    if (cellHeight <= 180) {
-      return {
-        padding: { left: 12, right: 12, top: 12, bottom: 12 },
-        iconGap: 4,
-        labelGap: 3
-      } as const;
-    }
-    return {
-      padding: { left: 14, right: 14, top: 14, bottom: 14 },
-      iconGap: 5,
-      labelGap: 4
-    } as const;
   }
 
   private resolveIconSize(cellHeight: number) {
@@ -2594,19 +1731,6 @@ export class GridSelect extends Phaser.GameObjects.Container {
       }
     }
     return ellipsis;
-  }
-
-  private applySingleLineText(
-    target: Phaser.GameObjects.Text,
-    content: string,
-    maxWidth: number
-  ): boolean {
-    const trimmed = content.trimEnd();
-    const display = this.ellipsize(trimmed, target, maxWidth);
-    target.setText(display);
-    const bounds = target.getBounds();
-    target.setFixedSize(maxWidth, bounds.height);
-    return display !== trimmed;
   }
 
   private applyMultilineText(

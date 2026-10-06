@@ -61,7 +61,6 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
       cellHeight: 120,
       autoSelectFirst: false,
       mobileCellContent: "image",
-      mobileImageLabels: true,
       confirmSelection: options?.confirmSelection,
       confirmLabel: options?.confirmLabel
     });

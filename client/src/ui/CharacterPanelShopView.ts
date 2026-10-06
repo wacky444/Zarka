@@ -223,7 +223,6 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
       cellHeight: 96,
       autoSelectFirst: false,
       mobileCellContent: "image",
-      mobileImageLabels: true,
       confirmSelection: true,
       confirmLabel: t("Confirm")
     });
