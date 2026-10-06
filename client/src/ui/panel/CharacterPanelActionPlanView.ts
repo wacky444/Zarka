@@ -3188,12 +3188,15 @@ export function layoutActionPlan(options: {
   if (options.hasExtraSecondary) {
     options.extraSecondary.box.setVisible(true);
     options.extraSecondary.label.setVisible(true);
+    options.extraSecondary.dropdown.setVisible(true);
+    options.extraSecondary.dropdown.setActive(true);
     layoutBlock(options.extraSecondary);
     cursorY += 16;
   } else {
     options.extraSecondary.box.setVisible(false);
     options.extraSecondary.label.setVisible(false);
     options.extraSecondary.dropdown.setVisible(false);
+    options.extraSecondary.dropdown.setActive(false);
   }
   options.scrollContent.setPosition(0, 0);
   options.scrollContent.setSize(options.width, cursorY);
