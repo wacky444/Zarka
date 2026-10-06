@@ -1128,7 +1128,7 @@ export class CharacterPanelLogView {
             }
           }
         }
-        if (Array.isArray(event.targets)) {
+        if (actionId !== "detect" && Array.isArray(event.targets)) {
           for (const target of event.targets) {
             const targetName = this.resolvePlayerName(target.targetId);
             const healed =

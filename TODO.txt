@@ -63,8 +63,6 @@
 
 - scare action without setting anything scared at 2 distance
 
-- Percepcion 4 test, it says x was affected for each located character
-
 - donate doesnt work with bots
 
 - bots doesnt buy
