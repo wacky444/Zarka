@@ -58,6 +58,7 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
       emptyOptionLabel: CLEAR_OPTION_LABEL,
       emptyOptionDescription: CLEAR_OPTION_DESCRIPTION,
       columns: 3,
+      desktopMinCellWidth: 160,
       cellHeight: 120,
       autoSelectFirst: false,
       mobileCellContent: "image",

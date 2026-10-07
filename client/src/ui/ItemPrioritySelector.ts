@@ -58,6 +58,7 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
       emptyOptionLabel: CLEAR_OPTION_LABEL,
       emptyOptionDescription: CLEAR_OPTION_DESCRIPTION,
       columns: 3,
+      desktopMinCellWidth: 170,
       cellHeight: 128,
       autoSelectFirst: false,
       mobileCellContent: "image",

@@ -472,6 +472,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       placeholder: "Choose action",
       emptyLabel: "Unknown",
       columns: 3,
+      desktopMinCellWidth: 210,
       cellHeight: 260,
       mobileCellIcons: true
     });
@@ -598,6 +599,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       placeholder: "Choose action",
       emptyLabel: "Unknown",
       columns: 3,
+      desktopMinCellWidth: 210,
       cellHeight: 260,
       includeEmptyOption: true,
       emptyOptionLabel: "No secondary action",
@@ -744,6 +746,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       placeholder: "Choose action",
       emptyLabel: "Unknown",
       columns: 3,
+      desktopMinCellWidth: 210,
       cellHeight: 260,
       includeEmptyOption: true,
       emptyOptionLabel: "No extra secondary action",

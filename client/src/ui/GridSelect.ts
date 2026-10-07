@@ -16,6 +16,9 @@ const ACTION_DESCRIPTION_TAG_COLORS: Record<string, string> = {
 
 const COLLAPSED_ICON_LEFT = 12;
 const ACTION_DESCRIPTION_LONG_PRESS_MS = 500;
+const DESKTOP_MODAL_SIDE_GUTTER = 48;
+const DESKTOP_MODAL_MAX_WIDTH = 1440;
+const GRID_COLUMN_GAP = 12;
 
 type MobileGridCellContent = "name" | "image";
 
@@ -205,6 +208,7 @@ interface GridSelectConfig {
   emptyLabel?: string;
   modalWidth?: number;
   modalHeight?: number;
+  desktopMinCellWidth?: number;
   cellHeight?: number;
   includeEmptyOption?: boolean;
   emptyOptionLabel?: string;
@@ -283,6 +287,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private placeholder: string;
   private readonly emptyLabel: string;
   private readonly columns: number;
+  private readonly desktopMinCellWidth: number | null;
   private readonly iconTargetSize: number;
   private readonly defaultModalWidth: number;
   private readonly defaultModalHeight: number;
@@ -362,6 +367,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
     this.collapsedHeight = config.height ?? 64;
     this.columns = Math.max(1, config.columns ?? 3);
+    this.desktopMinCellWidth =
+      typeof config.desktopMinCellWidth === "number" &&
+      Number.isFinite(config.desktopMinCellWidth) &&
+      config.desktopMinCellWidth > 0
+        ? config.desktopMinCellWidth
+        : null;
     this.modalTitle = config.title ?? "Select";
     this.modalSubtitle = config.subtitle ?? "Tap an action to select it";
     this.placeholder = config.placeholder ?? "Select";
@@ -776,7 +787,12 @@ export class GridSelect extends Phaser.GameObjects.Container {
     }
     this.modalWidth = mobile
       ? width
-      : Math.min(this.defaultModalWidth, Math.max(1, width - 80));
+      : this.desktopMinCellWidth !== null
+        ? Math.min(
+            DESKTOP_MODAL_MAX_WIDTH,
+            Math.max(1, width - DESKTOP_MODAL_SIDE_GUTTER * 2)
+          )
+        : Math.min(this.defaultModalWidth, Math.max(1, width - 80));
     this.modalHeight = mobile
       ? height
       : Math.min(this.defaultModalHeight, Math.max(1, height - 80));
@@ -1211,16 +1227,23 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.staticGridCells = [];
 
     const gridWidth = this.modalWidth - 48;
-    const columnGap = 12;
     const rowGap = 10;
+    const columns = this.getModalColumns(gridWidth);
     const cellWidth =
-      (gridWidth - (this.columns - 1) * columnGap) / this.columns;
-    const rowCount = Math.ceil(this.items.length / this.columns);
+      (gridWidth - (columns - 1) * GRID_COLUMN_GAP) / columns;
+    const rowCount = Math.ceil(this.items.length / columns);
 
     this.items.forEach((item, index) => {
-      const column = index % this.columns;
-      const row = Math.floor(index / this.columns);
-      const x = column * (cellWidth + columnGap);
+      const column = index % columns;
+      const row = Math.floor(index / columns);
+      const rowItemCount = Math.min(
+        columns,
+        this.items.length - row * columns
+      );
+      const rowWidth =
+        rowItemCount * cellWidth + (rowItemCount - 1) * GRID_COLUMN_GAP;
+      const rowOffset = Math.max(0, (gridWidth - rowWidth) / 2);
+      const x = rowOffset + column * (cellWidth + GRID_COLUMN_GAP);
       const y = row * (this.cellHeight + rowGap);
       const background = this.scene.add
         .rectangle(
@@ -1546,6 +1569,19 @@ export class GridSelect extends Phaser.GameObjects.Container {
     );
     this.refreshStaticGridCells();
     this.staticGridPanel?.layout?.();
+  }
+
+  private getModalColumns(gridWidth: number): number {
+    if (this.desktopMinCellWidth === null || isMobile(this.scene.scale.width)) {
+      return this.columns;
+    }
+    return Math.max(
+      1,
+      Math.floor(
+        (gridWidth + GRID_COLUMN_GAP) /
+          (this.desktopMinCellWidth + GRID_COLUMN_GAP)
+      )
+    );
   }
 
   private refreshStaticGridCells(): void {
