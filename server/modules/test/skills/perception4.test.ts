@@ -95,6 +95,26 @@ test("Perception 4 logs names and distances, includes Cowards, and excludes Unde
   );
 });
 
+test("Perception 4 excludes dead targets", () => {
+  const viewer = createCharacter("viewer", 0);
+  viewer.abilities.push("perception4");
+  const deadByCondition = createCharacter("dead-by-condition", 0);
+  deadByCondition.statuses.conditions.push("dead");
+  const deadByHealth = createCharacter("dead-by-health", 1);
+  deadByHealth.stats.health.current = 0;
+  const deadByMatchRecord = createCharacter("dead-by-match-record", -1);
+  const match = createMatch([
+    viewer,
+    deadByCondition,
+    deadByHealth,
+    deadByMatchRecord,
+  ]);
+  match.deadCharacters = { [deadByMatchRecord.id]: true };
+
+  const events = createPerception4DetectionEvents(match);
+  assert.equal(events.length, 0);
+});
+
 test("Perception 4 detection is included in turn replay only for conscious owner", () => {
   const viewer = createCharacter("viewer", 0);
   viewer.abilities.push("perception4");

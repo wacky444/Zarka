@@ -8,7 +8,10 @@ import {
 } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { axialDistance } from "../utils/location";
-import { isCharacterIncapacitated } from "../utils/playerCharacter";
+import {
+  isCharacterDead,
+  isCharacterIncapacitated,
+} from "../utils/playerCharacter";
 
 function isValidCoord(coord: Axial | undefined): coord is Axial {
   return !!coord && Number.isFinite(coord.q) && Number.isFinite(coord.r);
@@ -36,7 +39,12 @@ export function createPerception4DetectionEvents(
 
     const targets: ReplayActionTarget[] = [];
     for (const [targetId, target] of Object.entries(characters)) {
-      if (targetId === viewerId || isCharacterUndetectable(target)) {
+      if (
+        targetId === viewerId ||
+        match.deadCharacters?.[targetId] === true ||
+        isCharacterDead(target) ||
+        isCharacterUndetectable(target)
+      ) {
         continue;
       }
       const targetCoord = target.position?.coord;
