@@ -18,6 +18,7 @@
         padding: 0;
         overflow: hidden;
         background-color: #202030;
+        font-family: system-ui, sans-serif;
       }
 
       body {
@@ -35,11 +36,130 @@
       #game canvas {
         display: block;
       }
+
+      #startup-loading {
+        position: fixed;
+        z-index: 10000;
+        inset: 0;
+        display: grid;
+        place-content: center;
+        justify-items: center;
+        gap: 18px;
+        color: #f4e9d2;
+        background:
+          radial-gradient(ellipse at 50% 42%, rgba(87, 55, 36, 0.34), transparent 48%),
+          radial-gradient(ellipse at 50% 100%, rgba(46, 34, 55, 0.45), transparent 58%),
+          #202030;
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 220ms ease, visibility 0s linear 220ms;
+      }
+
+      #startup-loading.startup-loading-hidden {
+        pointer-events: none;
+        opacity: 0;
+        visibility: hidden;
+      }
+
+      .startup-mark {
+        display: grid;
+        width: 58px;
+        height: 66px;
+        place-items: center;
+        clip-path: polygon(50% 0, 94% 24%, 94% 76%, 50% 100%, 6% 76%, 6% 24%);
+        color: #f4c56b;
+        background: linear-gradient(145deg, #594329, #282331 72%);
+        font-size: 27px;
+        font-weight: 800;
+        text-shadow: 0 0 18px rgba(244, 197, 107, 0.4);
+      }
+
+      .startup-wordmark {
+        margin: 0;
+        color: #f4e9d2;
+        font-size: 18px;
+        font-weight: 750;
+        letter-spacing: 0.34em;
+        text-indent: 0.34em;
+      }
+
+      .startup-caption {
+        margin: 0;
+        color: #aaa3b2;
+        font-size: 14px;
+      }
+
+      progress.startup-progress {
+        display: block;
+        width: 142px;
+        height: 3px;
+        margin-top: 4px;
+        overflow: hidden;
+        appearance: none;
+        border: 0;
+        border-radius: 999px;
+        background: #393543;
+      }
+
+      progress.startup-progress:indeterminate {
+        background-image: linear-gradient(90deg, #393543, #e5ad55, #393543);
+        background-size: 200% 100%;
+        animation: startup-progress 1.5s ease-in-out infinite;
+      }
+
+      progress.startup-progress:indeterminate::-webkit-progress-bar {
+        background: transparent;
+      }
+
+      progress.startup-progress:indeterminate::-webkit-progress-value {
+        background: transparent;
+      }
+
+      progress.startup-progress:indeterminate::-moz-progress-bar {
+        background: transparent;
+      }
+
+      @keyframes startup-progress {
+        from { background-position: 100% 0; }
+        to { background-position: -100% 0; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #startup-loading,
+        progress.startup-progress {
+          transition-duration: 0.01ms;
+          animation-duration: 4s;
+        }
+      }
     </style>
   </head>
 
   <body>
     <div id="game"></div>
+    <div id="startup-loading" role="status" aria-live="polite">
+      <div class="startup-mark" aria-hidden="true">Z</div>
+      <p class="startup-wordmark" aria-hidden="true">ZARKA</p>
+      <p id="startup-loading-label" class="startup-caption">Loading game...</p>
+      <progress class="startup-progress" aria-label="Loading game"></progress>
+    </div>
+    <script>
+      try {
+        const storedLocale = localStorage.getItem("zarka_locale");
+        const locale =
+          storedLocale === "en" || storedLocale === "es"
+            ? storedLocale
+            : navigator.language;
+        if (locale.toLowerCase().startsWith("es")) {
+          document.documentElement.lang = "es";
+          const loadingLabel = document.getElementById("startup-loading-label");
+          const loadingProgress = document.querySelector(".startup-progress");
+          if (loadingLabel) loadingLabel.textContent = "Cargando partida...";
+          if (loadingProgress) {
+            loadingProgress.setAttribute("aria-label", "Cargando partida");
+          }
+        }
+      } catch {}
+    </script>
 
     <!-- Facebook SDK -->
     <script>

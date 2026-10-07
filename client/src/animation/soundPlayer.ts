@@ -235,12 +235,31 @@ export function setMusicEnabled(enabled: boolean): void {
   }
 }
 
+const MENU_MUSIC_LOAD_TIMEOUT_MS = 5000;
+let menuMusicLoadAttempted = false;
+
 export function preloadMenuMusic(scene: Phaser.Scene): void {
-  if (!scene.cache.audio.exists(DIRT_CITY_MUSIC_KEY)) {
+  if (
+    menuMusicLoadAttempted ||
+    scene.cache.audio.exists(DIRT_CITY_MUSIC_KEY)
+  ) {
+    return;
+  }
+  menuMusicLoadAttempted = true;
+  const previousMaxRetries = scene.load.maxRetries;
+  scene.load.maxRetries = 0;
+  try {
     scene.load.audio(
       DIRT_CITY_MUSIC_KEY,
-      encodeURI(assetPath("assets/music/Dirt City.mp3"))
+      encodeURI(assetPath("assets/music/Dirt City.mp3")),
+      undefined,
+      {
+        responseType: "arraybuffer",
+        timeout: MENU_MUSIC_LOAD_TIMEOUT_MS,
+      }
     );
+  } finally {
+    scene.load.maxRetries = previousMaxRetries;
   }
 }
 

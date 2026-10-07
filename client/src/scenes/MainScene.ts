@@ -26,6 +26,7 @@ import { getLocale, t, toggleLocale } from "../services/i18n";
 import { TUTORIAL_MATCH_METADATA_KEY } from "@shared";
 import { assetPath } from "../utils/assetPath";
 import { isMobile } from "../utils/isMobile";
+import { hideStartupLoadingScreen } from "../ui/StartupLoadingScreen";
 import {
   clearActiveTutorialMatchId,
   readActiveTutorialMatchId,
@@ -238,6 +239,7 @@ export class MainScene extends Phaser.Scene {
     this.createMainButtons();
     this.applyTutorialGate();
     this.layoutMain();
+    hideStartupLoadingScreen();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutMain, this);
     this.events.on(Phaser.Scenes.Events.WAKE, this.wakeHandler);
     this.events.on(Phaser.Scenes.Events.SLEEP, () => {

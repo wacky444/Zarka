@@ -6,6 +6,7 @@ import { SessionManager } from "../services/sessionManager";
 import { FacebookService } from "../services/facebookService";
 import { GoogleService } from "../services/googleService";
 import { getLocale, toggleLocale } from "../services/i18n";
+import { hideStartupLoadingScreen } from "../ui/StartupLoadingScreen";
 
 enum LoginGuiState {
   Entry = "entry",
@@ -138,6 +139,7 @@ export class LoginScene extends Phaser.Scene {
     this.input.keyboard!.on("keydown", (event: KeyboardEvent) => {
       this.handleKeyboardInput(event);
     });
+    hideStartupLoadingScreen();
   }
 
   private createEntryButtons() {

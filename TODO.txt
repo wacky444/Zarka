@@ -53,15 +53,6 @@
 
 - warning when there is extra power set and there isnt enough energy
 
-- use action order to order the list of the actions
-
-- i have created a game at 11:30 am with skip 12:00 and it says turn auto skips in 30 mins
-
-- missing translations to spanish:
-	tap an action to select it
-	select secondary action
-	removes the current
-
 - dexterity 2, when stealing should show a list of all possible items in the game, allowing max 3
 	- extra power should show two selectors
 
@@ -70,10 +61,6 @@
 - action icons that need new icons:
 	use antidote, use quemical weapon, use medicine
 	
-- the map can be dragged from te select target location, clean or other green buttons
-
 - throwing a moltov, threw 3 foods to three different players
 
 - registered items didnt stay in players view
-
-- in mobile pause music when chrome is not on focus, or the phone is locked
