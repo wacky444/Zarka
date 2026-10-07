@@ -1061,6 +1061,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       plannedEnergyCost:
         this.actionPlanView?.getTotalPlannedEnergyCost() ?? 0,
       availableEnergy: this.actionPlanView?.getAvailableEnergy() ?? 0,
+      willBeOverweight: this.actionPlanView?.willBeOverweight() ?? false,
       tutorialActive: this.tutorialActive,
       tutorialStepId: this.tutorialStepId,
       tutorialReadyEnabled: this.tutorialReadyEnabled,

@@ -545,6 +545,9 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Unspent points": "Puntos sin gastar",
   "There isn't enough energy. Performing actions without enough energy will deal 1 damage, and actions with extra power won't work.":
     "No hay suficiente energía. Realizar acciones sin suficiente energía causará 1 de daño y las acciones con potencia adicional no funcionarán.",
+  Overweight: "Sobrecargado",
+  "Your current actions may make you overweight":
+    "Tus acciones actuales pueden sobrecargarte.",
   Offensive: "Ataque",
   Defense: "Defensa",
   Utility: "Utilidad",

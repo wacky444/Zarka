@@ -1,11 +1,16 @@
 import Phaser from "phaser";
 import {
   ActionLibrary,
+  ExtraExecutionEffect,
+  ItemLibrary,
+  LocalizationType,
   MAX_PICKUP_NONE_PRIORITY_ENTRIES,
   MAX_STEAL_PRIORITY_ITEMS,
   PICKUP_NONE_PRIORITY_ID,
   type ActionId,
   type Axial,
+  type HexTileSnapshot,
+  type ItemId,
   type MatchRecord,
   type PlayerCharacter,
   type TutorialStepId,
@@ -1320,6 +1325,35 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     );
   }
 
+  willBeOverweight(): boolean {
+    const load = this.currentCharacter?.stats?.load;
+    if (
+      !load ||
+      !Number.isFinite(load.current) ||
+      !Number.isFinite(load.max)
+    ) {
+      return false;
+    }
+
+    const plannedWeightGain =
+      this.getPlannedWeightGain(
+        this.mainActionSelection,
+        this.mainExtraExecutions,
+        true
+      ) +
+      this.getPlannedWeightGain(
+        this.secondaryActionSelection,
+        this.secondaryExtraExecutions,
+        false
+      ) +
+      this.getPlannedWeightGain(
+        this.extraSecondaryActionSelection,
+        this.extraSecondaryExtraExecutions,
+        false
+      );
+    return plannedWeightGain > 0 && load.current + plannedWeightGain > load.max;
+  }
+
   getMainActionSelection(): MainActionSelection {
     return buildMainActionSelection({
       actionId: this.mainActionSelection,
@@ -1645,6 +1679,232 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.emit("ready-refresh-request");
     this.emitMainActionChange();
   };
+
+  private getCurrentTile(): HexTileSnapshot | null {
+    const character = this.currentCharacter;
+    const tiles = this.currentMatch?.map?.tiles ?? [];
+    if (!character?.position) {
+      return null;
+    }
+    const tileById = character.position.tileId
+      ? tiles.find((tile) => tile.id === character.position?.tileId)
+      : undefined;
+    if (tileById) {
+      return tileById;
+    }
+    const coord = character.position.coord;
+    return coord
+      ? tiles.find(
+          (tile) => tile.coord.q === coord.q && tile.coord.r === coord.r
+        ) ?? null
+      : null;
+  }
+
+  private getPlannedWeightGain(
+    actionId: string | null,
+    extraExecutions: number,
+    isMainAction: boolean
+  ): number {
+    if (!actionId) {
+      return 0;
+    }
+    if (actionId === "place_c4") {
+      const c4Quantity = this.currentCharacter?.inventory?.carriedItems?.find(
+        (stack) => stack.itemId === "c4"
+      )?.quantity;
+      const placements = Math.min(
+        typeof c4Quantity === "number" && Number.isFinite(c4Quantity)
+          ? Math.max(0, Math.floor(c4Quantity))
+          : 0,
+        1 + Math.max(0, Math.floor(extraExecutions))
+      );
+      return placements * (ItemLibrary.detonator.weight - ItemLibrary.c4.weight);
+    }
+    if (actionId === "refuel") {
+      return this.getCurrentTile()?.localizationType ===
+        LocalizationType.GasStation
+        ? ItemLibrary.fuel.weight * 3
+        : 0;
+    }
+    if (isMainAction && actionId === "pick_up") {
+      return this.getPlannedPickupWeight(extraExecutions);
+    }
+    if (isMainAction && actionId === "steal") {
+      return this.getPotentialStealWeight(extraExecutions);
+    }
+    return 0;
+  }
+
+  private getPlannedPickupWeight(extraExecutions: number): number {
+    const character = this.currentCharacter;
+    const match = this.currentMatch;
+    const tile = this.getCurrentTile();
+    if (!character || !match || !tile) {
+      return 0;
+    }
+
+    const discovered = new Set(character.discoveredItemIds ?? []);
+    const visibleItemIds = (tile.itemIds ?? []).filter((itemId) =>
+      discovered.has(itemId)
+    );
+    if (visibleItemIds.length === 0) {
+      return 0;
+    }
+
+    const priorities: string[] = [];
+    let noneCount = 0;
+    for (const itemId of this.mainActionPriorityItems) {
+      if (itemId === PICKUP_NONE_PRIORITY_ID) {
+        if (noneCount >= MAX_PICKUP_NONE_PRIORITY_ENTRIES) {
+          continue;
+        }
+        noneCount += 1;
+      } else if (priorities.includes(itemId)) {
+        continue;
+      }
+      priorities.push(itemId);
+    }
+
+    const noneIndex = priorities.indexOf(PICKUP_NONE_PRIORITY_ID);
+    const pickupDefinition = ActionLibrary.pick_up;
+    const extraScope =
+      pickupDefinition.extraExecution?.effectType ===
+      ExtraExecutionEffect.IncreaseScope
+        ? Math.max(0, Math.floor(extraExecutions))
+        : 0;
+    const maxPickups =
+      3 + getSkillEffectTotal(character, "pickup_scope_increase") + extraScope;
+    const pickupLimit =
+      noneIndex < 0
+        ? maxPickups
+        : Math.min(maxPickups, Math.max(1, noneIndex));
+    const priorityItemIds =
+      noneIndex < 0 ? priorities : priorities.slice(0, noneIndex);
+    const queue: string[] = [];
+    const queued = new Set<string>();
+    for (const itemId of priorityItemIds.concat(visibleItemIds)) {
+      if (
+        visibleItemIds.includes(itemId) &&
+        !queued.has(itemId)
+      ) {
+        queued.add(itemId);
+        queue.push(itemId);
+      }
+    }
+
+    const itemTypes = new Map(
+      (match.items ?? []).map((item) => [item.item_id, item.item_type])
+    );
+    return queue.slice(0, pickupLimit).reduce((weight, itemId) => {
+      const itemType = itemTypes.get(itemId);
+      if (!itemType || itemType === "zarkan3") {
+        return weight;
+      }
+      const definition = ItemLibrary[itemType];
+      if (!definition || definition.canBePickedUp === false) {
+        return weight;
+      }
+      return weight + Math.max(0, definition.weight);
+    }, 0);
+  }
+
+  private getPotentialStealWeight(extraExecutions: number): number {
+    const character = this.currentCharacter;
+    const match = this.currentMatch;
+    const origin = character?.position?.coord;
+    if (!character || !match || !origin) {
+      return 0;
+    }
+
+    const candidates = Object.values(match.playerCharacters ?? {}).filter(
+      (target) =>
+        target.id !== character.id &&
+        target.position?.coord?.q === origin.q &&
+        target.position?.coord?.r === origin.r
+    );
+    const firstTargetId = this.mainActionTargetPlayerId;
+    const selectedFirstTarget = firstTargetId
+      ? candidates.find((target) => target.id === firstTargetId)
+      : undefined;
+    const firstTargets = selectedFirstTarget
+      ? [selectedFirstTarget]
+      : candidates;
+    if (firstTargets.length === 0) {
+      return 0;
+    }
+
+    const secondTargetId = this.scareSecondTargetPlayerId;
+    const stealCount = 1 + Math.min(1, Math.max(0, Math.floor(extraExecutions)));
+    const maximumUnknownItemWeight = Math.max(
+      0,
+      ...Object.values(ItemLibrary)
+        .filter((item) => item.canBeStolen !== false)
+        .map((item) => Math.max(0, item.weight))
+    );
+    let maximumWeight = 0;
+    const selectedSecondTarget = secondTargetId
+      ? candidates.find((target) => target.id === secondTargetId)
+      : undefined;
+    const secondTargets = secondTargetId
+      ? selectedSecondTarget
+        ? [selectedSecondTarget]
+        : candidates
+      : [];
+    for (const firstTarget of firstTargets) {
+      const firstWeights = this.getTargetStealWeights(
+        firstTarget,
+        maximumUnknownItemWeight
+      );
+      if (stealCount === 1 || !secondTargetId) {
+        const totalWeight =
+          (firstWeights[0] ?? 0) +
+          (stealCount > 1 ? firstWeights[1] ?? 0 : 0);
+        maximumWeight = Math.max(maximumWeight, totalWeight);
+        continue;
+      }
+      for (const secondTarget of secondTargets) {
+        const secondWeights =
+          secondTarget === firstTarget
+            ? firstWeights
+            : this.getTargetStealWeights(
+                secondTarget,
+                maximumUnknownItemWeight
+              );
+        const totalWeight =
+          (firstWeights[0] ?? 0) +
+          (secondWeights[secondTarget === firstTarget ? 1 : 0] ?? 0);
+        maximumWeight = Math.max(maximumWeight, totalWeight);
+      }
+    }
+    return maximumWeight;
+  }
+
+  private getTargetStealWeights(
+    target: PlayerCharacter,
+    unknownItemWeight: number
+  ): number[] {
+    const carriedItems = target.inventory?.carriedItems;
+    if (!Array.isArray(carriedItems)) {
+      return [unknownItemWeight, unknownItemWeight];
+    }
+
+    const weights: number[] = [];
+    for (const stack of carriedItems) {
+      const definition = ItemLibrary[stack.itemId as ItemId];
+      if (!definition || definition.canBeStolen === false) {
+        continue;
+      }
+      const quantity =
+        typeof stack.quantity === "number" && Number.isFinite(stack.quantity)
+          ? Math.max(0, Math.floor(stack.quantity))
+          : 0;
+      const weight = Math.max(0, definition.weight);
+      for (let index = 0; index < Math.min(2, quantity); index += 1) {
+        weights.push(weight);
+      }
+    }
+    return weights.sort((left, right) => right - left);
+  }
 
   private getPlannedActionEnergyCost(
     actionId: string | null,
@@ -2638,6 +2898,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       this.playerSelector.setPending(false);
       this.refreshScareSecondPlayerSelectorState();
       if (emit && hadValue) {
+        this.emit("ready-refresh-request");
         this.emitMainActionChange();
       }
       return hadValue;
@@ -2658,6 +2919,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     }
     this.refreshScareSecondPlayerSelectorState();
     if (emit) {
+      this.emit("ready-refresh-request");
       this.emitMainActionChange();
     }
     return true;
@@ -2679,6 +2941,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       this.scareSecondPlayerSelector.setValue(null, false);
       this.scareSecondPlayerSelector.setPending(false);
       if (emit && hadValue) {
+        this.emit("ready-refresh-request");
         this.emitMainActionChange();
       }
       return hadValue;
@@ -2692,6 +2955,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.scareSecondPlayerSelector.setValue(normalized, false);
     this.scareSecondPlayerSelector.setPending(false);
     if (emit) {
+      this.emit("ready-refresh-request");
       this.emitMainActionChange();
     }
     return true;
@@ -2959,6 +3223,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       }
       this.itemSelector.setValue([], false);
       if (emit && hadValues) {
+        this.emit("ready-refresh-request");
         this.emitMainActionChange();
       }
       return hadValues;
@@ -2975,6 +3240,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.mainActionPriorityItems = filtered;
     this.itemSelector.setValue(filtered, false);
     if (emit) {
+      this.emit("ready-refresh-request");
       this.emitMainActionChange();
     }
     return true;

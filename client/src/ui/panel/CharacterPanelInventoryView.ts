@@ -3,6 +3,7 @@ import type { PlayerCharacter } from "@shared";
 import { InventoryGrid } from "../InventoryGrid";
 import type { InventoryGridItem } from "../InventoryGrid";
 import { buildInventoryGridItems } from "./CharacterPanelItemOptions";
+import { THEME } from "../ColorPalette";
 
 export interface CharacterPanelInventoryViewLayout {
   margin: number;
@@ -16,6 +17,8 @@ const MIN_BOX_HEIGHT = 360;
 export class CharacterPanelInventoryView {
   private readonly background: Phaser.GameObjects.Rectangle;
   private readonly title: Phaser.GameObjects.Text;
+  private readonly loadCurrentText: Phaser.GameObjects.Text;
+  private readonly loadRemainderText: Phaser.GameObjects.Text;
   private readonly grid: InventoryGrid;
   private readonly elements: Phaser.GameObjects.GameObject[];
 
@@ -50,6 +53,24 @@ export class CharacterPanelInventoryView {
       .setVisible(false);
     parent.add(this.title);
 
+    this.loadCurrentText = scene.add
+      .text(layout.margin + 12, layout.contentTop + 12, "", {
+        fontSize: "16px",
+        color: THEME.colors.textPrimary
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    parent.add(this.loadCurrentText);
+
+    this.loadRemainderText = scene.add
+      .text(layout.margin + 12, layout.contentTop + 12, "", {
+        fontSize: "16px",
+        color: THEME.colors.textPrimary
+      })
+      .setOrigin(0, 0)
+      .setVisible(false);
+    parent.add(this.loadRemainderText);
+
     this.grid = new InventoryGrid(
       scene,
       layout.margin + 12,
@@ -62,7 +83,13 @@ export class CharacterPanelInventoryView {
     this.grid.setActive(false);
     this.grid.setItems([]);
     parent.add(this.grid);
-    this.elements = [this.background, this.title, this.grid];
+    this.elements = [
+      this.background,
+      this.title,
+      this.loadCurrentText,
+      this.loadRemainderText,
+      this.grid
+    ];
   }
 
   getElements(): Phaser.GameObjects.GameObject[] {
@@ -79,16 +106,37 @@ export class CharacterPanelInventoryView {
   update(character: PlayerCharacter | null): void {
     if (!character) {
       this.title.setText("Inventory");
+      this.loadCurrentText.setVisible(false);
+      this.loadRemainderText.setVisible(false);
+      this.updateLoadTextPosition();
       this.grid.setItems([]);
       this.grid.refreshLayout();
       return;
     }
     const load = character.stats?.load;
-    this.title.setText(
-      load
-        ? `Inventory (Load ${normalizeWeight(load.current)}/${normalizeWeight(load.max)})`
-        : "Inventory"
-    );
+    if (load) {
+      const current = normalizeWeight(load.current);
+      const max = normalizeWeight(load.max);
+      this.title.setText("Inventory (Load ");
+      this.loadCurrentText
+        .setText(`${current}`)
+        .setColor(
+          load.current > load.max
+            ? THEME.colors.healthDamage
+            : load.max > 0 && load.current > load.max * 0.75
+              ? THEME.colors.warning
+              : THEME.colors.textPrimary
+        )
+        .setVisible(true);
+      this.loadRemainderText
+        .setText(`/${max})`)
+        .setVisible(true);
+    } else {
+      this.title.setText("Inventory");
+      this.loadCurrentText.setVisible(false);
+      this.loadRemainderText.setVisible(false);
+    }
+    this.updateLoadTextPosition();
     const stacks = Array.isArray(character.inventory?.carriedItems)
       ? character.inventory.carriedItems
       : [];
@@ -110,6 +158,7 @@ export class CharacterPanelInventoryView {
       .setSize(layout.boxWidth, boxHeight)
       .setDisplaySize(layout.boxWidth, boxHeight);
     this.title.setPosition(layout.margin + 12, layout.contentTop + 12);
+    this.updateLoadTextPosition();
     this.grid.setPosition(layout.margin + 12, layout.contentTop + 48);
     this.grid.setDimensions(
       layout.boxWidth - 24,
@@ -123,8 +172,19 @@ export class CharacterPanelInventoryView {
 
   destroy(): void {
     this.grid.destroy();
+    this.loadRemainderText.destroy();
+    this.loadCurrentText.destroy();
     this.title.destroy();
     this.background.destroy();
+  }
+
+  private updateLoadTextPosition(): void {
+    const loadX = this.title.x + this.title.width;
+    this.loadCurrentText.setPosition(loadX, this.title.y);
+    this.loadRemainderText.setPosition(
+      loadX + this.loadCurrentText.width,
+      this.title.y
+    );
   }
 }
 
