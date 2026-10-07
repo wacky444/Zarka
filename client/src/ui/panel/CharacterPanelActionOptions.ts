@@ -12,21 +12,39 @@ import { deriveBoardIconKey, isBoardIconTexture } from "../actionIcons";
 import type { GridSelectItem } from "../GridSelect";
 import { t } from "../../services/i18n";
 
-export const PRIMARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
-  .filter(
-    (definition) =>
-      definition.category === ActionCategory.Primary && !definition.hidden
-  )
-  .map((definition) => definition.id)
-  .sort((a, b) => ActionLibrary[a].name.localeCompare(ActionLibrary[b].name));
+function compareActionIdsByOrder(a: ActionId, b: ActionId): number {
+  const actionA = ActionLibrary[a];
+  const actionB = ActionLibrary[b];
+  return (
+    (actionA?.actionOrder ?? Number.MAX_SAFE_INTEGER) -
+      (actionB?.actionOrder ?? Number.MAX_SAFE_INTEGER) ||
+    (actionA?.actionSubOrder ?? Number.MAX_SAFE_INTEGER) -
+      (actionB?.actionSubOrder ?? Number.MAX_SAFE_INTEGER) ||
+    a.localeCompare(b)
+  );
+}
 
-export const SECONDARY_ACTION_IDS: ActionId[] = Object.values(ActionLibrary)
-  .filter(
-    (definition) =>
-      definition.category === ActionCategory.Secondary && !definition.hidden
-  )
-  .map((definition) => definition.id)
-  .sort((a, b) => ActionLibrary[a].name.localeCompare(ActionLibrary[b].name));
+function sortActionIdsByOrder(ids: Iterable<ActionId>): ActionId[] {
+  return Array.from(new Set(ids)).sort(compareActionIdsByOrder);
+}
+
+export const PRIMARY_ACTION_IDS: ActionId[] = sortActionIdsByOrder(
+  Object.values(ActionLibrary)
+    .filter(
+      (definition) =>
+        definition.category === ActionCategory.Primary && !definition.hidden
+    )
+    .map((definition) => definition.id)
+);
+
+export const SECONDARY_ACTION_IDS: ActionId[] = sortActionIdsByOrder(
+  Object.values(ActionLibrary)
+    .filter(
+      (definition) =>
+        definition.category === ActionCategory.Secondary && !definition.hidden
+    )
+    .map((definition) => definition.id)
+);
 
 export interface CharacterPanelActionOptionsContext {
   character: PlayerCharacter | null;
@@ -97,15 +115,16 @@ export function buildMainActionItems(
   const availableActions = actionIds.filter(
     (id) => available === null || available.has(id)
   );
-  const sourceIds =
+  const sourceIds = sortActionIdsByOrder(
     availableActions.length > 0
-      ? Array.from(new Set([...availableActions, ...baseList]))
-      : baseList;
+      ? [...availableActions, ...baseList]
+      : baseList
+  );
   const cooldowns = buildActionCooldownMap(
     context.character,
     context.currentTurn
   );
-  return Array.from(new Set(sourceIds), (id) =>
+  return sourceIds.map((id) =>
     resolveActionMetadata(id, cooldowns.get(id) ?? 0, context)
   );
 }
@@ -123,15 +142,16 @@ export function buildSecondaryActionItems(
   const availableActions = actionIds.filter(
     (id) => available === null || available.has(id)
   );
-  const sourceIds =
+  const sourceIds = sortActionIdsByOrder(
     availableActions.length > 0
-      ? Array.from(new Set([...availableActions, ...baseList]))
-      : baseList;
+      ? [...availableActions, ...baseList]
+      : baseList
+  );
   const cooldowns = buildActionCooldownMap(
     context.character,
     context.currentTurn
   );
-  return Array.from(new Set(sourceIds), (id) =>
+  return sourceIds.map((id) =>
     resolveActionMetadata(
       id,
       cooldowns.get(id) ?? 0,
