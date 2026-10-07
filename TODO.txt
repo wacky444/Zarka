@@ -29,14 +29,9 @@
 
 - protect, dodge and sleep in case the turn is skipped
 
-- step 1 2 and 3 are not saved, after doing them it resumes where the tutorial left off, but the 3 first steps have to be repeated every time the web reloads in the middle of tutorial
-
 - review scare tutorial hint
 
 - changing window size doesn't swap between mobile and pc, like its calculated once, making the gui show incorrect modal positions
-
-- in pc, the select target character, object priotize, action selector modals, can have more items per row
-    calculate it and make it responsive, leave margin at sides to click to cancel
 
 - in 3g mode, blue screen while loading, also the music takes 1 minute to load(make it so the music is the last to load and give it a 5 sec timeout)
 
@@ -74,3 +69,11 @@
 
 - action icons that need new icons:
 	use antidote, use quemical weapon, use medicine
+	
+- the map can be dragged from te select target location, clean or other green buttons
+
+- throwing a moltov, threw 3 foods to three different players
+
+- registered items didnt stay in players view
+
+- in mobile pause music when chrome is not on focus, or the phone is locked

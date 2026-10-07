@@ -10,6 +10,7 @@ import { installPhaserLocalization } from "./services/i18n";
 import { registerPushServiceWorker } from "./services/pushNotifications";
 
 import { isMobile } from "./utils/isMobile";
+import { installMobileAudioLifecycle } from "./services/mobileAudioLifecycle";
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -48,4 +49,5 @@ void registerPushServiceWorker().catch((error: unknown) => {
   console.warn("Failed to register the push service worker:", error);
 });
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+installMobileAudioLifecycle(game);

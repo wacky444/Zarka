@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { assetPath } from "../utils/assetPath";
+import { isBackgroundAudioSuspended } from "../services/mobileAudioLifecycle";
 
 export interface PlaySoundOptions {
   volume?: number;
@@ -139,7 +140,7 @@ export function playRandomSound(
   soundKeys: string | string[],
   options?: PlaySoundOptions
 ): void {
-  if (!scene || !scene.sound) {
+  if (!scene || !scene.sound || isBackgroundAudioSuspended()) {
     return;
   }
   const keys = Array.isArray(soundKeys) ? soundKeys : [soundKeys];
@@ -244,7 +245,12 @@ export function preloadMenuMusic(scene: Phaser.Scene): void {
 }
 
 export function playMenuMusic(scene: Phaser.Scene): void {
-  if (!scene || !scene.sound || !isMusicEnabled()) {
+  if (
+    !scene ||
+    !scene.sound ||
+    isBackgroundAudioSuspended() ||
+    !isMusicEnabled()
+  ) {
     return;
   }
   if (!scene.cache.audio.exists(DIRT_CITY_MUSIC_KEY)) {
