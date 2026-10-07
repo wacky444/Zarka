@@ -11,8 +11,6 @@
 - on pyro, also didnt get a confirm when bought
 
 - tutorial step 6 should teach about prioritize items
-- cant picke only one item
-    - add a card that says none, so it can prioritize, item, none, none
 
 - no hay log por recibir daño por peso
 
@@ -23,17 +21,17 @@
 - help screen with action orders
 	- highlights current selected actions
 
-- i never got hero team
+-t i never got hero team
 
 - improve the ready checkbox, to a cool button, if is the last player, show a confirm dialog
 
-- protect, dodge and sleep in case the turn is skipped
+-t protect, dodge and sleep in case the turn is skipped
 
 - review scare tutorial hint
 
 - changing window size doesn't swap between mobile and pc, like its calculated once, making the gui show incorrect modal positions
 
-- in 3g mode, blue screen while loading, also the music takes 1 minute to load(make it so the music is the last to load and give it a 5 sec timeout)
+-t in 3g mode, blue screen while loading, also the music takes 1 minute to load(make it so the music is the last to load and give it a 5 sec timeout)
 
 - donate doesnt work with bots
 
