@@ -35,6 +35,10 @@ export class ItemTooltipManager {
     this.tooltip?.hide();
   }
 
+  containsPoint(x: number, y: number): boolean {
+    return this.tooltip?.containsPoint(x, y) ?? false;
+  }
+
   destroy(): void {
     if (this.tooltip) {
       this.tooltip.destroy();

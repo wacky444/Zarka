@@ -13,6 +13,7 @@ export class HoverTooltip {
   private readonly bodyText: Phaser.GameObjects.Text;
   private readonly padding = 12;
   private readonly maxWidth = 280;
+  private readonly bounds = new Phaser.Geom.Rectangle();
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -133,9 +134,17 @@ export class HoverTooltip {
       posY = 12;
     }
 
+    this.bounds.setTo(posX, posY, contentWidth, contentHeight);
     this.scene.children.bringToTop(this.container);
     this.container.setPosition(posX, posY);
     this.container.setVisible(true);
+  }
+
+  containsPoint(x: number, y: number): boolean {
+    return (
+      this.container.visible &&
+      Phaser.Geom.Rectangle.Contains(this.bounds, x, y)
+    );
   }
 
   hide() {

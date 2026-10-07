@@ -1286,6 +1286,40 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     return this.mainExtraExecutions;
   }
 
+  getTotalPlannedEnergyCost(): number {
+    return (
+      this.getPlannedActionEnergyCost(
+        this.mainActionSelection,
+        this.mainExtraExecutions
+      ) +
+      this.getPlannedActionEnergyCost(
+        this.secondaryActionSelection,
+        this.secondaryExtraExecutions
+      ) +
+      this.getPlannedActionEnergyCost(
+        this.extraSecondaryActionSelection,
+        this.extraSecondaryExtraExecutions
+      )
+    );
+  }
+
+  getAvailableEnergy(): number {
+    const energy = this.currentCharacter?.stats?.energy;
+    if (!energy) {
+      return 0;
+    }
+    const energyTrack = energy as typeof energy & { activeTemporary?: number };
+    const amounts = [energy.current, energyTrack.activeTemporary, energy.temporary];
+    return amounts.reduce<number>(
+      (total, amount) =>
+        total +
+        (typeof amount === "number" && Number.isFinite(amount)
+          ? Math.max(0, amount)
+          : 0),
+      0
+    );
+  }
+
   getMainActionSelection(): MainActionSelection {
     return buildMainActionSelection({
       actionId: this.mainActionSelection,
@@ -1581,11 +1615,13 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   private readonly handleSecondaryExtraExecutionChange = (reps: number) => {
     this.secondaryExtraExecutions = reps;
     this.refreshSecondaryInspectAdditionalTargetState();
+    this.emit("ready-refresh-request");
     this.emitSecondaryActionChange();
   };
 
   private readonly handleExtraSecondaryExtraExecutionChange = (reps: number) => {
     this.extraSecondaryExtraExecutions = reps;
+    this.emit("ready-refresh-request");
     this.emitExtraSecondaryActionChange();
   };
 
@@ -1609,6 +1645,27 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.emit("ready-refresh-request");
     this.emitMainActionChange();
   };
+
+  private getPlannedActionEnergyCost(
+    actionId: string | null,
+    extraExecutions: number
+  ): number {
+    const character = this.currentCharacter;
+    const definition = actionId
+      ? ActionLibrary[actionId as ActionId]
+      : undefined;
+    if (!character || !definition) {
+      return 0;
+    }
+
+    const extraCost = Math.max(0, definition.extraExecution?.cost ?? 0);
+    const requestedExtras = Math.max(0, Math.floor(extraExecutions));
+    const discount = getActionEnergyDiscount(character, definition.id);
+    return Math.max(
+      0,
+      definition.energyCost + extraCost * requestedExtras - discount
+    );
+  }
 
   private readonly handleSecondaryActionSelection = (actionId: string | null) => {
     this.secondaryActionSelection = actionId ?? null;
@@ -1635,6 +1692,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.refreshSecondaryDropSellState();
     this.refreshSecondaryChemicalTargetState();
     this.refreshSecondaryDropdownItems();
+    this.emit("ready-refresh-request");
     this.emitSecondaryActionChange();
   };
 
@@ -1661,6 +1719,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.refreshExtraSecondaryDropSellState();
     this.refreshExtraSecondaryChemicalTargetState();
     this.refreshSecondaryDropdownItems();
+    this.emit("ready-refresh-request");
     this.emitExtraSecondaryActionChange();
   };
 

@@ -1058,6 +1058,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       isCharacterActive,
       isStatusActive,
       unspentSkillPoints: unspentPoints,
+      plannedEnergyCost:
+        this.actionPlanView?.getTotalPlannedEnergyCost() ?? 0,
+      availableEnergy: this.actionPlanView?.getAvailableEnergy() ?? 0,
       tutorialActive: this.tutorialActive,
       tutorialStepId: this.tutorialStepId,
       tutorialReadyEnabled: this.tutorialReadyEnabled,

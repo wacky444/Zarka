@@ -543,6 +543,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "erupted in flames": "ardió en llamas",
   Skills: "Habilidades",
   "Unspent points": "Puntos sin gastar",
+  "There isn't enough energy. Performing actions without enough energy will deal 1 damage, and actions with extra power won't work.":
+    "No hay suficiente energía. Realizar acciones sin suficiente energía causará 1 de daño y las acciones con potencia adicional no funcionarán.",
   Offensive: "Ataque",
   Defense: "Defensa",
   Utility: "Utilidad",
