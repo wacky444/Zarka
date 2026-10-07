@@ -14,8 +14,6 @@
 
 - no hay log por recibir daño por peso
 
-- in mobile, add the player sprites in the target selector, and item sprites in item selector
-
 - bombard has animation? it should have it similar to cell destroyed
 
 - help screen with action orders
@@ -30,8 +28,6 @@
 - review scare tutorial hint
 
 - changing window size doesn't swap between mobile and pc, like its calculated once, making the gui show incorrect modal positions
-
--t in 3g mode, blue screen while loading, also the music takes 1 minute to load(make it so the music is the last to load and give it a 5 sec timeout)
 
 - donate doesnt work with bots
 
