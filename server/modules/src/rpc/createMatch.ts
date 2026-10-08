@@ -7,11 +7,13 @@ import { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { normalizeMatchName } from "../utils/normalize";
-import { validateTime } from "../utils/validation";
+import { clampNumber, validateTime } from "../utils/validation";
 import {
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
-  TUTORIAL_MATCH_METADATA_KEY
+  TUTORIAL_MATCH_METADATA_KEY,
+  DEFAULT_NORMAL_MATCH_SIZE,
+  MAX_NORMAL_MATCH_SIZE
 } from "@shared";
 
 function getNumberOfMatches(storage: StorageService, userId: string): number {
@@ -53,7 +55,7 @@ export function createMatchRpc(
     );
   }
 
-  let size = 2;
+  let size = DEFAULT_NORMAL_MATCH_SIZE;
   let name = DEFAULT_MATCH_NAME;
   let roundTime = "23:00";
   let autoSkip = true;
@@ -62,8 +64,13 @@ export function createMatchRpc(
   if (payload && payload !== "") {
     try {
       const json = JSON.parse(payload);
-      if (json && typeof json.size === "number") {
-        size = json.size;
+      const requestedSize = clampNumber(
+        json?.size,
+        2,
+        MAX_NORMAL_MATCH_SIZE
+      );
+      if (typeof requestedSize === "number") {
+        size = requestedSize;
       }
       if (json && typeof json.name === "string") {
         name = normalizeMatchName(json.name);

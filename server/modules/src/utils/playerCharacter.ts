@@ -292,6 +292,29 @@ function buildSpawnPool(
   return ordered.concat(remaining);
 }
 
+function getSpawnRoster(match: MatchRecord): string[] {
+  const totalBots =
+    typeof match.botPlayers === "number" ? Math.max(0, match.botPlayers) : 0;
+  const roster = [...match.players];
+  for (let index = 1; index <= totalBots; index += 1) {
+    roster.push(`bot${index}`);
+  }
+  for (const characterId of Object.keys(match.playerCharacters ?? {})) {
+    if (!roster.includes(characterId)) {
+      roster.push(characterId);
+    }
+  }
+  return roster;
+}
+
+export function hasEnoughSpawnTiles(match: MatchRecord): boolean {
+  const tiles = match.map?.tiles;
+  return (
+    Array.isArray(tiles) &&
+    tiles.filter((tile) => tile.walkable).length >= getSpawnRoster(match).length
+  );
+}
+
 export function assignSpawnPositions(
   match: MatchRecord,
   logger: nkruntime.Logger
@@ -307,22 +330,7 @@ export function assignSpawnPositions(
 
   let mutated = ensureAllPlayerCharacters(match);
 
-  const totalBots =
-    typeof match.botPlayers === "number" ? Math.max(0, match.botPlayers) : 0;
-  const roster: string[] = [...match.players];
-  for (let i = 1; i <= totalBots; i += 1) {
-    roster.push(`bot${i}`);
-  }
-
-  const characterIds = match.playerCharacters
-    ? Object.keys(match.playerCharacters)
-    : [];
-  for (const characterId of characterIds) {
-    if (roster.indexOf(characterId) === -1) {
-      roster.push(characterId);
-    }
-  }
-
+  const roster = getSpawnRoster(match);
   const walkableTiles = map.tiles.filter((tile) => tile.walkable);
   if (walkableTiles.length === 0) {
     logger.warn(

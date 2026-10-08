@@ -13,7 +13,7 @@ import {
   PUSH_NOTIFICATION_OUTBOX_COLLECTION,
 } from "../constants";
 import { MatchRecord, TurnRecord } from "../models/types";
-import type { TurnNotificationOutbox } from "../models/pushNotifications";
+import type { PushNotificationOutbox, TurnNotificationOutbox } from "../models/pushNotifications";
 import type {
   MatchChatLog,
   MatchChatMessage,
@@ -25,6 +25,7 @@ import { NakamaWrapper, createNakamaWrapper } from "./nakamaWrapper";
 export interface MatchStorageObject {
   match: MatchRecord;
   version: string;
+  permissionRead: number;
 }
 
 export interface ReplayStorageObject {
@@ -70,6 +71,7 @@ export class StorageService {
     return {
       match,
       version: storageObject.version,
+      permissionRead: storageObject.permissionRead,
     };
   }
 
@@ -80,9 +82,30 @@ export class StorageService {
         key: this.getMatchKey(match.match_id),
         userId: SERVER_USER_ID,
         value: match,
-        permissionRead: 2,
+        permissionRead: 0,
         permissionWrite: 0,
         version,
+      },
+    ]);
+  }
+
+  writeMatchWithReplayTurn0(match: MatchRecord, replay: ReplayRecord): void {
+    this.nk.storageWrite([
+      {
+        collection: MATCH_COLLECTION,
+        key: this.getMatchKey(match.match_id),
+        userId: SERVER_USER_ID,
+        value: match,
+        permissionRead: 0,
+        permissionWrite: 0,
+      },
+      {
+        collection: REPLAY_COLLECTION,
+        key: this.getReplayKey(replay.match_id, replay.turn),
+        userId: SERVER_USER_ID,
+        value: replay,
+        permissionRead: 2,
+        permissionWrite: 0,
       },
     ]);
   }
@@ -98,7 +121,7 @@ export class StorageService {
         key: this.getMatchKey(match.match_id),
         userId: SERVER_USER_ID,
         value: match,
-        permissionRead: 2,
+        permissionRead: 0,
         permissionWrite: 0,
         version,
       },
@@ -113,6 +136,39 @@ export class StorageService {
     ]);
   }
 
+  writeMatchWithReplayTurn0AndPushOutbox(
+    match: MatchRecord,
+    replay: ReplayRecord,
+    outbox: PushNotificationOutbox
+  ): void {
+    this.nk.storageWrite([
+      {
+        collection: MATCH_COLLECTION,
+        key: this.getMatchKey(match.match_id),
+        userId: SERVER_USER_ID,
+        value: match,
+        permissionRead: 0,
+        permissionWrite: 0
+      },
+      {
+        collection: REPLAY_COLLECTION,
+        key: this.getReplayKey(replay.match_id, replay.turn),
+        userId: SERVER_USER_ID,
+        value: replay,
+        permissionRead: 2,
+        permissionWrite: 0
+      },
+      {
+        collection: PUSH_NOTIFICATION_OUTBOX_COLLECTION,
+        key: outbox.id,
+        userId: SERVER_USER_ID,
+        value: outbox,
+        permissionRead: 0,
+        permissionWrite: 0
+      }
+    ]);
+  }
+
   writeMatchWithTurn(
     match: MatchRecord,
     turn: TurnRecord,
@@ -124,7 +180,7 @@ export class StorageService {
         key: this.getMatchKey(match.match_id),
         userId: SERVER_USER_ID,
         value: match,
-        permissionRead: 2,
+        permissionRead: 0,
         permissionWrite: 0,
         version,
       },
@@ -473,6 +529,7 @@ export class StorageService {
         items.push({
           match: obj.value as MatchRecord,
           version: obj.version,
+          permissionRead: obj.permissionRead,
         });
       }
 

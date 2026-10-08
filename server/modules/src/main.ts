@@ -19,7 +19,10 @@ import {
   getReplayRpc,
   saveChatMessageRpc,
   getChatHistoryRpc,
+  getRankedQueueStatusRpc,
   getUserAccountRpc,
+  setRankedMatchSlotsRpc,
+  touchRankedPresenceRpc,
   updateSkinRpc,
   upgradeSkillRpc,
   updateTestamentRpc,
@@ -32,6 +35,10 @@ import {
   unregisterPushSubscriptionRpc
 } from "./rpc";
 import { asyncTurnMatchHandler } from "./match/async_turn";
+import {
+  rankedQueueCoordinatorMatchHandler,
+  type RankedQueueCoordinatorState
+} from "./matchmaking/coordinator";
 import { restoreMatchesFromStorage } from "./services/matchRestoration";
 
 export function InitModule(
@@ -101,6 +108,30 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register get_user_account: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("get_ranked_queue_status", getRankedQueueStatusRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register get_ranked_queue_status: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("set_ranked_match_slots", setRankedMatchSlotsRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register set_ranked_match_slots: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("touch_ranked_presence", touchRankedPresenceRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register touch_ranked_presence: %s",
       (error && (error as Error).message) || String(error)
     );
   }
@@ -284,6 +315,26 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register match handler async_turn: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerMatch<RankedQueueCoordinatorState>(
+      "ranked_queue_coordinator",
+      rankedQueueCoordinatorMatchHandler
+    );
+  } catch (error) {
+    logger.error(
+      "Failed to register ranked queue coordinator: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    const coordinatorId = nk.matchCreate("ranked_queue_coordinator", {});
+    logger.info("Ranked queue coordinator started: %s", coordinatorId);
+  } catch (error) {
+    logger.error(
+      "Failed to start ranked queue coordinator: %s",
       (error && (error as Error).message) || String(error)
     );
   }

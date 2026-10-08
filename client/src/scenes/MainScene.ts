@@ -81,6 +81,15 @@ export class MainScene extends Phaser.Scene {
     void this.refreshTutorialGate(true);
     this.updateMenuMusic();
   };
+  private readonly rankedPresenceForegroundHandler = () => {
+    if (
+      typeof document !== "undefined" &&
+      document.visibilityState === "visible"
+    ) {
+      void this.turnService?.touchRankedPresence();
+      void this.refreshRankedQueueAndMatches();
+    }
+  };
 
   constructor() {
     super("MainScene");
@@ -248,6 +257,12 @@ export class MainScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutMain, this);
       this.events.off(Phaser.Scenes.Events.WAKE, this.wakeHandler);
+      if (typeof document !== "undefined") {
+        document.removeEventListener(
+          "visibilitychange",
+          this.rankedPresenceForegroundHandler
+        );
+      }
       this.menuAshEffect?.destroy();
       this.menuAshEffect = null;
       cleanupMenuMusic(this);
@@ -279,6 +294,14 @@ export class MainScene extends Phaser.Scene {
       });
 
       this.turnService = new TurnService(client, session);
+      if (typeof document !== "undefined") {
+        document.addEventListener(
+          "visibilitychange",
+          this.rankedPresenceForegroundHandler
+        );
+      }
+      void this.turnService.touchRankedPresence();
+      void this.refreshRankedQueueAndMatches();
       void bindExistingPushSubscription(this.turnService).catch((error: unknown) => {
         console.warn("Failed to bind push subscription to current account:", error);
       });
@@ -497,7 +520,18 @@ export class MainScene extends Phaser.Scene {
           }
         } catch (e) {
           console.error("start_match error", e);
-          this.statusText.setText("start_match error (see console).");
+          const errorMessage =
+            typeof e === "object" && e !== null && "message" in e
+              ? String(e.message)
+              : String(e);
+          if (errorMessage.includes("insufficient_spawn_tiles")) {
+            this.lobbyView.showSpawnValidationWarning();
+            this.statusText.setText(
+              t("Not enough spawn tiles. Increase map size or remove players/bots.")
+            );
+          } else {
+            this.statusText.setText("start_match error (see console).");
+          }
         }
       });
       this.lobbyView.setOnSettingsChange(async (s) => {
@@ -570,6 +604,18 @@ export class MainScene extends Phaser.Scene {
       } else {
         this.statusText.setText("Init error: " + msg);
       }
+    }
+  }
+
+  private async refreshRankedQueueAndMatches(): Promise<void> {
+    if (!this.turnService) return;
+    try {
+      const result = await this.turnService.refreshRankedQueueAndMatches();
+      if (result.assignmentDiscovered && this.myMatchesListView) {
+        void this.myMatchesListView.refresh();
+      }
+    } catch (error) {
+      console.warn("Failed to refresh ranked match status:", error);
     }
   }
 
@@ -885,7 +931,7 @@ export class MainScene extends Phaser.Scene {
       async () => {
         if (!this.turnService) throw new Error("No service");
         try {
-          const createRes = await this.turnService.createMatch(2);
+          const createRes = await this.turnService.createMatch();
           const parsed = this.parseRpcPayload<CreateMatchPayload>(createRes);
           if (!parsed || !parsed.match_id)
             throw new Error("No match_id returned");

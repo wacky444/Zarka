@@ -90,9 +90,10 @@ function createNakamaHarness() {
           request.userId
         );
         const existing = objects.get(key);
+        const expectedVersion = request.version === "" ? undefined : request.version;
         if (
           request.version !== undefined &&
-          request.version !== existing?.version
+          expectedVersion !== existing?.version
         ) {
           throw new Error("version conflict");
         }

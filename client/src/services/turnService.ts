@@ -1,6 +1,8 @@
 import { Client, Session, Socket } from "@heroiclabs/nakama-js";
 import { getEnv } from "./nakama";
+import { parseRankedQueueStatusResponse } from "./rankedMatchmaking";
 import {
+  DEFAULT_NORMAL_MATCH_SIZE,
   OPCODE_MATCH_REMOVED,
   OPCODE_MATCH_ENDED,
   OPCODE_READY_STATE_UPDATE,
@@ -16,6 +18,7 @@ import {
   type ReadyStateUpdateMessagePayload,
   type SaveChatMessageRequest,
   type GetUserAccountPayload,
+  type GetRankedQueueStatusPayload,
   type Skin,
   type SkillId,
   type UpgradeSkillRequest,
@@ -64,6 +67,9 @@ export class TurnService {
   ) => void;
   private onZarkansDonated?: (payload: ZarkansDonatedMessagePayload) => void;
   private usernameCache = new Map<string, string>();
+  private lastRankedPresenceTouchAt = 0;
+  private rankedPresenceTouch: Promise<void> | null = null;
+  private knownRankedAssignmentIds = new Set<string>();
 
   constructor(
     private client: Client,
@@ -147,6 +153,28 @@ export class TurnService {
     }
   }
 
+  async touchRankedPresence(): Promise<void> {
+    if (this.rankedPresenceTouch) {
+      return this.rankedPresenceTouch;
+    }
+    if (Date.now() - this.lastRankedPresenceTouchAt < 60_000) {
+      return;
+    }
+
+    this.rankedPresenceTouch = this.client
+      .rpc(this.session, "touch_ranked_presence", {})
+      .then(() => {
+        this.lastRankedPresenceTouchAt = Date.now();
+      })
+      .catch((error: unknown) => {
+        console.warn("Failed to record ranked presence:", error);
+      })
+      .finally(() => {
+        this.rankedPresenceTouch = null;
+      });
+    return this.rankedPresenceTouch;
+  }
+
   async createTutorialMatch() {
     const res = await this.client.rpc(
       this.session,
@@ -156,7 +184,11 @@ export class TurnService {
     return res;
   }
 
-  async createMatch(size = 2, name?: string, turnsToBeAt1Tile = 30) {
+  async createMatch(
+    size = DEFAULT_NORMAL_MATCH_SIZE,
+    name?: string,
+    turnsToBeAt1Tile = 30
+  ) {
     const payload: { size: number; name?: string; turnsToBeAt1Tile?: number } =
       {
         size,
@@ -352,6 +384,35 @@ export class TurnService {
   async listMyMatches() {
     const res = await this.client.rpc(this.session, "list_my_matches", {});
     return res;
+  }
+
+  async getRankedQueueStatus(): Promise<GetRankedQueueStatusPayload> {
+    const res = await this.client.rpc(
+      this.session,
+      "get_ranked_queue_status",
+      {}
+    );
+    const raw = (res as unknown as { payload?: unknown }).payload;
+    return parseRankedQueueStatusResponse(raw);
+  }
+
+  async refreshRankedQueueAndMatches(): Promise<{
+    status: GetRankedQueueStatusPayload;
+    assignmentDiscovered: boolean;
+  }> {
+    const status = await this.getRankedQueueStatus();
+    let assignmentDiscovered = false;
+    if (status.ok && Array.isArray(status.assigned_matches)) {
+      const currentIds = new Set(
+        status.assigned_matches.map((assignment) => assignment.assignment_id)
+      );
+      assignmentDiscovered = Array.from(currentIds).some(
+        (assignmentId) => !this.knownRankedAssignmentIds.has(assignmentId)
+      );
+      this.knownRankedAssignmentIds = currentIds;
+    }
+    await this.listMyMatches();
+    return { status, assignmentDiscovered };
   }
 
   async getMatchReport(match_id: string) {

@@ -4,13 +4,25 @@ import { DEFAULT_MATCH_NAME } from "../../constants";
 import { AsyncTurnState } from "../../models/types";
 import { buildMatchLabel } from "../../utils/label";
 import { normalizeMatchName } from "../../utils/normalize";
+import {
+  DEFAULT_NORMAL_MATCH_SIZE,
+  MAX_NORMAL_MATCH_SIZE
+} from "@shared";
 
 export const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
   function (ctx, logger, nk, params) {
     const isRestore = params && params["restore"] === "true";
+    const isRanked = params && params["ranked"] === "true";
 
     const sizeStr = params && params["size"];
-    const size = Math.max(2, Math.min(8, parseInt(sizeStr || "2", 10) || 2));
+    const maxSize = isRanked ? 16 : MAX_NORMAL_MATCH_SIZE;
+    const requestedSize = sizeStr
+      ? parseInt(sizeStr, 10)
+      : DEFAULT_NORMAL_MATCH_SIZE;
+    const normalizedSize = Number.isFinite(requestedSize)
+      ? requestedSize
+      : DEFAULT_NORMAL_MATCH_SIZE;
+    const size = Math.max(2, Math.min(maxSize, normalizedSize));
     const creator = params && params["creator"];
     const gameId =
       params && params["game_id"] ? params["game_id"] : ctx.matchId;
@@ -45,7 +57,7 @@ export const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
           : undefined,
     };
 
-    if (isRestore && params && params["players"]) {
+    if ((isRestore || isRanked) && params && params["players"]) {
       try {
         const playerIds = JSON.parse(params["players"]) as string[];
         state.order = playerIds || [];

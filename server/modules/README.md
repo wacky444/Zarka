@@ -4,13 +4,13 @@ This folder contains a TypeScript runtime module for Nakama which replaces the p
 
 RPCs:
 
-- create_match: optional payload { size?: number }
+- create_match: optional payload { size?: number }; defaults to 16 players and clamps capacity to 2–30.
 - submit_turn: payload { match_id: string, move: any }
 - get_state: payload { match_id: string }
 
 Storage:
 
-- Collection "async*turn_matches", key `match*<uuid>`, system-owned
+- Collection "async*turn_matches", key `match*<uuid>`, system-owned and server-readable only; access match state through RPCs.
 - Collection "async_turn_turns", key `<turn>:<match_id>`, system-owned
 
 Build steps (run in this folder):

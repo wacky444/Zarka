@@ -8,7 +8,12 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { normalizeMatchName } from "../utils/normalize";
 import { clampNumber, validateTime } from "../utils/validation";
-import { MAX_BOT_PLAYERS, assignShrinkScheduleToMap } from "@shared";
+import {
+  MAX_BOT_PLAYERS,
+  MAX_NORMAL_MATCH_SIZE,
+  RANKED_MATCH_METADATA_KEY,
+  assignShrinkScheduleToMap
+} from "@shared";
 
 export function updateSettingsRpc(
   ctx: nkruntime.Context,
@@ -50,6 +55,12 @@ export function updateSettingsRpc(
   }
 
   const match: MatchRecord = read.match;
+  if (match.metadata?.[RANKED_MATCH_METADATA_KEY]) {
+    throw makeNakamaError(
+      "ranked_settings_locked",
+      nkruntime.Codes.PERMISSION_DENIED
+    );
+  }
   if (typeof match.started !== "boolean") {
     match.started = false;
   }
@@ -59,7 +70,7 @@ export function updateSettingsRpc(
     throw makeNakamaError("not_creator", nkruntime.Codes.PERMISSION_DENIED);
   }
 
-  const newSize = clampNumber(settings.players, 1, 100);
+  const newSize = clampNumber(settings.players, 2, MAX_NORMAL_MATCH_SIZE);
   const newCols = clampNumber(settings.cols, 1, 100);
   const newRows = clampNumber(settings.rows, 1, 100);
   const newRoundTime = validateTime(settings.roundTime);

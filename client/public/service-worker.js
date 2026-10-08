@@ -10,20 +10,35 @@ self.addEventListener("push", (event) => {
     payload && typeof payload.matchId === "string" ? payload.matchId : "";
   const turn = payload && Number.isSafeInteger(payload.turn) ? payload.turn : null;
   const spanish = payload && payload.locale === "es";
-  const title = spanish ? "Zarka: nuevo turno" : "Zarka: new turn";
-  const body = turn
+  const rankedMatchStarted = payload?.event === "ranked_match_started";
+  const title = rankedMatchStarted
     ? spanish
-      ? `Turno ${turn} avanzado.`
-      : `Turn ${turn} advanced.`
+      ? "Zarka: partida clasificatoria iniciada"
+      : "Zarka: ranked match started"
     : spanish
-      ? "Avanzó un turno de la partida."
-      : "A match turn advanced.";
+      ? "Zarka: nuevo turno"
+      : "Zarka: new turn";
+  const body = rankedMatchStarted
+    ? spanish
+      ? "Tu partida clasificatoria ya está lista."
+      : "Your ranked match is ready."
+    : turn
+      ? spanish
+        ? `Turno ${turn} avanzado.`
+        : `Turn ${turn} advanced.`
+      : spanish
+        ? "Avanzó un turno de la partida."
+        : "A match turn advanced.";
   const options = {
     body,
     lang: spanish ? "es" : "en",
     icon: new URL("zarka-icon-512.png", self.registration.scope).href,
     badge: new URL("notification-badge.svg", self.registration.scope).href,
-    tag: matchId ? `zarka-${matchId}-${turn ?? "update"}` : "zarka-turn",
+    tag: matchId
+      ? rankedMatchStarted
+        ? `zarka-${matchId}-ranked-start`
+        : `zarka-${matchId}-${turn ?? "update"}`
+      : "zarka-turn",
     renotify: false,
     data: {
       url: new URL("./?refreshMatches=1", self.registration.scope).href

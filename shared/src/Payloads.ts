@@ -278,6 +278,37 @@ export type UpdateSkinPayload = {
   error?: string;
 };
 
+export type SetRankedMatchSlotsRequest = {
+  ranked_match_slots: number;
+};
+
+export type SetRankedMatchSlotsPayload = {
+  ok?: boolean;
+  ranked_match_slots?: number;
+  error?: string;
+};
+
+export type TouchRankedPresencePayload = {
+  ok?: boolean;
+  error?: string;
+};
+
+export type RankedQueueAssignmentStatus = {
+  assignment_id: string;
+  match_id: string;
+  status: "starting" | "running";
+  current_turn?: number;
+};
+
+export type GetRankedQueueStatusPayload = {
+  ok?: boolean;
+  desired_slots?: number;
+  queued_tickets?: number;
+  reserved_tickets?: number;
+  assigned_matches?: RankedQueueAssignmentStatus[];
+  error?: string;
+};
+
 export type UpgradeSkillPayload = {
   ok?: boolean;
   match_id?: string;

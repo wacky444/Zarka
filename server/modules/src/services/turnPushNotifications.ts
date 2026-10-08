@@ -8,13 +8,16 @@ import {
   SERVER_USER_ID
 } from "../constants";
 import type {
+  PushNotificationOutbox,
   PushSubscriptionDeviceIndex,
+  RankedMatchStartedOutbox,
   StoredPushSubscription,
   TurnNotificationOutbox,
   TurnNotificationTarget
 } from "../models/pushNotifications";
 import type { MatchRecord } from "../models/types";
 import { isBotId } from "../match/botAI";
+import { RANKED_MATCH_METADATA_KEY } from "@shared";
 import { isPushDispatchConfigured, parsePushSubscription } from "./pushSubscriptions";
 
 interface PushDispatchResponse {
@@ -26,8 +29,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function getOutboxId(matchId: string, turn: number): string {
+function getTurnOutboxId(matchId: string, turn: number): string {
   return `turn_${matchId}_${turn}`;
+}
+
+function getRankedMatchStartedOutboxId(matchId: string): string {
+  return `ranked_match_started_${matchId}`;
 }
 
 function getStoredSubscription(
@@ -52,12 +59,11 @@ function getStoredSubscription(
   };
 }
 
-function parseOutbox(value: unknown): TurnNotificationOutbox | null {
+function parseOutbox(value: unknown): PushNotificationOutbox | null {
   if (
     !isRecord(value) ||
     typeof value.id !== "string" ||
     typeof value.matchId !== "string" ||
-    typeof value.turn !== "number" ||
     !Array.isArray(value.targets) ||
     (value.status !== "pending" && value.status !== "delivered")
   ) {
@@ -67,14 +73,16 @@ function parseOutbox(value: unknown): TurnNotificationOutbox | null {
     (target): target is TurnNotificationTarget =>
       isRecord(target) &&
       typeof target.userId === "string" &&
-      typeof target.deviceId === "string"
+      typeof target.deviceId === "string" &&
+      (target.locale === undefined ||
+        target.locale === "en" ||
+        target.locale === "es")
   );
-  return {
+  const common = {
     id: value.id,
     matchId: value.matchId,
-    turn: value.turn,
     targets,
-    status: value.status,
+    status: value.status === "pending" ? "pending" as const : "delivered" as const,
     attempts: typeof value.attempts === "number" ? value.attempts : 0,
     nextAttemptAtMs:
       typeof value.nextAttemptAtMs === "number" ? value.nextAttemptAtMs : 0,
@@ -83,20 +91,27 @@ function parseOutbox(value: unknown): TurnNotificationOutbox | null {
       ? { deliveredAtMs: value.deliveredAtMs }
       : {})
   };
+  const event = value.event ?? "turn_advanced";
+  if (event === "turn_advanced" && typeof value.turn === "number") {
+    return { ...common, event: "turn_advanced", turn: value.turn };
+  }
+  if (event === "ranked_match_started") {
+    return { ...common, event: "ranked_match_started" };
+  }
+  return null;
 }
 
-export function createTurnNotificationOutbox(
+function createNotificationTargets(
   match: MatchRecord,
   ctx: nkruntime.Context,
   nk: nkruntime.Nakama,
   logger: nkruntime.Logger
-): TurnNotificationOutbox | null {
+): TurnNotificationTarget[] | null {
   if (
     !isPushDispatchConfigured(ctx.env) ||
     match.started !== true ||
     (typeof match.removed === "number" && match.removed !== 0) ||
-    !Array.isArray(match.players) ||
-    !Number.isFinite(match.current_turn)
+    !Array.isArray(match.players)
   ) {
     return null;
   }
@@ -112,12 +127,14 @@ export function createTurnNotificationOutbox(
     try {
       const response = nk.storageList(userId, PUSH_SUBSCRIPTION_COLLECTION, 20);
       for (const entry of response?.objects ?? []) {
-        if (typeof entry?.key !== "string") {
-          continue;
-        }
+        if (typeof entry?.key !== "string") continue;
         const subscription = getStoredSubscription(entry.value, userId, entry.key);
         if (subscription) {
-          targets.push({ userId, deviceId: entry.key });
+          targets.push({
+            userId,
+            deviceId: entry.key,
+            locale: subscription.locale
+          });
         }
       }
     } catch (error) {
@@ -128,16 +145,45 @@ export function createTurnNotificationOutbox(
       );
     }
   }
+  return targets.length > 0 ? targets : null;
+}
 
-  if (targets.length === 0) {
-    return null;
-  }
-
+export function createTurnNotificationOutbox(
+  match: MatchRecord,
+  ctx: nkruntime.Context,
+  nk: nkruntime.Nakama,
+  logger: nkruntime.Logger
+): TurnNotificationOutbox | null {
+  if (!Number.isFinite(match.current_turn)) return null;
+  const targets = createNotificationTargets(match, ctx, nk, logger);
+  if (!targets) return null;
   const turn = match.current_turn;
   return {
-    id: getOutboxId(match.match_id, turn),
+    id: getTurnOutboxId(match.match_id, turn),
     matchId: match.match_id,
+    event: "turn_advanced",
     turn,
+    targets,
+    status: "pending",
+    attempts: 0,
+    nextAttemptAtMs: 0,
+    createdAtMs: Date.now()
+  };
+}
+
+export function createRankedMatchStartedOutbox(
+  match: MatchRecord,
+  ctx: nkruntime.Context,
+  nk: nkruntime.Nakama,
+  logger: nkruntime.Logger
+): RankedMatchStartedOutbox | null {
+  if (!match.metadata?.[RANKED_MATCH_METADATA_KEY]) return null;
+  const targets = createNotificationTargets(match, ctx, nk, logger);
+  if (!targets) return null;
+  return {
+    id: getRankedMatchStartedOutboxId(match.match_id),
+    matchId: match.match_id,
+    event: "ranked_match_started",
     targets,
     status: "pending",
     attempts: 0,
@@ -197,7 +243,7 @@ function removeExpiredSubscription(
 
 function persistOutbox(
   nk: nkruntime.Nakama,
-  outbox: TurnNotificationOutbox,
+  outbox: PushNotificationOutbox,
   version: string
 ): void {
   nk.storageWrite([
@@ -216,11 +262,21 @@ function persistOutbox(
 function retryOutbox(
   nk: nkruntime.Nakama,
   logger: nkruntime.Logger,
-  outbox: TurnNotificationOutbox,
+  outbox: PushNotificationOutbox,
   version: string
 ): void {
   const attempts = outbox.attempts + 1;
   const delayMs = Math.min(60 * 60 * 1000, 5000 * 2 ** Math.min(attempts - 1, 10));
+  logger.warn(
+    "push_notification_retry %s",
+    JSON.stringify({
+      event: "push_notification_retry",
+      notification_event: outbox.event,
+      match_id: outbox.matchId,
+      attempt: attempts,
+      target_count: outbox.targets.length
+    })
+  );
   try {
     persistOutbox(
       nk,
@@ -240,14 +296,14 @@ function retryOutbox(
   }
 }
 
-export function dispatchTurnNotificationOutbox(
-  matchId: string,
-  turn: number,
+const MAX_SUBSCRIPTIONS_PER_BATCH = 200;
+
+function dispatchNotificationOutbox(
+  id: string,
   ctx: nkruntime.Context,
   nk: nkruntime.Nakama,
   logger: nkruntime.Logger
 ): void {
-  const id = getOutboxId(matchId, turn);
   const stored = nk.storageRead([
     {
       collection: PUSH_NOTIFICATION_OUTBOX_COLLECTION,
@@ -301,7 +357,7 @@ export function dispatchTurnNotificationOutbox(
         userId: target.userId,
         deviceId: target.deviceId,
         subscription: subscription.subscription,
-        locale: subscription.locale
+        locale: target.locale ?? subscription.locale
       });
     }
   }
@@ -313,6 +369,16 @@ export function dispatchTurnNotificationOutbox(
         { ...outbox, status: "delivered", deliveredAtMs: Date.now() },
         stored.version
       );
+      logger.info(
+        "push_notification_delivered %s",
+        JSON.stringify({
+          event: "push_notification_delivered",
+          notification_event: outbox.event,
+          match_id: outbox.matchId,
+          target_count: 0,
+          attempt: outbox.attempts + 1
+        })
+      );
     } catch (error) {
       logger.warn(
         "push outbox completion write failed for %s: %s",
@@ -323,56 +389,113 @@ export function dispatchTurnNotificationOutbox(
     return;
   }
 
-  try {
-    const response = nk.httpRequest(
-      dispatcherUrl,
-      "post",
-      {
-        Authorization: `Bearer ${dispatchSecret}`,
-        "Content-Type": "application/json"
-      },
-      JSON.stringify({
-        idempotencyKey: id,
-        matchId,
-        turn,
-        subscriptions
-      }),
-      1500
-    );
-    let result: PushDispatchResponse | null = null;
+  const batches: Array<typeof subscriptions> = [];
+  for (let i = 0; i < subscriptions.length; i += MAX_SUBSCRIPTIONS_PER_BATCH) {
+    batches.push(subscriptions.slice(i, i + MAX_SUBSCRIPTIONS_PER_BATCH));
+  }
+
+  let allSucceeded = true;
+  for (let batchIndex = 0; batchIndex < batches.length; batchIndex += 1) {
+    const batch = batches[batchIndex];
     try {
-      const parsed: unknown = JSON.parse(response.body);
-      result = isRecord(parsed) ? (parsed as PushDispatchResponse) : null;
-    } catch {
-      result = null;
-    }
-
-    const expiredIds = Array.isArray(result?.expiredDeviceIds)
-      ? result.expiredDeviceIds.filter(
-          (deviceId): deviceId is string => typeof deviceId === "string"
-        )
-      : [];
-    for (const target of outbox.targets) {
-      if (expiredIds.includes(target.deviceId)) {
-        removeExpiredSubscription(nk, target);
+      const response = nk.httpRequest(
+        dispatcherUrl,
+        "post",
+        {
+          Authorization: `Bearer ${dispatchSecret}`,
+          "Content-Type": "application/json"
+        },
+        JSON.stringify({
+          idempotencyKey: `${id}:batch:${batchIndex}`,
+          event: outbox.event,
+          matchId: outbox.matchId,
+          ...(outbox.event === "turn_advanced" ? { turn: outbox.turn } : {}),
+          subscriptions: batch
+        }),
+        1500
+      );
+      let result: PushDispatchResponse | null = null;
+      try {
+        const parsed: unknown = JSON.parse(response.body);
+        result = isRecord(parsed) ? (parsed as PushDispatchResponse) : null;
+      } catch {
+        result = null;
       }
-    }
 
-    if (response.code >= 200 && response.code < 300 && result?.ok === true) {
+      const expiredIds = Array.isArray(result?.expiredDeviceIds)
+        ? result.expiredDeviceIds.filter(
+            (deviceId): deviceId is string => typeof deviceId === "string"
+          )
+        : [];
+      for (const target of outbox.targets) {
+        if (expiredIds.includes(target.deviceId)) {
+          removeExpiredSubscription(nk, target);
+        }
+      }
+
+      if (!(response.code >= 200 && response.code < 300 && result?.ok === true)) {
+        allSucceeded = false;
+      }
+    } catch (error) {
+      allSucceeded = false;
+      logger.warn(
+        "push dispatch failed for %s batch %d: %s",
+        id,
+        batchIndex,
+        (error as Error).message || String(error)
+      );
+    }
+  }
+
+  if (allSucceeded) {
+    try {
       persistOutbox(
         nk,
         { ...outbox, status: "delivered", deliveredAtMs: Date.now() },
         stored.version
       );
+      logger.info(
+        "push_notification_delivered %s",
+        JSON.stringify({
+          event: "push_notification_delivered",
+          notification_event: outbox.event,
+          match_id: outbox.matchId,
+          target_count: subscriptions.length,
+          attempt: outbox.attempts + 1
+        })
+      );
       return;
+    } catch (error) {
+      logger.warn(
+        "push outbox completion write failed for %s: %s",
+        id,
+        (error as Error).message || String(error)
+      );
     }
-    retryOutbox(nk, logger, outbox, stored.version);
-  } catch (error) {
-    logger.warn(
-      "push dispatch failed for %s: %s",
-      id,
-      (error as Error).message || String(error)
-    );
-    retryOutbox(nk, logger, outbox, stored.version);
   }
+  retryOutbox(nk, logger, outbox, stored.version);
+}
+
+export function dispatchTurnNotificationOutbox(
+  matchId: string,
+  turn: number,
+  ctx: nkruntime.Context,
+  nk: nkruntime.Nakama,
+  logger: nkruntime.Logger
+): void {
+  dispatchNotificationOutbox(getTurnOutboxId(matchId, turn), ctx, nk, logger);
+}
+
+export function dispatchRankedMatchStartedOutbox(
+  matchId: string,
+  ctx: nkruntime.Context,
+  nk: nkruntime.Nakama,
+  logger: nkruntime.Logger
+): void {
+  dispatchNotificationOutbox(
+    getRankedMatchStartedOutboxId(matchId),
+    ctx,
+    nk,
+    logger
+  );
 }

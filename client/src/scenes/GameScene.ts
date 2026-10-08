@@ -215,6 +215,10 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.lastForegroundSyncAt = now;
+    void this.turnService?.touchRankedPresence();
+    void this.turnService?.refreshRankedQueueAndMatches().catch((error: unknown) => {
+      console.warn("Failed to refresh ranked match status:", error);
+    });
     void this.refreshStateAfterForeground();
   };
   private readonly turnAdvancedHandler = (
@@ -569,6 +573,10 @@ export class GameScene extends Phaser.Scene {
     this.cellContentsPanel = new CellContentsPanel(this);
     this.hoverTooltip = new HoverTooltip(this);
     this.turnService = this.registry.get("turnService") as TurnService | null;
+    void this.turnService?.touchRankedPresence();
+    void this.turnService?.refreshRankedQueueAndMatches().catch((error: unknown) => {
+      console.warn("Failed to refresh ranked match status:", error);
+    });
     this.currentUserId = this.registry.get("currentUserId") as string | null;
     if (this.turnService) {
       this.turnService.setOnTurnAdvanced(this.turnAdvancedHandler);

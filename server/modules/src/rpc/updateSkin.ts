@@ -1,5 +1,7 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
+import { updateAccountMetadata } from "../services/accountMetadata";
+
 type UnknownRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): UnknownRecord | undefined {
@@ -93,13 +95,26 @@ export function updateSkinRpc(
     } satisfies import("@shared").UpdateSkinPayload);
   }
 
-  let user: nkruntime.User | undefined;
+  let status: ReturnType<typeof updateAccountMetadata>;
   try {
-    const users = nk.usersGetId([callerUserId]);
-    user = users && users.length > 0 ? users[0] : undefined;
+    status = updateAccountMetadata(nk, callerUserId, (metadata) => {
+      const existingZarka = asRecord(metadata.zarka);
+      const existingCosmetics = asRecord(existingZarka?.cosmetics);
+      return {
+        ...metadata,
+        zarka: {
+          ...(existingZarka ?? {}),
+          cosmetics: {
+            ...(existingCosmetics ?? {}),
+            selectedSkinId: skin,
+          },
+        },
+      };
+    });
   } catch (error) {
     logger.error(
-      "update_skin usersGetId failed: %s",
+      "update_skin account metadata update failed for user %s: %s",
+      callerUserId,
       (error && (error as Error).message) || String(error),
     );
     return JSON.stringify({
@@ -107,46 +122,13 @@ export function updateSkinRpc(
     } satisfies import("@shared").UpdateSkinPayload);
   }
 
-  if (!user) {
+  if (status === "not_found") {
     return JSON.stringify({
       error: "not_found",
     } satisfies import("@shared").UpdateSkinPayload);
   }
-
-  try {
-    const existingMetadata = asRecord(
-      (user as unknown as { metadata?: unknown }).metadata,
-    );
-    const existingZarka = asRecord(existingMetadata?.zarka);
-    const existingCosmetics = asRecord(existingZarka?.cosmetics);
-
-    const nextMetadata = {
-      ...(existingMetadata ?? {}),
-      zarka: {
-        ...(existingZarka ?? {}),
-        cosmetics: {
-          ...(existingCosmetics ?? {}),
-          selectedSkinId: skin,
-        },
-      },
-    };
-
-    nk.accountUpdateId(
-      callerUserId,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      nextMetadata,
-    );
-  } catch (error) {
-    logger.error(
-      "update_skin accountUpdateId failed for user %s: %s",
-      callerUserId,
-      (error && (error as Error).message) || String(error),
-    );
+  if (status === "busy") {
+    logger.warn("update_skin account update busy for user %s", callerUserId);
     return JSON.stringify({
       error: "internal_error",
     } satisfies import("@shared").UpdateSkinPayload);

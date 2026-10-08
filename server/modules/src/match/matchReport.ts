@@ -7,9 +7,10 @@ import type {
   MatchReportTeam,
   PlayerCharacter,
   ReplayEvent,
+  RankedTeamPlacement,
   Skin,
 } from "@shared";
-import { DEFAULT_SKIN } from "@shared";
+import { DEFAULT_SKIN, RANKED_MATCH_METADATA_KEY } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { StorageService } from "../services/storageService";
 import { isCharacterDead } from "../utils/playerCharacter";
@@ -361,17 +362,40 @@ export function buildMatchReport(
   for (const teamId of Object.keys(teamLookup)) {
     teams.push(teamLookup[teamId]);
   }
-  teams.sort((a, b) => {
-    if (a.won !== b.won) {
-      return a.won ? -1 : 1;
+  const rankedMetadata = match.metadata?.[RANKED_MATCH_METADATA_KEY];
+  const rankedPlacements = new Map<string, RankedTeamPlacement>(
+    (rankedMetadata?.placements ?? []).map((placement) => [
+      placement.teamId,
+      placement
+    ])
+  );
+  if (rankedMetadata) {
+    teams.sort((a, b) => {
+      const rankA = rankedPlacements.get(a.team_id)?.place ?? 1;
+      const rankB = rankedPlacements.get(b.team_id)?.place ?? 1;
+      return rankA - rankB || a.team_id.localeCompare(b.team_id);
+    });
+    for (const team of teams) {
+      const placement = rankedPlacements.get(team.team_id);
+      team.rank = placement?.place ?? 1;
+      team.placement = team.rank;
+      if (typeof placement?.eliminationTurn === "number") {
+        team.elimination_turn = placement.eliminationTurn;
+      }
     }
-    if (b.kills !== a.kills) {
-      return b.kills - a.kills;
+  } else {
+    teams.sort((a, b) => {
+      if (a.won !== b.won) {
+        return a.won ? -1 : 1;
+      }
+      if (b.kills !== a.kills) {
+        return b.kills - a.kills;
+      }
+      return b.total_damage_dealt - a.total_damage_dealt;
+    });
+    for (let index = 0; index < teams.length; index += 1) {
+      teams[index].rank = index + 1;
     }
-    return b.total_damage_dealt - a.total_damage_dealt;
-  });
-  for (let index = 0; index < teams.length; index += 1) {
-    teams[index].rank = index + 1;
   }
 
   const achievements: MatchReport["achievements"] = [];

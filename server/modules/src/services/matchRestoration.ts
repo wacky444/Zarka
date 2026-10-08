@@ -1,12 +1,18 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
 import { MatchRecord } from "../models/types";
+import {
+  DEFAULT_NORMAL_MATCH_SIZE,
+  MAX_NORMAL_MATCH_SIZE,
+  RANKED_MATCH_METADATA_KEY
+} from "@shared";
 import { createNakamaWrapper, NakamaWrapper } from "./nakamaWrapper";
 import { StorageService } from "./storageService";
 
 type StoredMatch = {
   match: MatchRecord;
   version: string;
+  permissionRead: number;
 };
 
 type ActiveRuntimeMatch = {
@@ -86,8 +92,35 @@ export function restoreMatchesFromStorage(
     for (const stored of allStoredMatches) {
       const match = stored.match;
 
-      if (typeof match.started !== "boolean") {
+      const startedChanged = typeof match.started !== "boolean";
+      if (startedChanged) {
         match.started = false;
+      }
+      const isRanked = Boolean(match.metadata?.[RANKED_MATCH_METADATA_KEY]);
+      const maxSize = isRanked ? 16 : MAX_NORMAL_MATCH_SIZE;
+      const storedSize = Number.isFinite(match.size)
+        ? match.size
+        : DEFAULT_NORMAL_MATCH_SIZE;
+      const normalizedSize = Math.max(2, Math.min(maxSize, storedSize));
+      const sizeChanged = normalizedSize !== match.size;
+      match.size = normalizedSize;
+
+      try {
+        if (stored.permissionRead !== 0 || startedChanged || sizeChanged) {
+          storage.writeMatch(match, stored.version);
+          const privateMatch = storage.getMatch(match.match_id);
+          if (!privateMatch || privateMatch.permissionRead !== 0) {
+            throw new Error(`Failed to secure stored match ${match.match_id}`);
+          }
+          stored.version = privateMatch.version;
+          stored.permissionRead = privateMatch.permissionRead;
+        }
+      } catch (error) {
+        logger.error(
+          "Failed to secure stored match %s: %s",
+          match.match_id,
+          (error as Error).message || String(error)
+        );
       }
 
       if (match.removed && match.removed !== 0) {
@@ -181,6 +214,7 @@ export function restoreMatchesFromStorage(
           lastAutoAdvanceAt: String(match.lastAutoAdvanceAt || 0),
           game_id: gameId,
           restore: "true",
+          ranked: String(Boolean(match.metadata?.[RANKED_MATCH_METADATA_KEY])),
           players: JSON.stringify(match.players),
         };
 

@@ -10,6 +10,7 @@ import {
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
   generateGameMap,
+  RANKED_MATCH_METADATA_KEY,
   TUTORIAL_MATCH_METADATA_KEY
 } from "@shared";
 import {
@@ -56,6 +57,15 @@ export function joinMatchRpc(
   }
 
   const match: MatchRecord = read.match;
+  if (
+    match.metadata?.[RANKED_MATCH_METADATA_KEY] &&
+    (!Array.isArray(match.players) || match.players.indexOf(ctx.userId) === -1)
+  ) {
+    throw makeNakamaError(
+      "ranked_roster_locked",
+      nkruntime.Codes.PERMISSION_DENIED
+    );
+  }
   if (match.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
     if (!Array.isArray(match.players) || match.players.indexOf(ctx.userId) === -1) {
       throw makeNakamaError(

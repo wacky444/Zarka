@@ -4,19 +4,18 @@ import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { MatchRecord } from "../models/types";
-import { assignSpawnPositions } from "../utils/playerCharacter";
-import { distributeTeams } from "../match/teams";
 import {
   CellLibrary,
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
   generateGameMap,
-  ReplayEvent
+  RANKED_MATCH_METADATA_KEY
 } from "@shared";
 import { tailorMapForCharacter } from "../utils/matchView";
 import { createReplaySnapshot } from "../match/replay/snapshot";
 import { getRuntimeMatchId } from "../utils/matchIds";
-import { getInitialAutoAdvanceAt } from "../utils/autoSkip";
+import { startMatchRecord } from "../match/startMatchRecord";
+import { hasEnoughSpawnTiles } from "../utils/playerCharacter";
 
 export function startMatchRpc(
   ctx: nkruntime.Context,
@@ -56,6 +55,12 @@ export function startMatchRpc(
   }
 
   const match: MatchRecord = read.match;
+  if (match.metadata?.[RANKED_MATCH_METADATA_KEY]) {
+    throw makeNakamaError(
+      "ranked_start_server_only",
+      nkruntime.Codes.PERMISSION_DENIED
+    );
+  }
   if (match.removed && match.removed !== 0) {
     throw makeNakamaError("match_ended", nkruntime.Codes.FAILED_PRECONDITION);
   }
@@ -118,47 +123,15 @@ export function startMatchRpc(
     return JSON.stringify(already);
   }
 
-  assignSpawnPositions(match, logger);
-  distributeTeams(match, logger);
+  if (!hasEnoughSpawnTiles(match)) {
+    throw makeNakamaError(
+      "insufficient_spawn_tiles",
+      nkruntime.Codes.FAILED_PRECONDITION
+    );
+  }
 
   const startedAtMs = Date.now();
-  match.started = true;
-  match.started_at = Math.floor(startedAtMs / 1000);
-  if (match.autoSkip !== false) {
-    const initialAutoAdvanceAt = getInitialAutoAdvanceAt(
-      match.roundTime,
-      startedAtMs,
-    );
-    if (initialAutoAdvanceAt !== undefined) {
-      match.lastAutoAdvanceAt = initialAutoAdvanceAt;
-    }
-  }
-
-  const turn0Events: ReplayEvent[] = [];
-  for (const playerId in match.playerCharacters) {
-    if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, playerId)) {
-      continue;
-    }
-    const character = match.playerCharacters[playerId];
-    const effectiveTeam = character?.secretTeamId || character?.teamId;
-    if (character && effectiveTeam) {
-      turn0Events.push({
-        kind: "player",
-        actorId: character.id,
-        action: {
-          actionId: "team_assigned",
-          metadata: {
-            teamId: effectiveTeam,
-            coverTeamId: character.secretTeamId ? character.teamId : undefined
-          }
-        },
-        visibility: {
-          scope: "limited",
-          playerIds: [character.id]
-        }
-      });
-    }
-  }
+  const turn0Events = startMatchRecord(match, logger, startedAtMs);
 
   try {
     storage.appendReplayTurn({

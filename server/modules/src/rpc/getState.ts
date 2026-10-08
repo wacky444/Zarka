@@ -3,7 +3,10 @@
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { MatchRecord } from "../models/types";
-import { syncBandolierLoadCapacity } from "@shared";
+import {
+  RANKED_MATCH_METADATA_KEY,
+  syncBandolierLoadCapacity
+} from "@shared";
 import { tailorMatchForPlayer } from "../utils/matchView";
 import { isAdminUser } from "../utils/admin";
 
@@ -38,6 +41,15 @@ export function getStateRpc(
   }
 
   const match: MatchRecord = read.match;
+  const viewerId = ctx?.userId ?? null;
+  const viewAll = json.view_all === true && isAdminUser(nk, viewerId);
+  if (
+    match.metadata?.[RANKED_MATCH_METADATA_KEY] &&
+    (!viewerId ||
+      (match.players.indexOf(viewerId) === -1 && !viewAll))
+  ) {
+    return JSON.stringify({ error: "forbidden" });
+  }
   logger.debug(
     "get_state match=%s user=%s turn=%d traps=%d",
     matchId,
@@ -53,8 +65,6 @@ export function getStateRpc(
   const start = Math.max(1, (match.current_turn || 0) - limit + 1);
   const turns = storage.readTurns(matchId, start, match.current_turn || 0);
 
-  const viewerId = ctx?.userId ?? null;
-  const viewAll = json.view_all === true && isAdminUser(nk, viewerId);
   const tailoredMatch = tailorMatchForPlayer(match, viewerId, viewAll);
   const visibleCharacters = tailoredMatch.playerCharacters;
   const trackerViews = visibleCharacters?.[viewerId ?? ""]?.trackerViews ?? [];

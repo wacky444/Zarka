@@ -60,7 +60,3 @@ export interface TutorialMatchMetadata {
   type: "guided_tutorial";
   version: 1;
 }
-
-export interface MatchMetadata {
-  [TUTORIAL_MATCH_METADATA_KEY]?: TutorialMatchMetadata;
-}

@@ -1,6 +1,9 @@
 /// <reference path="../../../node_modules/nakama-runtime/index.d.ts" />
 
-import { TUTORIAL_MATCH_METADATA_KEY } from "@shared";
+import {
+  RANKED_MATCH_METADATA_KEY,
+  TUTORIAL_MATCH_METADATA_KEY
+} from "@shared";
 import type { AsyncTurnState } from "../../models/types";
 import { createStorageService } from "../../services/storageService";
 import { hasTutorialCompleted } from "../../utils/tutorialProfile";
@@ -8,7 +11,18 @@ import { hasTutorialCompleted } from "../../utils/tutorialProfile";
 export const asyncTurnMatchJoinAttempt: nkruntime.MatchJoinAttemptFunction<AsyncTurnState> =
   function (ctx, logger, nk, dispatcher, tick, state, presence) {
     const match = createStorageService(nk).getMatch(state.game_id)?.match;
-    if (match?.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
+    if (match?.metadata?.[RANKED_MATCH_METADATA_KEY]) {
+      if (
+        !Array.isArray(match.players) ||
+        match.players.indexOf(presence.userId) === -1
+      ) {
+        return {
+          state,
+          accept: false,
+          rejectMessage: "ranked_roster_locked"
+        };
+      }
+    } else if (match?.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
       if (
         !Array.isArray(match.players) ||
         match.players.indexOf(presence.userId) === -1

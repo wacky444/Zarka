@@ -5,7 +5,10 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { MatchRecord } from "../models/types";
 import { getRuntimeMatchId } from "../utils/matchIds";
-import { TUTORIAL_MATCH_METADATA_KEY } from "@shared";
+import {
+  RANKED_MATCH_METADATA_KEY,
+  TUTORIAL_MATCH_METADATA_KEY
+} from "@shared";
 
 export function leaveMatchRpc(
   ctx: nkruntime.Context,
@@ -45,6 +48,12 @@ export function leaveMatchRpc(
   }
 
   const match: MatchRecord = read.match;
+  if (match.metadata?.[RANKED_MATCH_METADATA_KEY]) {
+    throw makeNakamaError(
+      "ranked_roster_locked",
+      nkruntime.Codes.PERMISSION_DENIED
+    );
+  }
   const idx = match.players.indexOf(ctx.userId);
   const wasInMatch = idx !== -1;
 
