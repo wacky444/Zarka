@@ -35,12 +35,6 @@
 
 - achievements, kill throwing food
 
-"npm:pi-mcp-adapter",
-"npm:pi-web-access",
-"npm:@juicesharp/rpiv-ask-user-question",
- "npm:@mjasnikovs/pi-task",
-"npm:pi-powerline-footer",
-"npm:@xynogen/pix-optimizer",
 "git:github.com/jonjonrankin/pi-caveman"
 
 -t warning when pick up will leave with overweight, weight number in warning/error color
@@ -60,3 +54,46 @@
 - registered items didnt stay in players view
 
 - search reveals placed c4, but can't be picked up
+
+- review that the matchmaking is using nakama features
+
+- social
+	- inspect others profiles
+	- friends
+	
+- matchmaking
+	-t pause auto matchmaking if the player hasn't logged in 24h, even it the account has a free slot, don't queue players with more than 24 offline time
+	
+-t enough spawn locations for 100 players? test to create a small map for 20 bots
+
+
+ 6. Large matches exceed dispatcher batch limit (server/modules/src/services/turnPushNotifications.ts:L125-148;
+    server/push-dispatcher/server.mjs:L6-8,L73-75; server/modules/src/services/pushSubscriptions.ts:L14)
+     - What this is: Dispatcher rejects jobs with over 200 subscriptions; each user can register 8 devices.
+     - Problem: 26 players with 8 devices each produce 208 targets. Dispatcher rejects entire job, so retries keep failing.
+     - Fix: Split sends into batches of at most 200, with distinct idempotency keys.
+     - If we skip it: Turn notifications fail for valid large matches.
+	 
+	 
+7. Queue status and coordinator scan global records repeatedly
+    (server/modules/src/services/rankedQueue.ts:L515-525,L813-845,L867-874)
+     - What this is: Queue status scans every assignment; each 10-second coordinator run scans all assignments and enrollments.
+     - Problem: Every foreground status request reads all assignment records, including unrelated users. Zero-slot enrollments
+       remain stored and keep getting reconciled.
+     - Fix: Use per-user assignment lookup and process queue records in bounded batches; remove inactive enrollments.
+     - If we skip it: Storage reads and processing grow with all past opt-ins and active matches.
+	 
+ 8. Ranked settings remain English in Spanish UI (client/src/scenes/SettingsScene.ts:L335-395,L977-995)
+     - What this is: New labels and save states are plain strings, despite translations in client/src/services/i18n.ts:L51-58.
+     - Problem: Spanish users see title, help text, and save status in English.
+     - Fix: Pass these strings through t().
+     - If we skip it: Ranked settings are partly untranslated.
+	 
+	 
+ 9. Logs include user IDs and private stats (server/modules/src/match/checkEndGame.ts:L337-340;
+    server/modules/src/rpc/setRankedMatchSlots.ts:L85)
+     - What this is: Match finalization logs per-user stats; slot RPC logs user IDs.
+     - Problem: Nakama logs link private performance data and matchmaking preference activity to stable account IDs. Rollout docs
+       say avoid this.
+     - Fix: Log aggregate counts and outcomes without user IDs or per-user stats.
+     - If we skip it: Anyone with log access can inspect private account data.
