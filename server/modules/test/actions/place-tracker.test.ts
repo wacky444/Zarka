@@ -92,7 +92,7 @@ function addWalkieTalkie(character: PlayerCharacter): void {
   });
 }
 
-test("placing a tracker consumes it and reports known target position for six turns", () => {
+test("placing a tracker consumes it and reports known target position for ten turns", () => {
   const actor = createCharacter("actor", 0, 1);
   const target = createCharacter("target", 0);
   const match = createMatch([actor, target], 0);
@@ -104,7 +104,7 @@ test("placing a tracker consumes it and reports known target position for six tu
   assert.equal(match.trackers?.length, 1);
   assert.equal(match.trackers?.[0]?.targetIdKnownToOwner, true);
   assert.equal(match.trackers?.[0]?.placedTurn, 1);
-  assert.equal(match.trackers?.[0]?.expiresTurn, 6);
+  assert.equal(match.trackers?.[0]?.expiresTurn, 10);
   assert.equal(events.length, 1);
   assert.deepEqual(events[0]?.visibility, {
     scope: "limited",
@@ -119,7 +119,7 @@ test("placing a tracker consumes it and reports known target position for six tu
   assert.deepEqual(actor.trackerViews?.[0], {
     trackerId: match.trackers?.[0]?.id,
     coord: { q: 0, r: 0 },
-    expiresTurn: 6,
+    expiresTurn: 10,
     targetPlayerId: target.id,
   });
 
@@ -354,9 +354,9 @@ test("expired trackers stop signaling but remain discoverable until inspected", 
   planTracker(actor, [target.id]);
   resolveTrackerAction(match, 1);
 
-  refreshTrackerViews(match, 6);
+  refreshTrackerViews(match, 10);
   assert.ok(actor.trackerViews?.length);
-  refreshTrackerViews(match, 7);
+  refreshTrackerViews(match, 11);
 
   assert.equal(actor.trackerViews, undefined);
   assert.equal(match.trackers?.length, 1);
@@ -401,7 +401,7 @@ test("self-inspection finds one planted tracker without stopping its signal", ()
 
   refreshTrackerViews(match, 2);
   assert.equal(actor.trackerViews?.[0]?.targetPlayerId, target.id);
-  refreshTrackerViews(match, 7);
+  refreshTrackerViews(match, 11);
   assert.equal(actor.trackerViews, undefined);
   assert.equal(match.trackers, undefined);
 });

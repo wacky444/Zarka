@@ -20,7 +20,7 @@ import {
 } from "./utils";
 import { BaseAction } from "./classes/BaseAction";
 
-const TRACKER_DURATION_TURNS = 6;
+const TRACKER_DURATION_TURNS = 10;
 
 type TrackerTarget = {
   targetId: string;
