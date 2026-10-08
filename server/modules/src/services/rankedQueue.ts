@@ -16,11 +16,15 @@ import {
 import {
   getRankedBotFillCount,
   getRankedEloSearchRange,
-  getRankedQueuePolicy
+  getRankedQueuePolicy,
+  RANKED_MATCH_TOTAL_SEATS
 } from "../matchmaking/policy";
 import { isRankedMatchmakingEnabled } from "../matchmaking/featureFlags";
 import { createRankedMatch } from "./rankedMatchFactory";
-import { countRankedDailyPresence } from "./rankedPresence";
+import {
+  countRankedDailyPresence,
+  hasRecentRankedPresence
+} from "./rankedPresence";
 import { createNakamaWrapper } from "./nakamaWrapper";
 import { StorageService } from "./storageService";
 
@@ -156,7 +160,8 @@ function deleteObject(
 
 function readAccountEligibility(
   nk: nkruntime.Nakama,
-  userId: string
+  userId: string,
+  nowMs = Date.now()
 ): AccountEligibility {
   const users = nk.usersGetId([userId]);
   const user = users && users.length > 0 ? users[0] : undefined;
@@ -172,7 +177,10 @@ function readAccountEligibility(
       : 0;
   const elo = stats?.elo;
   return {
-    eligible: !!user && zarka?.tutorialCompleted === true,
+    eligible:
+      !!user &&
+      zarka?.tutorialCompleted === true &&
+      (user.online || hasRecentRankedPresence(nk, userId, nowMs)),
     desiredSlots,
     elo:
       typeof elo === "number" && Number.isInteger(elo) && elo >= 0
@@ -422,7 +430,7 @@ function tryCreateReservedAssignment(
   }
 
   for (const userId of currentAssignment.value.humanIds) {
-    const account = readAccountEligibility(nk, userId);
+    const account = readAccountEligibility(nk, userId, nowMs);
     const occupiedTickets = ticketsForUser(nk, userId).filter(
       (ticket) =>
         ticket.value.status === "reserved" || ticket.value.status === "assigned"
@@ -596,7 +604,7 @@ function synchronizeEnrollmentTickets(
 ): void {
   for (const storedEnrollment of enrollments) {
     const userId = storedEnrollment.value.userId;
-    const account = readAccountEligibility(nk, userId);
+    const account = readAccountEligibility(nk, userId, nowMs);
     const desiredSlots = account.eligible ? account.desiredSlots : 0;
     let currentTickets = ticketsForUser(nk, userId);
     let cancelledTickets = 0;
@@ -795,13 +803,19 @@ function createAssignments(
     if (selectedByUser.size < policy.requiredHumans) return;
 
     const selected = Array.from(selectedByUser.values());
+    const queueMode =
+      selected.length === RANKED_MATCH_TOTAL_SEATS
+        ? "high_population"
+        : policy.mode;
     const botCount =
-      getRankedBotFillCount(dailyUsers, selected.length, waitSeconds) ?? 0;
+      queueMode === "low_population"
+        ? getRankedBotFillCount(dailyUsers, selected.length, waitSeconds) ?? 0
+        : 0;
     const assignment = reserveAssignment(
       nk,
       logger,
       nowMs,
-      policy.mode,
+      queueMode,
       selected,
       botCount
     );
@@ -814,7 +828,7 @@ export function getRankedQueueStatus(
   nk: nkruntime.Nakama,
   userId: string
 ): GetRankedQueueStatusPayload {
-  const account = readAccountEligibility(nk, userId);
+  const account = readAccountEligibility(nk, userId, Date.now());
   const tickets = ticketsForUser(nk, userId);
   const storage = new StorageService(createNakamaWrapper(nk));
   const assignedMatches: RankedQueueAssignmentStatus[] = [];

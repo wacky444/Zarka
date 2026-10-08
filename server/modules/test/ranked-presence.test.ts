@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { SERVER_USER_ID, RANKED_DAILY_PRESENCE_COLLECTION } from "../src/constants";
 import {
   countRankedDailyPresence,
+  hasRecentRankedPresence,
   RANKED_DAILY_PRESENCE_WINDOW_MS,
   touchRankedPresence
 } from "../src/services/rankedPresence";
@@ -20,6 +21,11 @@ function createHarness() {
   const users = new Map<string, { id: string; metadata: unknown }>();
   const writes: StoredPresence[] = [];
   const nakama = {
+    storageRead: (requests: Array<{ key: string }>) =>
+      requests.flatMap((request) => {
+        const stored = records.get(request.key);
+        return stored ? [{ key: stored.key, value: stored.value }] : [];
+      }),
     storageWrite: (requests: Array<{
       collection: string;
       key: string;
@@ -95,6 +101,22 @@ test("ranked presence deduplicates repeated heartbeats by user", () => {
   });
   assert.equal(harness.writes[1].permissionRead, 0);
   assert.equal(harness.writes[1].permissionWrite, 0);
+});
+
+test("recent ranked presence expires after 24 hours", () => {
+  const harness = createHarness();
+  const now = 1_700_000_000_000;
+  const cutoff = now - RANKED_DAILY_PRESENCE_WINDOW_MS;
+  touchRankedPresence(harness.nakama, "active-user", now);
+  touchRankedPresence(harness.nakama, "boundary-user", cutoff);
+  touchRankedPresence(harness.nakama, "stale-user", cutoff - 1);
+  touchRankedPresence(harness.nakama, "future-user", now + 1);
+
+  assert.equal(hasRecentRankedPresence(harness.nakama, "active-user", now), true);
+  assert.equal(hasRecentRankedPresence(harness.nakama, "boundary-user", now), true);
+  assert.equal(hasRecentRankedPresence(harness.nakama, "stale-user", now), false);
+  assert.equal(hasRecentRankedPresence(harness.nakama, "future-user", now), false);
+  assert.equal(hasRecentRankedPresence(harness.nakama, "missing-user", now), false);
 });
 
 test("ranked presence expires stale and future records at window boundaries", () => {

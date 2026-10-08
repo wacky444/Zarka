@@ -12,7 +12,10 @@ import {
 } from "../src/services/rankedQueue";
 import { getRankedQueueStatusRpc } from "../src/rpc/getRankedQueueStatus";
 import { listMyMatchesRpc } from "../src/rpc/listMyMatches";
-import { touchRankedPresence } from "../src/services/rankedPresence";
+import {
+  RANKED_DAILY_PRESENCE_WINDOW_MS,
+  touchRankedPresence
+} from "../src/services/rankedPresence";
 import { MATCH_COLLECTION } from "../src/constants";
 
 type Stored = {
@@ -23,7 +26,7 @@ type Stored = {
   version: string;
 };
 
-type FakeUser = { id: string; username: string; metadata: unknown };
+type FakeUser = { id: string; username: string; metadata: unknown; online?: boolean };
 
 function enabledMatchmakingContext(): nkruntime.Context {
   return { env: { RANKED_MATCHMAKING_ENABLED: "true" } } as nkruntime.Context;
@@ -224,6 +227,53 @@ test("low population assigns offline users and fills roster with bots", () => {
   assert.equal(harness.matches.length, 1);
 });
 
+test("users offline over 24 hours are removed from queue until they return", () => {
+  const now = 1_700_000_025_000;
+  const users = makeUsers(2, "offline");
+  const harness = createHarness(users);
+  harness.addDailyUsers(2, now);
+  for (const userId of users) harness.setSlots(userId, 1, now);
+  touchRankedPresence(
+    harness.nakama,
+    users[1],
+    now - RANKED_DAILY_PRESENCE_WINDOW_MS - 1
+  );
+
+  processRankedQueue(harness.nakama, harness.logger, now);
+
+  assert.equal(harness.matches.length, 0);
+  const queued = harness.collection(RANKED_QUEUE_TICKET_COLLECTION);
+  assert.equal(queued.length, 1);
+  assert.equal((queued[0].value as { userId: string }).userId, users[0]);
+
+  touchRankedPresence(harness.nakama, users[1], now + 1);
+  processRankedQueue(harness.nakama, harness.logger, now + 2);
+
+  assert.equal(harness.matches.length, 1);
+  const assignment = harness.collection(RANKED_ASSIGNMENT_COLLECTION)[0]
+    .value as { humanIds: string[] };
+  assert.deepEqual(new Set(assignment.humanIds), new Set(users));
+});
+
+test("currently online users remain eligible after a long session", () => {
+  const now = 1_700_000_030_000;
+  const users = makeUsers(2, "online");
+  const harness = createHarness(users);
+  harness.addDailyUsers(2, now);
+  for (const userId of users) harness.setSlots(userId, 1, now);
+  touchRankedPresence(
+    harness.nakama,
+    users[1],
+    now - RANKED_DAILY_PRESENCE_WINDOW_MS - 1
+  );
+  harness.users.get(users[1])!.online = true;
+
+  processRankedQueue(harness.nakama, harness.logger, now);
+
+  assert.equal(harness.matches.length, 0);
+  assert.equal(harness.collection(RANKED_QUEUE_TICKET_COLLECTION).length, 2);
+});
+
 test("multi-slot users may enter separate matches but never repeat in one roster", () => {
   const now = 1_700_000_100_000;
   const users = makeUsers(5, "multi");
@@ -266,6 +316,31 @@ test("high population assignments use humans only", () => {
     (harness.collection(RANKED_ASSIGNMENT_COLLECTION)[0].value as { queueMode: string }).queueMode,
     "high_population"
   );
+});
+
+test("full human roster uses high-population mode below daily cutoff", () => {
+  const now = 1_700_000_250_000;
+  const users = makeUsers(16, "full-roster");
+  const harness = createHarness(users);
+  harness.addDailyUsers(15, now);
+  for (const userId of users) harness.setSlots(userId, 1, now);
+  touchRankedPresence(
+    harness.nakama,
+    users[15],
+    now - RANKED_DAILY_PRESENCE_WINDOW_MS - 1
+  );
+  harness.users.get(users[15])!.online = true;
+
+  processRankedQueue(harness.nakama, harness.logger, now);
+
+  assert.equal(harness.matches.length, 1);
+  assert.equal(harness.matches[0].botPlayers, "0");
+  const assignment = harness.collection(RANKED_ASSIGNMENT_COLLECTION)[0]
+    .value as { state: string; queueMode: string; humanIds: string[]; botCount: number };
+  assert.equal(assignment.state, "active");
+  assert.equal(assignment.queueMode, "high_population");
+  assert.equal(assignment.humanIds.length, 16);
+  assert.equal(assignment.botCount, 0);
 });
 
 test("lowering slots cancels newest pending tickets without starting a match", () => {

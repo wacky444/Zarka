@@ -37,6 +37,30 @@ export function touchRankedPresence(
   ]);
 }
 
+export function hasRecentRankedPresence(
+  nk: nkruntime.Nakama,
+  userId: string,
+  nowMs: number
+): boolean {
+  if (!isRankedPresenceUserId(userId) || !Number.isFinite(nowMs)) {
+    return false;
+  }
+  const stored = nk.storageRead([
+    {
+      collection: RANKED_DAILY_PRESENCE_COLLECTION,
+      key: userId,
+      userId: SERVER_USER_ID
+    }
+  ])[0]?.value as Partial<RankedPresenceRecord> | undefined;
+  return (
+    stored?.userId === userId &&
+    typeof stored.lastSeenAtMs === "number" &&
+    Number.isFinite(stored.lastSeenAtMs) &&
+    stored.lastSeenAtMs >= nowMs - RANKED_DAILY_PRESENCE_WINDOW_MS &&
+    stored.lastSeenAtMs <= nowMs
+  );
+}
+
 export function countRankedDailyPresence(
   nk: nkruntime.Nakama,
   nowMs: number
