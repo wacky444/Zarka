@@ -1,6 +1,7 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
 import {
+  RANKED_MATCH_METADATA_KEY,
   TUTORIAL_MATCH_METADATA_KEY,
   type ReplayEvent
 } from "@shared";
@@ -9,6 +10,7 @@ import { isCharacterDead } from "../utils/playerCharacter";
 import { createStorageService } from "../services/storageService";
 import { buildMatchReport } from "./matchReport";
 import { finalizeRankedTeamPlacements } from "./rankedPlacements";
+import { enqueueRankedMatchSettlement } from "./rankedElo";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -217,13 +219,20 @@ export function finalizeMatchIfEnded(
   }
 
   finalizeRankedTeamPlacements(match, resolvedTurn);
+  const nowMs = Date.now();
+  const isRanked = Boolean(match.metadata?.[RANKED_MATCH_METADATA_KEY]);
+  if (
+    isRanked &&
+    !enqueueRankedMatchSettlement(match, outcome, nk, logger, nowMs)
+  ) {
+    throw new Error(`ranked settlement could not be recorded for ${match.match_id}`);
+  }
 
   // Mark match removed immediately to prevent duplicate finalization.
   match.removed = 1;
   match.started = false;
 
   const participants = Array.isArray(match.players) ? match.players : [];
-  const nowMs = Date.now();
   const winnerId = outcome.winnerId;
   let users: nkruntime.User[] = [];
 
@@ -262,7 +271,7 @@ export function finalizeMatchIfEnded(
     );
   }
 
-  if (participants.length > 0) {
+  if (!isRanked && participants.length > 0) {
     const userMap: Record<string, nkruntime.User> = {};
     for (const user of users) {
       const userId =

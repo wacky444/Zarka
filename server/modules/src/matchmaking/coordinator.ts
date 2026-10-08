@@ -1,6 +1,7 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
 import { processRankedQueue } from "../services/rankedQueue";
+import { processPendingRankedSettlements } from "../match/rankedElo";
 
 export interface RankedQueueCoordinatorState extends nkruntime.MatchState {
   lastProcessAtMs: number;
@@ -33,6 +34,14 @@ export const rankedQueueCoordinatorMatchHandler: nkruntime.MatchHandler<RankedQu
     const nowMs = Date.now();
     if (nowMs - state.lastProcessAtMs >= PROCESS_INTERVAL_MS) {
       state.lastProcessAtMs = nowMs;
+      try {
+        processPendingRankedSettlements(nk, logger, nowMs);
+      } catch (error) {
+        logger.error(
+          "ranked settlement recovery failed: %s",
+          (error && (error as Error).message) || String(error)
+        );
+      }
       processRankedQueue(nk, logger, nowMs);
     }
     return { state };
