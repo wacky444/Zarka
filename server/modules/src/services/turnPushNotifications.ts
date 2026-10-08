@@ -296,6 +296,8 @@ function retryOutbox(
   }
 }
 
+const MAX_SUBSCRIPTIONS_PER_BATCH = 200;
+
 function dispatchNotificationOutbox(
   id: string,
   ctx: nkruntime.Context,
@@ -387,43 +389,66 @@ function dispatchNotificationOutbox(
     return;
   }
 
-  try {
-    const response = nk.httpRequest(
-      dispatcherUrl,
-      "post",
-      {
-        Authorization: `Bearer ${dispatchSecret}`,
-        "Content-Type": "application/json"
-      },
-      JSON.stringify({
-        idempotencyKey: id,
-        event: outbox.event,
-        matchId: outbox.matchId,
-        ...(outbox.event === "turn_advanced" ? { turn: outbox.turn } : {}),
-        subscriptions
-      }),
-      1500
-    );
-    let result: PushDispatchResponse | null = null;
+  const batches: Array<typeof subscriptions> = [];
+  for (let i = 0; i < subscriptions.length; i += MAX_SUBSCRIPTIONS_PER_BATCH) {
+    batches.push(subscriptions.slice(i, i + MAX_SUBSCRIPTIONS_PER_BATCH));
+  }
+
+  let allSucceeded = true;
+  for (let batchIndex = 0; batchIndex < batches.length; batchIndex += 1) {
+    const batch = batches[batchIndex];
     try {
-      const parsed: unknown = JSON.parse(response.body);
-      result = isRecord(parsed) ? (parsed as PushDispatchResponse) : null;
-    } catch {
-      result = null;
-    }
-
-    const expiredIds = Array.isArray(result?.expiredDeviceIds)
-      ? result.expiredDeviceIds.filter(
-          (deviceId): deviceId is string => typeof deviceId === "string"
-        )
-      : [];
-    for (const target of outbox.targets) {
-      if (expiredIds.includes(target.deviceId)) {
-        removeExpiredSubscription(nk, target);
+      const response = nk.httpRequest(
+        dispatcherUrl,
+        "post",
+        {
+          Authorization: `Bearer ${dispatchSecret}`,
+          "Content-Type": "application/json"
+        },
+        JSON.stringify({
+          idempotencyKey: `${id}:batch:${batchIndex}`,
+          event: outbox.event,
+          matchId: outbox.matchId,
+          ...(outbox.event === "turn_advanced" ? { turn: outbox.turn } : {}),
+          subscriptions: batch
+        }),
+        1500
+      );
+      let result: PushDispatchResponse | null = null;
+      try {
+        const parsed: unknown = JSON.parse(response.body);
+        result = isRecord(parsed) ? (parsed as PushDispatchResponse) : null;
+      } catch {
+        result = null;
       }
-    }
 
-    if (response.code >= 200 && response.code < 300 && result?.ok === true) {
+      const expiredIds = Array.isArray(result?.expiredDeviceIds)
+        ? result.expiredDeviceIds.filter(
+            (deviceId): deviceId is string => typeof deviceId === "string"
+          )
+        : [];
+      for (const target of outbox.targets) {
+        if (expiredIds.includes(target.deviceId)) {
+          removeExpiredSubscription(nk, target);
+        }
+      }
+
+      if (!(response.code >= 200 && response.code < 300 && result?.ok === true)) {
+        allSucceeded = false;
+      }
+    } catch (error) {
+      allSucceeded = false;
+      logger.warn(
+        "push dispatch failed for %s batch %d: %s",
+        id,
+        batchIndex,
+        (error as Error).message || String(error)
+      );
+    }
+  }
+
+  if (allSucceeded) {
+    try {
       persistOutbox(
         nk,
         { ...outbox, status: "delivered", deliveredAtMs: Date.now() },
@@ -440,16 +465,15 @@ function dispatchNotificationOutbox(
         })
       );
       return;
+    } catch (error) {
+      logger.warn(
+        "push outbox completion write failed for %s: %s",
+        id,
+        (error as Error).message || String(error)
+      );
     }
-    retryOutbox(nk, logger, outbox, stored.version);
-  } catch (error) {
-    logger.warn(
-      "push dispatch failed for %s: %s",
-      id,
-      (error as Error).message || String(error)
-    );
-    retryOutbox(nk, logger, outbox, stored.version);
   }
+  retryOutbox(nk, logger, outbox, stored.version);
 }
 
 export function dispatchTurnNotificationOutbox(

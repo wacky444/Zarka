@@ -1,7 +1,6 @@
 import { NAKAMA_SYSTEM_USER_ID } from "./chat";
 
 export const TUTORIAL_MATCH_METADATA_KEY = "tutorial" as const;
-export const RANKED_MATCH_METADATA_KEY = "ranked" as const;
 export const TUTORIAL_BOT_ID = "bot1" as const;
 export const TUTORIAL_BOT_NAME = "Tutorial Bot" as const;
 export const TUTORIAL_BOT_SYSTEM_SENDER_ID = NAKAMA_SYSTEM_USER_ID;
@@ -60,27 +59,4 @@ export type TutorialStepId = (typeof TUTORIAL_STEP_IDS)[number];
 export interface TutorialMatchMetadata {
   type: "guided_tutorial";
   version: 1;
-}
-
-export type RankedQueueMode = "low_population" | "high_population";
-
-export interface RankedTeamPlacement {
-  teamId: string;
-  place: number;
-  eliminated: boolean;
-  eliminationTurn?: number;
-}
-
-export interface RankedMatchMetadata {
-  assignmentId: string;
-  humanCount: number;
-  botCount: number;
-  queueMode: RankedQueueMode;
-  eloSnapshots: Record<string, number>;
-  placements?: RankedTeamPlacement[];
-}
-
-export interface MatchMetadata {
-  [TUTORIAL_MATCH_METADATA_KEY]?: TutorialMatchMetadata;
-  [RANKED_MATCH_METADATA_KEY]?: RankedMatchMetadata;
 }

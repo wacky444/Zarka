@@ -833,10 +833,15 @@ export function getRankedQueueStatus(
   const storage = new StorageService(createNakamaWrapper(nk));
   const assignedMatches: RankedQueueAssignmentStatus[] = [];
 
-  for (const stored of listObjects<RankedAssignment>(
-    nk,
-    RANKED_ASSIGNMENT_COLLECTION
-  )) {
+  const seenAssignmentIds = new Set<string>();
+
+  for (const ticket of tickets) {
+    const assignmentId = ticket.value.assignmentId;
+    if (!assignmentId || seenAssignmentIds.has(assignmentId)) continue;
+    seenAssignmentIds.add(assignmentId);
+
+    const stored = readAssignment(nk, assignmentId);
+    if (!stored) continue;
     const assignment = stored.value;
     if (!assignment.humanIds.includes(userId)) continue;
     if (assignment.state === "creating") {

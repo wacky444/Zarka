@@ -92,7 +92,7 @@ export class MyMatchesListView {
     this.container.add(this.statusText);
 
     this.queueStatusText = scene.add
-      .text(0, 0, "Fetching ranked queue status...", {
+      .text(0, 0, t("Fetching ranked queue status..."), {
         color: "#9ca3af",
         fontSize: "13px",
         align: "center"
@@ -173,7 +173,7 @@ export class MyMatchesListView {
     if (this.fetching || !this.turnService) return;
     this.fetching = true;
     this.statusText.setText("Fetching my matches...");
-    this.queueStatusText.setText("Fetching ranked queue status...");
+    this.queueStatusText.setText(t("Fetching ranked queue status..."));
     this.clearList();
     this.layoutMyMatches();
 

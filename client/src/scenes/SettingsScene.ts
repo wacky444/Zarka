@@ -333,7 +333,7 @@ export class SettingsScene extends Phaser.Scene {
     this.accountRoot.add(this.playerStatsText);
 
     this.rankedMatchSlotsTitle = this.add
-      .text(0, 0, "Available for random games", {
+      .text(0, 0, t("Available for random games"), {
         color: "#ffffff",
         fontSize: "18px",
         align: "center"
@@ -345,7 +345,9 @@ export class SettingsScene extends Phaser.Scene {
       .text(
         0,
         0,
-        "Choose how many ranked matches Zarka can assign at once. Another match may be assigned while one is in progress.",
+        t(
+          "Choose how many ranked matches Zarka can assign at once. Another match may be assigned while one is in progress."
+        ),
         {
           color: "#cccccc",
           fontSize: "13px",
@@ -386,7 +388,7 @@ export class SettingsScene extends Phaser.Scene {
     this.accountRoot.add(this.rankedMatchSlotsIncreaseButton);
 
     this.rankedMatchSlotsStateText = this.add
-      .text(0, 0, "Disabled", {
+      .text(0, 0, t("Disabled"), {
         color: "#888888",
         fontSize: "13px",
         align: "center"
@@ -986,12 +988,12 @@ export class SettingsScene extends Phaser.Scene {
       this.rankedMatchSlotsPending !== null ||
       this.rankedMatchSlotsSaveTimer !== null;
     const stateText = saving
-      ? "Saving..."
+      ? t("Saving...")
       : this.rankedMatchSlotsSaveError
-        ? "Could not save. Restored saved value."
+        ? t("Could not save. Restored saved value.")
         : disabled
-          ? "Disabled"
-          : "Enabled";
+          ? t("Disabled")
+          : t("Enabled");
     this.rankedMatchSlotsStateText.setText(stateText);
     this.rankedMatchSlotsStateText.setColor(
       saving ? "#facc15" : this.rankedMatchSlotsSaveError ? "#f87171" : disabled ? "#888888" : "#86efac"

@@ -5,7 +5,19 @@ import type {
 } from "./playerCharacter";
 import type { ItemId } from "./Item";
 import type { MatchReportProgress } from "./matchReport";
-import type { MatchMetadata } from "./Tutorial";
+import {
+  TUTORIAL_MATCH_METADATA_KEY,
+  type TutorialMatchMetadata
+} from "./Tutorial";
+import {
+  RANKED_MATCH_METADATA_KEY,
+  type RankedMatchMetadata
+} from "./ranked";
+
+export interface MatchMetadata {
+  [TUTORIAL_MATCH_METADATA_KEY]?: TutorialMatchMetadata;
+  [RANKED_MATCH_METADATA_KEY]?: RankedMatchMetadata;
+}
 
 export interface MatchItemRecord {
   item_id: string;

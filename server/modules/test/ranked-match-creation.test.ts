@@ -143,7 +143,7 @@ function createMatch(
   return { ...harness, match };
 }
 
-test("normal match creation defaults to 16 and enforces 30-player maximum", () => {
+test("normal match creation defaults to 16 and enforces 100-player maximum", () => {
   const harness = createHarness(["creator"]);
   const context = { userId: "creator" } as nkruntime.Context;
   const defaultResponse = JSON.parse(
@@ -157,7 +157,7 @@ test("normal match creation defaults to 16 and enforces 30-player maximum", () =
       context,
       harness.logger,
       harness.nakama,
-      JSON.stringify({ size: 99 })
+      JSON.stringify({ size: 150 })
     )
   ) as { match_id: string; size: number };
   assert.equal(oversizedResponse.size, MAX_NORMAL_MATCH_SIZE);
@@ -170,7 +170,7 @@ test("normal match creation defaults to 16 and enforces 30-player maximum", () =
       harness.nakama,
       JSON.stringify({
         match_id: oversizedResponse.match_id,
-        settings: { players: 100 }
+        settings: { players: 150 }
       })
     )
   ) as { size: number };

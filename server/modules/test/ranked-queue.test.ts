@@ -4,7 +4,8 @@ import {
   RANKED_ASSIGNMENT_COLLECTION,
   RANKED_QUEUE_ENROLLMENT_COLLECTION,
   RANKED_QUEUE_TICKET_COLLECTION,
-  RANKED_DAILY_PRESENCE_COLLECTION
+  RANKED_DAILY_PRESENCE_COLLECTION,
+  SERVER_USER_ID
 } from "../src/constants";
 import {
   processRankedQueue as runRankedQueue,
@@ -420,6 +421,13 @@ test("ranked queue status is caller-scoped and reports assigned matches", () => 
     true
   );
 
+  let storageListCalls = 0;
+  const originalStorageList = harness.nakama.storageList;
+  harness.nakama.storageList = (...args: Parameters<typeof originalStorageList>) => {
+    storageListCalls += 1;
+    return originalStorageList(...args);
+  };
+
   const outsiderStatus = JSON.parse(
     getRankedQueueStatusRpc(
       { userId: "outsider" } as nkruntime.Context,
@@ -430,6 +438,67 @@ test("ranked queue status is caller-scoped and reports assigned matches", () => 
   ) as { desired_slots?: number; assigned_matches?: unknown[] };
   assert.equal(outsiderStatus.desired_slots, 0);
   assert.deepEqual(outsiderStatus.assigned_matches, []);
+  assert.equal(storageListCalls, 0);
+
+  const startingUser = "starting-player";
+  harness.records.set(`${RANKED_QUEUE_TICKET_COLLECTION}:${SERVER_USER_ID}:${startingUser}:1`, {
+    collection: RANKED_QUEUE_TICKET_COLLECTION,
+    key: `${startingUser}:1`,
+    userId: SERVER_USER_ID,
+    value: {
+      userId: startingUser,
+      slotIndex: 1,
+      createdAtMs: now,
+      elo: 1000,
+      status: "reserved",
+      assignmentId: "starting-assignment"
+    },
+    version: "1"
+  });
+  harness.records.set(`${RANKED_ASSIGNMENT_COLLECTION}:${SERVER_USER_ID}:starting-assignment`, {
+    collection: RANKED_ASSIGNMENT_COLLECTION,
+    key: "starting-assignment",
+    userId: SERVER_USER_ID,
+    value: {
+      assignmentId: "starting-assignment",
+      state: "creating",
+      ticketKeys: [`${startingUser}:1`],
+      humanIds: [startingUser],
+      botCount: 15,
+      queueMode: "low_population",
+      matchId: "ranked_starting-assignment",
+      createdAtMs: now,
+      reservationExpiresAtMs: now + 60_000,
+      attempts: 0
+    },
+    version: "1"
+  });
+  harness.users.set(startingUser, {
+    id: startingUser,
+    username: startingUser,
+    metadata: { zarka: { tutorialCompleted: true, rankedMatchSlots: 1, stats: { elo: 1000 } } },
+    online: true
+  });
+  const startingStatus = JSON.parse(
+    getRankedQueueStatusRpc(
+      { userId: startingUser } as nkruntime.Context,
+      harness.logger,
+      harness.nakama,
+      "{}"
+    )
+  ) as {
+    assigned_matches?: Array<{ match_id: string; status: string }>;
+    reserved_tickets?: number;
+  };
+  assert.equal(startingStatus.reserved_tickets, 1);
+  assert.deepEqual(startingStatus.assigned_matches, [
+    {
+      assignment_id: "starting-assignment",
+      match_id: "ranked_starting-assignment",
+      status: "starting"
+    }
+  ]);
+  assert.equal(storageListCalls, 0);
 
   const unauthenticated = JSON.parse(
     getRankedQueueStatusRpc(

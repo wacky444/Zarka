@@ -625,3 +625,172 @@ test("transient push failures remain in the outbox for retry", () => {
   assert.equal(storedOutbox?.attempts, 1);
   assert.ok((storedOutbox?.nextAttemptAtMs ?? 0) > Date.now());
 });
+
+test("subscriptions exceeding batch limit are chunked with indexed idempotency keys", () => {
+  const { nk, entries } = createFakeNakama();
+  const totalTargets = 205;
+  const targets: TurnNotificationOutbox["targets"] = [];
+  for (let i = 0; i < totalTargets; i += 1) {
+    const userId = `player-${i}`;
+    const deviceId = `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`;
+    writeSubscription(nk, userId, deviceId);
+    targets.push({ userId, deviceId, locale: "en" });
+  }
+
+  const outbox: TurnNotificationOutbox = {
+    id: "turn_match-large-batch_3",
+    matchId: "match-large-batch",
+    event: "turn_advanced",
+    turn: 3,
+    targets,
+    status: "pending",
+    attempts: 0,
+    nextAttemptAtMs: 0,
+    createdAtMs: Date.now()
+  };
+  nk.storageWrite([
+    {
+      collection: PUSH_NOTIFICATION_OUTBOX_COLLECTION,
+      key: outbox.id,
+      userId: SERVER_USER_ID,
+      value: outbox,
+      permissionRead: 0,
+      permissionWrite: 0
+    }
+  ]);
+
+  const requests: Array<{ body: string }> = [];
+  const expiredDevice = targets[202].deviceId;
+  const batchNk = {
+    ...nk,
+    httpRequest: (
+      _url: string,
+      _method: string,
+      _headers: Record<string, string>,
+      body: string
+    ) => {
+      requests.push({ body });
+      const parsed = JSON.parse(body) as { idempotencyKey: string };
+      const expiredDeviceIds = parsed.idempotencyKey.endsWith(":batch:1")
+        ? [expiredDevice]
+        : [];
+      return {
+        code: 200,
+        headers: [],
+        body: JSON.stringify({ ok: true, expiredDeviceIds })
+      };
+    }
+  } as unknown as nkruntime.Nakama;
+
+  dispatchTurnNotificationOutbox(
+    outbox.matchId,
+    outbox.turn,
+    context("system", PUSH_ENV),
+    batchNk,
+    logger()
+  );
+
+  assert.equal(requests.length, 2);
+  const firstPayload = JSON.parse(requests[0].body) as {
+    idempotencyKey: string;
+    subscriptions: unknown[];
+  };
+  assert.equal(firstPayload.idempotencyKey, `${outbox.id}:batch:0`);
+  assert.equal(firstPayload.subscriptions.length, 200);
+
+  const secondPayload = JSON.parse(requests[1].body) as {
+    idempotencyKey: string;
+    subscriptions: unknown[];
+  };
+  assert.equal(secondPayload.idempotencyKey, `${outbox.id}:batch:1`);
+  assert.equal(secondPayload.subscriptions.length, 5);
+
+  const storedOutbox = entries.get(
+    `${PUSH_NOTIFICATION_OUTBOX_COLLECTION}:${outbox.id}:${SERVER_USER_ID}`
+  )?.value as TurnNotificationOutbox | undefined;
+  assert.equal(storedOutbox?.status, "delivered");
+
+  assert.equal(
+    nk.storageRead([
+      {
+        collection: PUSH_SUBSCRIPTION_COLLECTION,
+        key: expiredDevice,
+        userId: targets[202].userId
+      }
+    ]).length,
+    0
+  );
+});
+
+test("batch dispatch failure in any chunk schedules an outbox retry", () => {
+  const { nk, entries } = createFakeNakama();
+  const totalTargets = 205;
+  const targets: TurnNotificationOutbox["targets"] = [];
+  for (let i = 0; i < totalTargets; i += 1) {
+    const userId = `player-${i}`;
+    const deviceId = `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`;
+    writeSubscription(nk, userId, deviceId);
+    targets.push({ userId, deviceId, locale: "en" });
+  }
+
+  const outbox: TurnNotificationOutbox = {
+    id: "turn_match-batch-fail_3",
+    matchId: "match-batch-fail",
+    event: "turn_advanced",
+    turn: 3,
+    targets,
+    status: "pending",
+    attempts: 0,
+    nextAttemptAtMs: 0,
+    createdAtMs: Date.now()
+  };
+  nk.storageWrite([
+    {
+      collection: PUSH_NOTIFICATION_OUTBOX_COLLECTION,
+      key: outbox.id,
+      userId: SERVER_USER_ID,
+      value: outbox,
+      permissionRead: 0,
+      permissionWrite: 0
+    }
+  ]);
+
+  const batchFailNk = {
+    ...nk,
+    httpRequest: (
+      _url: string,
+      _method: string,
+      _headers: Record<string, string>,
+      body: string
+    ) => {
+      const parsed = JSON.parse(body) as { idempotencyKey: string };
+      if (parsed.idempotencyKey.endsWith(":batch:1")) {
+        return {
+          code: 500,
+          headers: [],
+          body: JSON.stringify({ ok: false, error: "server_error" })
+        };
+      }
+      return {
+        code: 200,
+        headers: [],
+        body: JSON.stringify({ ok: true, expiredDeviceIds: [] })
+      };
+    }
+  } as unknown as nkruntime.Nakama;
+
+  dispatchTurnNotificationOutbox(
+    outbox.matchId,
+    outbox.turn,
+    context("system", PUSH_ENV),
+    batchFailNk,
+    logger()
+  );
+
+  const storedOutbox = entries.get(
+    `${PUSH_NOTIFICATION_OUTBOX_COLLECTION}:${outbox.id}:${SERVER_USER_ID}`
+  )?.value as TurnNotificationOutbox | undefined;
+  assert.equal(storedOutbox?.status, "pending");
+  assert.equal(storedOutbox?.attempts, 1);
+  assert.ok((storedOutbox?.nextAttemptAtMs ?? 0) > Date.now());
+});
