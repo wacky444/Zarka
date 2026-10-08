@@ -1,6 +1,7 @@
 import {
   canSeeHiddenCharacter,
   isCharacterHidden,
+  RANKED_MATCH_METADATA_KEY,
   type C4Record,
   type GameMap,
   type MatchItemRecord,
@@ -353,6 +354,15 @@ export function tailorMatchForPlayer(
     }
   }
   const publicMatch = { ...match };
+  if (publicMatch.metadata?.[RANKED_MATCH_METADATA_KEY]) {
+    const publicMetadata = { ...publicMatch.metadata };
+    delete publicMetadata[RANKED_MATCH_METADATA_KEY];
+    if (Object.keys(publicMetadata).length > 0) {
+      publicMatch.metadata = publicMetadata;
+    } else {
+      delete publicMatch.metadata;
+    }
+  }
   delete publicMatch.reportProgress;
   delete publicMatch.safeContainers;
   delete publicMatch.trackers;

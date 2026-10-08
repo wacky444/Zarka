@@ -87,6 +87,27 @@ export class StorageService {
     ]);
   }
 
+  writeMatchWithReplayTurn0(match: MatchRecord, replay: ReplayRecord): void {
+    this.nk.storageWrite([
+      {
+        collection: MATCH_COLLECTION,
+        key: this.getMatchKey(match.match_id),
+        userId: SERVER_USER_ID,
+        value: match,
+        permissionRead: 2,
+        permissionWrite: 0,
+      },
+      {
+        collection: REPLAY_COLLECTION,
+        key: this.getReplayKey(replay.match_id, replay.turn),
+        userId: SERVER_USER_ID,
+        value: replay,
+        permissionRead: 2,
+        permissionWrite: 0,
+      },
+    ]);
+  }
+
   writeMatchWithPushOutbox(
     match: MatchRecord,
     outbox: TurnNotificationOutbox,

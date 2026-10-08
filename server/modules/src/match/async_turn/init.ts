@@ -8,9 +8,14 @@ import { normalizeMatchName } from "../../utils/normalize";
 export const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
   function (ctx, logger, nk, params) {
     const isRestore = params && params["restore"] === "true";
+    const isRanked = params && params["ranked"] === "true";
 
     const sizeStr = params && params["size"];
-    const size = Math.max(2, Math.min(8, parseInt(sizeStr || "2", 10) || 2));
+    const maxSize = isRanked ? 16 : 8;
+    const size = Math.max(
+      2,
+      Math.min(maxSize, parseInt(sizeStr || "2", 10) || 2)
+    );
     const creator = params && params["creator"];
     const gameId =
       params && params["game_id"] ? params["game_id"] : ctx.matchId;
@@ -45,7 +50,7 @@ export const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
           : undefined,
     };
 
-    if (isRestore && params && params["players"]) {
+    if ((isRestore || isRanked) && params && params["players"]) {
       try {
         const playerIds = JSON.parse(params["players"]) as string[];
         state.order = playerIds || [];

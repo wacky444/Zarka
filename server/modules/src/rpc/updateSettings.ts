@@ -8,7 +8,11 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { normalizeMatchName } from "../utils/normalize";
 import { clampNumber, validateTime } from "../utils/validation";
-import { MAX_BOT_PLAYERS, assignShrinkScheduleToMap } from "@shared";
+import {
+  MAX_BOT_PLAYERS,
+  RANKED_MATCH_METADATA_KEY,
+  assignShrinkScheduleToMap
+} from "@shared";
 
 export function updateSettingsRpc(
   ctx: nkruntime.Context,
@@ -50,6 +54,12 @@ export function updateSettingsRpc(
   }
 
   const match: MatchRecord = read.match;
+  if (match.metadata?.[RANKED_MATCH_METADATA_KEY]) {
+    throw makeNakamaError(
+      "ranked_settings_locked",
+      nkruntime.Codes.PERMISSION_DENIED
+    );
+  }
   if (typeof match.started !== "boolean") {
     match.started = false;
   }
