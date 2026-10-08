@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  DEFAULT_NORMAL_MATCH_SIZE,
+  MAX_NORMAL_MATCH_SIZE,
   RANKED_MATCH_METADATA_KEY,
   type RankedQueueMode
 } from "@shared";
@@ -10,6 +12,7 @@ import { startMatchRpc } from "../src/rpc/startMatch";
 import { joinMatchRpc } from "../src/rpc/joinMatch";
 import { leaveMatchRpc } from "../src/rpc/leaveMatch";
 import { updateSettingsRpc } from "../src/rpc/updateSettings";
+import { createMatchRpc } from "../src/rpc/createMatch";
 import { getStateRpc } from "../src/rpc/getState";
 import { createRankedMatch } from "../src/services/rankedMatchFactory";
 
@@ -46,6 +49,7 @@ function createHarness(humanIds: string[]) {
   const signals: string[] = [];
   let version = 0;
   let runtimeMatchId = 0;
+  let gameId = 0;
   const keyFor = (request: { collection: string; key: string; userId: string }) =>
     `${request.collection}:${request.userId}:${request.key}`;
 
@@ -103,6 +107,7 @@ function createHarness(humanIds: string[]) {
       matchParams.push(params);
       return `runtime-${++runtimeMatchId}`;
     },
+    uuidv4: () => `game-${++gameId}`,
     matchList: () => [],
     matchSignal: (_matchId: string, data: string) => signals.push(data),
     usersGetId: (ids: string[]) => ids.flatMap((id) => {
@@ -135,6 +140,40 @@ function createMatch(
   );
   return { ...harness, match };
 }
+
+test("normal match creation defaults to 16 and enforces 30-player maximum", () => {
+  const harness = createHarness(["creator"]);
+  const context = { userId: "creator" } as nkruntime.Context;
+  const defaultResponse = JSON.parse(
+    createMatchRpc(context, harness.logger, harness.nakama, "{}")
+  ) as { match_id: string; size: number };
+  assert.equal(defaultResponse.size, DEFAULT_NORMAL_MATCH_SIZE);
+  assert.equal(harness.matchParams[0].size, String(DEFAULT_NORMAL_MATCH_SIZE));
+
+  const oversizedResponse = JSON.parse(
+    createMatchRpc(
+      context,
+      harness.logger,
+      harness.nakama,
+      JSON.stringify({ size: 99 })
+    )
+  ) as { match_id: string; size: number };
+  assert.equal(oversizedResponse.size, MAX_NORMAL_MATCH_SIZE);
+  assert.equal(harness.matchParams[1].size, String(MAX_NORMAL_MATCH_SIZE));
+
+  const settingsResponse = JSON.parse(
+    updateSettingsRpc(
+      context,
+      harness.logger,
+      harness.nakama,
+      JSON.stringify({
+        match_id: oversizedResponse.match_id,
+        settings: { players: 100 }
+      })
+    )
+  ) as { size: number };
+  assert.equal(settingsResponse.size, MAX_NORMAL_MATCH_SIZE);
+});
 
 test("ranked factory starts 8-player human and 16-player bot-filled rosters offline", () => {
   const eightPlayers = createMatch(
@@ -265,7 +304,21 @@ test("ranked matches lock roster, settings, and client-controlled starts", () =>
     created.nakama,
     { size: "16" }
   ).state;
-  assert.equal(normalState.size, 8);
+  assert.equal(normalState.size, 16);
+  const defaultNormalState = asyncTurnMatchInit(
+    {} as nkruntime.Context,
+    created.logger,
+    created.nakama,
+    {}
+  ).state;
+  assert.equal(defaultNormalState.size, DEFAULT_NORMAL_MATCH_SIZE);
+  const maxNormalState = asyncTurnMatchInit(
+    {} as nkruntime.Context,
+    created.logger,
+    created.nakama,
+    { size: "100" }
+  ).state;
+  assert.equal(maxNormalState.size, MAX_NORMAL_MATCH_SIZE);
 });
 
 test("ranked match join attempt accepts assigned users only and get_state hides snapshots", () => {

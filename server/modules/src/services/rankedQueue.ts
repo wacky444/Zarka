@@ -237,12 +237,12 @@ function updateAssignment(
   );
 }
 
-export function recordRankedSlotPreference(
+export function createRankedSlotPreferenceWrite(
   nk: nkruntime.Nakama,
   userId: string,
   desiredSlots: number,
   nowMs = Date.now()
-): void {
+): nkruntime.StorageWriteRequest {
   if (
     !Number.isInteger(desiredSlots) ||
     desiredSlots < 0 ||
@@ -251,26 +251,33 @@ export function recordRankedSlotPreference(
     throw new Error("invalid_ranked_match_slots");
   }
 
-  const key = userId;
+  const current = readObject<RankedQueueEnrollment>(
+    nk,
+    RANKED_QUEUE_ENROLLMENT_COLLECTION,
+    userId
+  );
+  return {
+    collection: RANKED_QUEUE_ENROLLMENT_COLLECTION,
+    key: userId,
+    userId: SERVER_USER_ID,
+    value: { userId, desiredSlots, updatedAtMs: nowMs },
+    permissionRead: 0,
+    permissionWrite: 0,
+    version: current?.version ?? ""
+  };
+}
+
+export function recordRankedSlotPreference(
+  nk: nkruntime.Nakama,
+  userId: string,
+  desiredSlots: number,
+  nowMs = Date.now()
+): void {
   for (let attempt = 0; attempt < 5; attempt += 1) {
-    const current = readObject<RankedQueueEnrollment>(
-      nk,
-      RANKED_QUEUE_ENROLLMENT_COLLECTION,
-      key
-    );
-    const value: RankedQueueEnrollment = {
-      userId,
-      desiredSlots,
-      updatedAtMs: nowMs
-    };
     try {
-      writeObject(
-        nk,
-        RANKED_QUEUE_ENROLLMENT_COLLECTION,
-        key,
-        value,
-        current?.version ?? ""
-      );
+      nk.storageWrite([
+        createRankedSlotPreferenceWrite(nk, userId, desiredSlots, nowMs)
+      ]);
       return;
     } catch (error) {
       if (attempt === 4) {

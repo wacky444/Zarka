@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { getUserAccountRpc } from "../src/rpc/getUserAccount";
+import { RANKED_QUEUE_ENROLLMENT_COLLECTION } from "../src/constants";
 import { setRankedMatchSlotsRpc } from "../src/rpc/setRankedMatchSlots";
 
 type RpcResponse = {
@@ -16,6 +17,8 @@ function createHarness(initialMetadata: unknown) {
     { collection: string; key: string; userId: string; value: unknown; version: string }
   >();
   let storageVersion = 0;
+  let uuid = 0;
+  let failNextMultiUpdate = false;
   let user = {
     id: userId,
     username: userId,
@@ -23,6 +26,29 @@ function createHarness(initialMetadata: unknown) {
   } as unknown as nkruntime.User;
   const storageKey = (record: { collection: string; key: string; userId: string }) =>
     `${record.collection}:${record.userId}:${record.key}`;
+  const writeStorage = (requests: nkruntime.StorageWriteRequest[]) => {
+    for (const request of requests) {
+      const current = storage.get(storageKey({
+        collection: request.collection,
+        key: request.key,
+        userId: request.userId ?? ""
+      }));
+      const expectedVersion = request.version === "" ? undefined : request.version;
+      if (request.version !== undefined && expectedVersion !== current?.version) {
+        throw new Error("version conflict");
+      }
+    }
+    for (const request of requests) {
+      const entry = {
+        collection: request.collection,
+        key: request.key,
+        userId: request.userId ?? "",
+        value: request.value,
+        version: String(++storageVersion)
+      };
+      storage.set(storageKey(entry), entry);
+    }
+  };
   const nakama = {
     usersGetId: (ids: string[]) => (ids.includes(userId) ? [user] : []),
     accountUpdateId: (...args: unknown[]) => {
@@ -35,31 +61,23 @@ function createHarness(initialMetadata: unknown) {
         const entry = storage.get(storageKey(request));
         return entry ? [entry] : [];
       }),
-    storageWrite: (requests: Array<{
-      collection: string;
-      key: string;
-      userId: string;
-      value: unknown;
-      version?: string;
-    }>) => {
-      for (const request of requests) {
-        const current = storage.get(storageKey(request));
-        const expectedVersion = request.version === "" ? undefined : request.version;
-        if (request.version !== undefined && expectedVersion !== current?.version) {
-          throw new Error("version conflict");
+    storageWrite: writeStorage,
+    multiUpdate: (
+      accountUpdates: nkruntime.UserUpdateAccount[] | null,
+      storageUpdates: nkruntime.StorageWriteRequest[] | null
+    ) => {
+      if (failNextMultiUpdate) {
+        failNextMultiUpdate = false;
+        throw new Error("simulated_multi_update_failure");
+      }
+      if (storageUpdates) writeStorage(storageUpdates);
+      for (const update of accountUpdates ?? []) {
+        if (update.userId === userId) {
+          user = { ...user, metadata: update.metadata } as nkruntime.User;
         }
       }
-      for (const request of requests) {
-        const entry = {
-          collection: request.collection,
-          key: request.key,
-          userId: request.userId,
-          value: request.value,
-          version: String(++storageVersion)
-        };
-        storage.set(storageKey(entry), entry);
-      }
     },
+    uuidv4: () => `metadata-lock-${++uuid}`,
     storageList: (storageUserId: string, collection: string) => ({
       objects: Array.from(storage.values()).filter(
         (entry) => entry.userId === storageUserId && entry.collection === collection
@@ -81,6 +99,14 @@ function createHarness(initialMetadata: unknown) {
     nakama,
     get metadata(): unknown {
       return (user as unknown as { metadata?: unknown }).metadata;
+    },
+    failNextMultiUpdate(): void {
+      failNextMultiUpdate = true;
+    },
+    get enrollment(): unknown {
+      return Array.from(storage.values()).find(
+        (entry) => entry.collection === RANKED_QUEUE_ENROLLMENT_COLLECTION
+      )?.value;
     },
     setSlots(slots: unknown, userIdOverride?: string): RpcResponse {
       return JSON.parse(
@@ -111,6 +137,10 @@ test("set_ranked_match_slots saves each supported value and reads it back", () =
     const result = harness.setSlots(slots);
     assert.deepEqual(result, { ok: true, ranked_match_slots: slots });
     assert.equal(harness.readAccount().account?.rankedMatchSlots, slots);
+    assert.equal(
+      (harness.enrollment as { desiredSlots: number } | undefined)?.desiredSlots,
+      slots
+    );
   }
 });
 
@@ -160,6 +190,16 @@ test("set_ranked_match_slots rejects invalid values without changing metadata", 
     "bad_json"
   );
   assert.deepEqual(harness.metadata, { zarka: {} });
+});
+
+test("slot preference and queue enrollment fail atomically", () => {
+  const initialMetadata = { unrelated: true, zarka: { stats: { elo: 1100 } } };
+  const harness = createHarness(initialMetadata);
+  harness.failNextMultiUpdate();
+
+  assert.equal(harness.setSlots(2).error, "internal_error");
+  assert.deepEqual(harness.metadata, initialMetadata);
+  assert.equal(harness.enrollment, undefined);
 });
 
 test("set_ranked_match_slots requires authentication and ignores supplied identity", () => {

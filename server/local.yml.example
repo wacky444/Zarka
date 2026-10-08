@@ -9,6 +9,7 @@ runtime:
     - "FACEBOOK_DATA_DELETION_URL=https://example.url/facebook/data-deletion"
     - "PUSH_DISPATCHER_URL=http://push-dispatcher:7355/send"
     - "PUSH_DISPATCH_SECRET=replace-with-the-same-32-plus-character-secret-from-server-env"
+    - "RANKED_MATCHMAKING_ENABLED=false"
 socket:
   port: 7350
   cors_allowed_origins:

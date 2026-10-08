@@ -4,6 +4,10 @@ import { DEFAULT_MATCH_NAME } from "../../constants";
 import { AsyncTurnState } from "../../models/types";
 import { buildMatchLabel } from "../../utils/label";
 import { normalizeMatchName } from "../../utils/normalize";
+import {
+  DEFAULT_NORMAL_MATCH_SIZE,
+  MAX_NORMAL_MATCH_SIZE
+} from "@shared";
 
 export const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
   function (ctx, logger, nk, params) {
@@ -11,11 +15,14 @@ export const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
     const isRanked = params && params["ranked"] === "true";
 
     const sizeStr = params && params["size"];
-    const maxSize = isRanked ? 16 : 8;
-    const size = Math.max(
-      2,
-      Math.min(maxSize, parseInt(sizeStr || "2", 10) || 2)
-    );
+    const maxSize = isRanked ? 16 : MAX_NORMAL_MATCH_SIZE;
+    const requestedSize = sizeStr
+      ? parseInt(sizeStr, 10)
+      : DEFAULT_NORMAL_MATCH_SIZE;
+    const normalizedSize = Number.isFinite(requestedSize)
+      ? requestedSize
+      : DEFAULT_NORMAL_MATCH_SIZE;
+    const size = Math.max(2, Math.min(maxSize, normalizedSize));
     const creator = params && params["creator"];
     const gameId =
       params && params["game_id"] ? params["game_id"] : ctx.matchId;

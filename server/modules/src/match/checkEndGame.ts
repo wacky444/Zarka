@@ -11,6 +11,7 @@ import { createStorageService } from "../services/storageService";
 import { buildMatchReport } from "./matchReport";
 import { finalizeRankedTeamPlacements } from "./rankedPlacements";
 import { enqueueRankedMatchSettlement } from "./rankedElo";
+import { updateAccountMetadata } from "../services/accountMetadata";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -48,12 +49,10 @@ function buildDefaultStats(): import("@shared").PlayerStats {
   };
 }
 
-function parsePlayerStatsFromUser(
-  user: nkruntime.User,
+function parsePlayerStatsFromMetadata(
+  metadataValue: unknown,
 ): import("@shared").PlayerStats {
-  const metadata = asRecord(
-    (user as unknown as { metadata?: unknown }).metadata,
-  );
+  const metadata = asRecord(metadataValue);
   const zarka = asRecord(metadata?.zarka);
   const statsObj = asRecord(zarka?.stats);
   const defaults = buildDefaultStats();
@@ -94,14 +93,11 @@ function parsePlayerStatsFromUser(
 }
 
 function writePlayerStatsToMetadata(
-  user: nkruntime.User,
+  existingMetadata: UnknownRecord,
   nextStats: import("@shared").PlayerStats,
   completedTutorial: boolean
-): { [key: string]: any } {
-  const existingMetadata = asRecord(
-    (user as unknown as { metadata?: unknown }).metadata,
-  );
-  const existingZarka = asRecord(existingMetadata?.zarka);
+): UnknownRecord {
+  const existingZarka = asRecord(existingMetadata.zarka);
 
   const nextZarka: UnknownRecord = {
     ...(existingZarka ?? {}),
@@ -111,7 +107,7 @@ function writePlayerStatsToMetadata(
     nextZarka.tutorialCompleted = true;
   }
   return {
-    ...(existingMetadata ?? {}),
+    ...existingMetadata,
     zarka: nextZarka,
   };
 }
@@ -298,91 +294,67 @@ export function finalizeMatchIfEnded(
   }
 
   if (!isRanked && participants.length > 0) {
-    const userMap: Record<string, nkruntime.User> = {};
-    for (const user of users) {
-      const userId =
-        (user as unknown as { id?: string; userId?: string }).id ??
-        (user as unknown as { id?: string; userId?: string }).userId;
-      if (typeof userId === "string" && userId.length > 0) {
-        userMap[userId] = user;
-      }
-    }
+    const characters = match.playerCharacters ?? {};
+    const firstAlive = outcome.aliveCharacterIds[0];
+    const winningCharacter = firstAlive ? characters[firstAlive] : undefined;
+    const winningTeamId = winningCharacter
+      ? winningCharacter.secretTeamId?.trim() ||
+        winningCharacter.teamId?.trim() ||
+        `solo_${firstAlive}`
+      : undefined;
 
     for (const playerId of participants) {
-      const user = userMap[playerId];
-      if (!user) {
-        continue;
-      }
-
-      const previous = parsePlayerStatsFromUser(user);
-      const characters = match.playerCharacters ?? {};
-      const firstAlive = outcome.aliveCharacterIds[0];
-      const winningCharacter = firstAlive ? characters[firstAlive] : undefined;
-      const winningTeamId = winningCharacter
-        ? winningCharacter.secretTeamId?.trim() ||
-          winningCharacter.teamId?.trim() ||
-          `solo_${firstAlive}`
-        : undefined;
-
       const playerCharacter = characters[playerId];
       const playerTeamId = playerCharacter
         ? playerCharacter.secretTeamId?.trim() ||
           playerCharacter.teamId?.trim() ||
           `solo_${playerId}`
         : undefined;
-
       const isWinner =
         outcome.reason === "last_alive" &&
         Boolean(winningTeamId && playerTeamId === winningTeamId);
       const isDraw = outcome.reason === "all_dead";
 
-      const nextMatchesPlayed = previous.matchesPlayed + 1;
-      const nextWins = previous.wins + (isWinner ? 1 : 0);
-      const nextLosses = previous.losses + (!isWinner && !isDraw ? 1 : 0);
-      const nextDraws = previous.draws + (isDraw ? 1 : 0);
-
-      const nextCurrentWinStreak = isWinner ? previous.currentWinStreak + 1 : 0;
-      const nextBestWinStreak = Math.max(
-        previous.bestWinStreak,
-        nextCurrentWinStreak,
-      );
-
-      const nextStats: import("@shared").PlayerStats = {
-        ...previous,
-        matchesPlayed: nextMatchesPlayed,
-        wins: nextWins,
-        losses: nextLosses,
-        draws: nextDraws,
-        currentWinStreak: nextCurrentWinStreak,
-        bestWinStreak: nextBestWinStreak,
-        lastMatchEndedAtMs: nowMs,
-      };
-
       try {
-        logger.info(
-          "finalizeMatchIfEnded updating stats for user %s: %o",
-          playerId,
-          nextStats,
-        );
-        const nextMetadata = writePlayerStatsToMetadata(
-          user,
-          nextStats,
-          isWinner && !!match.metadata?.[TUTORIAL_MATCH_METADATA_KEY]
-        );
-        // Nakama runtime API: metadata is replaced, so we preserve existing fields.
-        nk.accountUpdateId(
-          playerId,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          nextMetadata,
-        );
+        const status = updateAccountMetadata(nk, playerId, (metadata) => {
+          const previous = parsePlayerStatsFromMetadata(metadata);
+          const nextCurrentWinStreak = isWinner
+            ? previous.currentWinStreak + 1
+            : 0;
+          const nextStats: import("@shared").PlayerStats = {
+            ...previous,
+            matchesPlayed: previous.matchesPlayed + 1,
+            wins: previous.wins + (isWinner ? 1 : 0),
+            losses: previous.losses + (!isWinner && !isDraw ? 1 : 0),
+            draws: previous.draws + (isDraw ? 1 : 0),
+            currentWinStreak: nextCurrentWinStreak,
+            bestWinStreak: Math.max(
+              previous.bestWinStreak,
+              nextCurrentWinStreak,
+            ),
+            lastMatchEndedAtMs: nowMs,
+          };
+          logger.info(
+            "finalizeMatchIfEnded updating stats for user %s: %o",
+            playerId,
+            nextStats,
+          );
+          return writePlayerStatsToMetadata(
+            metadata,
+            nextStats,
+            isWinner && !!match.metadata?.[TUTORIAL_MATCH_METADATA_KEY]
+          );
+        });
+        if (status !== "updated") {
+          logger.error(
+            "finalizeMatchIfEnded account metadata update %s for user %s",
+            status,
+            playerId,
+          );
+        }
       } catch (error) {
         logger.error(
-          "finalizeMatchIfEnded accountUpdateId failed for user %s: %s",
+          "finalizeMatchIfEnded account metadata update failed for user %s: %s",
           playerId,
           (error && (error as Error).message) || String(error),
         );

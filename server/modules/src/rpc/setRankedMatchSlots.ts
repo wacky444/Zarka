@@ -1,6 +1,7 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import { recordRankedSlotPreference } from "../services/rankedQueue";
+import { updateAccountMetadata } from "../services/accountMetadata";
+import { createRankedSlotPreferenceWrite } from "../services/rankedQueue";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -41,13 +42,29 @@ export function setRankedMatchSlotsRpc(
     } satisfies import("@shared").SetRankedMatchSlotsPayload);
   }
 
-  let user: nkruntime.User | undefined;
+  const nowMs = Date.now();
+  let status: ReturnType<typeof updateAccountMetadata>;
   try {
-    const users = nk.usersGetId([userId]);
-    user = users && users.length > 0 ? users[0] : undefined;
+    status = updateAccountMetadata(
+      nk,
+      userId,
+      (metadata) => {
+        const zarka = asRecord(metadata.zarka);
+        return {
+          ...metadata,
+          zarka: {
+            ...(zarka ?? {}),
+            rankedMatchSlots: slots
+          }
+        };
+      },
+      () => [createRankedSlotPreferenceWrite(nk, userId, slots, nowMs)],
+      nowMs
+    );
   } catch (error) {
     logger.error(
-      "set_ranked_match_slots usersGetId failed: %s",
+      "set_ranked_match_slots atomic update failed for user %s: %s",
+      userId,
       (error && (error as Error).message) || String(error)
     );
     return JSON.stringify({
@@ -55,52 +72,11 @@ export function setRankedMatchSlotsRpc(
     } satisfies import("@shared").SetRankedMatchSlotsPayload);
   }
 
-  if (!user) {
+  if (status === "not_found") {
     return JSON.stringify({ error: "not_found" } satisfies import("@shared").SetRankedMatchSlotsPayload);
   }
-
-  const metadata = asRecord(
-    (user as unknown as { metadata?: unknown }).metadata
-  );
-  const zarka = asRecord(metadata?.zarka);
-  const nextMetadata = {
-    ...(metadata ?? {}),
-    zarka: {
-      ...(zarka ?? {}),
-      rankedMatchSlots: slots
-    }
-  };
-
-  try {
-    nk.accountUpdateId(
-      userId,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      nextMetadata
-    );
-  } catch (error) {
-    logger.error(
-      "set_ranked_match_slots accountUpdateId failed for user %s: %s",
-      userId,
-      (error && (error as Error).message) || String(error)
-    );
-    return JSON.stringify({
-      error: "internal_error"
-    } satisfies import("@shared").SetRankedMatchSlotsPayload);
-  }
-
-  try {
-    recordRankedSlotPreference(nk, userId, slots, Date.now());
-  } catch (error) {
-    logger.error(
-      "set_ranked_match_slots queue enrollment failed for user %s: %s",
-      userId,
-      (error && (error as Error).message) || String(error)
-    );
+  if (status === "busy") {
+    logger.warn("set_ranked_match_slots account update busy for user %s", userId);
     return JSON.stringify({
       error: "internal_error"
     } satisfies import("@shared").SetRankedMatchSlotsPayload);

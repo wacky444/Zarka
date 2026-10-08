@@ -9,7 +9,12 @@ import {
   TimeInputHandle,
   UIButton
 } from "../ui/button";
-import { MAX_BOT_PLAYERS, type InMatchSettings } from "@shared";
+import {
+  DEFAULT_NORMAL_MATCH_SIZE,
+  MAX_BOT_PLAYERS,
+  MAX_NORMAL_MATCH_SIZE,
+  type InMatchSettings
+} from "@shared";
 import { t } from "../services/i18n";
 
 type FixWidthSizerInstance = Phaser.GameObjects.GameObject & {
@@ -58,7 +63,7 @@ export class LobbyView {
   private actionSizer!: FixWidthSizerInstance;
   private settingsSizer!: FixWidthSizerInstance;
 
-  private players = 2;
+  private players = DEFAULT_NORMAL_MATCH_SIZE;
   private cols = 5;
   private rows = 4;
   private roundTime = "23:00";
@@ -66,7 +71,7 @@ export class LobbyView {
   private botPlayers = 0;
   private turnsToBeAt1Tile = 30;
   private matchName = LobbyView.DEFAULT_MATCH_NAME;
-  private maxPlayers = 2;
+  private maxPlayers = DEFAULT_NORMAL_MATCH_SIZE;
   private isHost = false;
   private playerNames: string[] = [];
   private playersStepper?: StepperHandle;
@@ -276,11 +281,11 @@ export class LobbyView {
       0,
       0,
       "Players",
-      1,
-      100,
+      2,
+      MAX_NORMAL_MATCH_SIZE,
       () => this.players,
       (v) => {
-        this.players = Phaser.Math.Clamp(v, 1, 100);
+        this.players = Phaser.Math.Clamp(v, 2, MAX_NORMAL_MATCH_SIZE);
         this.maxPlayers = this.players;
         this.refreshPlayerList();
         this.emitSettings();
@@ -627,7 +632,11 @@ export class LobbyView {
     started?: boolean;
   }) {
     if (typeof partial.size === "number") {
-      this.players = Phaser.Math.Clamp(partial.size, 1, 100);
+      this.players = Phaser.Math.Clamp(
+        partial.size,
+        2,
+        MAX_NORMAL_MATCH_SIZE
+      );
       this.maxPlayers = this.players;
       this.playersStepper?.setDisplayValue(this.players);
     }

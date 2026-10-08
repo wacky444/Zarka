@@ -1,3 +1,5 @@
+export const DEFAULT_NORMAL_MATCH_SIZE = 16;
+export const MAX_NORMAL_MATCH_SIZE = 100;
 export const MAX_BOT_PLAYERS = 20;
 
 export type InMatchSettings = {

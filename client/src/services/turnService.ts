@@ -2,6 +2,7 @@ import { Client, Session, Socket } from "@heroiclabs/nakama-js";
 import { getEnv } from "./nakama";
 import { parseRankedQueueStatusResponse } from "./rankedMatchmaking";
 import {
+  DEFAULT_NORMAL_MATCH_SIZE,
   OPCODE_MATCH_REMOVED,
   OPCODE_MATCH_ENDED,
   OPCODE_READY_STATE_UPDATE,
@@ -183,7 +184,11 @@ export class TurnService {
     return res;
   }
 
-  async createMatch(size = 2, name?: string, turnsToBeAt1Tile = 30) {
+  async createMatch(
+    size = DEFAULT_NORMAL_MATCH_SIZE,
+    name?: string,
+    turnsToBeAt1Tile = 30
+  ) {
     const payload: { size: number; name?: string; turnsToBeAt1Tile?: number } =
       {
         size,

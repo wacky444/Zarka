@@ -920,7 +920,7 @@ export class MainScene extends Phaser.Scene {
       async () => {
         if (!this.turnService) throw new Error("No service");
         try {
-          const createRes = await this.turnService.createMatch(2);
+          const createRes = await this.turnService.createMatch();
           const parsed = this.parseRpcPayload<CreateMatchPayload>(createRes);
           if (!parsed || !parsed.match_id)
             throw new Error("No match_id returned");

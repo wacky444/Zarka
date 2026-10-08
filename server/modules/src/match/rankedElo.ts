@@ -3,7 +3,6 @@
 import {
   RANKED_ELO_SETTLEMENT_COLLECTION,
   RANKED_MATCH_SETTLEMENT_COLLECTION,
-  RANKED_RATING_LOCK_COLLECTION,
   RANKED_RATING_STATE_COLLECTION,
   SERVER_USER_ID
 } from "../constants";
@@ -15,6 +14,10 @@ import {
 import type { MatchRecord } from "../models/types";
 import { isBotId } from "./botAI";
 import type { EndGameOutcome } from "./checkEndGame";
+import {
+  acquireAccountMetadataLock,
+  releaseAccountMetadataLock
+} from "../services/accountMetadata";
 
 export const RANKED_ELO_BASE_K = 24;
 export const RANKED_BOT_VIRTUAL_RATING = 1000;
@@ -50,11 +53,6 @@ type RankedRatingState = {
   pendingSettlementKeys: string[];
 };
 
-type RankedRatingLock = {
-  ownerId: string;
-  expiresAtMs: number;
-};
-
 type StoredObject<T> = {
   key: string;
   value: T;
@@ -62,8 +60,6 @@ type StoredObject<T> = {
 };
 
 type UnknownRecord = Record<string, unknown>;
-
-const RATING_LOCK_MS = 30_000;
 
 function asRecord(value: unknown): UnknownRecord | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -244,57 +240,6 @@ function parseNonNegativeInt(value: unknown, fallback: number): number {
     : fallback;
 }
 
-function acquireRatingLock(
-  nk: nkruntime.Nakama,
-  userId: string,
-  nowMs: number
-): string | null {
-  const current = readObject<RankedRatingLock>(
-    nk,
-    RANKED_RATING_LOCK_COLLECTION,
-    userId
-  );
-  if (current && current.value.expiresAtMs > nowMs) return null;
-  const ownerId = nk.uuidv4();
-  try {
-    writeObject(
-      nk,
-      RANKED_RATING_LOCK_COLLECTION,
-      userId,
-      { ownerId, expiresAtMs: nowMs + RATING_LOCK_MS },
-      current?.version ?? ""
-    );
-    return ownerId;
-  } catch {
-    return null;
-  }
-}
-
-function releaseRatingLock(
-  nk: nkruntime.Nakama,
-  userId: string,
-  ownerId: string,
-  nowMs: number
-): void {
-  const current = readObject<RankedRatingLock>(
-    nk,
-    RANKED_RATING_LOCK_COLLECTION,
-    userId
-  );
-  if (!current || current.value.ownerId !== ownerId) return;
-  try {
-    writeObject(
-      nk,
-      RANKED_RATING_LOCK_COLLECTION,
-      userId,
-      { ownerId: "", expiresAtMs: nowMs },
-      current.version
-    );
-  } catch {
-    // The lock expires automatically if its owner cannot release it.
-  }
-}
-
 function readStats(zarka: UnknownRecord | undefined): PlayerStats {
   const raw = asRecord(zarka?.stats);
   const elo = parseNonNegativeInt(raw?.elo, 1000);
@@ -371,7 +316,7 @@ function processUserSettlements(
   userId: string,
   nowMs: number
 ): boolean {
-  const lockOwner = acquireRatingLock(nk, userId, nowMs);
+  const lockOwner = acquireAccountMetadataLock(nk, userId, nowMs);
   if (!lockOwner) return false;
   try {
     const user = readUser(nk, userId);
@@ -472,7 +417,7 @@ function processUserSettlements(
 
     return true;
   } finally {
-    releaseRatingLock(nk, userId, lockOwner, Date.now());
+    releaseAccountMetadataLock(nk, userId, lockOwner, Date.now());
   }
 }
 

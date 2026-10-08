@@ -25,6 +25,7 @@ import { NakamaWrapper, createNakamaWrapper } from "./nakamaWrapper";
 export interface MatchStorageObject {
   match: MatchRecord;
   version: string;
+  permissionRead: number;
 }
 
 export interface ReplayStorageObject {
@@ -70,6 +71,7 @@ export class StorageService {
     return {
       match,
       version: storageObject.version,
+      permissionRead: storageObject.permissionRead,
     };
   }
 
@@ -80,7 +82,7 @@ export class StorageService {
         key: this.getMatchKey(match.match_id),
         userId: SERVER_USER_ID,
         value: match,
-        permissionRead: 2,
+        permissionRead: 0,
         permissionWrite: 0,
         version,
       },
@@ -94,7 +96,7 @@ export class StorageService {
         key: this.getMatchKey(match.match_id),
         userId: SERVER_USER_ID,
         value: match,
-        permissionRead: 2,
+        permissionRead: 0,
         permissionWrite: 0,
       },
       {
@@ -119,7 +121,7 @@ export class StorageService {
         key: this.getMatchKey(match.match_id),
         userId: SERVER_USER_ID,
         value: match,
-        permissionRead: 2,
+        permissionRead: 0,
         permissionWrite: 0,
         version,
       },
@@ -145,7 +147,7 @@ export class StorageService {
         key: this.getMatchKey(match.match_id),
         userId: SERVER_USER_ID,
         value: match,
-        permissionRead: 2,
+        permissionRead: 0,
         permissionWrite: 0
       },
       {
@@ -178,7 +180,7 @@ export class StorageService {
         key: this.getMatchKey(match.match_id),
         userId: SERVER_USER_ID,
         value: match,
-        permissionRead: 2,
+        permissionRead: 0,
         permissionWrite: 0,
         version,
       },
@@ -527,6 +529,7 @@ export class StorageService {
         items.push({
           match: obj.value as MatchRecord,
           version: obj.version,
+          permissionRead: obj.permissionRead,
         });
       }
 
