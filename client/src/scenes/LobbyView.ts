@@ -59,6 +59,7 @@ export class LobbyView {
   private creatorText!: Phaser.GameObjects.Text;
   private playerListTitle!: Phaser.GameObjects.Text;
   private playerListText!: Phaser.GameObjects.Text;
+  private spawnWarningText!: Phaser.GameObjects.Text;
   private headerSizer!: FixWidthSizerInstance;
   private actionSizer!: FixWidthSizerInstance;
   private settingsSizer!: FixWidthSizerInstance;
@@ -97,6 +98,7 @@ export class LobbyView {
 
   private started = false;
   private startMatchBusy = false;
+  private serverSpawnWarning = false;
   private settingsDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   private static readonly CONTENT_MAX_WIDTH = 920;
@@ -227,7 +229,13 @@ export class LobbyView {
       0,
       "Start Match",
       async () => {
-        if (this.started || this.startMatchBusy) return;
+        if (
+          this.started ||
+          this.startMatchBusy ||
+          !this.hasEnoughSpawnTiles()
+        ) {
+          return;
+        }
         if (!this.onStartMatch) return;
         const confirmed = window.confirm(
           t(
@@ -305,6 +313,7 @@ export class LobbyView {
       () => this.cols,
       (v) => {
         this.cols = Phaser.Math.Clamp(v, 1, 100);
+        this.refreshPlayerList();
         this.emitSettings();
       },
       true,
@@ -322,6 +331,7 @@ export class LobbyView {
       () => this.rows,
       (v) => {
         this.rows = Phaser.Math.Clamp(v, 1, 100);
+        this.refreshPlayerList();
         this.emitSettings();
       },
       true,
@@ -369,6 +379,7 @@ export class LobbyView {
       () => this.botPlayers,
       (v) => {
         this.botPlayers = Phaser.Math.Clamp(v, 0, MAX_BOT_PLAYERS);
+        this.refreshPlayerList();
         this.emitSettings();
       },
       true,
@@ -426,6 +437,13 @@ export class LobbyView {
       color: "#cccccc"
     });
     this.contentRoot.add(this.playerListText);
+
+    this.spawnWarningText = scene.add.text(0, 0, "", {
+      color: "#ff7777",
+      fontSize: "16px"
+    });
+    this.spawnWarningText.setVisible(false);
+    this.contentRoot.add(this.spawnWarningText);
 
     this.refreshPlayerList();
     this.updateStartButtonState();
@@ -502,6 +520,11 @@ export class LobbyView {
 
     layoutSizer(this.headerSizer);
     layoutSizer(this.actionSizer);
+    if (this.spawnWarningText.visible) {
+      this.spawnWarningText.setWordWrapWidth(contentWidth, true);
+      this.spawnWarningText.setPosition(contentLeft, cursorY);
+      cursorY += this.spawnWarningText.height + LobbyView.SECTION_GAP;
+    }
     layoutSizer(this.settingsSizer);
 
     this.playerListTitle.setPosition(contentLeft, cursorY);
@@ -575,6 +598,13 @@ export class LobbyView {
   setOnStartMatch(handler: () => void | Promise<void>) {
     this.onStartMatch = handler;
     this.updateStartButtonState();
+  }
+
+  showSpawnValidationWarning() {
+    this.serverSpawnWarning = true;
+    this.updateSpawnWarning();
+    this.updateStartButtonState();
+    this.layout();
   }
 
   setOnRemoveMatch(handler: () => void | Promise<void>) {
@@ -806,22 +836,44 @@ export class LobbyView {
 
   private refreshPlayerList() {
     if (!this.playerListTitle || !this.playerListText) return;
+    this.serverSpawnWarning = false;
     const playerCount = this.playerNames.length;
     const capacity = Math.max(this.maxPlayers, 1);
     this.playerListTitle.setText(`Players (${playerCount}/${capacity})`);
     if (playerCount === 0) {
       this.playerListText.setText("Waiting for players...");
-      this.layout();
-      return;
+    } else {
+      const lines = this.playerNames.map((name, idx) => `${idx + 1}. ${name}`);
+      this.playerListText.setText(lines.join("\n"));
     }
-    const lines = this.playerNames.map((name, idx) => `${idx + 1}. ${name}`);
-    this.playerListText.setText(lines.join("\n"));
+    this.updateSpawnWarning();
+    this.updateStartButtonState();
     this.layout();
+  }
+
+  private hasEnoughSpawnTiles(): boolean {
+    return this.playerNames.length + this.botPlayers <= this.cols * this.rows;
+  }
+
+  private updateSpawnWarning() {
+    const showWarning =
+      this.serverSpawnWarning || !this.hasEnoughSpawnTiles();
+    this.spawnWarningText.setText(
+      showWarning
+        ? t("Not enough spawn tiles. Increase map size or remove players/bots.")
+        : ""
+    );
+    this.spawnWarningText.setVisible(showWarning);
   }
 
   private updateStartButtonState() {
     if (!this.startMatchButton) return;
-    const canStart = this.isHost && !this.started && !this.startMatchBusy;
+    const canStart =
+      this.isHost &&
+      !this.started &&
+      !this.startMatchBusy &&
+      !this.serverSpawnWarning &&
+      this.hasEnoughSpawnTiles();
     if (canStart) {
       this.startMatchButton.setAlpha(1);
       this.startMatchButton.setText(

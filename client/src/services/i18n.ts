@@ -252,6 +252,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Leave Match": "Abandonar partida",
   "End Turn": "Terminar turno",
   "Start Match": "Comenzar partida",
+  "Not enough spawn tiles. Increase map size or remove players/bots.":
+    "No hay suficientes casillas de aparición. Aumenta el mapa o elimina jugadores/bots.",
   "Remove Match": "Eliminar partida",
   Rename: "Cambiar nombre",
   Players: "Jugadores",

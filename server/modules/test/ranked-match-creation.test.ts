@@ -15,6 +15,8 @@ import { updateSettingsRpc } from "../src/rpc/updateSettings";
 import { createMatchRpc } from "../src/rpc/createMatch";
 import { getStateRpc } from "../src/rpc/getState";
 import { createRankedMatch } from "../src/services/rankedMatchFactory";
+import { MATCH_COLLECTION } from "../src/constants";
+import type { MatchRecord } from "../src/models/types";
 
 Object.assign(globalThis, {
   nkruntime: {
@@ -173,6 +175,52 @@ test("normal match creation defaults to 16 and enforces 30-player maximum", () =
     )
   ) as { size: number };
   assert.equal(settingsResponse.size, MAX_NORMAL_MATCH_SIZE);
+});
+
+test("normal start rejects insufficient walkable spawns until map is expanded", () => {
+  const harness = createHarness(["creator"]);
+  const context = { userId: "creator" } as nkruntime.Context;
+  const created = JSON.parse(
+    createMatchRpc(context, harness.logger, harness.nakama, "{}")
+  ) as { match_id: string };
+  const stored = Array.from(harness.records.values()).find(
+    (record) => record.collection === MATCH_COLLECTION
+  );
+  assert.ok(stored);
+  const match = stored.value as MatchRecord;
+  match.size = 30;
+  match.players = [
+    "creator",
+    ...Array.from({ length: 20 }, (_, index) => `player-${index}`)
+  ];
+
+  assert.throws(
+    () =>
+      startMatchRpc(
+        context,
+        harness.logger,
+        harness.nakama,
+        JSON.stringify({ match_id: created.match_id })
+      ),
+    { message: "insufficient_spawn_tiles" }
+  );
+  assert.equal(match.started, false);
+
+  match.cols = 6;
+  match.rows = 4;
+  match.map = undefined;
+  const response = JSON.parse(
+    startMatchRpc(
+      context,
+      harness.logger,
+      harness.nakama,
+      JSON.stringify({ match_id: created.match_id })
+    )
+  ) as { started: boolean };
+  assert.equal(response.started, true);
+  assert.ok(
+    Object.values(match.playerCharacters).every((character) => character.position)
+  );
 });
 
 test("ranked factory starts 8-player human and 16-player bot-filled rosters offline", () => {

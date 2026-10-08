@@ -520,7 +520,18 @@ export class MainScene extends Phaser.Scene {
           }
         } catch (e) {
           console.error("start_match error", e);
-          this.statusText.setText("start_match error (see console).");
+          const errorMessage =
+            typeof e === "object" && e !== null && "message" in e
+              ? String(e.message)
+              : String(e);
+          if (errorMessage.includes("insufficient_spawn_tiles")) {
+            this.lobbyView.showSpawnValidationWarning();
+            this.statusText.setText(
+              t("Not enough spawn tiles. Increase map size or remove players/bots.")
+            );
+          } else {
+            this.statusText.setText("start_match error (see console).");
+          }
         }
       });
       this.lobbyView.setOnSettingsChange(async (s) => {

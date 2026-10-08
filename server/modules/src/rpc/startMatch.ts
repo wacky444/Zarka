@@ -15,6 +15,7 @@ import { tailorMapForCharacter } from "../utils/matchView";
 import { createReplaySnapshot } from "../match/replay/snapshot";
 import { getRuntimeMatchId } from "../utils/matchIds";
 import { startMatchRecord } from "../match/startMatchRecord";
+import { hasEnoughSpawnTiles } from "../utils/playerCharacter";
 
 export function startMatchRpc(
   ctx: nkruntime.Context,
@@ -120,6 +121,13 @@ export function startMatchRpc(
       map: tailored
     };
     return JSON.stringify(already);
+  }
+
+  if (!hasEnoughSpawnTiles(match)) {
+    throw makeNakamaError(
+      "insufficient_spawn_tiles",
+      nkruntime.Codes.FAILED_PRECONDITION
+    );
   }
 
   const startedAtMs = Date.now();
