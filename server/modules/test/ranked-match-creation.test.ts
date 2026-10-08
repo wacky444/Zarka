@@ -15,6 +15,7 @@ import { updateSettingsRpc } from "../src/rpc/updateSettings";
 import { createMatchRpc } from "../src/rpc/createMatch";
 import { getStateRpc } from "../src/rpc/getState";
 import { createRankedMatch } from "../src/services/rankedMatchFactory";
+import { THEME_COLORS, getRandomColorMatchName } from "../src/match/teams";
 import { MATCH_COLLECTION } from "../src/constants";
 import type { MatchRecord } from "../src/models/types";
 
@@ -238,6 +239,10 @@ test("ranked factory starts 8-player human and 16-player bot-filled rosters offl
   assert.equal(eightPlayers.match.botPlayers, 0);
   assert.equal(eightPlayers.matchParams[0].ranked, "true");
   assert.equal(eightPlayers.matchParams[0].started, "true");
+  assert.equal(eightPlayers.match.creator, "Ranked");
+  assert.equal(eightPlayers.matchParams[0].creator, "Ranked");
+  assert.ok(THEME_COLORS.includes(eightPlayers.match.name!));
+  assert.ok(THEME_COLORS.includes(eightPlayers.matchParams[0].name));
   assert.equal(eightPlayers.records.size, 2);
 
   const lowPopulation = createMatch(
@@ -247,6 +252,10 @@ test("ranked factory starts 8-player human and 16-player bot-filled rosters offl
     "assignment-low"
   );
   assert.equal(lowPopulation.match.started, true);
+  assert.equal(lowPopulation.match.creator, "Ranked");
+  assert.equal(lowPopulation.matchParams[0].creator, "Ranked");
+  assert.ok(THEME_COLORS.includes(lowPopulation.match.name!));
+  assert.ok(THEME_COLORS.includes(lowPopulation.matchParams[0].name));
   assert.equal(lowPopulation.match.size, 16);
   assert.equal(lowPopulation.match.cols, 5);
   assert.equal(lowPopulation.match.rows, 4);
@@ -268,6 +277,12 @@ test("ranked factory starts 8-player human and 16-player bot-filled rosters offl
   );
   assert.equal((storedMatch?.value as { started?: boolean }).started, true);
   assert.equal(lowPopulation.signals.length, 1);
+});
+
+test("ranked match names pick colors including Lavanda and set creator to Ranked", () => {
+  assert.ok(THEME_COLORS.includes("Lavanda"));
+  const randomColor = getRandomColorMatchName();
+  assert.ok(THEME_COLORS.includes(randomColor));
 });
 
 test("ranked match creator rejects duplicate, invalid, and inconsistent rosters", () => {

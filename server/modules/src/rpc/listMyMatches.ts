@@ -3,7 +3,9 @@
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
+import { SERVER_USER_ID } from "../constants";
 import {
+  RANKED_MATCH_METADATA_KEY,
   TUTORIAL_MATCH_METADATA_KEY,
   type ListMyMatchesPayload
 } from "@shared";
@@ -34,6 +36,12 @@ export function listMyMatchesRpc(
         continue;
       }
 
+      const isRanked = Boolean(match.metadata?.[RANKED_MATCH_METADATA_KEY]);
+      const creator =
+        isRanked && (!match.creator || match.creator === SERVER_USER_ID)
+          ? "Ranked"
+          : match.creator;
+
       const isActive = match.removed === 0 || match.removed === undefined;
       if (isActive) {
         const started = match.started === true;
@@ -44,7 +52,7 @@ export function listMyMatchesRpc(
           players,
           current_turn: match.current_turn,
           created_at: match.created_at,
-          creator: match.creator,
+          creator,
           cols: match.cols,
           rows: match.rows,
           roundTime: match.roundTime,
@@ -67,7 +75,7 @@ export function listMyMatchesRpc(
           players,
           current_turn: match.current_turn,
           created_at: match.created_at,
-          creator: match.creator,
+          creator,
           cols: match.cols,
           rows: match.rows,
           name: match.name,
@@ -97,7 +105,7 @@ export function listMyMatchesRpc(
         players,
         current_turn: report.turns,
         created_at: report.created_at,
-        creator: match.creator,
+        creator,
         cols: match.cols,
         rows: match.rows,
         name: report.name ?? match.name,

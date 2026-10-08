@@ -7,7 +7,8 @@ import {
   type RankedMatchMetadata,
   type RankedQueueMode
 } from "@shared";
-import { DEFAULT_MATCH_NAME, SERVER_USER_ID } from "../constants";
+import { SERVER_USER_ID } from "../constants";
+import { getRandomColorMatchName } from "../match/teams";
 import { startMatchRecord } from "../match/startMatchRecord";
 import type { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "./nakamaWrapper";
@@ -163,14 +164,15 @@ export function createRankedMatch(
     undefined,
     30
   );
+  const matchName = getRandomColorMatchName();
   const runtimeMatchId = findExistingRuntimeMatchId(nk, matchId) ??
     nk.matchCreate("async_turn", {
     game_id: matchId,
     ranked: "true",
     size: String(totalRoster),
     players: JSON.stringify(request.humanIds),
-    creator: SERVER_USER_ID,
-    name: DEFAULT_MATCH_NAME,
+    creator: "Ranked",
+    name: matchName,
     cols: String(dimensions.cols),
     rows: String(dimensions.rows),
     roundTime: "23:00",
@@ -209,8 +211,8 @@ export function createRankedMatch(
     turnsToBeAt1Tile: 30,
     created_at: Math.floor(nowMs / 1000),
     current_turn: 0,
-    creator: SERVER_USER_ID,
-    name: DEFAULT_MATCH_NAME,
+    creator: "Ranked",
+    name: matchName,
     started: false,
     removed: 0,
     map: generated.map,

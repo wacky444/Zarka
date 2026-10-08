@@ -66,7 +66,7 @@ export class TurnService {
     payload: ReadyStateUpdateMessagePayload
   ) => void;
   private onZarkansDonated?: (payload: ZarkansDonatedMessagePayload) => void;
-  private usernameCache = new Map<string, string>();
+  private usernameCache = new Map<string, string>([["Ranked", "Ranked"]]);
   private lastRankedPresenceTouchAt = 0;
   private rankedPresenceTouch: Promise<void> | null = null;
   private knownRankedAssignmentIds = new Set<string>();

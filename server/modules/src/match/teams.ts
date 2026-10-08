@@ -78,6 +78,34 @@ export const ALL_THEMES = [
   { name: "constellations", names: THEME_CONSTELLATIONS }
 ];
 
+export const THEME_COLORS = [
+  "Lavanda",
+  "Rojo",
+  "Azul",
+  "Verde",
+  "Amarillo",
+  "Naranja",
+  "Rosa",
+  "Violeta",
+  "Carmesí",
+  "Turquesa",
+  "Índigo",
+  "Ámbar",
+  "Celeste",
+  "Magenta",
+  "Coral",
+  "Esmeralda",
+  "Zafiro",
+  "Rubí",
+  "Ocre",
+  "Granate"
+];
+
+export function getRandomColorMatchName(): string {
+  const index = Math.floor(Math.random() * THEME_COLORS.length);
+  return THEME_COLORS[index];
+}
+
 export function shuffleArray<T>(array: T[]): T[] {
   const result = [...array];
   for (let i = result.length - 1; i > 0; i -= 1) {

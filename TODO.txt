@@ -64,9 +64,10 @@
 	
 - matchmaking
 	-t pause auto matchmaking if the player hasn't logged in 24h, even it the account has a free slot, don't queue players with more than 24 offline time
-	- match name and creator name for ranked games
+	-t match name and creator name for ranked games
 
 	- ignore elo range selection, match any
+	- min duration
 
 -t i can see 3/25) load quantity in other tabs
 
