@@ -13,6 +13,7 @@ import {
 import type { MatchRecord } from "../models/types";
 import { finalizeMatchIfEnded } from "./checkEndGame";
 import { recordMatchReportProgress } from "./matchReport";
+import { recordRankedTeamEliminations } from "./rankedPlacements";
 import { updateCooldownsForTurn } from "./actions/cooldowns";
 import { executeAction, type TileLookup } from "./actionExecutor";
 import { applyVirusInfection } from "./actions/virusInfection";
@@ -343,6 +344,7 @@ export function advanceTurn(
   refreshTrackerViews(match, resolvedTurn, logger);
   appendHiddenStatusEvents(match, resolvedTurn, replayEvents);
   recordMatchReportProgress(match);
+  recordRankedTeamEliminations(match, resolvedTurn);
   if (nk) {
     finalizeMatchIfEnded(match, nk, logger, replayEvents, resolvedTurn);
   }

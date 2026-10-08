@@ -31,6 +31,8 @@ export interface MatchReportPlayer {
 export interface MatchReportTeam {
   team_id: string;
   rank: number;
+  placement?: number;
+  elimination_turn?: number;
   won: boolean;
   player_ids: string[];
   total_damage_dealt: number;

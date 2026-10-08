@@ -8,6 +8,7 @@ import type { MatchRecord } from "../models/types";
 import { isCharacterDead } from "../utils/playerCharacter";
 import { createStorageService } from "../services/storageService";
 import { buildMatchReport } from "./matchReport";
+import { finalizeRankedTeamPlacements } from "./rankedPlacements";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -214,6 +215,8 @@ export function finalizeMatchIfEnded(
     );
     return outcome;
   }
+
+  finalizeRankedTeamPlacements(match, resolvedTurn);
 
   // Mark match removed immediately to prevent duplicate finalization.
   match.removed = 1;
