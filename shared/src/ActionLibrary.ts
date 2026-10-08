@@ -1009,6 +1009,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 3,
     cooldown: 3,
+    experience: {
+      base: 2
+    },
     requirements: [
       {
         description:
@@ -1018,7 +1021,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Permite fabricar pistola, bala, molotov, bate, hacha, cuchillo, arpón, flecha, trampa o C4 siguiendo las recetas del juego."
+          "Permite fabricar pistola, bala, molotov, bate, hacha, cuchillo, arpón, flecha, trampa o C4 utilizando los recursos del entorno."
       }
     ],
     texture: "Board Game Icons",

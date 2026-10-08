@@ -2,118 +2,167 @@
 
 ## Goal
 
-Implement two item-creation actions: **Crafting** (`fabricate`) and **Combine/Separate** (`manipulate`). Use these English labels in the UI while retaining existing action IDs. Give each action a product selector similar to the item selector. Always show every applicable recipe; show a warning when ingredients are missing instead of hiding the option.
+Implement two item-creation actions: **Crafting** (`fabricate`) and **Combine/Separate** (`manipulate`). Use these English labels in the UI while retaining existing action IDs. 
+
+Clarify the fundamental mechanical distinction between both actions:
+- **Crafting (`fabricate`)**: Represents utilizing tools and scrap available in the environment/workshop. It **does not consume inventory items / primary ingredients**. It can only be executed at the **Workshop** tile or with the **Dexterity 4** skill ("MacGyver").
+- **Combine/Separate (`manipulate`)**: Represents field assembly and disassembly. It can be performed anywhere on the map, but **requires and consumes specific inventory items** matching the creation recipes from the item catalog.
 
 ## Rules and action order
 
 Both actions are secondary actions:
 
-- **Combine/Separate** costs 1 energy, has cooldown 3, and allows one extra operation per extra execution, up to 3 extras. It runs at action order 6, after **Pick Up** (6.1) and **Search** (6.2).
-- **Crafting** costs 3 energy, has cooldown 3, and runs at order 14, after **Steal** (order 13). It requires the workshop unless the player has **Dexterity 4**.
+- **Combine/Separate (`manipulate`)**:
+  - Cost: 1 energy, Cooldown: 3.
+  - Extra executions: +1 energy per extra execution (up to 3 extras, allowing up to 4 operations total).
+  - Action order: 6 (sub-order 3), executing after **Pick Up** (6.1) and **Search** (6.2).
+  - Location/Skill requirement: None (can be executed anywhere).
+  - Ingredients: Consumes specific inventory items.
 
-Ingredient warnings must use inventory projected at each action's execution point, not only inventory at the beginning of the turn. Items picked up earlier can be available to both actions; known items acquired by stealing can be available to Crafting. Search reveals items but does not put them in inventory; they must also be picked up.
+- **Crafting (`fabricate`)**:
+  - Cost: 3 energy, Cooldown: 3, Base Experience reward: +2 XP.
+  - Extra executions: None (single craft per execution).
+  - Action order: 14 (sub-order 0), executing after **Steal** (order 13).
+  - Location/Skill requirement: Requires being at the **Workshop** tile unless the player has the **Dexterity 4** skill.
+  - Ingredients: **None consumed from inventory**. Synthesizes items directly from the workshop/environment.
 
-Keep the server's existing action order authoritative. Recheck requirements when each action executes because earlier actions can fail or consume items.
+Keep the server's existing action order authoritative. Recheck requirements when each action executes.
 
-## Current implementation and relevant UI
+## Catalogs and recipe definitions
 
-- `shared/src/ActionLibrary.ts` defines both actions, but neither is marked developed. No server handlers for these action IDs were found; undeveloped entries are disabled in the action selector.
-- `shared/src/ItemLibrary.ts` has display-only `recipes` strings but no structured ingredient quantities. Add `shared/src/RecipesLibrary.ts`, modeled after `ItemLibrary`, as the authoritative recipe catalog.
-- `client/src/ui/panel/CharacterPanelActionOptions.ts` calls `getMissingRequirement()` and passes its result as `GridSelectItem.missingRequirement`.
-- `client/src/ui/ActionRequirementWarnings.ts` computes action-level requirement messages. Its workshop check currently does not account for the Dexterity 4 exception.
-- `client/src/ui/GridSelect.ts` renders `missingRequirement` in warning color within each item card. Missing requirements do not disable selection; only `disabled` does. Use this behavior for recipe cards.
-- `client/src/ui/ItemPrioritySelector.ts` and `client/src/ui/CellItemGrid.ts` show existing item icon/name patterns. Use `resolveItemTexture()` from `client/src/ui/itemIcons.ts` for item art.
+Build both selectors from [RecipesLibrary.ts](file:///e:/Dev/ZarkaGit/shared/src/RecipesLibrary.ts) and export from [index.ts](file:///e:/Dev/ZarkaGit/shared/src/index.ts).
 
-## Recipe catalog
+### 1. Crafting catalog (`fabricate`)
 
-Build both selectors from `shared/src/RecipesLibrary.ts`, not parsed localized strings. Model it after `shared/src/ItemLibrary.ts`; each base recipe has a typed recipe ID, action ID, output `ItemId`, and ingredient entries `{ itemId, quantity }`. Derive localized names, icons, and descriptions from `ItemLibrary`. Export the catalog and types from `shared/src/index.ts`; keep it as the single source of ingredient requirements.
+Crafting allows producing exactly these 10 items without consuming player inventory items:
 
-A Separate operation reverses a base recipe: it consumes one output item and returns that recipe's original ingredients. Use the same catalog for both directions so combine and separate costs cannot drift.
+| Item ID | Item Name | Inventory Ingredients | Location / Skill Requirement |
+| --- | --- | --- | --- |
+| `pistol` | Pistol | None (0) | Workshop or Dexterity 4 |
+| `bullet` | Bullet | None (0) | Workshop or Dexterity 4 |
+| `molotov` | Molotov | None (0) | Workshop or Dexterity 4 |
+| `bat` | Bat | None (0) | Workshop or Dexterity 4 |
+| `axe` | Axe | None (0) | Workshop or Dexterity 4 |
+| `knife` | Knife | None (0) | Workshop or Dexterity 4 |
+| `harpoon` | Harpoon | None (0) | Workshop or Dexterity 4 |
+| `arrow` | Arrow | None (0) | Workshop or Dexterity 4 |
+| `trap` | Trap | None (0) | Workshop or Dexterity 4 |
+| `c4` | C4 | None (0) | Workshop or Dexterity 4 |
 
-### Crafting recipes
+> [!NOTE]
+> Items like `nail_bat` and `suppressed_pistol` cannot be crafted via Crafting; they are exclusive to Combine/Separate. Conversely, items like `pistol`, `bullet`, `harpoon`, `trap`, and `c4` cannot be assembled via Combine/Separate.
 
-Show exactly these four options:
+### 2. Combine and Separate catalog (`manipulate`)
 
-| Recipe ID | Output | Ingredients |
-| --- | --- | --- |
-| `knife` | Knife | Wood ×1, Spike ×2 |
-| `bat` | Bat | Wood ×4 |
-| `axe` | Axe | Wood ×3, Spike ×2 |
-| `arrow` | Arrow | Wood ×1, Spike ×1 |
+Combine/Separate is defined by the creation recipes from the item table.
 
-All four remain visible at the workshop and when Dexterity 4 is owned. Outside the workshop, show the action-level warning unless Dexterity 4 is present. Do not expose outputs beyond these four in the Crafting selector.
+#### Combine options (7 recipes)
 
-### Combine and Separate options
+The Combine selector shows exactly these seven recipes requiring inventory ingredients:
 
-The Combine selector shows exactly these three combinations:
+| Recipe ID | Output Item | Ingredients Consumed | Location Requirement |
+| --- | --- | --- | --- |
+| `knife` | Knife (`knife`) | Wood ×1, Spike ×2 | Anywhere |
+| `bat` | Bat (`bat`) | Wood ×4 | Anywhere |
+| `nail_bat` | Nail bat (`nail_bat`) | Bat ×1, Nails ×2 | Anywhere |
+| `axe` | Axe (`axe`) | Wood ×3, Spike ×2 | Anywhere |
+| `molotov` | Molotov (`molotov`) | Bottle ×1, Fuel ×1 | Anywhere |
+| `arrow` | Arrow (`arrow`) | Wood ×1, Spike ×1 | Anywhere |
+| `suppressed_pistol` | Silenced pistol (`suppressed_pistol`) | Pistol ×1, Silencer ×1 | Anywhere |
 
-| Recipe ID | Output | Ingredients |
-| --- | --- | --- |
-| `silenced_pistol` | Silenced pistol | Pistol ×1, Silencer ×1 |
-| `molotov` | Molotov | Bottle ×1, Fuel ×1 |
-| `nail_bat` | Nail bat | Bat ×1, Nails ×2 |
+#### Separate options (7 recipes)
 
-The Separate selector lists reverse operations for recipe outputs and returns original ingredients:
+The Separate selector reverses the base recipes, consuming one output item and returning its exact components:
 
-| Separate option | Consumes | Returns |
+| Separate Option | Item Consumed | Components Returned |
 | --- | --- | --- |
 | Separate Knife | Knife ×1 | Wood ×1, Spike ×2 |
 | Separate Bat | Bat ×1 | Wood ×4 |
+| Separate Nail bat | Nail bat ×1 | Bat ×1, Nails ×2 |
 | Separate Axe | Axe ×1 | Wood ×3, Spike ×2 |
+| Separate Molotov | Molotov ×1 | Bottle ×1, Fuel ×1 |
 | Separate Arrow | Arrow ×1 | Wood ×1, Spike ×1 |
 | Separate Silenced pistol | Silenced pistol ×1 | Pistol ×1, Silencer ×1 |
-| Separate Molotov | Molotov ×1 | Bottle ×1, Fuel ×1 |
-| Separate Nail bat | Nail bat ×1 | Bat ×1, Nails ×2 |
 
-In particular, separating a Knife returns Wood ×1 and Spike ×2; separating a Molotov returns Bottle ×1 and Fuel ×1. Keep the poison-on-weapon behavior described in `Zark.md` as a separate Combine/Separate operation, not a recipe entry or craftable output. Its poison consumption and coating duration still need rule confirmation.
+Poison coating on melee weapons remains a separate operation as described in game rules, not part of standard item recipe catalog.
 
-## Selector behavior
+### Comparison summary
 
-- Add one recipe selector for Crafting and one for Combine/Separate, shown when the corresponding action is selected. In the latter, let the player choose Combine or Separate. Reuse `GridSelect` card/modal behavior and item textures.
-- Always show all four Crafting recipes, all three Combine options, and all seven Separate options. Do not filter options based on current inventory.
-- Show output name, icon, and ingredient list on each card. For Separate, show the item consumed and the components returned. Show available projected quantities and a warning for every shortage; example: `Missing Spike ×1`.
-- Set `missingRequirement` for ingredient warnings and leave `disabled` false for shortages. This matches the action-list warning pattern and allows a recipe to be selected when an earlier planned pickup or known steal may provide the ingredients.
-- For Crafting, also show the workshop/Dexterity 4 warning through the action-level requirement path.
-- Localize labels, ingredient names, and warning text in English and Spanish. Keep ingredient counts explicit.
-- Persist selected recipe and operation (`combine` or `separate`) per Combine/Separate execution. It supports up to four operations (base plus three extra executions); repeats can select different recipes. Crafting selects one output.
+| Feature | Crafting (`fabricate`) | Combine/Separate (`manipulate`) |
+| --- | --- | --- |
+| **Energy cost** | 3 | 1 (+1 per extra execution, max 3 extras) |
+| **Cooldown** | 3 | 3 |
+| **Experience** | +2 XP | Base (0) |
+| **Location / Skill** | Workshop tile OR Dexterity 4 | Anywhere |
+| **Inventory ingredients** | None (does not consume items) | Required (consumes components) |
+| **Outputs** | 10 items (Pistol, Bullet, Molotov, Bat, Axe, Knife, Harpoon, Arrow, Trap, C4) | 7 items (Knife, Bat, Nail bat, Axe, Molotov, Arrow, Silenced pistol) |
+| **Reverse (Separate)** | No | Yes (disassembles all 7 recipes) |
+| **Action order** | 14 (sub-order 0) | 6 (sub-order 3) |
 
-## Projected ingredients and authoritative validation
+## Selector and UI behavior
 
-- Calculate each warning from known carried inventory plus items selected by earlier planned actions that resolve before the recipe. Subtract ingredients allocated to earlier planned recipes.
-- For pickup projections, count only visible items actually selected by the player's pickup plan. A search alone is not an inventory gain.
-- Include a same-turn steal only when the selected item is known to the acting player. Never inspect or disclose hidden opponent inventory to build warnings.
-- Treat projections as advisory. At resolution, the server validates the recipe, checks live inventory and the workshop/Dexterity requirement, consumes all inputs, and grants all outputs atomically. On failure, consume nothing and record a clear failed-action result.
-- Validate quantities, duplicate selections, recipe/action compatibility, and maximum Combine/Separate repetitions server-side. Ignore client-supplied warning status.
+### Crafting selector
+- Opens a product selector showing the 10 craftable items with icons and descriptions.
+- **No ingredient shortage warnings**: Items do not require inventory components, so no "Missing X" warnings are displayed.
+- Shows action-level requirement warning when the player is not currently at a Workshop and does not have Dexterity 4.
+- Allows selection of one product to craft.
+
+### Combine/Separate selector
+- Opens with a choice/tab between **Combine** (7 recipes) and **Separate** (7 dismantles).
+- Always displays all eligible recipes; does not hide uncraftable recipes.
+- **Ingredient shortage warnings**: Uses projected inventory to show required vs available quantities (e.g., `Missing Spike ×1`). Shortages set `missingRequirement` in warning color without disabling selection (matching action selector UX).
+- For Separate, shows the item required and returned parts, with a warning if the item is not carried.
+- Supports up to 4 operations (1 base + up to 3 extra executions). Each repeat can choose a distinct operation.
+
+## Projected inventory and authoritative validation
+
+- **Projection scope**: Applies strictly to **Combine/Separate**, where carried inventory + items picked up earlier in turn (Pick Up 6.1) - items consumed by earlier operations are tracked.
+- **Crafting validation**:
+  - Server verifies: energy, cooldown, Workshop tile or Dexterity 4, character inventory weight capacity.
+  - Grants the crafted item and awards +2 XP.
+- **Combine/Separate validation**:
+  - Server verifies: energy, cooldown, presence of required items in inventory.
+  - Atomically consumes input items and grants output items (or vice-versa for Separate).
+  - On failure, no items are consumed or granted, and a failed action replay event is recorded.
 
 ## Implementation work
 
-1. Add `shared/src/RecipesLibrary.ts`, modeled after `ItemLibrary`, with exactly the seven base recipes above and their action IDs. Define typed recipe IDs, output `ItemId`s, and ingredient `{ itemId, quantity }` entries; export it from `shared/src/index.ts` and test that all referenced items exist. Derive Separate options by reversing the base recipe ingredients; do not duplicate recipe costs.
-2. Add client recipe-card builders using `ItemLibrary`, `resolveItemTexture()`, and `GridSelectItem.missingRequirement`.
-3. Persist Crafting recipe selection and the recipe plus operation type for each Combine/Separate execution in the action plan/RPC payload. Keep recipe IDs typed and server-validated; do not overload pickup target IDs.
-4. Implement server handlers for `manipulate` and `fabricate`, integrate them at their documented action orders, and enable both `ActionDefinition`s only when authoritative handlers are ready. Display their English labels as Combine/Separate and Crafting.
-5. Extend `getMissingRequirement()` so Crafting accepts either workshop location or Dexterity 4. Keep this action-level warning separate from per-recipe ingredient warnings.
-6. Add English/Spanish translations and replay/log output that names the selected operation, consumed components, and returned/created items.
+1. Add [RecipesLibrary.ts](file:///e:/Dev/ZarkaGit/shared/src/RecipesLibrary.ts) defining:
+   - `CRAFTABLE_ITEMS`: Array/record of the 10 item IDs craftable via `fabricate`.
+   - `MANIPULATE_RECIPES`: Array/record of the 7 recipes with explicit `{ itemId, quantity }` inputs and outputs.
+   - `SEPARATE_RECIPES`: Reversal helper derived from `MANIPULATE_RECIPES`.
+2. Update [ActionLibrary.ts](file:///e:/Dev/ZarkaGit/shared/src/ActionLibrary.ts):
+   - Set `experience: { base: 2 }` on `fabricate`.
+   - Ensure descriptions and requirements reflect Workshop / Dexterity 4 requirement and 10 craftable items.
+3. Build client selectors in `client/src/ui/`:
+   - Crafting selector for `fabricate` (10 items, no ingredient warnings, checks Workshop / Dexterity 4).
+   - Combine/Separate selector for `manipulate` (Combine tab with 7 recipes + Separate tab with 7 recipes, ingredient projections and warnings).
+4. Implement server action handlers in `server/modules/src/match/actions/`:
+   - `executeFabricate`: Checks Workshop / Dexterity 4, adds crafted item, grants +2 XP.
+   - `executeManipulate`: Validates and executes Combine or Separate operations atomically.
+5. Add client replay and log formatters in [CharacterPanelLogView.ts](file:///e:/Dev/ZarkaGit/client/src/ui/CharacterPanelLogView.ts) for both actions.
 
 ## Tests and acceptance
 
-### Automated
-
-- Catalog tests: `RecipesLibrary` contains exactly four Crafting recipes and three Combine recipes; every output and ingredient references a valid `ItemId`, and quantities are positive integers.
-- Separate tests: all seven reverse options return exactly the original recipe ingredients, including Knife → Wood ×1 + Spike ×2 and Molotov → Bottle ×1 + Fuel ×1.
-- Selector tests: all seven base recipes and their Separate options remain visible with missing ingredients; warnings appear and options remain selectable; available recipes show no shortage warning.
-- Projection tests: same-turn pickups count for both actions; search-only items do not; known prior steals count for Crafting; earlier operations reserve their ingredients; failed earlier actions do not become guaranteed inventory.
-- Requirement tests: Crafting is allowed in Workshop or with Dexterity 4, and warns otherwise.
-- Server tests: combine consumes exact ingredients and creates the expected output; separate consumes one output and returns exact original ingredients; shortages, invalid recipe IDs, duplicates, and excess repetitions fail without partial inventory changes.
-- Ordering tests: both actions see eligible items picked up earlier in the turn; Crafting can use a known item stolen earlier; later actions do not affect earlier ingredient checks.
-- Privacy tests: selectors and warnings do not expose hidden items from other players.
+### Automated tests
+- **Catalog validation**:
+  - `CRAFTABLE_ITEMS` contains exactly the 10 specified items.
+  - `MANIPULATE_RECIPES` contains exactly the 7 recipes with valid `ItemId`s and positive integers.
+  - `SEPARATE_RECIPES` correctly inverses all 7 recipes.
+- **Crafting tests**:
+  - Allowed at Workshop or with Dexterity 4.
+  - Rejected outside Workshop without Dexterity 4.
+  - Does not deduct any items from inventory.
+  - Grants selected item and +2 XP upon execution.
+- **Combine/Separate tests**:
+  - Combine consumes exact ingredient items and creates output.
+  - Separate consumes output item and returns exact ingredients.
+  - Fails cleanly without state mutation if items are missing.
+  - Extra executions correctly chain inventory consumption and returns.
 
 ### Manual acceptance
-
-1. Select Crafting and verify only Knife, Bat, Axe, and Arrow appear with ingredients and shortage warnings.
-2. Select Combine/Separate, choose Combine, and verify Silenced pistol, Molotov, and Nail bat appear.
-3. Choose Separate and verify all seven reverse options appear; specifically verify Knife returns Wood ×1 and Spike ×2, and Molotov returns Bottle ×1 and Fuel ×1.
-4. Select an operation while short an ingredient; verify its card remains selectable, then verify server rejects execution without consuming or granting anything if requirements remain unmet.
-5. Plan a pickup before either action; verify selected visible components satisfy projected warnings and resolve correctly.
-6. Verify Crafting warns outside Workshop unless Dexterity 4 is owned.
-7. Verify extra Combine/Separate executions can select different operations and account for ingredients spent or returned by earlier operations.
-8. Repeat in English and Spanish and verify result logs match consumed and returned/created items.
+1. Select Crafting: verify all 10 items appear without ingredient warnings; verify Workshop / Dexterity 4 warning displays outside Workshop when lacking Dexterity 4.
+2. Select Combine/Separate: verify 7 Combine recipes show ingredient requirements and shortage warnings; verify 7 Separate options show dismantlable items.
+3. Craft an item (e.g., Bat) at Workshop: verify no wood is deducted, bat is added, and +2 XP is awarded.
+4. Combine an item (e.g., Bat with 4 Wood): verify 4 Wood are consumed and 1 Bat is created.
+5. Separate an item: verify item is dismantled and original ingredients returned.
