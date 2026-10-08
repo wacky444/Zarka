@@ -48,6 +48,11 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Account Settings": "Configuración de la cuenta",
   Settings: "Ajustes",
   Account: "Cuenta",
+  "Available for random games": "Disponible para partidas aleatorias",
+  "Choose how many ranked matches Zarka can assign at once. Another match may be assigned while one is in progress.":
+    "Elige cuántas partidas clasificatorias puede asignarte Zarka a la vez. Puede asignarte otra mientras una partida está en curso.",
+  Disabled: "Desactivado",
+  Enabled: "Activado",
   Appearance: "Apariencia",
   Audio: "Audio",
   Notifications: "Notificaciones",

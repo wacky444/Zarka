@@ -146,6 +146,14 @@ export class SettingsScene extends Phaser.Scene {
   private skinSavePending = false;
   private currentDisplayName = "";
   private playerStatsText!: Phaser.GameObjects.Text;
+  private rankedMatchSlotsTitle!: Phaser.GameObjects.Text;
+  private rankedMatchSlotsDescription!: Phaser.GameObjects.Text;
+  private rankedMatchSlotsValueText!: Phaser.GameObjects.Text;
+  private rankedMatchSlotsStateText!: Phaser.GameObjects.Text;
+  private rankedMatchSlotsDecreaseButton!: UIButton;
+  private rankedMatchSlotsIncreaseButton!: UIButton;
+  private rankedMatchSlots = 0;
+  public onRankedMatchSlotsChange: ((value: number) => void) | null = null;
   private facebookStatusText!: Phaser.GameObjects.Text;
   private skinSelectors: Partial<Record<SkinCategory, GridSelect>> = {};
   private skinCategoryOrder: SkinCategory[] = [];
@@ -304,6 +312,69 @@ export class SettingsScene extends Phaser.Scene {
       })
       .setOrigin(0.5, 0);
     this.accountRoot.add(this.playerStatsText);
+
+    this.rankedMatchSlotsTitle = this.add
+      .text(0, 0, "Available for random games", {
+        color: "#ffffff",
+        fontSize: "18px",
+        align: "center"
+      })
+      .setOrigin(0.5, 0);
+    this.accountRoot.add(this.rankedMatchSlotsTitle);
+
+    this.rankedMatchSlotsDescription = this.add
+      .text(
+        0,
+        0,
+        "Choose how many ranked matches Zarka can assign at once. Another match may be assigned while one is in progress.",
+        {
+          color: "#cccccc",
+          fontSize: "13px",
+          align: "center"
+        }
+      )
+      .setOrigin(0.5, 0);
+    this.accountRoot.add(this.rankedMatchSlotsDescription);
+
+    this.rankedMatchSlotsDecreaseButton = makeButton(
+      this,
+      0,
+      0,
+      "−",
+      () => this.adjustRankedMatchSlots(-1),
+      ["account"]
+    ).setOrigin(0.5, 0);
+    this.accountRoot.add(this.rankedMatchSlotsDecreaseButton);
+
+    this.rankedMatchSlotsValueText = this.add
+      .text(0, 0, "0", {
+        color: "#888888",
+        fontSize: "22px",
+        fontStyle: "bold",
+        align: "center"
+      })
+      .setOrigin(0.5, 0);
+    this.accountRoot.add(this.rankedMatchSlotsValueText);
+
+    this.rankedMatchSlotsIncreaseButton = makeButton(
+      this,
+      0,
+      0,
+      "+",
+      () => this.adjustRankedMatchSlots(1),
+      ["account"]
+    ).setOrigin(0.5, 0);
+    this.accountRoot.add(this.rankedMatchSlotsIncreaseButton);
+
+    this.rankedMatchSlotsStateText = this.add
+      .text(0, 0, "Disabled", {
+        color: "#888888",
+        fontSize: "13px",
+        align: "center"
+      })
+      .setOrigin(0.5, 0);
+    this.accountRoot.add(this.rankedMatchSlotsStateText);
+    this.updateRankedMatchSlotsControl();
 
     this.skinTitle = this.add
       .text(0, 0, "Skin Customization", {
@@ -533,6 +604,12 @@ export class SettingsScene extends Phaser.Scene {
     this.adminServerButton.setVisible(showAccount && this.isAdmin);
     this.skinStatsTitle.setVisible(showAccount);
     this.playerStatsText.setVisible(showAccount);
+    this.rankedMatchSlotsTitle.setVisible(showAccount);
+    this.rankedMatchSlotsDescription.setVisible(showAccount);
+    this.rankedMatchSlotsValueText.setVisible(showAccount);
+    this.rankedMatchSlotsStateText.setVisible(showAccount);
+    this.rankedMatchSlotsDecreaseButton.setVisible(showAccount);
+    this.rankedMatchSlotsIncreaseButton.setVisible(showAccount);
     this.facebookTitle.setVisible(showAccount);
     this.facebookStatusText.setVisible(showAccount);
     this.linkFacebookButton.setVisible(showAccount);
@@ -626,6 +703,43 @@ export class SettingsScene extends Phaser.Scene {
       this.playerStatsText.setWordWrapWidth(contentWidth, true);
       this.playerStatsText.setPosition(centerX, cursorY);
       cursorY += this.playerStatsText.height + ACCOUNT_LAYOUT.sectionGap;
+
+      this.rankedMatchSlotsTitle.setWordWrapWidth(contentWidth, true);
+      this.rankedMatchSlotsTitle.setPosition(centerX, cursorY);
+      cursorY += this.rankedMatchSlotsTitle.height + 4;
+      this.rankedMatchSlotsDescription.setWordWrapWidth(contentWidth, true);
+      this.rankedMatchSlotsDescription.setPosition(centerX, cursorY);
+      cursorY += this.rankedMatchSlotsDescription.height + 8;
+
+      const slotsStepperGap = 12;
+      const slotsStepperWidth =
+        this.rankedMatchSlotsDecreaseButton.width +
+        this.rankedMatchSlotsValueText.width +
+        this.rankedMatchSlotsIncreaseButton.width +
+        slotsStepperGap * 2;
+      let slotsStepperX = centerX - slotsStepperWidth / 2;
+      this.rankedMatchSlotsDecreaseButton.setPosition(
+        slotsStepperX + this.rankedMatchSlotsDecreaseButton.width / 2,
+        cursorY
+      );
+      slotsStepperX += this.rankedMatchSlotsDecreaseButton.width + slotsStepperGap;
+      this.rankedMatchSlotsValueText.setPosition(
+        slotsStepperX + this.rankedMatchSlotsValueText.width / 2,
+        cursorY + 2
+      );
+      slotsStepperX += this.rankedMatchSlotsValueText.width + slotsStepperGap;
+      this.rankedMatchSlotsIncreaseButton.setPosition(
+        slotsStepperX + this.rankedMatchSlotsIncreaseButton.width / 2,
+        cursorY
+      );
+      cursorY +=
+        Math.max(
+          this.rankedMatchSlotsDecreaseButton.height,
+          this.rankedMatchSlotsValueText.height,
+          this.rankedMatchSlotsIncreaseButton.height
+        ) + 4;
+      this.rankedMatchSlotsStateText.setPosition(centerX, cursorY);
+      cursorY += this.rankedMatchSlotsStateText.height + ACCOUNT_LAYOUT.sectionGap;
 
       this.facebookTitle.setPosition(centerX, cursorY);
       cursorY += this.facebookTitle.height + 6;
@@ -736,6 +850,51 @@ export class SettingsScene extends Phaser.Scene {
     this.accountScrollPanel.setSize?.(viewportWidth, viewportHeight);
     this.accountScrollPanel.setMinSize?.(viewportWidth, viewportHeight);
     this.accountScrollPanel.layout?.();
+  }
+
+  public getRankedMatchSlots(): number {
+    return this.rankedMatchSlots;
+  }
+
+  public setRankedMatchSlots(value: number): void {
+    this.rankedMatchSlots = Number.isFinite(value)
+      ? Math.max(0, Math.min(3, Math.floor(value)))
+      : 0;
+    if (this.rankedMatchSlotsValueText) {
+      this.updateRankedMatchSlotsControl();
+    }
+  }
+
+  private adjustRankedMatchSlots(delta: number): void {
+    const nextValue = Math.max(0, Math.min(3, this.rankedMatchSlots + delta));
+    if (nextValue === this.rankedMatchSlots) {
+      return;
+    }
+    this.setRankedMatchSlots(nextValue);
+    this.onRankedMatchSlotsChange?.(nextValue);
+  }
+
+  private updateRankedMatchSlotsControl(): void {
+    this.rankedMatchSlotsValueText.setText(`${this.rankedMatchSlots}`);
+    const disabled = this.rankedMatchSlots === 0;
+    this.rankedMatchSlotsValueText.setColor(disabled ? "#888888" : "#ffffff");
+    this.rankedMatchSlotsStateText.setText(disabled ? "Disabled" : "Enabled");
+    this.rankedMatchSlotsStateText.setColor(disabled ? "#888888" : "#86efac");
+
+    if (disabled) {
+      this.rankedMatchSlotsDecreaseButton.setAlpha(0.5).disableInteractive();
+    } else {
+      this.rankedMatchSlotsDecreaseButton
+        .setAlpha(1)
+        .setInteractive({ useHandCursor: true });
+    }
+    if (this.rankedMatchSlots === 3) {
+      this.rankedMatchSlotsIncreaseButton.setAlpha(0.5).disableInteractive();
+    } else {
+      this.rankedMatchSlotsIncreaseButton
+        .setAlpha(1)
+        .setInteractive({ useHandCursor: true });
+    }
   }
 
   private getMusicToggleLabel(): string {
