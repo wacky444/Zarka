@@ -87,7 +87,10 @@ function createHarness() {
     }>) => {
       for (const request of requests) {
         const existing = records.get(keyOf(request));
-        const expected = request.version === "" ? undefined : request.version;
+        const expected =
+          request.version === "" || request.version === "*"
+            ? undefined
+            : request.version;
         if (request.version !== undefined && expected !== existing?.version) {
           throw new Error("version conflict");
         }

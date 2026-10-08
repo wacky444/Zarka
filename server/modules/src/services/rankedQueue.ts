@@ -111,19 +111,20 @@ function writeObject<T extends Record<string, unknown>>(
   collection: string,
   key: string,
   value: T,
-  version: string
+  version?: string
 ): void {
-  nk.storageWrite([
-    {
-      collection,
-      key,
-      userId: SERVER_USER_ID,
-      value,
-      permissionRead: 0,
-      permissionWrite: 0,
-      version
-    }
-  ]);
+  const request: nkruntime.StorageWriteRequest = {
+    collection,
+    key,
+    userId: SERVER_USER_ID,
+    value,
+    permissionRead: 0,
+    permissionWrite: 0
+  };
+  if (version !== undefined && version !== "") {
+    request.version = version;
+  }
+  nk.storageWrite([request]);
 }
 
 function listObjects<T>(
@@ -271,7 +272,7 @@ export function createRankedSlotPreferenceWrite(
     value: { userId, desiredSlots, updatedAtMs: nowMs },
     permissionRead: 0,
     permissionWrite: 0,
-    version: current?.version ?? ""
+    ...(current ? { version: current.version } : {})
   };
 }
 
@@ -314,7 +315,7 @@ function acquireCoordinatorLease(
       RANKED_QUEUE_LEASE_COLLECTION,
       COORDINATOR_LEASE_KEY,
       { ownerId, expiresAtMs: nowMs + COORDINATOR_LEASE_MS },
-      current?.version ?? ""
+      current ? current.version : "*"
     );
     return ownerId;
   } catch {
@@ -696,7 +697,7 @@ function synchronizeEnrollmentTickets(
         status: "queued"
       };
       try {
-        writeObject(nk, RANKED_QUEUE_TICKET_COLLECTION, key, value, "");
+        writeObject(nk, RANKED_QUEUE_TICKET_COLLECTION, key, value, "*");
         occupiedSlots.add(key);
       } catch (error) {
         logger.warn(
@@ -741,7 +742,7 @@ function reserveAssignment(
       value: assignment,
       permissionRead: 0,
       permissionWrite: 0,
-      version: ""
+      version: "*"
     },
     ...selected.map((ticket) => ({
       collection: RANKED_QUEUE_TICKET_COLLECTION,

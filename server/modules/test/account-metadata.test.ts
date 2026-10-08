@@ -37,7 +37,10 @@ test("account metadata writers share one per-user lock and read fresh metadata",
           userId: request.userId ?? ""
         });
         const current = objects.get(key);
-        const expected = request.version === "" ? undefined : request.version;
+        const expected =
+          request.version === "" || request.version === "*"
+            ? undefined
+            : request.version;
         if (request.version !== undefined && expected !== current?.version) {
           throw new Error("version conflict");
         }

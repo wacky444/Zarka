@@ -59,7 +59,8 @@ export function setRankedMatchSlotsRpc(
         };
       },
       () => [createRankedSlotPreferenceWrite(nk, userId, slots, nowMs)],
-      nowMs
+      nowMs,
+      logger
     );
   } catch (error) {
     logger.error(

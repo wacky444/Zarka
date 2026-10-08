@@ -33,7 +33,10 @@ function createHarness(initialMetadata: unknown) {
         key: request.key,
         userId: request.userId ?? ""
       }));
-      const expectedVersion = request.version === "" ? undefined : request.version;
+      const expectedVersion =
+        request.version === "" || request.version === "*"
+          ? undefined
+          : request.version;
       if (request.version !== undefined && expectedVersion !== current?.version) {
         throw new Error("version conflict");
       }

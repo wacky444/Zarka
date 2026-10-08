@@ -42,7 +42,8 @@ function readLock(
 export function acquireAccountMetadataLock(
   nk: nkruntime.Nakama,
   userId: string,
-  nowMs = Date.now()
+  nowMs = Date.now(),
+  logger?: nkruntime.Logger
 ): string | null {
   const current = readLock(nk, userId);
   if (current && current.value.expiresAtMs > nowMs) return null;
@@ -57,11 +58,16 @@ export function acquireAccountMetadataLock(
         value: { ownerId, expiresAtMs: nowMs + ACCOUNT_METADATA_LOCK_MS },
         permissionRead: 0,
         permissionWrite: 0,
-        version: current?.version ?? ""
+        ...(current ? { version: current.version } : { version: "*" })
       }
     ]);
     return ownerId;
-  } catch {
+  } catch (error) {
+    logger?.error(
+      "acquireAccountMetadataLock failed for user %s: %s",
+      userId,
+      (error && (error as Error).message) || String(error)
+    );
     return null;
   }
 }
@@ -96,9 +102,10 @@ export function updateAccountMetadata(
   userId: string,
   mutate: AccountMetadataMutator,
   storageWrites?: () => nkruntime.StorageWriteRequest[],
-  nowMs = Date.now()
+  nowMs = Date.now(),
+  logger?: nkruntime.Logger
 ): AccountMetadataUpdateStatus {
-  const ownerId = acquireAccountMetadataLock(nk, userId, nowMs);
+  const ownerId = acquireAccountMetadataLock(nk, userId, nowMs, logger);
   if (!ownerId) return "busy";
 
   try {

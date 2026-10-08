@@ -86,19 +86,20 @@ function writeObject<T extends Record<string, unknown>>(
   collection: string,
   key: string,
   value: T,
-  version: string
+  version?: string
 ): void {
-  nk.storageWrite([
-    {
-      collection,
-      key,
-      userId: SERVER_USER_ID,
-      value,
-      permissionRead: 0,
-      permissionWrite: 0,
-      version
-    }
-  ]);
+  const request: nkruntime.StorageWriteRequest = {
+    collection,
+    key,
+    userId: SERVER_USER_ID,
+    value,
+    permissionRead: 0,
+    permissionWrite: 0
+  };
+  if (version !== undefined && version !== "") {
+    request.version = version;
+  }
+  nk.storageWrite([request]);
 }
 
 function deleteObject(
@@ -468,7 +469,7 @@ function enqueueUserSettlement(
       value: nextState,
       permissionRead: 0,
       permissionWrite: 0,
-      version: state?.version ?? ""
+      ...(state ? { version: state.version } : { version: "*" })
     },
     {
       collection: RANKED_ELO_SETTLEMENT_COLLECTION,
@@ -477,7 +478,7 @@ function enqueueUserSettlement(
       value: settlement,
       permissionRead: 0,
       permissionWrite: 0,
-      version: ""
+      version: "*"
     }
   ]);
 }
@@ -581,7 +582,7 @@ export function enqueueRankedMatchSettlement(
         RANKED_MATCH_SETTLEMENT_COLLECTION,
         match.match_id,
         value,
-        ""
+        "*"
       );
       batch = readObject<RankedMatchSettlementBatch>(
         nk,
