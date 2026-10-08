@@ -68,6 +68,15 @@ function clampNonNegativeInt(value: unknown, fallback: number): number {
   return Math.max(0, rounded);
 }
 
+function parseRankedMatchSlots(value: unknown): number {
+  return typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value <= 3
+    ? value
+    : 0;
+}
+
 function buildAccountFromUser(
   user: nkruntime.User,
 ): import("@shared").UserAccount {
@@ -157,6 +166,7 @@ function buildAccountFromUser(
     isAdmin:
       metadata?.admin === true || zarka?.admin === true ? true : undefined,
     tutorialCompleted: zarka?.tutorialCompleted === true,
+    rankedMatchSlots: parseRankedMatchSlots(zarka?.rankedMatchSlots),
     stats,
     cosmetics,
     createdAtMs,

@@ -60,6 +60,8 @@ export type UserAccount = {
   // Game-specific data (stored in Nakama user metadata under `metadata.zarka`).
   readonly stats: PlayerStats;
   readonly cosmetics: UserCosmetics;
+  // Present only on the self account RPC; public profile lookups omit it.
+  readonly rankedMatchSlots?: number;
   readonly tutorialCompleted?: boolean;
 
   // Optional timestamps (epoch milliseconds).
