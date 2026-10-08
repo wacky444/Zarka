@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import type { TutorialStepId } from "@shared";
-import { THEME } from "../ColorPalette";
 import { ItemTooltipManager } from "../ItemTooltip";
+import { ReadyWarning } from "./ReadyWarning";
 import { getTutorialUiPolicy } from "../../tutorial/TutorialUiPolicy";
 import { t } from "../../services/i18n";
 
@@ -30,16 +30,16 @@ export interface CharacterPanelReadyRefreshOptions {
 export class CharacterPanelReadyView {
   private readonly scene: Phaser.Scene;
   private readonly readyToggle: Phaser.GameObjects.Text;
-  private readonly unspentSkillsWarning: Phaser.GameObjects.Text;
-  private readonly energyWarningIcon: Phaser.GameObjects.Container;
-  private readonly overweightWarning: Phaser.GameObjects.Text;
+  private readonly unspentSkillsWarning: ReadyWarning;
+  private readonly energyWarning: ReadyWarning;
+  private readonly overweightWarning: ReadyWarning;
   private readonly warningTooltip: ItemTooltipManager;
   private readonly onReadyChange?: (ready: boolean) => void;
   private readyState = false;
   private readyEnabled = false;
   private readyPointerIsDown = false;
   private lastRefreshOptions: CharacterPanelReadyRefreshOptions | null = null;
-  private activeWarning: "energy" | "overweight" | null = null;
+  private activeWarning: ReadyWarning | null = null;
 
   constructor(config: CharacterPanelReadyViewConfig) {
     const { scene, parent, x, y, onReadyChange } = config;
@@ -62,59 +62,36 @@ export class CharacterPanelReadyView {
     this.readyToggle.on(Phaser.Input.Events.POINTER_UP, this.handlePointerUp);
     parent.add(this.readyToggle);
 
-    this.unspentSkillsWarning = scene.add
-      .text(x + this.readyToggle.width + 12, y + 1, "", {
-        fontSize: "14px",
-        color: THEME.colors.warning
-      })
-      .setOrigin(0, 0)
-      .setVisible(false);
-    parent.add(this.unspentSkillsWarning);
-
-    this.energyWarningIcon = scene.add.container(0, 0);
-    this.energyWarningIcon.setSize(28, 28);
-    const warningBackground = scene.add
-      .circle(14, 14, 12, THEME.colors.collapsedBackground)
-      .setStrokeStyle(2, 0xfb923c);
-    const warningMark = scene.add
-      .text(14, 13, "!", {
-        fontSize: "17px",
-        fontStyle: "bold",
-        color: THEME.colors.warning,
-      })
-      .setOrigin(0.5, 0.5);
-    this.energyWarningIcon.add([warningBackground, warningMark]);
-    this.energyWarningIcon
-      .setInteractive({ useHandCursor: true })
-      .setVisible(false);
-    this.energyWarningIcon.on(
-      Phaser.Input.Events.POINTER_OVER,
-      this.handleEnergyWarningPointerOver
-    );
-    this.energyWarningIcon.on(
-      Phaser.Input.Events.POINTER_DOWN,
-      this.handleEnergyWarningPointerDown
-    );
-    this.overweightWarning = scene.add
-      .text(x + this.readyToggle.width + 12, y + 1, "Overweight", {
-        fontSize: "14px",
-        fontStyle: "bold",
-        color: THEME.colors.warning,
-        backgroundColor: "#2b211c",
-        padding: { x: 6, y: 4 },
-      })
-      .setOrigin(0, 0)
-      .setInteractive({ useHandCursor: true })
-      .setVisible(false);
-    this.overweightWarning.on(
-      Phaser.Input.Events.POINTER_OVER,
-      this.handleEnergyWarningPointerOver
-    );
-    this.overweightWarning.on(
-      Phaser.Input.Events.POINTER_DOWN,
-      this.handleEnergyWarningPointerDown
-    );
-    parent.add(this.overweightWarning);
+    this.unspentSkillsWarning = new ReadyWarning({
+      scene,
+      parent,
+      x: x + this.readyToggle.width + 12,
+      y: y + 1,
+      text: "",
+    });
+    this.energyWarning = new ReadyWarning({
+      scene,
+      parent,
+      x: x + this.readyToggle.width + 12,
+      y: y + 1,
+      text: t("Insufficient energy"),
+      emphasized: true,
+      tooltip: () =>
+        t("Without energy, actions hurt for 1 damage and actions with extra effort will fail."),
+      onTooltipRequested: (message, tooltipX, tooltipY) =>
+        this.showWarningTooltip(message, tooltipX, tooltipY),
+    });
+    this.overweightWarning = new ReadyWarning({
+      scene,
+      parent,
+      x: x + this.readyToggle.width + 12,
+      y: y + 1,
+      text: t("Overweight"),
+      emphasized: true,
+      tooltip: () => t("Your current actions may make you overweight"),
+      onTooltipRequested: (message, tooltipX, tooltipY) =>
+        this.showWarningTooltip(message, tooltipX, tooltipY),
+    });
 
     this.warningTooltip = new ItemTooltipManager(scene);
     scene.input.on(
@@ -126,8 +103,6 @@ export class CharacterPanelReadyView {
       this.handleScenePointerMove
     );
     scene.input.on(Phaser.Input.Events.GAME_OUT, this.handleSceneGameOut);
-    parent.add(this.energyWarningIcon);
-
     this.updateWarningPosition();
     this.readyToggle.setAlpha(0.5);
     this.readyToggle.disableInteractive();
@@ -148,9 +123,9 @@ export class CharacterPanelReadyView {
   getElements(): Phaser.GameObjects.GameObject[] {
     return [
       this.readyToggle,
-      this.unspentSkillsWarning,
-      this.energyWarningIcon,
-      this.overweightWarning,
+      this.unspentSkillsWarning.gameObject,
+      this.energyWarning.gameObject,
+      this.overweightWarning.gameObject,
     ];
   }
 
@@ -229,27 +204,27 @@ export class CharacterPanelReadyView {
       this.unspentSkillsWarning.setText(
         `${t("Unspent points")}: ${options.unspentSkillPoints}`
       );
-      this.updateWarningPosition();
       this.unspentSkillsWarning.setVisible(true);
     } else {
       this.unspentSkillsWarning.setVisible(false);
     }
 
     const previousWarning = this.activeWarning;
-    this.energyWarningIcon.setVisible(showEnergyWarning);
+    this.energyWarning.setText(t("Insufficient energy"));
+    this.energyWarning.setVisible(showEnergyWarning);
+    this.overweightWarning.setText(t("Overweight"));
     this.overweightWarning.setVisible(showOverweightWarning);
-    if (showOverweightWarning) {
-      this.overweightWarning.setText("Overweight");
-      this.updateWarningPosition();
-    }
-    this.activeWarning = showEnergyWarning
-      ? "energy"
-      : showOverweightWarning
-        ? "overweight"
-        : null;
+    this.activeWarning = showSkillsWarning
+      ? this.unspentSkillsWarning
+      : showEnergyWarning
+        ? this.energyWarning
+        : showOverweightWarning
+          ? this.overweightWarning
+          : null;
     if (this.activeWarning !== previousWarning || this.activeWarning === null) {
-      this.hideEnergyWarningTooltip();
+      this.hideWarningTooltip();
     }
+    this.updateWarningPosition();
 
     if (options.tutorialActive) {
       const isReadyHighlighted =
@@ -278,22 +253,6 @@ export class CharacterPanelReadyView {
     );
     this.readyToggle.off(Phaser.Input.Events.POINTER_OUT, this.handlePointerOut);
     this.readyToggle.off(Phaser.Input.Events.POINTER_UP, this.handlePointerUp);
-    this.energyWarningIcon.off(
-      Phaser.Input.Events.POINTER_OVER,
-      this.handleEnergyWarningPointerOver
-    );
-    this.energyWarningIcon.off(
-      Phaser.Input.Events.POINTER_DOWN,
-      this.handleEnergyWarningPointerDown
-    );
-    this.overweightWarning.off(
-      Phaser.Input.Events.POINTER_OVER,
-      this.handleEnergyWarningPointerOver
-    );
-    this.overweightWarning.off(
-      Phaser.Input.Events.POINTER_DOWN,
-      this.handleEnergyWarningPointerDown
-    );
     this.scene.input.off(
       Phaser.Input.Events.POINTER_DOWN,
       this.handleScenePointerDown
@@ -306,61 +265,35 @@ export class CharacterPanelReadyView {
     this.warningTooltip.destroy();
     this.readyToggle.destroy();
     this.unspentSkillsWarning.destroy();
-    this.energyWarningIcon.destroy(true);
+    this.energyWarning.destroy();
     this.overweightWarning.destroy();
   }
 
   private updateWarningPosition(): void {
-    this.unspentSkillsWarning.setPosition(
-      this.readyToggle.x + this.readyToggle.width + 12,
-      this.readyToggle.y + 1
-    );
     const warningX = this.readyToggle.x + this.readyToggle.width + 12;
-    this.energyWarningIcon.setPosition(
+    this.unspentSkillsWarning.setPosition(warningX, this.readyToggle.y + 1);
+    this.energyWarning.setPosition(
       warningX,
-      this.readyToggle.y + (this.readyToggle.height - 28) / 2
+      this.readyToggle.y +
+        (this.readyToggle.height - this.energyWarning.gameObject.height) / 2
     );
     this.overweightWarning.setPosition(
       warningX,
       this.readyToggle.y +
-        (this.readyToggle.height - this.overweightWarning.height) / 2
+        (this.readyToggle.height - this.overweightWarning.gameObject.height) / 2
     );
   }
 
-  private showEnergyWarningTooltip(x: number, y: number): void {
-    const message =
-      this.activeWarning === "overweight"
-        ? "Your current actions may make you overweight"
-        : "There isn't enough energy. Performing actions without enough energy will deal 1 damage, and actions with extra power won't work.";
-    this.warningTooltip.show(x, y, "", t(message));
+  private showWarningTooltip(message: string, x: number, y: number): void {
+    this.warningTooltip.show(x, y, "", message);
   }
 
-  private hideEnergyWarningTooltip(): void {
+  private hideWarningTooltip(): void {
     this.warningTooltip.hide();
   }
 
-  private readonly handleEnergyWarningPointerOver = (
-    pointer: Phaser.Input.Pointer
-  ): void => {
-    if (!pointer.wasTouch && this.activeWarning !== null) {
-      this.showEnergyWarningTooltip(pointer.x, pointer.y);
-    }
-  };
-
-  private readonly handleEnergyWarningPointerDown = (
-    pointer: Phaser.Input.Pointer,
-    _localX: number,
-    _localY: number,
-    event: Phaser.Types.Input.EventData
-  ): void => {
-    if (pointer.wasTouch && this.activeWarning !== null) {
-      this.showEnergyWarningTooltip(pointer.x, pointer.y);
-    }
-    event.stopPropagation();
-  };
-
   private readonly handleScenePointerDown = (): void => {
-    this.hideEnergyWarningTooltip();
+    this.hideWarningTooltip();
   };
 
   private readonly handleScenePointerMove = (
@@ -369,22 +302,18 @@ export class CharacterPanelReadyView {
     if (pointer.wasTouch) {
       return;
     }
-    const warningBounds = this.energyWarningIcon.visible
-      ? this.energyWarningIcon.getBounds()
-      : this.overweightWarning.getBounds();
     const pointerOverWarning =
-      this.activeWarning !== null &&
-      Phaser.Geom.Rectangle.Contains(warningBounds, pointer.x, pointer.y);
+      this.activeWarning?.containsPoint(pointer.x, pointer.y) ?? false;
     if (
       !pointerOverWarning &&
       !this.warningTooltip.containsPoint(pointer.x, pointer.y)
     ) {
-      this.hideEnergyWarningTooltip();
+      this.hideWarningTooltip();
     }
   };
 
   private readonly handleSceneGameOut = (): void => {
-    this.hideEnergyWarningTooltip();
+    this.hideWarningTooltip();
   };
 
   private canToggle(): boolean {
