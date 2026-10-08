@@ -81,6 +81,14 @@ export class MainScene extends Phaser.Scene {
     void this.refreshTutorialGate(true);
     this.updateMenuMusic();
   };
+  private readonly rankedPresenceForegroundHandler = () => {
+    if (
+      typeof document !== "undefined" &&
+      document.visibilityState === "visible"
+    ) {
+      void this.turnService?.touchRankedPresence();
+    }
+  };
 
   constructor() {
     super("MainScene");
@@ -248,6 +256,12 @@ export class MainScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutMain, this);
       this.events.off(Phaser.Scenes.Events.WAKE, this.wakeHandler);
+      if (typeof document !== "undefined") {
+        document.removeEventListener(
+          "visibilitychange",
+          this.rankedPresenceForegroundHandler
+        );
+      }
       this.menuAshEffect?.destroy();
       this.menuAshEffect = null;
       cleanupMenuMusic(this);
@@ -279,6 +293,13 @@ export class MainScene extends Phaser.Scene {
       });
 
       this.turnService = new TurnService(client, session);
+      if (typeof document !== "undefined") {
+        document.addEventListener(
+          "visibilitychange",
+          this.rankedPresenceForegroundHandler
+        );
+      }
+      void this.turnService.touchRankedPresence();
       void bindExistingPushSubscription(this.turnService).catch((error: unknown) => {
         console.warn("Failed to bind push subscription to current account:", error);
       });

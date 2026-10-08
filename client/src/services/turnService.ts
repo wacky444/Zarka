@@ -64,6 +64,8 @@ export class TurnService {
   ) => void;
   private onZarkansDonated?: (payload: ZarkansDonatedMessagePayload) => void;
   private usernameCache = new Map<string, string>();
+  private lastRankedPresenceTouchAt = 0;
+  private rankedPresenceTouch: Promise<void> | null = null;
 
   constructor(
     private client: Client,
@@ -145,6 +147,28 @@ export class TurnService {
     } else {
       this.usernameCache.clear();
     }
+  }
+
+  async touchRankedPresence(): Promise<void> {
+    if (this.rankedPresenceTouch) {
+      return this.rankedPresenceTouch;
+    }
+    if (Date.now() - this.lastRankedPresenceTouchAt < 60_000) {
+      return;
+    }
+
+    this.rankedPresenceTouch = this.client
+      .rpc(this.session, "touch_ranked_presence", {})
+      .then(() => {
+        this.lastRankedPresenceTouchAt = Date.now();
+      })
+      .catch((error: unknown) => {
+        console.warn("Failed to record ranked presence:", error);
+      })
+      .finally(() => {
+        this.rankedPresenceTouch = null;
+      });
+    return this.rankedPresenceTouch;
   }
 
   async createTutorialMatch() {

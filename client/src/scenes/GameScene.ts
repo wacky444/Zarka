@@ -215,6 +215,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.lastForegroundSyncAt = now;
+    void this.turnService?.touchRankedPresence();
     void this.refreshStateAfterForeground();
   };
   private readonly turnAdvancedHandler = (
@@ -569,6 +570,7 @@ export class GameScene extends Phaser.Scene {
     this.cellContentsPanel = new CellContentsPanel(this);
     this.hoverTooltip = new HoverTooltip(this);
     this.turnService = this.registry.get("turnService") as TurnService | null;
+    void this.turnService?.touchRankedPresence();
     this.currentUserId = this.registry.get("currentUserId") as string | null;
     if (this.turnService) {
       this.turnService.setOnTurnAdvanced(this.turnAdvancedHandler);

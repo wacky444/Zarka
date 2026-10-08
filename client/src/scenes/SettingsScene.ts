@@ -168,6 +168,14 @@ export class SettingsScene extends Phaser.Scene {
   private previewLayers: SkinLayers = {};
   private currentSkin: Skin = { ...DEFAULT_SKIN };
   private saving = false;
+  private readonly rankedPresenceForegroundHandler = () => {
+    if (
+      typeof document !== "undefined" &&
+      document.visibilityState === "visible"
+    ) {
+      void this.turnService?.touchRankedPresence();
+    }
+  };
 
   constructor() {
     super("SettingsScene");
@@ -552,6 +560,12 @@ export class SettingsScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutAccount, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutAccount, this);
+      if (typeof document !== "undefined") {
+        document.removeEventListener(
+          "visibilitychange",
+          this.rankedPresenceForegroundHandler
+        );
+      }
       this.settingsSceneShuttingDown = true;
       if (this.skinSaveTimer !== null) {
         clearTimeout(this.skinSaveTimer);
@@ -564,6 +578,13 @@ export class SettingsScene extends Phaser.Scene {
       }
     });
 
+    if (typeof document !== "undefined") {
+      document.addEventListener(
+        "visibilitychange",
+        this.rankedPresenceForegroundHandler
+      );
+    }
+    void this.turnService.touchRankedPresence();
     void this.refreshPushNotificationUi();
     await this.loadUserInfo();
   }

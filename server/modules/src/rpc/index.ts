@@ -17,6 +17,7 @@ export { saveChatMessageRpc } from "./saveChatMessage";
 export { getChatHistoryRpc } from "./getChatHistory";
 export { getUserAccountRpc } from "./getUserAccount";
 export { setRankedMatchSlotsRpc } from "./setRankedMatchSlots";
+export { touchRankedPresenceRpc } from "./touchRankedPresence";
 export { updateSkinRpc } from "./updateSkin";
 export { upgradeSkillRpc } from "./upgradeSkill";
 export { updateTestamentRpc } from "./updateTestament";

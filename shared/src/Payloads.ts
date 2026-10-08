@@ -288,6 +288,11 @@ export type SetRankedMatchSlotsPayload = {
   error?: string;
 };
 
+export type TouchRankedPresencePayload = {
+  ok?: boolean;
+  error?: string;
+};
+
 export type UpgradeSkillPayload = {
   ok?: boolean;
   match_id?: string;

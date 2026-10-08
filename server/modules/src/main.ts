@@ -21,6 +21,7 @@ import {
   getChatHistoryRpc,
   getUserAccountRpc,
   setRankedMatchSlotsRpc,
+  touchRankedPresenceRpc,
   updateSkinRpc,
   upgradeSkillRpc,
   updateTestamentRpc,
@@ -110,6 +111,14 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register set_ranked_match_slots: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("touch_ranked_presence", touchRankedPresenceRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register touch_ranked_presence: %s",
       (error && (error as Error).message) || String(error)
     );
   }
