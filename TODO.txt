@@ -43,9 +43,9 @@
 "npm:@xynogen/pix-optimizer",
 "git:github.com/jonjonrankin/pi-caveman"
 
-- warning when pick up will leave with overweight, weight number in warning/error color
+-t warning when pick up will leave with overweight, weight number in warning/error color
 
-- warning when there is extra power set and there isnt enough energy
+-t warning when there is extra power set and there isnt enough energy
 
 - dexterity 2, when stealing should show a list of all possible items in the game, allowing max 3
 	- extra power should show two selectors
@@ -58,3 +58,5 @@
 - throwing a moltov, threw 3 foods to three different players
 
 - registered items didnt stay in players view
+
+- search reveals placed c4, but can't be picked up
