@@ -6,7 +6,10 @@ import {
   RANKED_QUEUE_TICKET_COLLECTION,
   RANKED_DAILY_PRESENCE_COLLECTION
 } from "../src/constants";
-import { processRankedQueue, recordRankedSlotPreference } from "../src/services/rankedQueue";
+import {
+  processRankedQueue as runRankedQueue,
+  recordRankedSlotPreference
+} from "../src/services/rankedQueue";
 import { getRankedQueueStatusRpc } from "../src/rpc/getRankedQueueStatus";
 import { listMyMatchesRpc } from "../src/rpc/listMyMatches";
 import { touchRankedPresence } from "../src/services/rankedPresence";
@@ -21,6 +24,18 @@ type Stored = {
 };
 
 type FakeUser = { id: string; username: string; metadata: unknown };
+
+function enabledMatchmakingContext(): nkruntime.Context {
+  return { env: { RANKED_MATCHMAKING_ENABLED: "true" } } as nkruntime.Context;
+}
+
+function processRankedQueue(
+  nk: nkruntime.Nakama,
+  logger: nkruntime.Logger,
+  nowMs: number
+): void {
+  runRankedQueue(nk, logger, nowMs, enabledMatchmakingContext());
+}
 
 function createHarness(userIds: string[]) {
   const records = new Map<string, Stored>();
@@ -160,6 +175,27 @@ function createHarness(userIds: string[]) {
 
 const makeUsers = (count: number, prefix = "player"): string[] =>
   Array.from({ length: count }, (_, index) => `${prefix}-${index}`);
+
+test("ranked feature flag off pauses queue intake without deleting preferences or matches", () => {
+  const now = 1_700_000_050_000;
+  const users = makeUsers(2, "flagged");
+  const harness = createHarness(users);
+  harness.addDailyUsers(2, now);
+  for (const userId of users) harness.setSlots(userId, 1, now);
+
+  runRankedQueue(harness.nakama, harness.logger, now, {
+    env: { RANKED_MATCHMAKING_ENABLED: "false" }
+  } as unknown as nkruntime.Context);
+  assert.equal(harness.collection(RANKED_QUEUE_ENROLLMENT_COLLECTION).length, 2);
+  assert.equal(harness.collection(RANKED_QUEUE_TICKET_COLLECTION).length, 0);
+  assert.equal(harness.matches.length, 0);
+
+  processRankedQueue(harness.nakama, harness.logger, now + 1);
+  assert.equal(harness.matches.length, 1);
+  const startedMatch = harness.collection(MATCH_COLLECTION);
+  processRankedQueue(harness.nakama, harness.logger, now + 2);
+  assert.equal(harness.collection(MATCH_COLLECTION).length, startedMatch.length);
+});
 
 test("low population assigns offline users and fills roster with bots", () => {
   const now = 1_700_000_000_000;

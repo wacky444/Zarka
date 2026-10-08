@@ -251,6 +251,18 @@ export function createRankedMatch(
   } else {
     storage.writeMatchWithReplayTurn0(match, replayTurn0);
   }
+  logger.info(
+    "ranked_match_created %s",
+    JSON.stringify({
+      event: "ranked_match_created",
+      assignment_id: request.assignmentId,
+      match_id: match.match_id,
+      population_mode: request.queueMode,
+      human_count: request.humanIds.length,
+      bot_count: request.botCount,
+      roster_size: totalRoster
+    })
+  );
   if (startOutbox && ctx) {
     dispatchRankedMatchStartedOutbox(match.match_id, ctx, nk, logger);
   }

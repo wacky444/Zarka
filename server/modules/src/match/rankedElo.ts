@@ -653,6 +653,27 @@ export function enqueueRankedMatchSettlement(
     }
   }
   if (!batch) return false;
+  if (!current) {
+    const deltas = entries.map((entry) => entry.delta);
+    const ranked = match.metadata?.[RANKED_MATCH_METADATA_KEY];
+    logger.info(
+      "ranked_elo_settlement_queued %s",
+      JSON.stringify({
+        event: "ranked_elo_settlement_queued",
+        match_id: match.match_id,
+        population_mode: ranked?.queueMode,
+        human_count: ranked?.humanCount ?? entries.length,
+        bot_count: ranked?.botCount ?? 0,
+        player_count: entries.length,
+        delta_min: deltas.length > 0 ? Math.min(...deltas) : 0,
+        delta_max: deltas.length > 0 ? Math.max(...deltas) : 0,
+        delta_average:
+          deltas.length > 0
+            ? deltas.reduce((sum, delta) => sum + delta, 0) / deltas.length
+            : 0
+      })
+    );
+  }
   try {
     processMatchSettlement(nk, logger, batch, nowMs);
   } catch (error) {

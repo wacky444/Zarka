@@ -267,6 +267,16 @@ function retryOutbox(
 ): void {
   const attempts = outbox.attempts + 1;
   const delayMs = Math.min(60 * 60 * 1000, 5000 * 2 ** Math.min(attempts - 1, 10));
+  logger.warn(
+    "push_notification_retry %s",
+    JSON.stringify({
+      event: "push_notification_retry",
+      notification_event: outbox.event,
+      match_id: outbox.matchId,
+      attempt: attempts,
+      target_count: outbox.targets.length
+    })
+  );
   try {
     persistOutbox(
       nk,
@@ -357,6 +367,16 @@ function dispatchNotificationOutbox(
         { ...outbox, status: "delivered", deliveredAtMs: Date.now() },
         stored.version
       );
+      logger.info(
+        "push_notification_delivered %s",
+        JSON.stringify({
+          event: "push_notification_delivered",
+          notification_event: outbox.event,
+          match_id: outbox.matchId,
+          target_count: 0,
+          attempt: outbox.attempts + 1
+        })
+      );
     } catch (error) {
       logger.warn(
         "push outbox completion write failed for %s: %s",
@@ -408,6 +428,16 @@ function dispatchNotificationOutbox(
         nk,
         { ...outbox, status: "delivered", deliveredAtMs: Date.now() },
         stored.version
+      );
+      logger.info(
+        "push_notification_delivered %s",
+        JSON.stringify({
+          event: "push_notification_delivered",
+          notification_event: outbox.event,
+          match_id: outbox.matchId,
+          target_count: subscriptions.length,
+          attempt: outbox.attempts + 1
+        })
       );
       return;
     }

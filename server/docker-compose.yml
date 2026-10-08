@@ -37,6 +37,7 @@ services:
     environment:
       - NAKAMA_DATABASE_ADDRESS=nakama:localdev@postgres:5432/nakama0000
       - runtime.environment.ROUND_TIME_OFFSET_MINUTES=60
+      - runtime.environment.RANKED_MATCHMAKING_ENABLED=${RANKED_MATCHMAKING_ENABLED:-false}
       - TZ=Europe/Madrid
     volumes:
       - ./modules:/nakama/data/modules

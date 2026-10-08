@@ -18,6 +18,7 @@ import {
   getRankedEloSearchRange,
   getRankedQueuePolicy
 } from "../matchmaking/policy";
+import { isRankedMatchmakingEnabled } from "../matchmaking/featureFlags";
 import { createRankedMatch } from "./rankedMatchFactory";
 import { countRankedDailyPresence } from "./rankedPresence";
 import { createNakamaWrapper } from "./nakamaWrapper";
@@ -466,11 +467,20 @@ function tryCreateReservedAssignment(
         });
       }
     }
+    const oldestTicketAtMs = Math.min(
+      ...selectedTickets.map((ticket) => ticket?.value.createdAtMs ?? nowMs)
+    );
     logger.info(
-      "ranked assignment %s started with %d humans and %d bots",
-      currentAssignment.value.assignmentId,
-      currentAssignment.value.humanIds.length,
-      currentAssignment.value.botCount
+      "ranked_match_started %s",
+      JSON.stringify({
+        event: "ranked_match_started",
+        assignment_id: currentAssignment.value.assignmentId,
+        match_id: match.match_id,
+        queue_wait_ms: Math.max(0, nowMs - oldestTicketAtMs),
+        population_mode: currentAssignment.value.queueMode,
+        human_count: currentAssignment.value.humanIds.length,
+        bot_count: currentAssignment.value.botCount
+      })
     );
     return true;
   } catch (error) {
@@ -549,8 +559,13 @@ function recoverAssignments(
 
     if (assignment.state === "creating" && assignment.reservationExpiresAtMs <= nowMs) {
       logger.warn(
-        "ranked assignment %s reservation expired; retrying idempotently",
-        assignment.assignmentId
+        "ranked_assignment_recovery %s",
+        JSON.stringify({
+          event: "ranked_assignment_recovery",
+          assignment_id: assignment.assignmentId,
+          match_id: assignment.matchId,
+          attempts: assignment.attempts + 1
+        })
       );
       tryCreateReservedAssignment(nk, logger, stored, nowMs, ctx);
     } else if (assignment.state === "active") {
@@ -577,6 +592,7 @@ function synchronizeEnrollmentTickets(
     const account = readAccountEligibility(nk, userId);
     const desiredSlots = account.eligible ? account.desiredSlots : 0;
     let currentTickets = ticketsForUser(nk, userId);
+    let cancelledTickets = 0;
     if (account.eligible) {
       currentTickets = currentTickets.map((ticket) =>
         ticket.value.status === "queued" && ticket.value.elo !== account.elo
@@ -593,6 +609,7 @@ function synchronizeEnrollmentTickets(
     for (const queued of queuedNewestFirst) {
       if (overage <= 0) break;
       deleteObject(nk, RANKED_QUEUE_TICKET_COLLECTION, queued.key);
+      cancelledTickets += 1;
       currentTickets = currentTickets.filter((ticket) => ticket.key !== queued.key);
       overage -= 1;
     }
@@ -617,6 +634,9 @@ function synchronizeEnrollmentTickets(
           desiredSlots === 0 ? userId : undefined
         );
         currentTickets = ticketsForUser(nk, userId);
+        if (!currentTickets.some((ticket) => ticket.key === reserved.key)) {
+          cancelledTickets += 1;
+        }
         overage = Math.max(0, occupied() - desiredSlots);
       }
       const queuedAfterReservationCancel = currentTickets
@@ -625,6 +645,7 @@ function synchronizeEnrollmentTickets(
       for (const queued of queuedAfterReservationCancel) {
         if (overage <= 0) break;
         deleteObject(nk, RANKED_QUEUE_TICKET_COLLECTION, queued.key);
+        cancelledTickets += 1;
         currentTickets = currentTickets.filter((ticket) => ticket.key !== queued.key);
         overage -= 1;
       }
@@ -633,6 +654,17 @@ function synchronizeEnrollmentTickets(
     if (!account.eligible || desiredSlots === 0) {
       currentTickets = ticketsForUser(nk, userId);
     }
+    if (cancelledTickets > 0) {
+      logger.info(
+        "ranked_queue_tickets_cancelled %s",
+        JSON.stringify({
+          event: "ranked_queue_tickets_cancelled",
+          count: cancelledTickets,
+          desired_slots: desiredSlots
+        })
+      );
+    }
+
     const occupiedSlots = new Set(currentTickets.map((ticket) => ticket.key));
     while (account.eligible && occupiedSlots.size < desiredSlots) {
       let slotIndex = 1;
@@ -821,6 +853,7 @@ export function processRankedQueue(
   nowMs = Date.now(),
   ctx?: nkruntime.Context
 ): void {
+  if (!isRankedMatchmakingEnabled(ctx)) return;
   const ownerId = acquireCoordinatorLease(nk, nowMs);
   if (!ownerId) return;
   try {

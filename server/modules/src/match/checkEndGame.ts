@@ -220,7 +220,22 @@ export function finalizeMatchIfEnded(
 
   finalizeRankedTeamPlacements(match, resolvedTurn);
   const nowMs = Date.now();
-  const isRanked = Boolean(match.metadata?.[RANKED_MATCH_METADATA_KEY]);
+  const rankedMetadata = match.metadata?.[RANKED_MATCH_METADATA_KEY];
+  const isRanked = Boolean(rankedMetadata);
+  if (rankedMetadata) {
+    const placements = rankedMetadata.placements ?? [];
+    logger.info(
+      "ranked_placements_recorded %s",
+      JSON.stringify({
+        event: "ranked_placements_recorded",
+        match_id: match.match_id,
+        team_count: placements.length,
+        distinct_places: new Set(placements.map((placement) => placement.place)).size,
+        eliminated_team_count: placements.filter((placement) => placement.eliminated).length,
+        resolved_turn: resolvedTurn
+      })
+    );
+  }
   if (
     isRanked &&
     !enqueueRankedMatchSettlement(match, outcome, nk, logger, nowMs)
@@ -231,6 +246,17 @@ export function finalizeMatchIfEnded(
   // Mark match removed immediately to prevent duplicate finalization.
   match.removed = 1;
   match.started = false;
+  if (isRanked) {
+    logger.info(
+      "ranked_match_completed %s",
+      JSON.stringify({
+        event: "ranked_match_completed",
+        match_id: match.match_id,
+        reason: outcome.reason,
+        resolved_turn: resolvedTurn
+      })
+    );
+  }
 
   const participants = Array.isArray(match.players) ? match.players : [];
   const winnerId = outcome.winnerId;
