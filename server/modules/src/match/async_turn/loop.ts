@@ -19,6 +19,7 @@ import { getAliveCharacterIds } from "../checkEndGame";
 import { createReplaySnapshot } from "../replay/snapshot";
 import {
   createTurnNotificationOutbox,
+  dispatchRankedMatchStartedOutbox,
   dispatchTurnNotificationOutbox
 } from "../../services/turnPushNotifications";
 
@@ -120,6 +121,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       return { state };
     }
 
+    dispatchRankedMatchStartedOutbox(match.match_id, ctx, nk, logger);
     dispatchTurnNotificationOutbox(
       match.match_id,
       match.current_turn,

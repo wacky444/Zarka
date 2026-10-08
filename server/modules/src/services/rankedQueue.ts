@@ -390,7 +390,8 @@ function tryCreateReservedAssignment(
   nk: nkruntime.Nakama,
   logger: nkruntime.Logger,
   storedAssignment: StoredObject<RankedAssignment>,
-  nowMs: number
+  nowMs: number,
+  ctx?: nkruntime.Context
 ): boolean {
   const currentAssignment = readAssignment(nk, storedAssignment.key);
   if (!currentAssignment || currentAssignment.value.state !== "creating") {
@@ -443,7 +444,8 @@ function tryCreateReservedAssignment(
         botCount: currentAssignment.value.botCount,
         queueMode: currentAssignment.value.queueMode
       },
-      nowMs
+      nowMs,
+      ctx
     );
     const latestAssignment = readAssignment(nk, currentAssignment.key);
     if (latestAssignment) {
@@ -496,7 +498,8 @@ function tryCreateReservedAssignment(
 function recoverAssignments(
   nk: nkruntime.Nakama,
   logger: nkruntime.Logger,
-  nowMs: number
+  nowMs: number,
+  ctx?: nkruntime.Context
 ): void {
   const storage = new StorageService(createNakamaWrapper(nk));
   for (const stored of listObjects<RankedAssignment>(
@@ -549,7 +552,7 @@ function recoverAssignments(
         "ranked assignment %s reservation expired; retrying idempotently",
         assignment.assignmentId
       );
-      tryCreateReservedAssignment(nk, logger, stored, nowMs);
+      tryCreateReservedAssignment(nk, logger, stored, nowMs, ctx);
     } else if (assignment.state === "active") {
       for (const key of assignment.ticketKeys) {
         deleteObject(nk, RANKED_QUEUE_TICKET_COLLECTION, key);
@@ -724,7 +727,8 @@ function reserveAssignment(
 function createAssignments(
   nk: nkruntime.Nakama,
   logger: nkruntime.Logger,
-  nowMs: number
+  nowMs: number,
+  ctx?: nkruntime.Context
 ): void {
   const dailyUsers = countRankedDailyPresence(nk, nowMs);
   for (let count = 0; count < MAX_ASSIGNMENTS_PER_TICK; count += 1) {
@@ -763,7 +767,7 @@ function createAssignments(
       botCount
     );
     if (!assignment) return;
-    tryCreateReservedAssignment(nk, logger, assignment, nowMs);
+    tryCreateReservedAssignment(nk, logger, assignment, nowMs, ctx);
   }
 }
 
@@ -814,19 +818,20 @@ export function getRankedQueueStatus(
 export function processRankedQueue(
   nk: nkruntime.Nakama,
   logger: nkruntime.Logger,
-  nowMs = Date.now()
+  nowMs = Date.now(),
+  ctx?: nkruntime.Context
 ): void {
   const ownerId = acquireCoordinatorLease(nk, nowMs);
   if (!ownerId) return;
   try {
-    recoverAssignments(nk, logger, nowMs);
+    recoverAssignments(nk, logger, nowMs, ctx);
     synchronizeEnrollmentTickets(
       nk,
       logger,
       nowMs,
       listObjects<RankedQueueEnrollment>(nk, RANKED_QUEUE_ENROLLMENT_COLLECTION)
     );
-    createAssignments(nk, logger, nowMs);
+    createAssignments(nk, logger, nowMs, ctx);
   } catch (error) {
     logger.error(
       "ranked queue processing failed: %s",

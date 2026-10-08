@@ -13,7 +13,7 @@ import {
   PUSH_NOTIFICATION_OUTBOX_COLLECTION,
 } from "../constants";
 import { MatchRecord, TurnRecord } from "../models/types";
-import type { TurnNotificationOutbox } from "../models/pushNotifications";
+import type { PushNotificationOutbox, TurnNotificationOutbox } from "../models/pushNotifications";
 import type {
   MatchChatLog,
   MatchChatMessage,
@@ -131,6 +131,39 @@ export class StorageService {
         permissionRead: 0,
         permissionWrite: 0,
       },
+    ]);
+  }
+
+  writeMatchWithReplayTurn0AndPushOutbox(
+    match: MatchRecord,
+    replay: ReplayRecord,
+    outbox: PushNotificationOutbox
+  ): void {
+    this.nk.storageWrite([
+      {
+        collection: MATCH_COLLECTION,
+        key: this.getMatchKey(match.match_id),
+        userId: SERVER_USER_ID,
+        value: match,
+        permissionRead: 2,
+        permissionWrite: 0
+      },
+      {
+        collection: REPLAY_COLLECTION,
+        key: this.getReplayKey(replay.match_id, replay.turn),
+        userId: SERVER_USER_ID,
+        value: replay,
+        permissionRead: 2,
+        permissionWrite: 0
+      },
+      {
+        collection: PUSH_NOTIFICATION_OUTBOX_COLLECTION,
+        key: outbox.id,
+        userId: SERVER_USER_ID,
+        value: outbox,
+        permissionRead: 0,
+        permissionWrite: 0
+      }
     ]);
   }
 

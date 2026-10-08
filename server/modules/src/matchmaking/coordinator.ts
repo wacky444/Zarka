@@ -42,7 +42,7 @@ export const rankedQueueCoordinatorMatchHandler: nkruntime.MatchHandler<RankedQu
           (error && (error as Error).message) || String(error)
         );
       }
-      processRankedQueue(nk, logger, nowMs);
+      processRankedQueue(nk, logger, nowMs, _ctx);
     }
     return { state };
   },

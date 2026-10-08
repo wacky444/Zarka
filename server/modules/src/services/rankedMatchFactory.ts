@@ -18,6 +18,10 @@ import { createDefaultCharacter, ensureAllPlayerCharacters } from "../utils/play
 import { getRuntimeMatchId } from "../utils/matchIds";
 import { isRankedPresenceUserId } from "./rankedPresence";
 import { hasTutorialCompleted } from "../utils/tutorialProfile";
+import {
+  createRankedMatchStartedOutbox,
+  dispatchRankedMatchStartedOutbox
+} from "./turnPushNotifications";
 
 export type RankedMatchCreationRequest = {
   assignmentId: string;
@@ -130,7 +134,8 @@ export function createRankedMatch(
   nk: nkruntime.Nakama,
   logger: nkruntime.Logger,
   request: RankedMatchCreationRequest,
-  nowMs = Date.now()
+  nowMs = Date.now(),
+  ctx?: nkruntime.Context
 ): MatchRecord {
   const totalRoster = validateRequest(request);
   for (const userId of request.humanIds) {
@@ -227,13 +232,28 @@ export function createRankedMatch(
   }
 
   const turn0Events = startMatchRecord(match, logger, nowMs);
-  storage.writeMatchWithReplayTurn0(match, {
+  const replayTurn0 = {
     match_id: matchId,
     turn: 0,
     events: turn0Events,
     snapshot: createReplaySnapshot(match),
     created_at: Math.floor(nowMs / 1000)
-  });
+  };
+  const startOutbox = ctx
+    ? createRankedMatchStartedOutbox(match, ctx, nk, logger)
+    : null;
+  if (startOutbox) {
+    storage.writeMatchWithReplayTurn0AndPushOutbox(
+      match,
+      replayTurn0,
+      startOutbox
+    );
+  } else {
+    storage.writeMatchWithReplayTurn0(match, replayTurn0);
+  }
+  if (startOutbox && ctx) {
+    dispatchRankedMatchStartedOutbox(match.match_id, ctx, nk, logger);
+  }
   try {
     nk.matchSignal(
       getRuntimeMatchId(match),

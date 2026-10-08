@@ -9,6 +9,7 @@ const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
 function createJob(overrides = {}) {
   return {
     idempotencyKey: "turn_match-1_2",
+    event: "turn_advanced",
     matchId: "match-1",
     turn: 2,
     subscriptions: [
@@ -109,10 +110,67 @@ test("push dispatcher sends valid payload and deduplicates idempotency key", asy
     assert.equal(duplicate.status, 200);
     assert.equal(sendCount, 1);
     assert.deepEqual(JSON.parse(sentPayload), {
+      event: "turn_advanced",
       matchId: "match-1",
       turn: 2,
       locale: "es"
     });
+  });
+});
+
+test("ranked-match start payload omits turn state and deduplicates by event key", async () => {
+  let sendCount = 0;
+  let sentPayload = "";
+  const handler = makeHandler(async (_subscription, payload) => {
+    sendCount += 1;
+    sentPayload = payload;
+  });
+  const job = createJob({
+    idempotencyKey: "ranked_match_started_match-1",
+    event: "ranked_match_started",
+    turn: undefined
+  });
+  await withServer(handler, async (baseUrl) => {
+    const request = () =>
+      fetch(`${baseUrl}/send`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${SECRET}`,
+          "content-type": "application/json"
+        },
+        body: JSON.stringify(job)
+      });
+    assert.equal((await request()).status, 200);
+    assert.equal((await request()).status, 200);
+    assert.equal(sendCount, 1);
+    assert.deepEqual(JSON.parse(sentPayload), {
+      event: "ranked_match_started",
+      matchId: "match-1",
+      locale: "es"
+    });
+  });
+});
+
+test("ranked-match push provider failures remain retryable", async () => {
+  const handler = makeHandler(async () => {
+    throw Object.assign(new Error("temporary"), { statusCode: 503 });
+  });
+  const job = createJob({
+    idempotencyKey: "ranked_match_started_match-1",
+    event: "ranked_match_started",
+    turn: undefined
+  });
+  await withServer(handler, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/send`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${SECRET}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(job)
+    });
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), { ok: false, expiredDeviceIds: [] });
   });
 });
 

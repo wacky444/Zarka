@@ -22,12 +22,12 @@ export interface PushSubscriptionDeviceIndex {
 export interface TurnNotificationTarget {
   userId: string;
   deviceId: string;
+  locale?: "en" | "es";
 }
 
-export interface TurnNotificationOutbox {
+export interface PushNotificationOutboxBase {
   id: string;
   matchId: string;
-  turn: number;
   targets: TurnNotificationTarget[];
   status: "pending" | "delivered";
   attempts: number;
@@ -35,3 +35,16 @@ export interface TurnNotificationOutbox {
   createdAtMs: number;
   deliveredAtMs?: number;
 }
+
+export interface TurnNotificationOutbox extends PushNotificationOutboxBase {
+  event: "turn_advanced";
+  turn: number;
+}
+
+export interface RankedMatchStartedOutbox extends PushNotificationOutboxBase {
+  event: "ranked_match_started";
+}
+
+export type PushNotificationOutbox =
+  | TurnNotificationOutbox
+  | RankedMatchStartedOutbox;

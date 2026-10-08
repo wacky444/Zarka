@@ -60,14 +60,16 @@ function parseSubscription(value) {
 }
 
 function parseJob(value) {
+  if (!isRecord(value)) return null;
+  const event = value.event ?? "turn_advanced";
   if (
-    !isRecord(value) ||
     typeof value.idempotencyKey !== "string" ||
     !/^[A-Za-z0-9:_-]{1,180}$/.test(value.idempotencyKey) ||
     typeof value.matchId !== "string" ||
     !/^[A-Za-z0-9_-]{1,128}$/.test(value.matchId) ||
-    !Number.isSafeInteger(value.turn) ||
-    value.turn < 1 ||
+    (event !== "turn_advanced" && event !== "ranked_match_started") ||
+    (event === "turn_advanced" &&
+      (!Number.isSafeInteger(value.turn) || value.turn < 1)) ||
     !Array.isArray(value.subscriptions) ||
     value.subscriptions.length > MAX_SUBSCRIPTIONS_PER_JOB
   ) {
@@ -99,8 +101,9 @@ function parseJob(value) {
   }
   return {
     idempotencyKey: value.idempotencyKey,
+    event,
     matchId: value.matchId,
-    turn: value.turn,
+    ...(event === "turn_advanced" ? { turn: value.turn } : {}),
     subscriptions
   };
 }
@@ -146,8 +149,9 @@ async function deliverJob(job, sendNotification) {
     job.subscriptions.map(async (entry) => {
       try {
         const payload = JSON.stringify({
+          event: job.event,
           matchId: job.matchId,
-          turn: job.turn,
+          ...(job.event === "turn_advanced" ? { turn: job.turn } : {}),
           locale: entry.locale
         });
         await sendNotification(entry.subscription, payload, {
