@@ -183,6 +183,9 @@ export function collectTargets(
     selected.push(...filtered);
   }
   if (options.allowMultiple === false && selected.length > 1) {
+    if (requested.length === 0) {
+      return [selected[Math.floor(Math.random() * selected.length)]];
+    }
     return [selected[0]];
   }
   return selected;

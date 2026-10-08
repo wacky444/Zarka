@@ -593,7 +593,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "throw.png",
     actionOrder: 8,
     actionSubOrder: 1,
-    tags: ["Attack", "Area", "Ranged", "TargetItems"]
+    tags: ["Attack", "SingleTarget", "Ranged", "TargetItems"]
   },
   use_chemical_weapon: {
     id: "use_chemical_weapon",

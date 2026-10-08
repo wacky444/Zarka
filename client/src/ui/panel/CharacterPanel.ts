@@ -551,9 +551,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       },
       onItemsTabShow: () => {
         this.inventoryView.setActive(true);
+        this.inventoryView.setVisible(true);
       },
       onItemsTabHide: () => {
         this.inventoryView.setActive(false);
+        this.inventoryView.setVisible(false);
       },
       onShopTabShow: () => {
         this.shopView.setVisible(true);

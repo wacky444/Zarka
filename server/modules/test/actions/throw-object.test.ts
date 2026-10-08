@@ -202,3 +202,105 @@ test("zarkans alone cannot be thrown", () => {
   assert.ok(failure && failure.kind === "player");
   assert.equal(failure.action.metadata?.attemptedActionId, "throw_object");
 });
+
+test("throwing into a tile with multiple characters hits only one character", () => {
+  const actor = createCharacter("thrower", 0);
+  actor.inventory.carriedItems = [
+    { itemId: "drink", quantity: 1, weight: 3 },
+  ];
+  actor.stats.load.current = 3;
+  const target1 = createCharacter("target1", 1);
+  const target2 = createCharacter("target2", 1);
+  const match = createMatch(actor, [target1, target2], { q: 1, r: 0 });
+  const events = executeAction(
+    match,
+    ActionLibrary.throw_object,
+    1,
+    {},
+    logger
+  );
+  const event = getThrowEvent(events);
+
+  assert.equal(event.targets?.length, 1);
+  const hitId = event.targets?.[0].targetId;
+  assert.ok(hitId === "target1" || hitId === "target2");
+  const hitTarget = hitId === "target1" ? target1 : target2;
+  const unhitTarget = hitId === "target1" ? target2 : target1;
+  assert.equal(hitTarget.stats.health.current, 9);
+  assert.equal(unhitTarget.stats.health.current, 10);
+});
+
+test("throwing into a tile with multiple characters prioritizes targeted character", () => {
+  const actor = createCharacter("thrower", 0);
+  actor.inventory.carriedItems = [
+    { itemId: "drink", quantity: 1, weight: 3 },
+  ];
+  actor.stats.load.current = 3;
+  const target1 = createCharacter("target1", 1);
+  const target2 = createCharacter("target2", 1);
+  const match = createMatch(actor, [target1, target2], { q: 1, r: 0 });
+  actor.actionPlan!.main!.targetPlayerIds = ["target2"];
+  const events = executeAction(
+    match,
+    ActionLibrary.throw_object,
+    1,
+    {},
+    logger
+  );
+  const event = getThrowEvent(events);
+
+  assert.equal(event.targets?.length, 1);
+  assert.equal(event.targets?.[0].targetId, "target2");
+  assert.equal(target2.stats.health.current, 9);
+  assert.equal(target1.stats.health.current, 10);
+});
+
+test("throwing prioritizing a character not at target tile hits another character at tile", () => {
+  const actor = createCharacter("thrower", 0);
+  actor.inventory.carriedItems = [
+    { itemId: "drink", quantity: 1, weight: 3 },
+  ];
+  actor.stats.load.current = 3;
+  const target1 = createCharacter("target1", 1);
+  const target2 = createCharacter("target2", 2);
+  const match = createMatch(actor, [target1, target2], { q: 1, r: 0 });
+  actor.actionPlan!.main!.targetPlayerIds = ["target2"];
+  const events = executeAction(
+    match,
+    ActionLibrary.throw_object,
+    1,
+    {},
+    logger
+  );
+  const event = getThrowEvent(events);
+
+  assert.equal(event.targets?.length, 1);
+  assert.equal(event.targets?.[0].targetId, "target1");
+  assert.equal(target1.stats.health.current, 9);
+  assert.equal(target2.stats.health.current, 10);
+});
+
+test("throwing can target a character in own cell", () => {
+  const actor = createCharacter("thrower", 0);
+  actor.inventory.carriedItems = [
+    { itemId: "drink", quantity: 1, weight: 3 },
+  ];
+  actor.stats.load.current = 3;
+  const target1 = createCharacter("target1", 0);
+  const match = createMatch(actor, [target1], { q: 0, r: 0 });
+  actor.actionPlan!.main!.targetPlayerIds = ["target1"];
+  const events = executeAction(
+    match,
+    ActionLibrary.throw_object,
+    1,
+    {},
+    logger
+  );
+  const event = getThrowEvent(events);
+
+  assert.equal(event.targets?.length, 1);
+  assert.equal(event.targets?.[0].targetId, "target1");
+  assert.equal(target1.stats.health.current, 9);
+  assert.equal(actor.stats.health.current, 10);
+});
+

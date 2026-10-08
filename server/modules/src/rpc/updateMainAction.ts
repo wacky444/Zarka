@@ -201,6 +201,9 @@ export function updateMainActionRpc(
     if (normalizedActionId !== "steal" || !extraExecutions) {
       secondTargetItemIds = undefined;
     }
+    if (normalizedActionId === "scare" && !extraExecutions) {
+      targetLocation = undefined;
+    }
   }
   const clearAction = !submission;
   const nkWrapper = createNakamaWrapper(nk);

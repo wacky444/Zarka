@@ -225,7 +225,7 @@ export class ThrowObjectAction extends BaseAction {
         match,
         {
           deadCharacterPolicy: "exclude",
-          allowMultiple: true,
+          allowMultiple: false,
           filter: (candidate) =>
             candidate.coord.q === targetCoord.q &&
             candidate.coord.r === targetCoord.r,

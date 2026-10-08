@@ -21,6 +21,8 @@ export class CharacterPanelInventoryView {
   private readonly loadRemainderText: Phaser.GameObjects.Text;
   private readonly grid: InventoryGrid;
   private readonly elements: Phaser.GameObjects.GameObject[];
+  private isVisible = false;
+  private hasLoad = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -86,8 +88,6 @@ export class CharacterPanelInventoryView {
     this.elements = [
       this.background,
       this.title,
-      this.loadCurrentText,
-      this.loadRemainderText,
       this.grid
     ];
   }
@@ -101,19 +101,37 @@ export class CharacterPanelInventoryView {
     if (active) {
       this.grid.refreshLayout();
     }
+    this.setVisible(active);
+  }
+
+  setVisible(visible: boolean): void {
+    this.isVisible = visible;
+    this.background.setVisible(visible);
+    this.title.setVisible(visible);
+    this.grid.setVisible(visible);
+    this.updateLoadVisibility();
+  }
+
+  private updateLoadVisibility(): void {
+    const showLoad = this.isVisible && this.hasLoad;
+    this.loadCurrentText.setVisible(showLoad);
+    this.loadRemainderText.setVisible(showLoad);
   }
 
   update(character: PlayerCharacter | null): void {
     if (!character) {
+      this.hasLoad = false;
       this.title.setText("Inventory");
-      this.loadCurrentText.setVisible(false);
-      this.loadRemainderText.setVisible(false);
+      this.loadCurrentText.setText("");
+      this.loadRemainderText.setText("");
+      this.updateLoadVisibility();
       this.updateLoadTextPosition();
       this.grid.setItems([]);
       this.grid.refreshLayout();
       return;
     }
     const load = character.stats?.load;
+    this.hasLoad = Boolean(load);
     if (load) {
       const current = normalizeWeight(load.current);
       const max = normalizeWeight(load.max);
@@ -126,16 +144,14 @@ export class CharacterPanelInventoryView {
             : load.max > 0 && load.current > load.max * 0.75
               ? THEME.colors.warning
               : THEME.colors.textPrimary
-        )
-        .setVisible(true);
-      this.loadRemainderText
-        .setText(`/${max})`)
-        .setVisible(true);
+        );
+      this.loadRemainderText.setText(`/${max})`);
     } else {
       this.title.setText("Inventory");
-      this.loadCurrentText.setVisible(false);
-      this.loadRemainderText.setVisible(false);
+      this.loadCurrentText.setText("");
+      this.loadRemainderText.setText("");
     }
+    this.updateLoadVisibility();
     this.updateLoadTextPosition();
     const stacks = Array.isArray(character.inventory?.carriedItems)
       ? character.inventory.carriedItems

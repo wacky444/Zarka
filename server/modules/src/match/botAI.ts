@@ -885,6 +885,7 @@ function createThrowCandidate(
     plan: {
       actionId: definition.id,
       targetLocationId: { ...targetCoord },
+      targetPlayerIds: [target.character.id],
       targetItemIds: [throwable.itemId]
     },
     weight:

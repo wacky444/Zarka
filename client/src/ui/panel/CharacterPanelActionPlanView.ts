@@ -2276,8 +2276,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
           ? THEME.colors.healthDamageAccent
           : THEME.colors.energyAccent
     });
+    this.mainExtraExecutions = initialReps;
     if (initialReps > 0) {
-      this.mainExtraExecutions = initialReps;
       this.extraExecutionSelector.setValue(initialReps);
     }
     this.extraExecutionSelector.setEnabled(this.mainActionSelection !== null);
@@ -2639,6 +2639,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
 
   private refreshItemSelectorState(): void {
     this.itemSelector.setMaxEntries(this.getStealPriorityLimit());
+    this.itemSelector.setLabel(
+      this.mainActionSelection === "throw_object"
+        ? t("Item to throw")
+        : t("Priority Items")
+    );
     const supports = this.selectedActionSupportsItemPriority();
     const availableOptions = this.getMainActionItemOptions();
     const shouldShow = supports && availableOptions.length > 0;
@@ -2952,6 +2957,13 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       return false;
     }
     this.scareSecondTargetPlayerId = normalized;
+    if (
+      normalized &&
+      this.mainActionSelection === "scare" &&
+      this.mainActionTarget !== null
+    ) {
+      this.setMainActionTarget(null, false);
+    }
     this.scareSecondPlayerSelector.setValue(normalized, false);
     this.scareSecondPlayerSelector.setPending(false);
     if (emit) {
@@ -3345,6 +3357,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   }
 
   private selectedMainActionSupportsLocation(): boolean {
+    if (this.mainActionSelection === "scare") {
+      return this.mainExtraExecutions > 0;
+    }
     return (
       actionSupportsLocation(this.lastMainActionItem) ||
       this.mainActionSelection === "shoot_pistol"
@@ -3383,6 +3398,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   private getMainActionItemOptions(): ItemPriorityOption[] {
     if (this.mainActionSelection === "steal") {
       return this.stealItemOptions;
+    }
+    if (this.mainActionSelection === "throw_object") {
+      return this.inventoryItemOptions.filter(
+        (option) => option.id !== "zarkans" && option.id !== "zarkan3"
+      );
     }
     if (this.mainActionSelection !== "pick_up") {
       return this.itemOptions;

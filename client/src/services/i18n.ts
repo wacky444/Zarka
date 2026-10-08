@@ -216,6 +216,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "None selected": "Ninguno seleccionado",
   "Extra power": "Potencia adicional",
   "Priority Items": "Objetos prioritarios",
+  "Item to throw": "Objeto a lanzar",
   "Second Steal Item Priorities": "Prioridades del segundo robo",
   "No items carried.": "No llevas objetos.",
   Toggle: "Alternar",

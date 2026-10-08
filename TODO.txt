@@ -50,6 +50,7 @@
 	use antidote, use quemical weapon, use medicine
 	
 - throwing a moltov, threw 3 foods to three different players
+	-t its like it hits in area
 
 - registered items didnt stay in players view
 
@@ -63,7 +64,12 @@
 	
 - matchmaking
 	-t pause auto matchmaking if the player hasn't logged in 24h, even it the account has a free slot, don't queue players with more than 24 offline time
-	
+	- match name and creator name for ranked games
+
+	- ignore elo range selection, match any
+
+-t i can see 3/25) load quantity in other tabs
+
 -t enough spawn locations for 100 players? test to create a small map for 20 bots
 
 
@@ -83,17 +89,3 @@
      - Fix: Use per-user assignment lookup and process queue records in bounded batches; remove inactive enrollments.
      - If we skip it: Storage reads and processing grow with all past opt-ins and active matches.
 	 
- 8. Ranked settings remain English in Spanish UI (client/src/scenes/SettingsScene.ts:L335-395,L977-995)
-     - What this is: New labels and save states are plain strings, despite translations in client/src/services/i18n.ts:L51-58.
-     - Problem: Spanish users see title, help text, and save status in English.
-     - Fix: Pass these strings through t().
-     - If we skip it: Ranked settings are partly untranslated.
-	 
-	 
- 9. Logs include user IDs and private stats (server/modules/src/match/checkEndGame.ts:L337-340;
-    server/modules/src/rpc/setRankedMatchSlots.ts:L85)
-     - What this is: Match finalization logs per-user stats; slot RPC logs user IDs.
-     - Problem: Nakama logs link private performance data and matchmaking preference activity to stable account IDs. Rollout docs
-       say avoid this.
-     - Fix: Log aggregate counts and outcomes without user IDs or per-user stats.
-     - If we skip it: Anyone with log access can inspect private account data.
