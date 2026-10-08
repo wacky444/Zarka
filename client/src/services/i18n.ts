@@ -53,6 +53,9 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
     "Elige cuántas partidas clasificatorias puede asignarte Zarka a la vez. Puede asignarte otra mientras una partida está en curso.",
   Disabled: "Desactivado",
   Enabled: "Activado",
+  "Saving...": "Guardando...",
+  "Could not save. Restored saved value.":
+    "No se pudo guardar. Se restauró el valor guardado.",
   Appearance: "Apariencia",
   Audio: "Audio",
   Notifications: "Notificaciones",

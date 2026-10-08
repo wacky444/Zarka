@@ -20,6 +20,7 @@ import { GridSelect, type GridSelectItem } from "../ui/GridSelect";
 import { assetPath } from "../utils/assetPath";
 import type {
   GetUserAccountPayload,
+  SetRankedMatchSlotsPayload,
   UpdateSkinPayload,
   UserAccount,
   Skin,
@@ -153,6 +154,13 @@ export class SettingsScene extends Phaser.Scene {
   private rankedMatchSlotsDecreaseButton!: UIButton;
   private rankedMatchSlotsIncreaseButton!: UIButton;
   private rankedMatchSlots = 0;
+  private confirmedRankedMatchSlots = 0;
+  private rankedMatchSlotsSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  private rankedMatchSlotsPending: { value: number; revision: number } | null = null;
+  private rankedMatchSlotsRevision = 0;
+  private rankedMatchSlotsSaving = false;
+  private rankedMatchSlotsSaveError = false;
+  private settingsSceneShuttingDown = false;
   public onRankedMatchSlotsChange: ((value: number) => void) | null = null;
   private facebookStatusText!: Phaser.GameObjects.Text;
   private skinSelectors: Partial<Record<SkinCategory, GridSelect>> = {};
@@ -375,6 +383,8 @@ export class SettingsScene extends Phaser.Scene {
       .setOrigin(0.5, 0);
     this.accountRoot.add(this.rankedMatchSlotsStateText);
     this.updateRankedMatchSlotsControl();
+    this.onRankedMatchSlotsChange = (value) =>
+      this.scheduleRankedMatchSlotsSave(value);
 
     this.skinTitle = this.add
       .text(0, 0, "Skin Customization", {
@@ -542,9 +552,15 @@ export class SettingsScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutAccount, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutAccount, this);
+      this.settingsSceneShuttingDown = true;
       if (this.skinSaveTimer !== null) {
         clearTimeout(this.skinSaveTimer);
         this.skinSaveTimer = null;
+      }
+      if (this.rankedMatchSlotsSaveTimer !== null) {
+        clearTimeout(this.rankedMatchSlotsSaveTimer);
+        this.rankedMatchSlotsSaveTimer = null;
+        void this.flushRankedMatchSlotsSave();
       }
     });
 
@@ -860,7 +876,7 @@ export class SettingsScene extends Phaser.Scene {
     this.rankedMatchSlots = Number.isFinite(value)
       ? Math.max(0, Math.min(3, Math.floor(value)))
       : 0;
-    if (this.rankedMatchSlotsValueText) {
+    if (this.rankedMatchSlotsValueText && !this.settingsSceneShuttingDown) {
       this.updateRankedMatchSlotsControl();
     }
   }
@@ -874,12 +890,85 @@ export class SettingsScene extends Phaser.Scene {
     this.onRankedMatchSlotsChange?.(nextValue);
   }
 
+  private scheduleRankedMatchSlotsSave(value: number): void {
+    const revision = ++this.rankedMatchSlotsRevision;
+    this.rankedMatchSlotsPending = { value, revision };
+    this.rankedMatchSlotsSaveError = false;
+    if (this.rankedMatchSlotsSaveTimer !== null) {
+      clearTimeout(this.rankedMatchSlotsSaveTimer);
+    }
+    this.updateRankedMatchSlotsControl();
+    this.rankedMatchSlotsSaveTimer = setTimeout(() => {
+      this.rankedMatchSlotsSaveTimer = null;
+      void this.flushRankedMatchSlotsSave();
+    }, 250);
+  }
+
+  private async flushRankedMatchSlotsSave(): Promise<void> {
+    if (this.rankedMatchSlotsSaving || !this.rankedMatchSlotsPending) {
+      return;
+    }
+    const pending = this.rankedMatchSlotsPending;
+    this.rankedMatchSlotsPending = null;
+    this.rankedMatchSlotsSaving = true;
+    this.updateRankedMatchSlotsControl();
+
+    try {
+      const rpcRes = await this.client.rpc(this.session, "set_ranked_match_slots", {
+        ranked_match_slots: pending.value
+      });
+      const raw = (rpcRes as unknown as { payload?: unknown }).payload;
+      const response = (typeof raw === "string" ? JSON.parse(raw) : raw) as
+        | SetRankedMatchSlotsPayload
+        | undefined;
+      if (
+        response?.ok !== true ||
+        response.ranked_match_slots !== pending.value
+      ) {
+        throw new Error(response?.error ?? "invalid_response");
+      }
+      this.confirmedRankedMatchSlots = pending.value;
+      this.rankedMatchSlotsSaveError = false;
+    } catch (error) {
+      console.warn("Failed to save ranked match slots:", error);
+      if (
+        pending.revision === this.rankedMatchSlotsRevision &&
+        this.rankedMatchSlotsPending === null
+      ) {
+        this.rankedMatchSlotsSaveError = true;
+        this.setRankedMatchSlots(this.confirmedRankedMatchSlots);
+      }
+    } finally {
+      this.rankedMatchSlotsSaving = false;
+      this.updateRankedMatchSlotsControl();
+      if (this.rankedMatchSlotsPending !== null) {
+        void this.flushRankedMatchSlotsSave();
+      }
+    }
+  }
+
   private updateRankedMatchSlotsControl(): void {
+    if (this.settingsSceneShuttingDown) {
+      return;
+    }
     this.rankedMatchSlotsValueText.setText(`${this.rankedMatchSlots}`);
     const disabled = this.rankedMatchSlots === 0;
     this.rankedMatchSlotsValueText.setColor(disabled ? "#888888" : "#ffffff");
-    this.rankedMatchSlotsStateText.setText(disabled ? "Disabled" : "Enabled");
-    this.rankedMatchSlotsStateText.setColor(disabled ? "#888888" : "#86efac");
+    const saving =
+      this.rankedMatchSlotsSaving ||
+      this.rankedMatchSlotsPending !== null ||
+      this.rankedMatchSlotsSaveTimer !== null;
+    const stateText = saving
+      ? "Saving..."
+      : this.rankedMatchSlotsSaveError
+        ? "Could not save. Restored saved value."
+        : disabled
+          ? "Disabled"
+          : "Enabled";
+    this.rankedMatchSlotsStateText.setText(stateText);
+    this.rankedMatchSlotsStateText.setColor(
+      saving ? "#facc15" : this.rankedMatchSlotsSaveError ? "#f87171" : disabled ? "#888888" : "#86efac"
+    );
 
     if (disabled) {
       this.rankedMatchSlotsDecreaseButton.setAlpha(0.5).disableInteractive();
@@ -1086,6 +1175,18 @@ export class SettingsScene extends Phaser.Scene {
       this.layoutAccount();
 
       if (userAccount) {
+        if (this.rankedMatchSlotsRevision === 0) {
+          const savedSlots = userAccount.rankedMatchSlots;
+          this.confirmedRankedMatchSlots =
+            typeof savedSlots === "number" &&
+            Number.isInteger(savedSlots) &&
+            savedSlots >= 0 &&
+            savedSlots <= 3
+              ? savedSlots
+              : 0;
+          this.setRankedMatchSlots(this.confirmedRankedMatchSlots);
+        }
+
         const s = userAccount.stats;
 
         const lines: string[] = [];
