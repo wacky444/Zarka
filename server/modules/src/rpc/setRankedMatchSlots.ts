@@ -1,5 +1,7 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
+import { recordRankedSlotPreference } from "../services/rankedQueue";
+
 type UnknownRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): UnknownRecord | undefined {
@@ -83,6 +85,19 @@ export function setRankedMatchSlotsRpc(
   } catch (error) {
     logger.error(
       "set_ranked_match_slots accountUpdateId failed for user %s: %s",
+      userId,
+      (error && (error as Error).message) || String(error)
+    );
+    return JSON.stringify({
+      error: "internal_error"
+    } satisfies import("@shared").SetRankedMatchSlotsPayload);
+  }
+
+  try {
+    recordRankedSlotPreference(nk, userId, slots, Date.now());
+  } catch (error) {
+    logger.error(
+      "set_ranked_match_slots queue enrollment failed for user %s: %s",
       userId,
       (error && (error as Error).message) || String(error)
     );

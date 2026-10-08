@@ -34,6 +34,10 @@ import {
   unregisterPushSubscriptionRpc
 } from "./rpc";
 import { asyncTurnMatchHandler } from "./match/async_turn";
+import {
+  rankedQueueCoordinatorMatchHandler,
+  type RankedQueueCoordinatorState
+} from "./matchmaking/coordinator";
 import { restoreMatchesFromStorage } from "./services/matchRestoration";
 
 export function InitModule(
@@ -302,6 +306,26 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register match handler async_turn: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerMatch<RankedQueueCoordinatorState>(
+      "ranked_queue_coordinator",
+      rankedQueueCoordinatorMatchHandler
+    );
+  } catch (error) {
+    logger.error(
+      "Failed to register ranked queue coordinator: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    const coordinatorId = nk.matchCreate("ranked_queue_coordinator", {});
+    logger.info("Ranked queue coordinator started: %s", coordinatorId);
+  } catch (error) {
+    logger.error(
+      "Failed to start ranked queue coordinator: %s",
       (error && (error as Error).message) || String(error)
     );
   }

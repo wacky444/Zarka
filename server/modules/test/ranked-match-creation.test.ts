@@ -103,7 +103,7 @@ function createHarness(humanIds: string[]) {
       matchParams.push(params);
       return `runtime-${++runtimeMatchId}`;
     },
-    matchList: () => ({ matches: [] }),
+    matchList: () => [],
     matchSignal: (_matchId: string, data: string) => signals.push(data),
     usersGetId: (ids: string[]) => ids.flatMap((id) => {
       const user = users.get(id);

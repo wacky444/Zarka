@@ -26,6 +26,23 @@ export type RankedMatchCreationRequest = {
   queueMode: RankedQueueMode;
 };
 
+function findExistingRuntimeMatchId(
+  nk: nkruntime.Nakama,
+  gameId: string
+): string | undefined {
+  for (const runtimeMatch of nk.matchList(1000, true, "", 0, 500, "")) {
+    try {
+      const label = JSON.parse(runtimeMatch.label) as { game_id?: unknown };
+      if (label.game_id === gameId) {
+        return runtimeMatch.matchId;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return undefined;
+}
+
 function readRatingSnapshots(
   nk: nkruntime.Nakama,
   humanIds: string[]
@@ -141,7 +158,8 @@ export function createRankedMatch(
     undefined,
     30
   );
-  const runtimeMatchId = nk.matchCreate("async_turn", {
+  const runtimeMatchId = findExistingRuntimeMatchId(nk, matchId) ??
+    nk.matchCreate("async_turn", {
     game_id: matchId,
     ranked: "true",
     size: String(totalRoster),

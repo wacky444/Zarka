@@ -11,17 +11,63 @@ type RpcResponse = {
 
 function createHarness(initialMetadata: unknown) {
   const userId = "ranked-slots-owner";
+  const storage = new Map<
+    string,
+    { collection: string; key: string; userId: string; value: unknown; version: string }
+  >();
+  let storageVersion = 0;
   let user = {
     id: userId,
     username: userId,
     metadata: initialMetadata
   } as unknown as nkruntime.User;
+  const storageKey = (record: { collection: string; key: string; userId: string }) =>
+    `${record.collection}:${record.userId}:${record.key}`;
   const nakama = {
     usersGetId: (ids: string[]) => (ids.includes(userId) ? [user] : []),
     accountUpdateId: (...args: unknown[]) => {
       if (args[0] === userId) {
         user = { ...user, metadata: args[7] } as nkruntime.User;
       }
+    },
+    storageRead: (requests: Array<{ collection: string; key: string; userId: string }>) =>
+      requests.flatMap((request) => {
+        const entry = storage.get(storageKey(request));
+        return entry ? [entry] : [];
+      }),
+    storageWrite: (requests: Array<{
+      collection: string;
+      key: string;
+      userId: string;
+      value: unknown;
+      version?: string;
+    }>) => {
+      for (const request of requests) {
+        const current = storage.get(storageKey(request));
+        const expectedVersion = request.version === "" ? undefined : request.version;
+        if (request.version !== undefined && expectedVersion !== current?.version) {
+          throw new Error("version conflict");
+        }
+      }
+      for (const request of requests) {
+        const entry = {
+          collection: request.collection,
+          key: request.key,
+          userId: request.userId,
+          value: request.value,
+          version: String(++storageVersion)
+        };
+        storage.set(storageKey(entry), entry);
+      }
+    },
+    storageList: (storageUserId: string, collection: string) => ({
+      objects: Array.from(storage.values()).filter(
+        (entry) => entry.userId === storageUserId && entry.collection === collection
+      ),
+      cursor: ""
+    }),
+    storageDelete: (requests: Array<{ collection: string; key: string; userId: string }>) => {
+      for (const request of requests) storage.delete(storageKey(request));
     }
   } as unknown as nkruntime.Nakama;
   const logger = {
