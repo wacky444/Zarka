@@ -278,6 +278,16 @@ export type UpdateSkinPayload = {
   error?: string;
 };
 
+export type SetRankedMatchSlotsRequest = {
+  ranked_match_slots: number;
+};
+
+export type SetRankedMatchSlotsPayload = {
+  ok?: boolean;
+  ranked_match_slots?: number;
+  error?: string;
+};
+
 export type UpgradeSkillPayload = {
   ok?: boolean;
   match_id?: string;

@@ -20,6 +20,7 @@ import {
   saveChatMessageRpc,
   getChatHistoryRpc,
   getUserAccountRpc,
+  setRankedMatchSlotsRpc,
   updateSkinRpc,
   upgradeSkillRpc,
   updateTestamentRpc,
@@ -101,6 +102,14 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register get_user_account: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("set_ranked_match_slots", setRankedMatchSlotsRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register set_ranked_match_slots: %s",
       (error && (error as Error).message) || String(error)
     );
   }
