@@ -1,5 +1,6 @@
 import { Client, Session, Socket } from "@heroiclabs/nakama-js";
 import { getEnv } from "./nakama";
+import { parseRankedQueueStatusResponse } from "./rankedMatchmaking";
 import {
   OPCODE_MATCH_REMOVED,
   OPCODE_MATCH_ENDED,
@@ -16,6 +17,7 @@ import {
   type ReadyStateUpdateMessagePayload,
   type SaveChatMessageRequest,
   type GetUserAccountPayload,
+  type GetRankedQueueStatusPayload,
   type Skin,
   type SkillId,
   type UpgradeSkillRequest,
@@ -66,6 +68,7 @@ export class TurnService {
   private usernameCache = new Map<string, string>();
   private lastRankedPresenceTouchAt = 0;
   private rankedPresenceTouch: Promise<void> | null = null;
+  private knownRankedAssignmentIds = new Set<string>();
 
   constructor(
     private client: Client,
@@ -376,6 +379,35 @@ export class TurnService {
   async listMyMatches() {
     const res = await this.client.rpc(this.session, "list_my_matches", {});
     return res;
+  }
+
+  async getRankedQueueStatus(): Promise<GetRankedQueueStatusPayload> {
+    const res = await this.client.rpc(
+      this.session,
+      "get_ranked_queue_status",
+      {}
+    );
+    const raw = (res as unknown as { payload?: unknown }).payload;
+    return parseRankedQueueStatusResponse(raw);
+  }
+
+  async refreshRankedQueueAndMatches(): Promise<{
+    status: GetRankedQueueStatusPayload;
+    assignmentDiscovered: boolean;
+  }> {
+    const status = await this.getRankedQueueStatus();
+    let assignmentDiscovered = false;
+    if (status.ok && Array.isArray(status.assigned_matches)) {
+      const currentIds = new Set(
+        status.assigned_matches.map((assignment) => assignment.assignment_id)
+      );
+      assignmentDiscovered = Array.from(currentIds).some(
+        (assignmentId) => !this.knownRankedAssignmentIds.has(assignmentId)
+      );
+      this.knownRankedAssignmentIds = currentIds;
+    }
+    await this.listMyMatches();
+    return { status, assignmentDiscovered };
   }
 
   async getMatchReport(match_id: string) {

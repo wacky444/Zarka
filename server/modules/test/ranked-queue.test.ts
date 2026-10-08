@@ -7,6 +7,8 @@ import {
   RANKED_DAILY_PRESENCE_COLLECTION
 } from "../src/constants";
 import { processRankedQueue, recordRankedSlotPreference } from "../src/services/rankedQueue";
+import { getRankedQueueStatusRpc } from "../src/rpc/getRankedQueueStatus";
+import { listMyMatchesRpc } from "../src/rpc/listMyMatches";
 import { touchRankedPresence } from "../src/services/rankedPresence";
 import { MATCH_COLLECTION } from "../src/constants";
 
@@ -267,6 +269,66 @@ test("completed assignment releases slot and replenishes requested ticket", () =
   );
   assert.equal(assignments.filter((assignment) => assignment.state === "completed").length, 1);
   assert.equal(assignments.filter((assignment) => assignment.state === "active").length, 1);
+});
+
+test("ranked queue status is caller-scoped and reports assigned matches", () => {
+  const now = 1_700_000_600_000;
+  const users = makeUsers(5, "status");
+  const harness = createHarness(users);
+  harness.addDailyUsers(5, now);
+  for (const userId of users.slice(0, 3)) harness.setSlots(userId, 1, now);
+  processRankedQueue(harness.nakama, harness.logger, now);
+
+  const ownStatus = JSON.parse(
+    getRankedQueueStatusRpc(
+      { userId: users[0] } as nkruntime.Context,
+      harness.logger,
+      harness.nakama,
+      JSON.stringify({ user_id: users[1] })
+    )
+  ) as {
+    desired_slots?: number;
+    queued_tickets?: number;
+    assigned_matches?: Array<{ match_id: string; status: string }>;
+  };
+  assert.equal(ownStatus.desired_slots, 1);
+  assert.equal(ownStatus.queued_tickets, 0);
+  assert.deepEqual(ownStatus.assigned_matches?.map((entry) => entry.status), ["running"]);
+  const myMatches = JSON.parse(
+    listMyMatchesRpc(
+      { userId: users[0] } as nkruntime.Context,
+      harness.logger,
+      harness.nakama,
+      ""
+    )
+  ) as { matches?: Array<{ match_id: string }> };
+  assert.equal(
+    myMatches.matches?.some(
+      (match) => match.match_id === ownStatus.assigned_matches?.[0]?.match_id
+    ),
+    true
+  );
+
+  const outsiderStatus = JSON.parse(
+    getRankedQueueStatusRpc(
+      { userId: "outsider" } as nkruntime.Context,
+      harness.logger,
+      harness.nakama,
+      "{}"
+    )
+  ) as { desired_slots?: number; assigned_matches?: unknown[] };
+  assert.equal(outsiderStatus.desired_slots, 0);
+  assert.deepEqual(outsiderStatus.assigned_matches, []);
+
+  const unauthenticated = JSON.parse(
+    getRankedQueueStatusRpc(
+      {} as nkruntime.Context,
+      harness.logger,
+      harness.nakama,
+      "{}"
+    )
+  ) as { error?: string };
+  assert.equal(unauthenticated.error, "unauthorized");
 });
 
 test("expired reservation retries the same assignment and reuses orphaned runtime match", () => {

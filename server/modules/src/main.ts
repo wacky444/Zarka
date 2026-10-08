@@ -19,6 +19,7 @@ import {
   getReplayRpc,
   saveChatMessageRpc,
   getChatHistoryRpc,
+  getRankedQueueStatusRpc,
   getUserAccountRpc,
   setRankedMatchSlotsRpc,
   touchRankedPresenceRpc,
@@ -107,6 +108,14 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register get_user_account: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("get_ranked_queue_status", getRankedQueueStatusRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register get_ranked_queue_status: %s",
       (error && (error as Error).message) || String(error)
     );
   }

@@ -56,6 +56,13 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Saving...": "Guardando...",
   "Could not save. Restored saved value.":
     "No se pudo guardar. Se restauró el valor guardado.",
+  "Fetching ranked queue status...": "Consultando la cola clasificatoria...",
+  "Ranked queue status unavailable.": "Estado de la cola clasificatoria no disponible.",
+  "Random games": "Partidas aleatorias",
+  Desired: "Solicitadas",
+  Queued: "En cola",
+  Starting: "Iniciando",
+  Running: "En curso",
   Appearance: "Apariencia",
   Audio: "Audio",
   Notifications: "Notificaciones",

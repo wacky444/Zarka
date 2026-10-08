@@ -87,6 +87,7 @@ export class MainScene extends Phaser.Scene {
       document.visibilityState === "visible"
     ) {
       void this.turnService?.touchRankedPresence();
+      void this.refreshRankedQueueAndMatches();
     }
   };
 
@@ -300,6 +301,7 @@ export class MainScene extends Phaser.Scene {
         );
       }
       void this.turnService.touchRankedPresence();
+      void this.refreshRankedQueueAndMatches();
       void bindExistingPushSubscription(this.turnService).catch((error: unknown) => {
         console.warn("Failed to bind push subscription to current account:", error);
       });
@@ -591,6 +593,18 @@ export class MainScene extends Phaser.Scene {
       } else {
         this.statusText.setText("Init error: " + msg);
       }
+    }
+  }
+
+  private async refreshRankedQueueAndMatches(): Promise<void> {
+    if (!this.turnService) return;
+    try {
+      const result = await this.turnService.refreshRankedQueueAndMatches();
+      if (result.assignmentDiscovered && this.myMatchesListView) {
+        void this.myMatchesListView.refresh();
+      }
+    } catch (error) {
+      console.warn("Failed to refresh ranked match status:", error);
     }
   }
 

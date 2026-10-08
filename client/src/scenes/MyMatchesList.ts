@@ -2,7 +2,10 @@ import Phaser from "phaser";
 import { TurnService } from "../services/turnService";
 import { t } from "../services/i18n";
 import { makeButton, type UIButton } from "../ui/button";
-import type { ListMyMatchesPayload } from "@shared";
+import type {
+  GetRankedQueueStatusPayload,
+  ListMyMatchesPayload
+} from "@shared";
 
 // Type for my matches entries from the RPC response
 type MyMatch = {
@@ -15,6 +18,7 @@ type MyMatch = {
   creator?: string;
   cols?: number;
   rows?: number;
+  botPlayers?: number;
   name?: string;
   started?: boolean;
   status?: "waiting" | "in_progress" | "finished";
@@ -36,9 +40,10 @@ const MY_MATCHES_LAYOUT = {
   horizontalPadding: 32,
   titleY: 0,
   statusY: 36,
-  actionsY: 76,
+  queueStatusY: 58,
+  actionsY: 90,
   actionsGap: 16,
-  listStartY: 120,
+  listStartY: 134,
   rowGap: 34,
   buttonGap: 10,
   minTop: 24
@@ -50,6 +55,7 @@ export class MyMatchesListView {
   private container: Phaser.GameObjects.Container;
   private titleText!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
+  private queueStatusText!: Phaser.GameObjects.Text;
   private refreshButton!: UIButton;
   private backButton!: UIButton;
   private listItems: Phaser.GameObjects.Text[] = [];
@@ -84,6 +90,15 @@ export class MyMatchesListView {
       })
       .setOrigin(0.5);
     this.container.add(this.statusText);
+
+    this.queueStatusText = scene.add
+      .text(0, 0, "Fetching ranked queue status...", {
+        color: "#9ca3af",
+        fontSize: "13px",
+        align: "center"
+      })
+      .setOrigin(0.5);
+    this.container.add(this.queueStatusText);
 
     this.refreshButton = makeButton(
       this.scene,
@@ -158,11 +173,19 @@ export class MyMatchesListView {
     if (this.fetching || !this.turnService) return;
     this.fetching = true;
     this.statusText.setText("Fetching my matches...");
+    this.queueStatusText.setText("Fetching ranked queue status...");
     this.clearList();
     this.layoutMyMatches();
 
     try {
-      const res = await this.turnService.listMyMatches();
+      const [res, queueStatus] = await Promise.all([
+        this.turnService.listMyMatches(),
+        this.turnService.getRankedQueueStatus().catch((error: unknown) => {
+          console.warn("Failed to load ranked queue status:", error);
+          return { ok: false, error: "status_unavailable" } as GetRankedQueueStatusPayload;
+        })
+      ]);
+      this.renderRankedQueueStatus(queueStatus);
       let payload: ListMyMatchesPayload;
 
       if (typeof res.payload === "string") {
@@ -215,13 +238,34 @@ export class MyMatchesListView {
     }
   }
 
+  private renderRankedQueueStatus(status: GetRankedQueueStatusPayload): void {
+    if (
+      status.ok !== true ||
+      typeof status.desired_slots !== "number" ||
+      typeof status.queued_tickets !== "number" ||
+      !Array.isArray(status.assigned_matches)
+    ) {
+      this.queueStatusText.setText(t("Ranked queue status unavailable."));
+      return;
+    }
+    const starting = status.assigned_matches.filter(
+      (assignment) => assignment.status === "starting"
+    ).length;
+    const running = status.assigned_matches.filter(
+      (assignment) => assignment.status === "running"
+    ).length;
+    this.queueStatusText.setText(
+      `${t("Random games")}: ${t("Desired")} ${status.desired_slots} | ${t("Queued")} ${status.queued_tickets} | ${t("Starting")} ${starting} | ${t("Running")} ${running}`
+    );
+  }
+
   private renderList(
     matches: MyMatch[],
     hostMap: Record<string, string> = {}
   ) {
     matches.forEach((m, idx) => {
       const matchId = m.match_id;
-      const playerCount = m.players.length;
+      const playerCount = m.players.length + (m.botPlayers ?? 0);
       const maxPlayers = m.size;
       const turns = m.current_turn;
       const matchName = m.name && m.name.trim() ? m.name : `Match ${idx + 1}`;
@@ -342,6 +386,8 @@ export class MyMatchesListView {
     this.container.setPosition(viewportWidth / 2, top);
     this.titleText.setPosition(0, MY_MATCHES_LAYOUT.titleY);
     this.statusText.setPosition(0, MY_MATCHES_LAYOUT.statusY);
+    this.queueStatusText.setWordWrapWidth(contentWidth, true);
+    this.queueStatusText.setPosition(0, MY_MATCHES_LAYOUT.queueStatusY);
 
     const refreshWidth = this.refreshButton.width;
     const backWidth = this.backButton.width;

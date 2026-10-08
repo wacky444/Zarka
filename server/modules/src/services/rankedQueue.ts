@@ -9,6 +9,8 @@ import {
 } from "../constants";
 import {
   RANKED_MATCH_METADATA_KEY,
+  type GetRankedQueueStatusPayload,
+  type RankedQueueAssignmentStatus,
   type RankedQueueMode
 } from "@shared";
 import {
@@ -763,6 +765,50 @@ function createAssignments(
     if (!assignment) return;
     tryCreateReservedAssignment(nk, logger, assignment, nowMs);
   }
+}
+
+export function getRankedQueueStatus(
+  nk: nkruntime.Nakama,
+  userId: string
+): GetRankedQueueStatusPayload {
+  const account = readAccountEligibility(nk, userId);
+  const tickets = ticketsForUser(nk, userId);
+  const storage = new StorageService(createNakamaWrapper(nk));
+  const assignedMatches: RankedQueueAssignmentStatus[] = [];
+
+  for (const stored of listObjects<RankedAssignment>(
+    nk,
+    RANKED_ASSIGNMENT_COLLECTION
+  )) {
+    const assignment = stored.value;
+    if (!assignment.humanIds.includes(userId)) continue;
+    if (assignment.state === "creating") {
+      assignedMatches.push({
+        assignment_id: assignment.assignmentId,
+        match_id: assignment.matchId,
+        status: "starting"
+      });
+      continue;
+    }
+    if (assignment.state !== "active") continue;
+    const match = storage.getMatch(assignment.matchId)?.match;
+    if (!match || match.removed !== 0) continue;
+    assignedMatches.push({
+      assignment_id: assignment.assignmentId,
+      match_id: assignment.matchId,
+      status: "running",
+      current_turn: match.current_turn
+    });
+  }
+  assignedMatches.sort((a, b) => a.assignment_id.localeCompare(b.assignment_id));
+
+  return {
+    ok: true,
+    desired_slots: account.desiredSlots,
+    queued_tickets: tickets.filter((ticket) => ticket.value.status === "queued").length,
+    reserved_tickets: tickets.filter((ticket) => ticket.value.status === "reserved").length,
+    assigned_matches: assignedMatches
+  };
 }
 
 export function processRankedQueue(

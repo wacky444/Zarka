@@ -174,6 +174,9 @@ export class SettingsScene extends Phaser.Scene {
       document.visibilityState === "visible"
     ) {
       void this.turnService?.touchRankedPresence();
+      void this.turnService?.refreshRankedQueueAndMatches().catch((error: unknown) => {
+        console.warn("Failed to refresh ranked match status:", error);
+      });
     }
   };
 
@@ -585,6 +588,9 @@ export class SettingsScene extends Phaser.Scene {
       );
     }
     void this.turnService.touchRankedPresence();
+    void this.turnService.refreshRankedQueueAndMatches().catch((error: unknown) => {
+      console.warn("Failed to refresh ranked match status:", error);
+    });
     void this.refreshPushNotificationUi();
     await this.loadUserInfo();
   }
