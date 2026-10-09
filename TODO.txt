@@ -60,9 +60,6 @@
 	-t pause auto matchmaking if the player hasn't logged in 24h, even it the account has a free slot, don't queue players with more than 24 offline time
 	-t match name and creator name for ranked games
 
-	- ignore elo range selection, match any
-	- min duration
-
 -t enough spawn locations for 100 players? test to create a small map for 20 bots
 
 7. Queue status and coordinator scan global records repeatedly
@@ -73,7 +70,7 @@
      - Fix: Use per-user assignment lookup and process queue records in bounded batches; remove inactive enrollments.
      - If we skip it: Storage reads and processing grow with all past opt-ins and active matches.
 	 
-- my matches remake,
+- my matches remake and matches list
 	- order by matches where ready is not set then by timeleft, place a green play button over the image on the ones with ready not set
 	- cards instead of rows, in a reusable component in ui folder
 			R Name
@@ -85,3 +82,5 @@
 
 	- max current matches, default 10, store in account settings, check nakama if already has something
 	- also in all matches view
+
+- in the replay(tested in an end game report replay), changing the turn to view, doesnt put the characters on the positions pre turn

@@ -166,3 +166,17 @@ Poison coating on melee weapons remains a separate operation as described in gam
 3. Craft an item (e.g., Bat) at Workshop: verify no wood is deducted, bat is added, and +2 XP is awarded.
 4. Combine an item (e.g., Bat with 4 Wood): verify 4 Wood are consumed and 1 Bat is created.
 5. Separate an item: verify item is dismantled and original ingredients returned.
+
+## Implementation task breakdown
+
+Tasks 1–2 can start in parallel. Tasks 3–4 can run in parallel after them; Tasks 6–7 can run in parallel after Task 5.
+
+1. [Shared recipe catalogs](CRAFTING_TASK_1.md)
+2. [Action metadata and localized labels](CRAFTING_TASK_2.md)
+3. [Crafting product selector](CRAFTING_TASK_3.md)
+4. [Combine/Separate selector](CRAFTING_TASK_4.md)
+5. [Connect selectors to action planning](CRAFTING_TASK_5.md)
+6. [Authoritative Crafting resolution](CRAFTING_TASK_6.md)
+7. [Authoritative Combine/Separate resolution](CRAFTING_TASK_7.md)
+8. [Replay and log formatters](CRAFTING_TASK_8.md)
+9. [End-to-end workflow validation](CRAFTING_TASK_9.md)
