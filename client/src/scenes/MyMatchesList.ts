@@ -2,70 +2,141 @@ import Phaser from "phaser";
 import { TurnService } from "../services/turnService";
 import { t } from "../services/i18n";
 import { makeButton, type UIButton } from "../ui/button";
+import { THEME } from "../ui/ColorPalette";
+import { MatchCard } from "../ui/MatchCard";
 import type {
   GetRankedQueueStatusPayload,
-  ListMyMatchesPayload
+  ListMyMatchesPayload,
+  MatchCardStatus,
+  MyMatchCardSummary
 } from "@shared";
-
-// Type for my matches entries from the RPC response
-type MyMatch = {
-  match_id: string;
-  runtime_match_id?: string;
-  size: number;
-  players: string[];
-  current_turn: number;
-  created_at: number;
-  creator?: string;
-  cols?: number;
-  rows?: number;
-  botPlayers?: number;
-  name?: string;
-  started?: boolean;
-  status?: "waiting" | "in_progress" | "finished";
-  ended_at?: number;
-  turns?: number;
-  duration_ms?: number;
-  player_team_won?: boolean;
-  has_report?: boolean;
+import {
+  formatFinishedHeading,
+  formatOnlineHeading,
+  groupMyMatches,
+  toggleSectionCollapse,
+  type MyMatchesGroupResult,
+  type SectionCollapseState,
+  type SectionId
+} from "./MyMatchesListModel";
+type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
+  layout?: () => void;
+  setMinSize?: (width: number, height: number) => void;
+  setSize?: (width: number, height: number) => void;
+  setPosition?: (x: number, y: number) => void;
+  setOrigin?: (x: number, y?: number) => void;
+  setVisible?: (visible: boolean) => void;
+  setActive?: (active: boolean) => void;
+  scrollToTop?: () => void;
 };
 
-type MyMatchRowItem = {
-  textObj: Phaser.GameObjects.Text;
-  viewBtn: UIButton;
-  leaveBtn: UIButton;
-};
+export type MyMatchSelectHandler = (
+  matchId: string,
+  status: MatchCardStatus,
+  match: MyMatchCardSummary
+) => void;
 
 const MY_MATCHES_LAYOUT = {
   contentWidth: 720,
   horizontalPadding: 32,
-  titleY: 0,
-  statusY: 36,
-  queueStatusY: 58,
-  actionsY: 90,
-  actionsGap: 16,
-  listStartY: 134,
-  rowGap: 34,
-  buttonGap: 10,
-  minTop: 24
+  cardGap: 10,
+  sectionGap: 14,
+  actionsGap: 16
 };
 
-// A lightweight view container for My Matches List that can be mounted inside any Scene.
+class CollapsibleSectionHeader extends Phaser.GameObjects.Container {
+  private readonly background: Phaser.GameObjects.Rectangle;
+  private readonly arrowText: Phaser.GameObjects.Text;
+  private readonly titleText: Phaser.GameObjects.Text;
+  private readonly hitArea: Phaser.GameObjects.Zone;
+
+  constructor(scene: Phaser.Scene, onToggle: () => void) {
+    super(scene, 0, 0);
+    this.background = scene.add
+      .rectangle(0, 0, 100, 38, THEME.colors.collapsedBackground)
+      .setOrigin(0)
+      .setStrokeStyle(1, THEME.colors.collapsedBorder, 1);
+    this.add(this.background);
+
+    this.arrowText = scene.add
+      .text(12, 19, "▼", {
+        color: THEME.colors.zarkanGold,
+        fontSize: "14px"
+      })
+      .setOrigin(0, 0.5);
+    this.add(this.arrowText);
+
+    this.titleText = scene.add
+      .text(32, 19, "", {
+        color: THEME.colors.textPrimary,
+        fontSize: "15px",
+        fontStyle: "bold"
+      })
+      .setOrigin(0, 0.5);
+    this.add(this.titleText);
+
+    this.hitArea = scene.add
+      .zone(0, 0, 100, 38)
+      .setOrigin(0)
+      .setInteractive({ useHandCursor: true });
+    this.hitArea.on(Phaser.Input.Events.POINTER_UP, () => {
+      onToggle();
+    });
+    this.hitArea.on(Phaser.Input.Events.POINTER_OVER, () => {
+      this.background.setAlpha(0.8);
+    });
+    this.hitArea.on(Phaser.Input.Events.POINTER_OUT, () => {
+      this.background.setAlpha(1);
+    });
+    this.add(this.hitArea);
+  }
+
+  updateHeader(width: number, label: string, collapsed: boolean): void {
+    this.setSize(width, 38);
+    this.background.setSize(width, 38);
+    this.hitArea.setSize(width, 38);
+    this.hitArea.input?.hitArea.setTo(0, 0, width, 38);
+    this.arrowText.setText(collapsed ? "▶" : "▼");
+    this.titleText.setText(label);
+  }
+}
+
 export class MyMatchesListView {
-  private scene: Phaser.Scene;
-  private container: Phaser.GameObjects.Container;
-  private titleText!: Phaser.GameObjects.Text;
-  private statusText!: Phaser.GameObjects.Text;
-  private queueStatusText!: Phaser.GameObjects.Text;
-  private refreshButton!: UIButton;
-  private backButton!: UIButton;
-  private listItems: Phaser.GameObjects.Text[] = [];
-  private rowItems: MyMatchRowItem[] = [];
+  private readonly scene: Phaser.Scene;
+  private readonly container: Phaser.GameObjects.Container;
+  private readonly contentRoot: Phaser.GameObjects.Container;
+  private readonly scrollPanel?: ScrollablePanelInstance;
+
+  private readonly titleText: Phaser.GameObjects.Text;
+  private readonly statusText: Phaser.GameObjects.Text;
+  private readonly queueStatusText: Phaser.GameObjects.Text;
+  private readonly refreshButton: UIButton;
+  private readonly backButton: UIButton;
+
+  private readonly onlineHeader: CollapsibleSectionHeader;
+  private readonly onlineEmptyText: Phaser.GameObjects.Text;
+  private readonly finishedHeader: CollapsibleSectionHeader;
+  private readonly finishedEmptyText: Phaser.GameObjects.Text;
+
+  private onlineCards: MatchCard[] = [];
+  private finishedCards: MatchCard[] = [];
+  private onlineMatches: MyMatchCardSummary[] = [];
+  private finishedMatches: MyMatchCardSummary[] = [];
+  private maxCurrentMatches = 10;
+  private currentCardWidth = 0;
+
+  private collapseState: SectionCollapseState = {
+    onlineCollapsed: false,
+    finishedCollapsed: false
+  };
+
   private fetching = false;
+  private turnService: TurnService | null = null;
+  private onSelectMatch?: MyMatchSelectHandler;
   private onLeave?: (matchId: string) => void | Promise<void>;
   private onView?: (matchId: string) => void | Promise<void>;
   private onReport?: (matchId: string) => void | Promise<void>;
   private onBack?: () => void;
-  private turnService: TurnService | null = null;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -74,47 +145,104 @@ export class MyMatchesListView {
       .setVisible(false)
       .setActive(false);
 
+    this.contentRoot = scene.add.container(0, 0);
+
+    const rexUi = (
+      scene as unknown as {
+        rexUI?: {
+          add: {
+            scrollablePanel: (options: unknown) => ScrollablePanelInstance;
+            roundRectangle: (
+              x: number,
+              y: number,
+              width: number,
+              height: number,
+              radius: number,
+              fillColor: number
+            ) => unknown;
+          };
+        };
+      }
+    ).rexUI;
+
+    if (rexUi) {
+      this.scrollPanel = rexUi.add.scrollablePanel({
+        x: 0,
+        y: 0,
+        width: scene.scale.width,
+        height: scene.scale.height,
+        scrollMode: 0,
+        panel: {
+          child: this.contentRoot,
+          mask: true
+        },
+        slider: {
+          track: rexUi.add.roundRectangle(0, 0, 4, 120, 2, 0x1f2a4a),
+          thumb: rexUi.add.roundRectangle(0, 0, 6, 36, 3, 0x3b82f6)
+        },
+        scroller: {
+          threshold: 10,
+          rectBoundsInteractive: true,
+          slidingDeceleration: 5000,
+          backDeceleration: 2000,
+          pointerOutRelease: true
+        },
+        mouseWheelScroller: {
+          focus: 2,
+          speed: 0.35
+        },
+        space: { left: 0, right: 8, top: 0, bottom: 0, panel: 8 }
+      });
+      this.scrollPanel.setOrigin?.(0, 0);
+      this.scrollPanel.setVisible?.(false);
+      this.scrollPanel.setActive?.(false);
+      this.container.add(this.scrollPanel);
+    } else {
+      this.container.add(this.contentRoot);
+    }
+
     this.titleText = scene.add
-      .text(0, 0, "My Matches", {
-        color: "#ffffff",
+      .text(0, 0, t("My Matches"), {
+        color: THEME.colors.textPrimary,
         fontSize: "28px",
         fontStyle: "bold"
       })
-      .setOrigin(0.5);
-    this.container.add(this.titleText);
+      .setOrigin(0.5, 0);
+    this.contentRoot.add(this.titleText);
 
     this.statusText = scene.add
-      .text(0, 0, "Fetching...", {
-        color: "#cccccc",
-        fontSize: "16px"
+      .text(0, 0, t("Fetching..."), {
+        color: THEME.colors.textMuted,
+        fontSize: "15px",
+        align: "center"
       })
-      .setOrigin(0.5);
-    this.container.add(this.statusText);
+      .setOrigin(0.5, 0);
+    this.contentRoot.add(this.statusText);
 
     this.queueStatusText = scene.add
       .text(0, 0, t("Fetching ranked queue status..."), {
-        color: "#9ca3af",
+        color: THEME.colors.textMuted,
         fontSize: "13px",
         align: "center"
       })
-      .setOrigin(0.5);
-    this.container.add(this.queueStatusText);
+      .setOrigin(0.5, 0);
+    this.contentRoot.add(this.queueStatusText);
 
     this.refreshButton = makeButton(
-      this.scene,
+      scene,
       0,
       0,
-      "Refresh",
+      t("Refresh"),
       () => this.refresh(),
       ["myMatchList"]
-    ).setOrigin(0.5);
-    this.container.add(this.refreshButton);
+    ).setOrigin(0.5, 0);
+    this.contentRoot.add(this.refreshButton);
 
     this.backButton = makeButton(
-      this.scene,
+      scene,
       0,
       0,
-      "Back",
+      t("Back"),
       () => {
         if (this.onBack) {
           this.onBack();
@@ -123,58 +251,93 @@ export class MyMatchesListView {
         }
       },
       ["myMatchList"]
-    ).setOrigin(0.5);
-    this.container.add(this.backButton);
+    ).setOrigin(0.5, 0);
+    this.contentRoot.add(this.backButton);
+
+    this.onlineHeader = new CollapsibleSectionHeader(scene, () => {
+      this.toggleSection("online");
+    });
+    this.contentRoot.add(this.onlineHeader);
+
+    this.onlineEmptyText = scene.add
+      .text(0, 0, t("No online matches"), {
+        color: THEME.colors.textMuted,
+        fontSize: "14px",
+        align: "center"
+      })
+      .setOrigin(0.5, 0)
+      .setVisible(false);
+    this.contentRoot.add(this.onlineEmptyText);
+
+    this.finishedHeader = new CollapsibleSectionHeader(scene, () => {
+      this.toggleSection("finished");
+    });
+    this.contentRoot.add(this.finishedHeader);
+
+    this.finishedEmptyText = scene.add
+      .text(0, 0, t("No finished matches"), {
+        color: THEME.colors.textMuted,
+        fontSize: "14px",
+        align: "center"
+      })
+      .setOrigin(0.5, 0)
+      .setVisible(false);
+    this.contentRoot.add(this.finishedEmptyText);
 
     this.layoutMyMatches();
-    this.scene.scale.on(Phaser.Scale.Events.RESIZE, this.layoutMyMatches, this);
-    this.scene.events.on(Phaser.Scenes.Events.WAKE, this.layoutMyMatches, this);
-    this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.scene.scale.off(
-        Phaser.Scale.Events.RESIZE,
-        this.layoutMyMatches,
-        this
-      );
-      this.scene.events.off(Phaser.Scenes.Events.WAKE, this.layoutMyMatches, this);
+    scene.scale.on(Phaser.Scale.Events.RESIZE, this.layoutMyMatches, this);
+    scene.events.on(Phaser.Scenes.Events.WAKE, this.layoutMyMatches, this);
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      scene.scale.off(Phaser.Scale.Events.RESIZE, this.layoutMyMatches, this);
+      scene.events.off(Phaser.Scenes.Events.WAKE, this.layoutMyMatches, this);
     });
   }
 
-  setTurnService(service: TurnService | null) {
+  setTurnService(service: TurnService | null): void {
     this.turnService = service;
   }
 
-  setOnLeave(handler: (matchId: string) => void | Promise<void>) {
+  setOnSelectMatch(handler: MyMatchSelectHandler): void {
+    this.onSelectMatch = handler;
+  }
+
+  setOnLeave(handler: (matchId: string) => void | Promise<void>): void {
     this.onLeave = handler;
   }
 
-  setOnView(handler: (matchId: string) => void | Promise<void>) {
+  setOnView(handler: (matchId: string) => void | Promise<void>): void {
     this.onView = handler;
   }
 
-  setOnReport(handler: (matchId: string) => void | Promise<void>) {
+  setOnReport(handler: (matchId: string) => void | Promise<void>): void {
     this.onReport = handler;
   }
 
-  setOnBack(handler: () => void) {
+  setOnBack(handler: () => void): void {
     this.onBack = handler;
   }
 
-  show() {
+  show(): void {
     this.container.setVisible(true).setActive(true);
+    this.scrollPanel?.setVisible?.(true);
+    this.scrollPanel?.setActive?.(true);
     this.layoutMyMatches();
-    this.refresh();
+    void this.refresh();
   }
 
-  hide() {
+  hide(): void {
     this.container.setVisible(false).setActive(false);
+    this.scrollPanel?.setVisible?.(false);
+    this.scrollPanel?.setActive?.(false);
   }
 
-  async refresh() {
-    if (this.fetching || !this.turnService) return;
+  async refresh(): Promise<void> {
+    if (this.fetching || !this.turnService) {
+      return;
+    }
     this.fetching = true;
-    this.statusText.setText("Fetching my matches...");
+    this.statusText.setText(t("Fetching my matches..."));
     this.queueStatusText.setText(t("Fetching ranked queue status..."));
-    this.clearList();
     this.layoutMyMatches();
 
     try {
@@ -186,8 +349,8 @@ export class MyMatchesListView {
         })
       ]);
       this.renderRankedQueueStatus(queueStatus);
-      let payload: ListMyMatchesPayload;
 
+      let payload: ListMyMatchesPayload;
       if (typeof res.payload === "string") {
         payload = JSON.parse(res.payload) as ListMyMatchesPayload;
       } else {
@@ -195,43 +358,28 @@ export class MyMatchesListView {
       }
 
       if (payload.error) {
-        this.statusText.setText("Error: " + payload.error);
+        this.statusText.setText(`Error: ${payload.error}`);
+        this.clearCards();
         this.layoutMyMatches();
         return;
       }
 
       const matches = payload.matches || [];
       if (!matches.length) {
-        this.statusText.setText("You haven't joined any matches yet.");
+        this.statusText.setText(t("You haven't joined any matches yet."));
+        this.clearCards();
         this.layoutMyMatches();
         return;
       }
 
-      const creatorIds = Array.from(
-        new Set(
-          matches
-            .map((m) => m.creator)
-            .filter(
-              (id): id is string => typeof id === "string" && id.trim().length > 0
-            )
-        )
-      );
-
-      let hostMap: Record<string, string> = {};
-      if (creatorIds.length > 0 && this.turnService) {
-        try {
-          hostMap = await this.turnService.resolveUsernames(creatorIds);
-        } catch (e) {
-          console.warn("Failed to resolve creator usernames", e);
-        }
-      }
-
-      this.statusText.setText(`Found ${matches.length} matches you've joined:`);
-      this.renderList(matches, hostMap);
-    } catch (e) {
-      console.error(e);
-      const msg = e instanceof Error ? e.message : String(e);
-      this.statusText.setText("Error: " + msg);
+      this.statusText.setText("");
+      const grouped = groupMyMatches(matches, payload.maxCurrentMatches);
+      this.applyGroupedMatches(grouped);
+    } catch (error) {
+      console.error(error);
+      const msg = error instanceof Error ? error.message : String(error);
+      this.statusText.setText(`Error: ${msg}`);
+      this.clearCards();
       this.layoutMyMatches();
     } finally {
       this.fetching = false;
@@ -259,109 +407,86 @@ export class MyMatchesListView {
     );
   }
 
-  private renderList(
-    matches: MyMatch[],
-    hostMap: Record<string, string> = {}
-  ) {
-    matches.forEach((m, idx) => {
-      const matchId = m.match_id;
-      const playerCount = m.players.length + (m.botPlayers ?? 0);
-      const maxPlayers = m.size;
-      const turns = m.current_turn;
-      const matchName = m.name && m.name.trim() ? m.name : `Match ${idx + 1}`;
-      const isCreator = this.scene.registry.get("currentUserId") === m.creator;
-      const isFinished = m.status === "finished";
-      const isStarted = Boolean(
-        m.started || m.status === "in_progress" || isFinished
-      );
-      let stateLabel: string;
-      if (isFinished) {
-        stateLabel = this.formatFinishedSummary(m);
-      } else if (m.started) {
-        stateLabel = t("In Progress");
-      } else {
-        stateLabel = t("Waiting");
-      }
-      const hostName =
-        m.creator && hostMap[m.creator]
-          ? hostMap[m.creator]
-          : m.creator ?? "-";
-      const hostDisplay = isCreator ? `${hostName} (Host)` : hostName;
-
-      const text = `${
-        idx + 1
-      }. ${matchName} | ${hostDisplay} | ${playerCount}/${maxPlayers} ${t("Players")} | ${turns} ${t("Turns")} | ${stateLabel}`;
-      this.createRow(matchId, text, isFinished, isStarted);
-    });
-
+  private applyGroupedMatches(grouped: MyMatchesGroupResult): void {
+    this.onlineMatches = grouped.onlineMatches;
+    this.finishedMatches = grouped.finishedMatches;
+    this.maxCurrentMatches = grouped.maxCurrentMatches;
+    this.rebuildCards();
     this.layoutMyMatches();
   }
 
-  private formatFinishedSummary(match: MyMatch): string {
-    const duration = this.formatDuration(match.duration_ms ?? 0);
-    return match.player_team_won
-      ? `${t("Finished")} | ${duration} | ${t("Win")}`
-      : `${t("Finished")} | ${duration}`;
+  private toggleSection(section: SectionId): void {
+    this.collapseState = toggleSectionCollapse(this.collapseState, section);
+    this.layoutMyMatches();
   }
 
-  private formatDuration(durationMs: number): string {
-    const totalSeconds = Math.max(0, Math.round(durationMs / 1000));
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  }
-
-  private createRow(
-    matchId: string,
-    text: string,
-    isFinished: boolean,
-    isStarted: boolean = false
-  ) {
-    const lineObj = this.scene.add
-      .text(0, 0, text, {
-        color: "#00ccff",
-        fontSize: "14px"
-      })
-      .setOrigin(0, 0.5);
-    this.container.add(lineObj);
-    this.listItems.push(lineObj);
-
-    const viewBtn = makeButton(
-      this.scene,
-      0,
-      0,
-      isFinished ? t("Report") : t("View"),
-      async () => {
-        if (isFinished) {
-          await this.onReport?.(matchId);
-        } else {
-          await this.onView?.(matchId);
-        }
-      },
-      ["myMatchList"]
-    ).setOrigin(0.5);
-    this.container.add(viewBtn);
-    this.listItems.push(viewBtn);
-
-    const leaveBtn = makeButton(
-      this.scene,
-      0,
-      0,
-      t("Leave"),
-      async () => {
-        if (!isFinished && !isStarted) {
-          await this.onLeave?.(matchId);
-        }
-      },
-      ["myMatchList"]
-    ).setOrigin(0.5);
-    this.container.add(leaveBtn);
-    this.listItems.push(leaveBtn);
-    if (isFinished || isStarted) {
-      leaveBtn.setVisible(false).setActive(false);
+  private clearCards(): void {
+    for (const card of this.onlineCards) {
+      card.destroy();
     }
+    for (const card of this.finishedCards) {
+      card.destroy();
+    }
+    this.onlineCards = [];
+    this.finishedCards = [];
+    this.onlineMatches = [];
+    this.finishedMatches = [];
+  }
 
-    this.rowItems.push({ textObj: lineObj, viewBtn, leaveBtn });
+  private rebuildCards(): void {
+    for (const card of this.onlineCards) {
+      card.destroy();
+    }
+    for (const card of this.finishedCards) {
+      card.destroy();
+    }
+    this.onlineCards = [];
+    this.finishedCards = [];
+
+    const viewportWidth = this.scene.scale.width;
+    const contentWidth = Math.min(
+      MY_MATCHES_LAYOUT.contentWidth,
+      Math.max(300, viewportWidth - MY_MATCHES_LAYOUT.horizontalPadding)
+    );
+    this.currentCardWidth = contentWidth;
+
+    this.onlineCards = this.onlineMatches.map((summary) => {
+      const card = new MatchCard(
+        this.scene,
+        0,
+        0,
+        contentWidth,
+        summary,
+        {
+          isMyMatch: true,
+          currentUserReady: summary.currentUserReady,
+          onSelect: () => this.handleCardSelect(summary)
+        }
+      );
+      this.contentRoot.add(card);
+      return card;
+    });
+
+    this.finishedCards = this.finishedMatches.map((summary) => {
+      const card = new MatchCard(
+        this.scene,
+        0,
+        0,
+        contentWidth,
+        summary,
+        {
+          isMyMatch: true,
+          currentUserReady: false,
+          onSelect: () => this.handleCardSelect(summary)
+        }
+      );
+      this.contentRoot.add(card);
+      return card;
+    });
+  }
+
+  private handleCardSelect(match: MyMatchCardSummary): void {
+    this.onSelectMatch?.(match.match_id, match.status, match);
   }
 
   private layoutMyMatches(): void {
@@ -371,60 +496,112 @@ export class MyMatchesListView {
       MY_MATCHES_LAYOUT.contentWidth,
       Math.max(300, viewportWidth - MY_MATCHES_LAYOUT.horizontalPadding)
     );
-    const rowCount = Math.max(1, this.rowItems.length);
-    const contentHeight =
-      this.rowItems.length > 0
-        ? MY_MATCHES_LAYOUT.listStartY +
-          (rowCount - 1) * MY_MATCHES_LAYOUT.rowGap +
-          32
-        : MY_MATCHES_LAYOUT.actionsY + 40;
-    const top = Math.max(
-      MY_MATCHES_LAYOUT.minTop,
-      (viewportHeight - contentHeight) / 2
-    );
+    const contentLeft = (viewportWidth - contentWidth) / 2;
+    const centerX = viewportWidth / 2;
 
-    this.container.setPosition(viewportWidth / 2, top);
-    this.titleText.setPosition(0, MY_MATCHES_LAYOUT.titleY);
-    this.statusText.setPosition(0, MY_MATCHES_LAYOUT.statusY);
+    if (
+      this.currentCardWidth !== contentWidth &&
+      (this.onlineMatches.length > 0 || this.finishedMatches.length > 0)
+    ) {
+      this.rebuildCards();
+    }
+
+    let cursorY = 24;
+
+    this.titleText.setPosition(centerX, cursorY);
+    cursorY += this.titleText.height + 6;
+
+    if (this.statusText.text.length > 0) {
+      this.statusText.setVisible(true);
+      this.statusText.setWordWrapWidth(contentWidth, true);
+      this.statusText.setPosition(centerX, cursorY);
+      cursorY += this.statusText.height + 6;
+    } else {
+      this.statusText.setVisible(false);
+    }
+
     this.queueStatusText.setWordWrapWidth(contentWidth, true);
-    this.queueStatusText.setPosition(0, MY_MATCHES_LAYOUT.queueStatusY);
+    this.queueStatusText.setPosition(centerX, cursorY);
+    cursorY += this.queueStatusText.height + 12;
 
     const refreshWidth = this.refreshButton.width;
     const backWidth = this.backButton.width;
-    const totalActionWidth =
+    const totalActionsWidth =
       refreshWidth + MY_MATCHES_LAYOUT.actionsGap + backWidth;
     this.refreshButton.setPosition(
-      -totalActionWidth / 2 + refreshWidth / 2,
-      MY_MATCHES_LAYOUT.actionsY
+      centerX - totalActionsWidth / 2 + refreshWidth / 2,
+      cursorY
     );
     this.backButton.setPosition(
-      totalActionWidth / 2 - backWidth / 2,
-      MY_MATCHES_LAYOUT.actionsY
+      centerX + totalActionsWidth / 2 - backWidth / 2,
+      cursorY
     );
+    cursorY += Math.max(this.refreshButton.height, this.backButton.height) + 18;
 
-    const left = -contentWidth / 2;
-    const right = contentWidth / 2;
+    this.onlineHeader.setPosition(contentLeft, cursorY);
+    this.onlineHeader.updateHeader(
+      contentWidth,
+      formatOnlineHeading(this.onlineMatches.length, this.maxCurrentMatches),
+      this.collapseState.onlineCollapsed
+    );
+    cursorY += 38 + MY_MATCHES_LAYOUT.cardGap;
 
-    this.rowItems.forEach((row, idx) => {
-      const rowY =
-        MY_MATCHES_LAYOUT.listStartY + idx * MY_MATCHES_LAYOUT.rowGap;
-      row.textObj.setPosition(left, rowY);
+    if (this.collapseState.onlineCollapsed) {
+      this.onlineEmptyText.setVisible(false);
+      for (const card of this.onlineCards) {
+        card.setVisible(false).setActive(false);
+      }
+    } else {
+      if (this.onlineMatches.length === 0) {
+        this.onlineEmptyText.setVisible(true);
+        this.onlineEmptyText.setPosition(centerX, cursorY + 6);
+        cursorY += this.onlineEmptyText.height + 16;
+      } else {
+        this.onlineEmptyText.setVisible(false);
+        for (const card of this.onlineCards) {
+          card.setVisible(true).setActive(true);
+          card.setPosition(contentLeft, cursorY);
+          cursorY += 124 + MY_MATCHES_LAYOUT.cardGap;
+        }
+      }
+    }
 
-      const leaveWidth = row.leaveBtn.width;
-      const viewWidth = row.viewBtn.width;
-      const btnGap = MY_MATCHES_LAYOUT.buttonGap;
+    cursorY += MY_MATCHES_LAYOUT.sectionGap;
 
-      const leaveX = right - leaveWidth / 2;
-      const viewX = right - leaveWidth - btnGap - viewWidth / 2;
+    this.finishedHeader.setPosition(contentLeft, cursorY);
+    this.finishedHeader.updateHeader(
+      contentWidth,
+      formatFinishedHeading(this.finishedMatches.length),
+      this.collapseState.finishedCollapsed
+    );
+    cursorY += 38 + MY_MATCHES_LAYOUT.cardGap;
 
-      row.leaveBtn.setPosition(leaveX, rowY);
-      row.viewBtn.setPosition(viewX, rowY);
-    });
-  }
+    if (this.collapseState.finishedCollapsed) {
+      this.finishedEmptyText.setVisible(false);
+      for (const card of this.finishedCards) {
+        card.setVisible(false).setActive(false);
+      }
+    } else {
+      if (this.finishedMatches.length === 0) {
+        this.finishedEmptyText.setVisible(true);
+        this.finishedEmptyText.setPosition(centerX, cursorY + 6);
+        cursorY += this.finishedEmptyText.height + 16;
+      } else {
+        this.finishedEmptyText.setVisible(false);
+        for (const card of this.finishedCards) {
+          card.setVisible(true).setActive(true);
+          card.setPosition(contentLeft, cursorY);
+          cursorY += 124 + MY_MATCHES_LAYOUT.cardGap;
+        }
+      }
+    }
 
-  private clearList() {
-    this.listItems.forEach((t) => t.destroy());
-    this.listItems = [];
-    this.rowItems = [];
+    cursorY += 28;
+
+    this.contentRoot.setSize(viewportWidth, cursorY);
+    this.scrollPanel?.setPosition?.(0, 0);
+    this.scrollPanel?.setSize?.(viewportWidth, viewportHeight);
+    this.scrollPanel?.setMinSize?.(viewportWidth, viewportHeight);
+    this.scrollPanel?.layout?.();
   }
 }

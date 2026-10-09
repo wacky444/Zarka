@@ -187,6 +187,24 @@ export class MatchCard extends Phaser.GameObjects.Container {
         true
       );
       this.add(overlay);
+    } else if (presentation.showWaitingState) {
+      const overlay = scene.add.graphics();
+      const centerX = CARD_PADDING + mapWidth / 2;
+      const centerY = CARD_PADDING + MAP_HEIGHT / 2;
+      overlay.fillStyle(0x0f172a, 0.85);
+      overlay.fillCircle(centerX, centerY, 19);
+      overlay.lineStyle(2, 0x3b82f6, 0.9);
+      overlay.strokeCircle(centerX, centerY, 19);
+      this.add(overlay);
+
+      const checkmark = scene.add
+        .text(centerX, centerY, "✓", {
+          color: "#60a5fa",
+          fontSize: "18px",
+          fontStyle: "bold"
+        })
+        .setOrigin(0.5);
+      this.add(checkmark);
     }
 
     const hitArea = scene.add

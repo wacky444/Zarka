@@ -23,7 +23,11 @@ import {
 } from "../animation/soundPlayer";
 import { MenuAshEffect } from "../animation/MenuAshEffect";
 import { getLocale, t, toggleLocale } from "../services/i18n";
-import { TUTORIAL_MATCH_METADATA_KEY } from "@shared";
+import {
+  TUTORIAL_MATCH_METADATA_KEY,
+  type MatchCardStatus
+} from "@shared";
+import { resolveMyMatchRoute } from "./MyMatchesListModel";
 import { assetPath } from "../utils/assetPath";
 import { isMobile } from "../utils/isMobile";
 import { hideStartupLoadingScreen } from "../ui/StartupLoadingScreen";
@@ -196,18 +200,29 @@ export class MainScene extends Phaser.Scene {
             this.lobbyView.setMatchName(matchObj.name);
             this.currentMatchName = matchObj.name;
           }
-          if (typeof matchObj?.started === "boolean") {
-            this.lobbyView.setMatchStarted(matchObj.started);
-            if (matchObj.started) {
-              this.showView("inMatch");
-              this.scene.sleep("MainScene");
-              this.scene.run("GameScene");
-              return;
-            }
+          const isStarted = matchObj?.started === true || parsed.started === true;
+          this.lobbyView.setMatchStarted(isStarted);
+          if (isStarted) {
+            this.showView("inMatch");
+            this.scene.sleep("MainScene");
+            this.scene.run("GameScene");
+            return;
           }
         } catch (e) {
           console.warn("Failed to load creator info", e);
+          if (parsed.started) {
+            this.showView("inMatch");
+            this.scene.sleep("MainScene");
+            this.scene.run("GameScene");
+            return;
+          }
         }
+      }
+      if (parsed.started) {
+        this.showView("inMatch");
+        this.scene.sleep("MainScene");
+        this.scene.run("GameScene");
+        return;
       }
       this.showView("inMatch");
     } else {
@@ -410,6 +425,11 @@ export class MainScene extends Phaser.Scene {
       // Instantiate My Matches List view (hidden by default)
       this.myMatchesListView = new MyMatchesListView(this);
       this.myMatchesListView.setTurnService(this.turnService);
+      this.myMatchesListView.setOnSelectMatch(
+        async (matchId: string, status: MatchCardStatus) => {
+          await this.handleMyMatchSelected(matchId, status);
+        }
+      );
       this.myMatchesListView.setOnLeave(async (matchId: string) => {
         if (!this.turnService) return;
         const res = await this.turnService.leaveMatch(matchId);
@@ -645,6 +665,18 @@ export class MainScene extends Phaser.Scene {
 
   public showMyMatchesView() {
     this.showView("myMatchList");
+  }
+
+  private async handleMyMatchSelected(
+    matchId: string,
+    status: MatchCardStatus
+  ): Promise<void> {
+    const route = resolveMyMatchRoute(status);
+    if (route === "report") {
+      this.openMatchReport(matchId);
+      return;
+    }
+    await this.joinMatch(matchId);
   }
 
   private openMatchReport(matchId: string) {

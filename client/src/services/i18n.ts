@@ -1,5 +1,3 @@
-import Phaser from "phaser";
-
 export type Locale = "en" | "es";
 
 type TextValue = string | string[];
@@ -250,6 +248,12 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Match: "Partida",
   "Time left": "Tiempo restante",
   "Map unavailable": "Mapa no disponible",
+  "Online matches": "Partidas online",
+  "Finished matches": "Partidas terminadas",
+  "No online matches": "No hay partidas online",
+  "No finished matches": "No hay partidas terminadas",
+  "Fetching my matches...": "Cargando mis partidas...",
+  "You haven't joined any matches yet.": "Aún no te has unido a ninguna partida.",
   "In Progress": "En curso",
   "Carried items:": "Objetos transportados:",
   "Return to Game": "Volver al juego",

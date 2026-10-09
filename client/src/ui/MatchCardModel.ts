@@ -16,6 +16,7 @@ export interface MatchCardPresentation {
   timeLeft: string;
   urgentTimeLeft: boolean;
   showPlayOverlay: boolean;
+  showWaitingState: boolean;
 }
 
 export function getMatchTypeBadge(isRanked: boolean): "R" | "UR" {
@@ -54,6 +55,7 @@ export function getMatchCardPresentation(
             : formatMatchTimeLeft(match.nextAdvanceAtMs - nowMs);
   const active = match.status !== "finished";
   const notReady = options.currentUserReady === false;
+  const isReady = options.currentUserReady === true;
   const nextAdvanceAtMs = match.nextAdvanceAtMs;
   const urgentTimeLeft =
     options.isMyMatch &&
@@ -67,7 +69,8 @@ export function getMatchCardPresentation(
     playerCount,
     timeLeft,
     urgentTimeLeft,
-    showPlayOverlay: options.isMyMatch && active && notReady
+    showPlayOverlay: options.isMyMatch && active && notReady,
+    showWaitingState: options.isMyMatch && active && isReady
   };
 }
 

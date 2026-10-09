@@ -13,6 +13,7 @@
     "test:tutorial-ui": "node ./scripts/test-tutorial-ui.mjs",
     "test:chat": "node ./scripts/test-chat-service.mjs",
     "test:match-card": "node ./scripts/test-match-card.mjs",
+    "test:my-matches": "node ./scripts/test-my-matches.mjs",
     "test:push": "node ./scripts/test-push-notifications.mjs"
   },
   "dependencies": {
