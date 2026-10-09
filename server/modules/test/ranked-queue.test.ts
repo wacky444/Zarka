@@ -231,6 +231,26 @@ test("low population assigns offline users and fills roster with bots", () => {
   assert.equal(harness.matches.length, 1);
 });
 
+test("ranked queue includes players with different ELO when filtering is disabled", () => {
+  const now = 1_700_000_010_000;
+  const users = makeUsers(2, "elo-range");
+  const harness = createHarness(users);
+  harness.addDailyUsers(2, now);
+  for (const userId of users) harness.setSlots(userId, 1, now);
+  const highEloMetadata = harness.users.get(users[1])!.metadata as {
+    zarka: { stats: { elo: number } };
+  };
+  highEloMetadata.zarka.stats.elo = 5000;
+
+  processRankedQueue(harness.nakama, harness.logger, now);
+
+  assert.equal(harness.matches.length, 1);
+  const assignment = harness.collection(RANKED_ASSIGNMENT_COLLECTION)[0]
+    .value as { state: string; humanIds: string[] };
+  assert.equal(assignment.state, "active");
+  assert.deepEqual(new Set(assignment.humanIds), new Set(users));
+});
+
 test("users offline over 24 hours are removed from queue until they return", () => {
   const now = 1_700_000_025_000;
   const users = makeUsers(2, "offline");

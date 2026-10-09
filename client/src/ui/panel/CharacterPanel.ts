@@ -757,6 +757,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
   }
 
+  setPanelVisibility(visible: boolean): void {
+    this.setVisible(visible);
+    this.setActive(visible);
+    this.chatView?.setPanelVisible(visible);
+  }
+
   private updateScrollMaskPosition(): void {
     const matrix = this.getWorldTransformMatrix();
     this.actionPlanView?.updateScrollMaskPosition({ tx: matrix.tx, ty: matrix.ty });

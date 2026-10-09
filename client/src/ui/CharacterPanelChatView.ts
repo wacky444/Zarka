@@ -1,4 +1,6 @@
 import Phaser from "phaser";
+import { t } from "../services/i18n";
+import { THEME } from "./ColorPalette";
 import { makeButton, type UIButton } from "./button";
 
 export type ChatConnectionState = "idle" | "connecting" | "ready" | "error";
@@ -49,16 +51,17 @@ export class CharacterPanelChatView {
   private readonly messagesText: Phaser.GameObjects.Text;
   private readonly overlayText: Phaser.GameObjects.Text;
   private readonly inputBackground: Phaser.GameObjects.Rectangle;
-  private readonly inputText: Phaser.GameObjects.Text;
-  private readonly placeholderText: Phaser.GameObjects.Text;
+  private readonly inputElement: HTMLInputElement;
+  private readonly inputDomElement: Phaser.GameObjects.DOMElement;
   private readonly sendButton: UIButton;
-  private readonly keyListener: (event: KeyboardEvent) => void;
   private sendCooldownUntil = 0;
   private sendCooldownTimer: number | null = null;
+  private messageAreaHeight = Number.POSITIVE_INFINITY;
   private inputValue = "";
   private inputFocused = false;
   private inputEnabled = false;
   private visible = false;
+  private panelVisible = true;
   private connectionState: ChatConnectionState = "idle";
   private overlayMessage = "";
   private messages: ChatMessageViewModel[] = [];
@@ -69,40 +72,94 @@ export class CharacterPanelChatView {
     this.onFocusChange = options.onFocusChange;
     this.maxInputLength = options.maxInputLength ?? 70;
     this.titleText = this.scene.add
-      .text(0, 0, "Match Chat", { fontSize: "16px", color: "#ffffff" })
+      .text(0, 0, "Match Chat", {
+        fontSize: "16px",
+        color: THEME.colors.textPrimary
+      })
       .setVisible(false);
     this.statusText = this.scene.add
-      .text(0, 0, "", { fontSize: "14px", color: "#a0b7ff" })
+      .text(0, 0, "", {
+        fontSize: "14px",
+        color: THEME.colors.loadingPercent
+      })
       .setVisible(false);
     this.messagesBox = this.scene.add
-      .rectangle(0, 0, 100, 100, 0x1b2440)
+      .rectangle(0, 0, 100, 100, THEME.colors.cardBackground)
       .setOrigin(0, 0)
       .setVisible(false);
     this.messagesText = this.scene.add
       .text(0, 0, "", {
         fontSize: "15px",
-        color: "#cbd5f5",
+        color: THEME.colors.modalText,
         wordWrap: { width: 280, useAdvancedWrap: true },
       })
       .setVisible(false);
     this.overlayText = this.scene.add
       .text(0, 0, "No messages yet.", {
         fontSize: "15px",
-        color: "#7f8ab8",
+        color: THEME.colors.textMuted,
       })
       .setVisible(false);
     this.inputBackground = this.scene.add
-      .rectangle(0, 0, 100, 44, 0x11152a)
-      .setStrokeStyle(1, 0x2c3557, 1)
+      .rectangle(0, 0, 100, 44, THEME.colors.collapsedBackground)
+      .setStrokeStyle(1, THEME.colors.collapsedBorder, 1)
       .setOrigin(0, 0)
       .setVisible(false)
       .setInteractive({ useHandCursor: true });
-    this.inputText = this.scene.add
-      .text(0, 0, "", { fontSize: "15px", color: "#ffffff" })
+    this.inputElement = document.createElement("input");
+    this.inputElement.type = "text";
+    this.inputElement.inputMode = "text";
+    this.inputElement.maxLength = this.maxInputLength;
+    this.inputElement.placeholder = t("Type a message");
+    this.inputElement.setAttribute("aria-label", t("Type a message"));
+    this.inputElement.enterKeyHint = "send";
+    this.inputElement.autocomplete = "off";
+    this.inputElement.style.boxSizing = "border-box";
+    this.inputElement.style.padding = "0 12px";
+    this.inputElement.style.color = THEME.colors.textPrimary;
+    this.inputElement.style.background = "transparent";
+    this.inputElement.style.border = "0";
+    this.inputElement.style.font = "16px Arial, sans-serif";
+    this.inputElement.style.outline = "none";
+    this.inputElement.style.caretColor = THEME.colors.textPrimary;
+    this.inputDomElement = this.scene.add
+      .dom(0, 0, this.inputElement)
+      .setOrigin(0, 0)
       .setVisible(false);
-    this.placeholderText = this.scene.add
-      .text(0, 0, "Type a message", { fontSize: "15px", color: "#6c7398" })
-      .setVisible(false);
+    this.inputElement.addEventListener("input", () => {
+      this.inputValue = clampLength(
+        this.inputElement.value,
+        this.maxInputLength
+      );
+      if (this.inputElement.value !== this.inputValue) {
+        this.inputElement.value = this.inputValue;
+      }
+      this.updateInputStyles();
+    });
+    this.inputElement.addEventListener("focus", () => {
+      if (!this.inputEnabled || !this.visible || !this.panelVisible) {
+        this.inputElement.blur();
+        return;
+      }
+      this.inputFocused = true;
+      this.onFocusChange?.(true);
+      this.updateInputStyles();
+    });
+    this.inputElement.addEventListener("blur", () => {
+      this.inputFocused = false;
+      this.onFocusChange?.(false);
+      this.updateInputStyles();
+    });
+    this.inputElement.addEventListener("keydown", (event) => {
+      event.stopPropagation();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        this.blurInput();
+      } else if (event.key === "Enter" && !event.isComposing) {
+        event.preventDefault();
+        this.trySend();
+      }
+    });
     this.sendButton = makeButton(this.scene, 0, 0, "Send", () => {
       this.trySend();
     });
@@ -114,14 +171,9 @@ export class CharacterPanelChatView {
       this.messagesText,
       this.overlayText,
       this.inputBackground,
-      this.inputText,
-      this.placeholderText,
+      this.inputDomElement,
       this.sendButton,
     ];
-    this.keyListener = (event: KeyboardEvent) => {
-      this.handleKeyInput(event);
-    };
-    this.scene.input.keyboard?.on("keydown", this.keyListener);
     this.inputBackground.on(Phaser.Input.Events.POINTER_DOWN, () => {
       if (!this.inputEnabled) {
         return;
@@ -131,7 +183,7 @@ export class CharacterPanelChatView {
   }
 
   destroy() {
-    this.scene.input.keyboard?.off("keydown", this.keyListener);
+    this.blurInput();
     this.inputBackground.off(Phaser.Input.Events.POINTER_DOWN);
     this.inputBackground.disableInteractive();
     this.sendButton.disableInteractive();
@@ -174,22 +226,28 @@ export class CharacterPanelChatView {
     );
     const boxY = contentTop + 32;
     const inputHeight = 50;
-    const boxHeight = Math.max(160, panelHeight - boxY - inputHeight - margin);
+    const inputBottomInset = 64;
+    const inputY = Math.max(
+      boxY + 64,
+      panelHeight - inputHeight - inputBottomInset
+    );
+    const boxHeight = Math.max(0, inputY - boxY - 16);
     this.messagesBox.setPosition(margin, boxY);
     this.messagesBox.setSize(boxWidth, boxHeight);
     this.messagesBox.setDisplaySize(boxWidth, boxHeight);
     this.messagesText.setPosition(margin + 16, boxY + 8);
     this.messagesText.setWordWrapWidth(boxWidth - 32);
+    this.messageAreaHeight = Math.max(0, boxHeight - 16);
+    this.refreshMessages();
     this.overlayText.setPosition(margin + 16, boxY + 8);
-    const inputY = boxY + boxHeight + 16;
     const inputWidth = Math.max(140, boxWidth - 100);
     this.inputBackground.setPosition(margin, inputY);
     this.inputBackground.setSize(inputWidth, inputHeight);
     this.inputBackground.setDisplaySize(inputWidth, inputHeight);
-    this.placeholderText.setPosition(margin + 12, inputY + 12);
-    this.inputText.setPosition(margin + 12, inputY + 12);
-    this.inputText.setWordWrapWidth(inputWidth - 24);
-    this.placeholderText.setWordWrapWidth(inputWidth - 24);
+    this.inputElement.style.width = `${inputWidth}px`;
+    this.inputElement.style.height = `${inputHeight}px`;
+    this.inputDomElement.updateSize();
+    this.inputDomElement.setPosition(margin, inputY);
     this.sendButton.setPosition(margin + inputWidth + 16, inputY + 10);
     this.updateOverlayVisibility();
   }
@@ -221,6 +279,8 @@ export class CharacterPanelChatView {
 
   setInputEnabled(enabled: boolean) {
     this.inputEnabled = enabled;
+    this.inputElement.disabled =
+      !enabled || !this.visible || !this.panelVisible;
     if (!enabled) {
       this.blurInput();
       this.inputBackground.disableInteractive();
@@ -235,6 +295,9 @@ export class CharacterPanelChatView {
     for (const element of this.elements) {
       element.setVisible(visible);
     }
+    this.inputDomElement.setVisible(visible && this.panelVisible);
+    this.inputElement.disabled =
+      !visible || !this.inputEnabled || !this.panelVisible;
     if (!visible) {
       this.blurInput();
       this.inputBackground.disableInteractive();
@@ -246,60 +309,24 @@ export class CharacterPanelChatView {
     this.updateInputStyles();
   }
 
-  focusInput() {
-    if (!this.inputEnabled) {
-      return;
+  setPanelVisible(visible: boolean) {
+    this.panelVisible = visible;
+    this.inputDomElement.setVisible(this.visible && visible);
+    if (!visible) {
+      this.blurInput();
     }
-    if (this.inputFocused) {
-      return;
-    }
-    this.inputFocused = true;
-    this.onFocusChange?.(true);
     this.updateInputStyles();
+  }
+
+  focusInput() {
+    if (!this.inputEnabled || !this.visible || !this.panelVisible) {
+      return;
+    }
+    this.inputElement.focus();
   }
 
   blurInput() {
-    if (!this.inputFocused) {
-      return;
-    }
-    this.inputFocused = false;
-    this.onFocusChange?.(false);
-    this.updateInputStyles();
-  }
-
-  private handleKeyInput(event: KeyboardEvent) {
-    if (
-      !this.inputFocused ||
-      !this.inputEnabled ||
-      !this.visible ||
-      this.isCoolingDown()
-    ) {
-      return;
-    }
-    if (event.key === "Enter") {
-      event.preventDefault();
-      this.trySend();
-      return;
-    }
-    if (event.key === "Backspace") {
-      if (this.inputValue.length > 0) {
-        this.inputValue = this.inputValue.slice(0, -1);
-        this.updateInputStyles();
-      }
-      return;
-    }
-    if (event.key === "Escape") {
-      this.blurInput();
-      return;
-    }
-    if (event.key.length === 1) {
-      const next = clampLength(
-        this.inputValue + event.key,
-        this.maxInputLength
-      );
-      this.inputValue = next;
-      this.updateInputStyles();
-    }
+    this.inputElement.blur();
   }
 
   private trySend() {
@@ -312,6 +339,7 @@ export class CharacterPanelChatView {
     }
     this.onSend(trimmed);
     this.inputValue = "";
+    this.inputElement.value = "";
     this.updateInputStyles();
   }
 
@@ -326,21 +354,31 @@ export class CharacterPanelChatView {
       this.updateOverlayVisibility();
       return;
     }
-    const lines = this.messages.map((entry) => {
-      const time = formatTime(entry.timestamp);
-      const name = entry.senderLabel.trim();
-      const label = entry.isSystem
-        ? "System"
-        : entry.isSelf
-        ? name
-          ? name.endsWith("(You)")
-            ? name
-            : `${name} (You)`
-          : "You"
-        : name || "Unknown";
-      return `${time} ${label}: ${entry.content}`;
-    });
-    this.messagesText.setText(lines.join("\n"));
+    let startIndex = 0;
+    while (startIndex < this.messages.length) {
+      const lines = this.messages.slice(startIndex).map((entry) => {
+        const time = formatTime(entry.timestamp);
+        const name = entry.senderLabel.trim();
+        const label = entry.isSystem
+          ? "System"
+          : entry.isSelf
+          ? name
+            ? name.endsWith("(You)")
+              ? name
+              : `${name} (You)`
+            : "You"
+          : name || "Unknown";
+        return `${time} ${label}: ${entry.content}`;
+      });
+      this.messagesText.setText(lines.join("\n"));
+      if (
+        this.messagesText.height <= this.messageAreaHeight ||
+        startIndex === this.messages.length - 1
+      ) {
+        break;
+      }
+      startIndex += 1;
+    }
     this.messagesText.setVisible(this.visible);
     this.overlayMessage = "";
     this.updateOverlayVisibility();
@@ -361,13 +399,15 @@ export class CharacterPanelChatView {
 
   private updateInputStyles() {
     const cooling = this.isCoolingDown();
-    const caret = this.inputFocused ? "_" : "";
-    this.inputText.setText(`${this.inputValue}${caret}`);
-    const showPlaceholder =
-      !this.inputFocused && this.inputValue.trim().length === 0;
-    this.placeholderText.setVisible(this.visible && showPlaceholder);
-    const showText = this.inputFocused || this.inputValue.length > 0;
-    this.inputText.setVisible(this.visible && showText);
+    this.inputElement.disabled =
+      !this.visible || !this.inputEnabled || !this.panelVisible;
+    this.inputBackground.setStrokeStyle(
+      1,
+      this.inputFocused
+        ? THEME.colors.loadingFill
+        : THEME.colors.collapsedBorder,
+      1
+    );
     const canSend =
       this.visible &&
       this.inputEnabled &&
@@ -375,11 +415,11 @@ export class CharacterPanelChatView {
       this.inputValue.trim().length > 0;
     if (canSend) {
       this.sendButton.setAlpha(1);
-      this.sendButton.setColor("#4ade80");
+      this.sendButton.setColor(THEME.colors.healthRecover);
       this.sendButton.setInteractive({ useHandCursor: true });
     } else {
       this.sendButton.setAlpha(0.4);
-      this.sendButton.setColor("#2f9c5f");
+      this.sendButton.setColor(THEME.buttons.disabled.text);
       this.sendButton.disableInteractive();
     }
   }

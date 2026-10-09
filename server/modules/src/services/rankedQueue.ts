@@ -80,6 +80,7 @@ const RESERVATION_LEASE_MS = 60_000;
 const FINISHED_RECORD_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_ASSIGNMENTS_PER_TICK = 4;
 const RANKED_MATCH_PREFIX = "ranked_";
+const ELO_FILTERING = false;
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -796,7 +797,10 @@ function createAssignments(
     const selectedByUser = new Map<string, StoredObject<RankedQueueTicket>>();
     for (const ticket of queued) {
       if (selectedByUser.has(ticket.value.userId)) continue;
-      if (Math.abs(ticket.value.elo - oldest.value.elo) <= range) {
+      if (
+        !ELO_FILTERING ||
+        Math.abs(ticket.value.elo - oldest.value.elo) <= range
+      ) {
         selectedByUser.set(ticket.value.userId, ticket);
       }
       if (selectedByUser.size >= 16) break;

@@ -1739,11 +1739,9 @@ export class GameScene extends Phaser.Scene {
         const showSidebar = this.mobileViewMode === "sidebar";
         this.characterPanel.setPosition(0, 0);
         this.characterPanel.setPanelSize(width, height);
-        this.characterPanel.setVisible(showSidebar);
-        this.characterPanel.setActive(showSidebar);
+        this.characterPanel.setPanelVisibility(showSidebar);
       } else {
-        this.characterPanel.setVisible(true);
-        this.characterPanel.setActive(true);
+        this.characterPanel.setPanelVisibility(true);
         this.characterPanel.setPosition(
           width - this.characterPanelDesktopWidth,
           0

@@ -1,10 +1,8 @@
-- icons for, inventory, character, status, skills, players, teams, log/replay, map, chat, arrow right, left
-
-- end game animation, screen, stats, achievements (who killed the most, or pacifist)
+- menu icons for, inventory, character, status, skills, players, teams, log/replay, map, chat, arrow right, left
 
 - crafting
 
-- improve ground visuals, check kenney hexagon pack examples
+- improve ground visuals, alley and road have the similar sprite, check kenney hexagon pack examples
 
 - train and experience
 
@@ -12,7 +10,7 @@
 
 - tutorial step 6 should teach about prioritize items
 
-- no hay log por recibir daño por peso
+- overweight should drop items at the end of the turn
 
 - bombard has animation? it should have it similar to cell destroyed
 
@@ -37,10 +35,6 @@
 
 "git:github.com/jonjonrankin/pi-caveman"
 
--t warning when pick up will leave with overweight, weight number in warning/error color
-
--t warning when there is extra power set and there isnt enough energy
-
 - dexterity 2, when stealing should show a list of all possible items in the game, allowing max 3
 	- extra power should show two selectors
 
@@ -50,18 +44,18 @@
 	use antidote, use quemical weapon, use medicine
 	
 - throwing a moltov, threw 3 foods to three different players
-	-t its like it hits in area
+	-t like it hits in area
 
-- registered items didnt stay in players view
+- registered items didnt stay in players view for the char that has been hit
 
 - search reveals placed c4, but can't be picked up
-
-- review that the matchmaking is using nakama features
 
 - social
 	- inspect others profiles
 	- friends
 	
+- end game animation improve, alive players dance, zoom to players, fireworks intead of confetti, check menu particles
+
 - matchmaking
 	-t pause auto matchmaking if the player hasn't logged in 24h, even it the account has a free slot, don't queue players with more than 24 offline time
 	-t match name and creator name for ranked games
@@ -69,19 +63,8 @@
 	- ignore elo range selection, match any
 	- min duration
 
--t i can see 3/25) load quantity in other tabs
-
 -t enough spawn locations for 100 players? test to create a small map for 20 bots
 
-
- 6. Large matches exceed dispatcher batch limit (server/modules/src/services/turnPushNotifications.ts:L125-148;
-    server/push-dispatcher/server.mjs:L6-8,L73-75; server/modules/src/services/pushSubscriptions.ts:L14)
-     - What this is: Dispatcher rejects jobs with over 200 subscriptions; each user can register 8 devices.
-     - Problem: 26 players with 8 devices each produce 208 targets. Dispatcher rejects entire job, so retries keep failing.
-     - Fix: Split sends into batches of at most 200, with distinct idempotency keys.
-     - If we skip it: Turn notifications fail for valid large matches.
-	 
-	 
 7. Queue status and coordinator scan global records repeatedly
     (server/modules/src/services/rankedQueue.ts:L515-525,L813-845,L867-874)
      - What this is: Queue status scans every assignment; each 10-second coordinator run scans all assignments and enrollments.
@@ -90,3 +73,14 @@
      - Fix: Use per-user assignment lookup and process queue records in bounded batches; remove inactive enrollments.
      - If we skip it: Storage reads and processing grow with all past opt-ins and active matches.
 	 
+- my matches remake,
+	- order by matches where ready is not set then by timeleft, place a green play button over the image on the ones with ready not set
+	- cards instead of rows,
+			R Name
+	Image  5/18		Timeleft 11 <- rounds played
+
+			^ players alive, players started
+
+	- two groups collapsable, "3/10 Partidas online" "Partidas terminadas"
+
+	- max current matches, default 10, store in account settings, check nakama if already has something

@@ -22,6 +22,9 @@ const config: Phaser.Types.Core.GameConfig = {
   input: {
     activePointers: 2
   },
+  dom: {
+    createContainer: true
+  },
   plugins: {
     scene: [
       {
