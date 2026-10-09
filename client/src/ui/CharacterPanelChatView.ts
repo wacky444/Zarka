@@ -52,7 +52,6 @@ export class CharacterPanelChatView {
   private readonly overlayText: Phaser.GameObjects.Text;
   private readonly inputBackground: Phaser.GameObjects.Rectangle;
   private readonly inputElement: HTMLInputElement;
-  private readonly inputDomElement: Phaser.GameObjects.DOMElement;
   private readonly sendButton: UIButton;
   private sendCooldownUntil = 0;
   private sendCooldownTimer: number | null = null;
@@ -114,7 +113,11 @@ export class CharacterPanelChatView {
     this.inputElement.setAttribute("aria-label", t("Type a message"));
     this.inputElement.enterKeyHint = "send";
     this.inputElement.autocomplete = "off";
+    this.inputElement.style.position = "fixed";
+    this.inputElement.style.display = "none";
+    this.inputElement.style.zIndex = "1";
     this.inputElement.style.boxSizing = "border-box";
+    this.inputElement.style.margin = "0";
     this.inputElement.style.padding = "0 12px";
     this.inputElement.style.color = THEME.colors.textPrimary;
     this.inputElement.style.background = "transparent";
@@ -122,10 +125,7 @@ export class CharacterPanelChatView {
     this.inputElement.style.font = "16px Arial, sans-serif";
     this.inputElement.style.outline = "none";
     this.inputElement.style.caretColor = THEME.colors.textPrimary;
-    this.inputDomElement = this.scene.add
-      .dom(0, 0, this.inputElement)
-      .setOrigin(0, 0)
-      .setVisible(false);
+    document.body.appendChild(this.inputElement);
     this.inputElement.addEventListener("input", () => {
       this.inputValue = clampLength(
         this.inputElement.value,
@@ -171,7 +171,6 @@ export class CharacterPanelChatView {
       this.messagesText,
       this.overlayText,
       this.inputBackground,
-      this.inputDomElement,
       this.sendButton,
     ];
     this.inputBackground.on(Phaser.Input.Events.POINTER_DOWN, () => {
@@ -184,6 +183,7 @@ export class CharacterPanelChatView {
 
   destroy() {
     this.blurInput();
+    this.inputElement.remove();
     this.inputBackground.off(Phaser.Input.Events.POINTER_DOWN);
     this.inputBackground.disableInteractive();
     this.sendButton.disableInteractive();
@@ -217,8 +217,11 @@ export class CharacterPanelChatView {
     contentTop: number;
     boxWidth: number;
     panelHeight: number;
+    panelX: number;
+    panelY: number;
   }) {
-    const { margin, contentTop, boxWidth, panelHeight } = bounds;
+    const { margin, contentTop, boxWidth, panelHeight, panelX, panelY } =
+      bounds;
     this.titleText.setPosition(margin, contentTop);
     this.statusText.setPosition(
       this.titleText.x + this.titleText.width + 12,
@@ -244,10 +247,17 @@ export class CharacterPanelChatView {
     this.inputBackground.setPosition(margin, inputY);
     this.inputBackground.setSize(inputWidth, inputHeight);
     this.inputBackground.setDisplaySize(inputWidth, inputHeight);
-    this.inputElement.style.width = `${inputWidth}px`;
-    this.inputElement.style.height = `${inputHeight}px`;
-    this.inputDomElement.updateSize();
-    this.inputDomElement.setPosition(margin, inputY);
+    const canvasRect = this.scene.game.canvas.getBoundingClientRect();
+    const scaleX = canvasRect.width / this.scene.scale.width;
+    const scaleY = canvasRect.height / this.scene.scale.height;
+    this.inputElement.style.left = `${
+      canvasRect.left + (panelX + margin) * scaleX
+    }px`;
+    this.inputElement.style.top = `${
+      canvasRect.top + (panelY + inputY) * scaleY
+    }px`;
+    this.inputElement.style.width = `${inputWidth * scaleX}px`;
+    this.inputElement.style.height = `${inputHeight * scaleY}px`;
     this.sendButton.setPosition(margin + inputWidth + 16, inputY + 10);
     this.updateOverlayVisibility();
   }
@@ -295,9 +305,6 @@ export class CharacterPanelChatView {
     for (const element of this.elements) {
       element.setVisible(visible);
     }
-    this.inputDomElement.setVisible(visible && this.panelVisible);
-    this.inputElement.disabled =
-      !visible || !this.inputEnabled || !this.panelVisible;
     if (!visible) {
       this.blurInput();
       this.inputBackground.disableInteractive();
@@ -311,7 +318,6 @@ export class CharacterPanelChatView {
 
   setPanelVisible(visible: boolean) {
     this.panelVisible = visible;
-    this.inputDomElement.setVisible(this.visible && visible);
     if (!visible) {
       this.blurInput();
     }
@@ -399,6 +405,8 @@ export class CharacterPanelChatView {
 
   private updateInputStyles() {
     const cooling = this.isCoolingDown();
+    this.inputElement.style.display =
+      this.visible && this.panelVisible ? "block" : "none";
     this.inputElement.disabled =
       !this.visible || !this.inputEnabled || !this.panelVisible;
     this.inputBackground.setStrokeStyle(

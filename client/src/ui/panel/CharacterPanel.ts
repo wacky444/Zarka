@@ -518,7 +518,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       margin: MARGIN,
       contentTop,
       boxWidth,
-      panelHeight: this.panelHeight
+      panelHeight: this.panelHeight,
+      panelX: this.x,
+      panelY: this.y
     });
 
     this.skillsView = new CharacterPanelSkillsView(scene, this, {
@@ -854,7 +856,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         margin: MARGIN,
         contentTop,
         boxWidth,
-        panelHeight: height
+        panelHeight: height,
+        panelX: this.x,
+        panelY: this.y
       });
     }
   }

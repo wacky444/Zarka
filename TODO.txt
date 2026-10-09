@@ -75,7 +75,7 @@
 	 
 - my matches remake,
 	- order by matches where ready is not set then by timeleft, place a green play button over the image on the ones with ready not set
-	- cards instead of rows,
+	- cards instead of rows, in a reusable component in ui folder
 			R Name
 	Image  5/18		Timeleft 11 <- rounds played
 
@@ -84,3 +84,4 @@
 	- two groups collapsable, "3/10 Partidas online" "Partidas terminadas"
 
 	- max current matches, default 10, store in account settings, check nakama if already has something
+	- also in all matches view
