@@ -26,6 +26,8 @@ interface ChatInputLayout {
   margin: number;
   panelX: number;
   panelY: number;
+  boxWidth: number;
+  boxY: number;
   inputWidth: number;
   inputHeight: number;
   inputY: number;
@@ -68,6 +70,9 @@ export class CharacterPanelChatView {
   private sendCooldownUntil = 0;
   private sendCooldownTimer: number | null = null;
   private messageAreaHeight = Number.POSITIVE_INFINITY;
+  private messageAreaTop = 0;
+  private messageAreaBottom = 0;
+  private messageAreaWidth = 0;
   private inputLayout: ChatInputLayout | null = null;
   private previousParentSize: { width: string; height: string } | null = null;
   private inputValue = "";
@@ -282,14 +287,6 @@ export class CharacterPanelChatView {
       boxY + 64,
       panelHeight - inputHeight - inputBottomInset
     );
-    const boxHeight = Math.max(0, inputY - boxY - 16);
-    this.messagesBox.setPosition(margin, boxY);
-    this.messagesBox.setSize(boxWidth, boxHeight);
-    this.messagesBox.setDisplaySize(boxWidth, boxHeight);
-    this.messagesText.setPosition(margin + 16, boxY + 8);
-    this.messagesText.setWordWrapWidth(boxWidth - 32);
-    this.messageAreaHeight = Math.max(0, boxHeight - 16);
-    this.refreshMessages();
     this.overlayText.setPosition(margin + 16, boxY + 8);
     const inputWidth = Math.max(140, boxWidth - 100);
     this.inputBackground.setSize(inputWidth, inputHeight);
@@ -301,6 +298,8 @@ export class CharacterPanelChatView {
       margin,
       panelX,
       panelY,
+      boxWidth,
+      boxY,
       inputWidth,
       inputHeight,
       inputY,
@@ -320,6 +319,26 @@ export class CharacterPanelChatView {
       return;
     }
     const canvasRect = this.scene.game.canvas.getBoundingClientRect();
+    const boxHeight = Math.max(0, inputY - layout.boxY - 16);
+    const messageAreaHeight = Math.max(0, boxHeight - 16);
+    const messageWidthChanged = this.messageAreaWidth !== layout.boxWidth;
+    const messageAreaChanged =
+      messageAreaHeight !== this.messageAreaHeight || messageWidthChanged;
+    this.messagesBox.setPosition(layout.margin, layout.boxY);
+    this.messagesBox.setSize(layout.boxWidth, boxHeight);
+    this.messagesBox.setDisplaySize(layout.boxWidth, boxHeight);
+    this.messageAreaTop = layout.boxY + 8;
+    this.messageAreaBottom = layout.boxY + boxHeight - 8;
+    this.messageAreaHeight = messageAreaHeight;
+    if (messageWidthChanged) {
+      this.messagesText.setWordWrapWidth(layout.boxWidth - 32);
+      this.messageAreaWidth = layout.boxWidth;
+    }
+    this.messagesText.setPosition(layout.margin + 16, this.messageAreaTop);
+    if (messageAreaChanged) {
+      this.refreshMessages();
+    }
+    this.alignMessagesTextToBottom();
     this.inputBackground.setPosition(layout.margin, inputY);
     this.sendButton.setPosition(layout.margin + layout.inputWidth + 16, inputY + 10);
     this.inputElement.style.left = `${
@@ -354,6 +373,16 @@ export class CharacterPanelChatView {
     if (this.inputLayout) {
       this.positionInputRow(this.inputLayout.inputY);
     }
+  }
+
+  private alignMessagesTextToBottom() {
+    this.messagesText.setPosition(
+      this.messagesText.x,
+      Math.max(
+        this.messageAreaTop,
+        this.messageAreaBottom - this.messagesText.height
+      )
+    );
   }
 
   private lockGameParentSize() {
@@ -511,6 +540,7 @@ export class CharacterPanelChatView {
       }
       startIndex += 1;
     }
+    this.alignMessagesTextToBottom();
     this.messagesText.setVisible(this.visible);
     this.overlayMessage = "";
     this.updateOverlayVisibility();
