@@ -9,8 +9,7 @@ import { assignAfkSkillPoints } from "../afkSkills";
 import { resolveTurnForMatch } from "../turnResolution";
 import { sendTutorialBotMessageForTurn } from "../TutorialBotChat";
 import { isBotId } from "../botAI";
-import { validateTime } from "../../utils/validation";
-import { hasFirstTurnAutoSkipGraceElapsed } from "../../utils/autoSkip";
+import { getNextAutoAdvanceAtMs } from "../../utils/autoSkip";
 import {
   isCharacterDead,
   isCharacterIncapacitated,
@@ -25,15 +24,6 @@ import {
 
 const AUTO_CHECK_INTERVAL_MS = 60 * 1000;
 const BOT_AUTO_CHECK_INTERVAL_MS = 5 * 1000;
-
-function timeToMinutes(value: string): number | null {
-  const parts = value.split(":");
-  if (parts.length !== 2) return null;
-  const hours = parseInt(parts[0], 10);
-  const minutes = parseInt(parts[1], 10);
-  if (!isFinite(hours) || !isFinite(minutes)) return null;
-  return hours * 60 + minutes;
-}
 
 function areOnlyBotsAlive(match: MatchRecord): boolean {
   const characters = match.playerCharacters;
@@ -52,20 +42,6 @@ function areOnlyBotsAlive(match: MatchRecord): boolean {
     aliveBots += 1;
   }
   return aliveBots > 0;
-}
-
-function hasAutoAdvancedToday(
-  lastAutoAdvanceAt: number | undefined,
-  nowMs: number,
-): boolean {
-  if (!lastAutoAdvanceAt) return false;
-  const lastLocal = new Date(lastAutoAdvanceAt * 1000);
-  const nowLocal = new Date(nowMs);
-  return (
-    lastLocal.getFullYear() === nowLocal.getFullYear() &&
-    lastLocal.getMonth() === nowLocal.getMonth() &&
-    lastLocal.getDate() === nowLocal.getDate()
-  );
 }
 
 export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
@@ -144,31 +120,19 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       if (!normalCheckDue || !state.autoSkip || match.autoSkip === false) {
         return { state };
       }
-      const configuredRoundTime =
-        typeof state.roundTime === "string"
-          ? validateTime(state.roundTime)
-          : undefined;
-      if (!configuredRoundTime) {
-        return { state };
-      }
-      const nowLocal = new Date(nowMs);
-      const currentMinutes = nowLocal.getHours() * 60 + nowLocal.getMinutes();
-      const targetMinutes = timeToMinutes(configuredRoundTime);
-      logger.debug(
-        "Auto-checking turn advancement, currentMinutes/targetMinutes: %d/%d",
-        currentMinutes,
-        targetMinutes,
+      const nextAutoAdvanceAt = getNextAutoAdvanceAtMs(
+        {
+          stateRoundTime: state.roundTime,
+          matchRoundTime: match.roundTime,
+          stateAutoSkip: state.autoSkip,
+          matchAutoSkip: match.autoSkip,
+          currentTurn: match.current_turn,
+          startedAtSeconds: match.started_at,
+          lastAutoAdvanceAtSeconds: match.lastAutoAdvanceAt
+        },
+        nowMs
       );
-      if (targetMinutes === null || currentMinutes < targetMinutes) {
-        return { state };
-      }
-
-      const matchRoundTime =
-        typeof match.roundTime === "string"
-          ? (validateTime(match.roundTime) ?? configuredRoundTime)
-          : configuredRoundTime;
-      const matchTargetMinutes = timeToMinutes(matchRoundTime);
-      if (matchTargetMinutes === null || currentMinutes < matchTargetMinutes) {
+      if (nextAutoAdvanceAt === undefined || nowMs < nextAutoAdvanceAt) {
         return { state };
       }
     }
@@ -188,19 +152,6 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
         );
       });
       if (allReady) {
-        return { state };
-      }
-
-      if (hasAutoAdvancedToday(match.lastAutoAdvanceAt, nowMs)) {
-        return { state };
-      }
-      if (
-        !hasFirstTurnAutoSkipGraceElapsed(
-          match.current_turn,
-          match.started_at,
-          nowMs
-        )
-      ) {
         return { state };
       }
 

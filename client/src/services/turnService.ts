@@ -19,6 +19,8 @@ import {
   type SaveChatMessageRequest,
   type GetUserAccountPayload,
   type GetRankedQueueStatusPayload,
+  type ListMatchCardsPayload,
+  type ListMatchCardsRequest,
   type Skin,
   type SkillId,
   type UpgradeSkillRequest,
@@ -384,6 +386,26 @@ export class TurnService {
   async listMyMatches() {
     const res = await this.client.rpc(this.session, "list_my_matches", {});
     return res;
+  }
+
+  async listMatchCards(
+    request: ListMatchCardsRequest = {}
+  ): Promise<ListMatchCardsPayload> {
+    const response = await this.client.rpc(
+      this.session,
+      "list_match_cards",
+      request
+    );
+    const raw = (response as unknown as { payload?: unknown }).payload;
+    try {
+      const payload = typeof raw === "string" ? JSON.parse(raw) as unknown : raw;
+      if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+        return payload as ListMatchCardsPayload;
+      }
+    } catch {
+      return { ok: false, error: "invalid_response" };
+    }
+    return { ok: false, error: "invalid_response" };
   }
 
   async getRankedQueueStatus(): Promise<GetRankedQueueStatusPayload> {

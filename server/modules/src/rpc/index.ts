@@ -7,6 +7,7 @@ export { leaveMatchRpc } from "./leaveMatch";
 export { updateSettingsRpc } from "./updateSettings";
 export { startMatchRpc } from "./startMatch";
 export { listMyMatchesRpc } from "./listMyMatches";
+export { listMatchCardsRpc } from "./listMatchCards";
 export { getMatchReportRpc } from "./getMatchReport";
 export { removeMatchRpc } from "./removeMatch";
 export { updateMainActionRpc } from "./updateMainAction";

@@ -5,12 +5,31 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { SERVER_USER_ID } from "../constants";
 import {
+  normalizeMaxCurrentMatches,
   RANKED_MATCH_METADATA_KEY,
   TUTORIAL_MATCH_METADATA_KEY,
   type ListMyMatchesPayload
 } from "@shared";
+import { buildMyMatchCardSummary } from "../services/matchCardSummary";
 
 type MatchListEntry = NonNullable<ListMyMatchesPayload["matches"]>[number];
+type UnknownRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): UnknownRecord | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+  return value as UnknownRecord;
+}
+
+function getMaxCurrentMatches(nk: nkruntime.Nakama, userId: string): number {
+  const user = nk.usersGetId([userId])?.[0] as
+    | (nkruntime.User & { metadata?: unknown })
+    | undefined;
+  const metadata = asRecord(user?.metadata);
+  const zarka = asRecord(metadata?.zarka);
+  return normalizeMaxCurrentMatches(zarka?.maxCurrentMatches);
+}
 
 export function listMyMatchesRpc(
   ctx: nkruntime.Context,
@@ -26,6 +45,7 @@ export function listMyMatchesRpc(
   try {
     const activeMatches: MatchListEntry[] = [];
     const finishedMatches: MatchListEntry[] = [];
+    const maxCurrentMatches = getMaxCurrentMatches(nk, ctx.userId);
 
     for (const { match } of storage.listAllMatches()) {
       if (match.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
@@ -44,24 +64,16 @@ export function listMyMatchesRpc(
 
       const isActive = match.removed === 0 || match.removed === undefined;
       if (isActive) {
-        const started = match.started === true;
         activeMatches.push({
-          match_id: match.match_id,
-          runtime_match_id: match.runtime_match_id ?? match.match_id,
-          size: match.size,
-          players,
-          current_turn: match.current_turn,
-          created_at: match.created_at,
+          ...buildMyMatchCardSummary(match, ctx.userId),
           creator,
           cols: match.cols,
           rows: match.rows,
           roundTime: match.roundTime,
           autoSkip: match.autoSkip,
           botPlayers: match.botPlayers,
-          name: match.name,
-          started,
-          status: started ? "in_progress" : "waiting",
-          has_report: false,
+          turnsToBeAt1Tile: match.turnsToBeAt1Tile,
+          has_report: false
         });
         continue;
       }
@@ -69,21 +81,14 @@ export function listMyMatchesRpc(
       const report = storage.getMatchReport(match.match_id);
       if (!report) {
         finishedMatches.push({
-          match_id: match.match_id,
-          runtime_match_id: match.runtime_match_id ?? match.match_id,
-          size: match.size,
-          players,
-          current_turn: match.current_turn,
-          created_at: match.created_at,
+          ...buildMyMatchCardSummary(match, ctx.userId),
           creator,
           cols: match.cols,
           rows: match.rows,
-          name: match.name,
           started: false,
-          status: "finished",
           turns: match.current_turn,
           duration_ms: 0,
-          has_report: false,
+          has_report: false
         });
         continue;
       }
@@ -99,18 +104,15 @@ export function listMyMatchesRpc(
           player?.team_id === report.winning_team_id,
       );
       finishedMatches.push({
-        match_id: report.match_id,
-        runtime_match_id: match.runtime_match_id ?? match.match_id,
-        size: match.size,
-        players,
-        current_turn: report.turns,
-        created_at: report.created_at,
+        ...buildMyMatchCardSummary(match, ctx.userId),
         creator,
         cols: match.cols,
         rows: match.rows,
         name: report.name ?? match.name,
+        current_turn: report.turns,
+        currentTurn: report.turns,
+        created_at: report.created_at,
         started: false,
-        status: "finished",
         ended_at: report.ended_at,
         turns: report.turns,
         duration_ms: Math.max(
@@ -118,7 +120,7 @@ export function listMyMatchesRpc(
           (report.ended_at - report.created_at) * 1000,
         ),
         player_team_won: playerTeamWon,
-        has_report: true,
+        has_report: true
       });
     }
 
@@ -131,6 +133,7 @@ export function listMyMatchesRpc(
 
     const response: import("@shared").ListMyMatchesPayload = {
       ok: true,
+      maxCurrentMatches,
       matches: [...activeMatches, ...finishedMatches.slice(0, 10)],
     };
     return JSON.stringify(response);

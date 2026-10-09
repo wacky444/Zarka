@@ -1,3 +1,11 @@
+export const DEFAULT_MAX_CURRENT_MATCHES = 10;
+
+export function normalizeMaxCurrentMatches(value: unknown): number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0
+    ? value
+    : DEFAULT_MAX_CURRENT_MATCHES;
+}
+
 export type SkinId = string;
 
 export type CosmeticUnlockId = string;
@@ -62,6 +70,7 @@ export type UserAccount = {
   readonly cosmetics: UserCosmetics;
   // Present only on the self account RPC; public profile lookups omit it.
   readonly rankedMatchSlots?: number;
+  readonly maxCurrentMatches?: number;
   readonly tutorialCompleted?: boolean;
 
   // Optional timestamps (epoch milliseconds).

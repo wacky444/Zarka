@@ -5,7 +5,7 @@ import type {
   TrapRecord,
   TurnRecord,
 } from "./match";
-import type { GameMap, Axial } from "./hexTile";
+import type { GameMap, Axial, LocalizationType } from "./hexTile";
 import type {
   PlayerCharacter,
   PlayerCharacterUnknown
@@ -150,32 +150,72 @@ export type UpdateSettingsPayload = {
   error?: string;
 };
 
-// List matches the current user has joined
+export type MatchCardStatus = "waiting" | "in_progress" | "finished";
+export type MatchPreviewDestructionState = "safe" | "scheduled" | "destroyed";
+export type MatchCardTimeStatus =
+  | "scheduled"
+  | "manual"
+  | "not_started"
+  | "finished";
+
+export interface MatchPreviewCell {
+  coord: Axial;
+  localizationType: LocalizationType;
+  destructionState: MatchPreviewDestructionState;
+}
+
+export interface MatchCardSummary {
+  match_id: string;
+  runtime_match_id?: string;
+  name?: string;
+  status: MatchCardStatus;
+  isRanked: boolean;
+  size: number;
+  joinedPlayers: number;
+  totalPlayers: number;
+  alivePlayers: number;
+  currentTurn: number;
+  nextAdvanceAtMs: number | null;
+  timeStatus: MatchCardTimeStatus;
+  mapPreviewCells: MatchPreviewCell[];
+}
+
+export interface MyMatchCardSummary extends MatchCardSummary {
+  players: string[];
+  current_turn: number;
+  created_at: number;
+  creator?: string;
+  cols?: number;
+  rows?: number;
+  roundTime?: string;
+  autoSkip?: boolean;
+  botPlayers?: number;
+  turnsToBeAt1Tile?: number;
+  started?: boolean;
+  ended_at?: number;
+  turns?: number;
+  duration_ms?: number;
+  player_team_won?: boolean;
+  has_report?: boolean;
+  currentUserReady: boolean;
+}
+
 export type ListMyMatchesPayload = {
   ok?: boolean;
-  matches?: Array<{
-    match_id: string;
-    runtime_match_id?: string;
-    size: number;
-    players: string[];
-    current_turn: number;
-    created_at: number;
-    creator?: string;
-    cols?: number;
-    rows?: number;
-    roundTime?: string;
-    autoSkip?: boolean;
-    botPlayers?: number;
-    turnsToBeAt1Tile?: number;
-    name?: string;
-    started?: boolean;
-    status?: "waiting" | "in_progress" | "finished";
-    ended_at?: number;
-    turns?: number;
-    duration_ms?: number;
-    player_team_won?: boolean;
-    has_report?: boolean;
-  }>;
+  maxCurrentMatches?: number;
+  matches?: MyMatchCardSummary[];
+  error?: string;
+};
+
+export type ListMatchCardsRequest = {
+  offset?: number;
+  limit?: number;
+};
+
+export type ListMatchCardsPayload = {
+  ok?: boolean;
+  matches?: MatchCardSummary[];
+  nextOffset?: number | null;
   error?: string;
 };
 

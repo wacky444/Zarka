@@ -1,5 +1,7 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
+import { normalizeMaxCurrentMatches } from "@shared";
+
 type UnknownRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): UnknownRecord | undefined {
@@ -167,6 +169,7 @@ function buildAccountFromUser(
       metadata?.admin === true || zarka?.admin === true ? true : undefined,
     tutorialCompleted: zarka?.tutorialCompleted === true,
     rankedMatchSlots: parseRankedMatchSlots(zarka?.rankedMatchSlots),
+    maxCurrentMatches: normalizeMaxCurrentMatches(zarka?.maxCurrentMatches),
     stats,
     cosmetics,
     createdAtMs,

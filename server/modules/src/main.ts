@@ -8,6 +8,7 @@ import {
   joinMatchRpc,
   leaveMatchRpc,
   listMyMatchesRpc,
+  listMatchCardsRpc,
   getMatchReportRpc,
   removeMatchRpc,
   startMatchRpc,
@@ -180,6 +181,14 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register list_my_matches: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("list_match_cards", listMatchCardsRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register list_match_cards: %s",
       (error && (error as Error).message) || String(error)
     );
   }
