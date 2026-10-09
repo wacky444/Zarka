@@ -41,23 +41,22 @@ export class MatchMapPreview extends Phaser.GameObjects.Container {
       return;
     }
 
-    const hexHeight = Math.sqrt(3) / 2;
-    const rowStep = hexHeight * 0.75;
+    const hexHeight = Math.sqrt(3) / 2 + 0.15;
+    const rowStep = hexHeight;
     const positionedCells: PositionedCell[] = cells.map((cell) => ({
       cell,
-      x: cell.coord.q + ((cell.coord.r % 2 + 2) % 2) * 0.5,
+      x: cell.coord.q + (((cell.coord.r % 2) + 2) % 2) * 0.5,
       y: cell.coord.r * rowStep
     }));
     const minX = Math.min(...positionedCells.map((cell) => cell.x)) - 0.5;
     const maxX = Math.max(...positionedCells.map((cell) => cell.x)) + 0.5;
-    const minY = Math.min(...positionedCells.map((cell) => cell.y)) - hexHeight / 2;
-    const maxY = Math.max(...positionedCells.map((cell) => cell.y)) + hexHeight / 2;
+    const minY =
+      Math.min(...positionedCells.map((cell) => cell.y)) - hexHeight / 2;
+    const maxY =
+      Math.max(...positionedCells.map((cell) => cell.y)) + hexHeight / 2;
     const scale = Math.max(
       0.1,
-      Math.min(
-        (width - 12) / (maxX - minX),
-        (height - 12) / (maxY - minY)
-      )
+      Math.min((width - 12) / (maxX - minX), (height - 12) / (maxY - minY))
     );
     const offsetX = (width - (maxX - minX) * scale) / 2;
     const offsetY = (height - (maxY - minY) * scale) / 2;
