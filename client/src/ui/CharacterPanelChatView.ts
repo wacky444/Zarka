@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { t } from "../services/i18n";
+import { isMobile } from "../utils/isMobile";
 import { THEME } from "./ColorPalette";
 import { makeButton, type UIButton } from "./button";
 
@@ -19,6 +20,17 @@ interface CharacterPanelChatViewOptions {
   onSend: (message: string) => void;
   onFocusChange?: (focused: boolean) => void;
   maxInputLength?: number;
+}
+
+interface ChatInputLayout {
+  margin: number;
+  panelX: number;
+  panelY: number;
+  inputWidth: number;
+  inputHeight: number;
+  inputY: number;
+  scaleX: number;
+  scaleY: number;
 }
 
 const MAX_MESSAGES = 31;
@@ -56,6 +68,8 @@ export class CharacterPanelChatView {
   private sendCooldownUntil = 0;
   private sendCooldownTimer: number | null = null;
   private messageAreaHeight = Number.POSITIVE_INFINITY;
+  private inputLayout: ChatInputLayout | null = null;
+  private previousParentSize: { width: string; height: string } | null = null;
   private inputValue = "";
   private inputFocused = false;
   private inputEnabled = false;
@@ -64,6 +78,12 @@ export class CharacterPanelChatView {
   private connectionState: ChatConnectionState = "idle";
   private overlayMessage = "";
   private messages: ChatMessageViewModel[] = [];
+  private readonly visualViewportChangeHandler = () => {
+    this.updateInputForVisualViewport();
+  };
+  private readonly orientationChangeHandler = () => {
+    this.restoreGameParentSize();
+  };
 
   constructor(options: CharacterPanelChatViewOptions) {
     this.scene = options.scene;
@@ -126,6 +146,16 @@ export class CharacterPanelChatView {
     this.inputElement.style.outline = "none";
     this.inputElement.style.caretColor = THEME.colors.textPrimary;
     document.body.appendChild(this.inputElement);
+    window.visualViewport?.addEventListener(
+      "resize",
+      this.visualViewportChangeHandler
+    );
+    window.visualViewport?.addEventListener(
+      "scroll",
+      this.visualViewportChangeHandler
+    );
+    window.addEventListener("orientationchange", this.orientationChangeHandler);
+    window.addEventListener("resize", this.visualViewportChangeHandler);
     this.inputElement.addEventListener("input", () => {
       this.inputValue = clampLength(
         this.inputElement.value,
@@ -142,11 +172,15 @@ export class CharacterPanelChatView {
         return;
       }
       this.inputFocused = true;
+      this.lockGameParentSize();
       this.onFocusChange?.(true);
       this.updateInputStyles();
+      this.updateInputForVisualViewport();
     });
     this.inputElement.addEventListener("blur", () => {
       this.inputFocused = false;
+      this.restoreInputRowPosition();
+      this.restoreGameParentSize();
       this.onFocusChange?.(false);
       this.updateInputStyles();
     });
@@ -183,6 +217,20 @@ export class CharacterPanelChatView {
 
   destroy() {
     this.blurInput();
+    this.restoreGameParentSize();
+    window.visualViewport?.removeEventListener(
+      "resize",
+      this.visualViewportChangeHandler
+    );
+    window.visualViewport?.removeEventListener(
+      "scroll",
+      this.visualViewportChangeHandler
+    );
+    window.removeEventListener(
+      "orientationchange",
+      this.orientationChangeHandler
+    );
+    window.removeEventListener("resize", this.visualViewportChangeHandler);
     this.inputElement.remove();
     this.inputBackground.off(Phaser.Input.Events.POINTER_DOWN);
     this.inputBackground.disableInteractive();
@@ -244,22 +292,100 @@ export class CharacterPanelChatView {
     this.refreshMessages();
     this.overlayText.setPosition(margin + 16, boxY + 8);
     const inputWidth = Math.max(140, boxWidth - 100);
-    this.inputBackground.setPosition(margin, inputY);
     this.inputBackground.setSize(inputWidth, inputHeight);
     this.inputBackground.setDisplaySize(inputWidth, inputHeight);
     const canvasRect = this.scene.game.canvas.getBoundingClientRect();
     const scaleX = canvasRect.width / this.scene.scale.width;
     const scaleY = canvasRect.height / this.scene.scale.height;
+    this.inputLayout = {
+      margin,
+      panelX,
+      panelY,
+      inputWidth,
+      inputHeight,
+      inputY,
+      scaleX,
+      scaleY
+    };
+    this.positionInputRow(inputY);
+    if (this.inputFocused) {
+      this.updateInputForVisualViewport();
+    }
+    this.updateOverlayVisibility();
+  }
+
+  private positionInputRow(inputY: number) {
+    const layout = this.inputLayout;
+    if (!layout) {
+      return;
+    }
+    const canvasRect = this.scene.game.canvas.getBoundingClientRect();
+    this.inputBackground.setPosition(layout.margin, inputY);
+    this.sendButton.setPosition(layout.margin + layout.inputWidth + 16, inputY + 10);
     this.inputElement.style.left = `${
-      canvasRect.left + (panelX + margin) * scaleX
+      canvasRect.left + (layout.panelX + layout.margin) * layout.scaleX
     }px`;
     this.inputElement.style.top = `${
-      canvasRect.top + (panelY + inputY) * scaleY
+      canvasRect.top + (layout.panelY + inputY) * layout.scaleY
     }px`;
-    this.inputElement.style.width = `${inputWidth * scaleX}px`;
-    this.inputElement.style.height = `${inputHeight * scaleY}px`;
-    this.sendButton.setPosition(margin + inputWidth + 16, inputY + 10);
-    this.updateOverlayVisibility();
+    this.inputElement.style.width = `${layout.inputWidth * layout.scaleX}px`;
+    this.inputElement.style.height = `${layout.inputHeight * layout.scaleY}px`;
+  }
+
+  private updateInputForVisualViewport() {
+    const viewport = window.visualViewport;
+    const layout = this.inputLayout;
+    if (!this.inputFocused || !layout) {
+      return;
+    }
+    const canvasRect = this.scene.game.canvas.getBoundingClientRect();
+    const normalTop =
+      canvasRect.top + (layout.panelY + layout.inputY) * layout.scaleY;
+    const visibleTop = viewport?.offsetTop ?? 0;
+    const visibleHeight = viewport?.height ?? window.innerHeight;
+    const keyboardSafeTop =
+      visibleTop + visibleHeight - layout.inputHeight * layout.scaleY - 8;
+    const top = Math.max(visibleTop, Math.min(normalTop, keyboardSafeTop));
+    const inputY = (top - canvasRect.top) / layout.scaleY - layout.panelY;
+    this.positionInputRow(inputY);
+  }
+
+  private restoreInputRowPosition() {
+    if (this.inputLayout) {
+      this.positionInputRow(this.inputLayout.inputY);
+    }
+  }
+
+  private lockGameParentSize() {
+    if (
+      this.previousParentSize ||
+      (!isMobile() && navigator.maxTouchPoints === 0)
+    ) {
+      return;
+    }
+    const parent = this.scene.game.canvas.parentElement;
+    if (!parent) {
+      return;
+    }
+    const bounds = parent.getBoundingClientRect();
+    this.previousParentSize = {
+      width: parent.style.width,
+      height: parent.style.height
+    };
+    parent.style.width = `${bounds.width}px`;
+    parent.style.height = `${bounds.height}px`;
+  }
+
+  private restoreGameParentSize() {
+    if (!this.previousParentSize) {
+      return;
+    }
+    const parent = this.scene.game.canvas.parentElement;
+    if (parent) {
+      parent.style.width = this.previousParentSize.width;
+      parent.style.height = this.previousParentSize.height;
+    }
+    this.previousParentSize = null;
   }
 
   setMessages(messages: ChatMessageViewModel[]) {
