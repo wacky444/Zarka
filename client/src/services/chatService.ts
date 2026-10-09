@@ -125,6 +125,7 @@ function decodeMessageDisplayName(raw: unknown): string | undefined {
 
 export class MatchChatService {
   private socket: Socket | null = null;
+  private socketConnected = false;
   private channel: Channel | null = null;
   private matchId: string | null = null;
   private readonly listeners = new Set<(message: MatchChatMessage) => void>();
@@ -136,31 +137,21 @@ export class MatchChatService {
     if (!normalized) {
       throw new Error("matchId is required");
     }
-    const socket = await this.ensureSocket();
-    if (this.channel && this.matchId === normalized) {
-      return this.fetchRecentMessages();
-    }
-    await this.leaveChannel();
-    const room = this.buildRoomName(normalized);
-    this.channel = await socket.joinChat(
-      room,
-      MATCH_CHAT_ROOM_CHANNEL_TYPE,
-      true,
-      false
-    );
-    this.matchId = normalized;
+    await this.ensureChannel(normalized);
     return this.fetchRecentMessages();
   }
 
   async disconnect(): Promise<void> {
     await this.leaveChannel();
-    if (this.socket) {
+    const socket = this.socket;
+    this.socket = null;
+    this.socketConnected = false;
+    if (socket) {
       try {
-        this.socket.disconnect(true);
+        socket.disconnect(true);
       } catch (error) {
         console.warn("chat socket disconnect failed", error);
       }
-      this.socket = null;
     }
     this.matchId = null;
     this.listeners.clear();
@@ -174,15 +165,18 @@ export class MatchChatService {
   }
 
   async send(text: string, displayName?: string): Promise<void> {
-    if (!this.socket || !this.channel) {
-      throw new Error("Chat is not connected");
+    const trimmed = text.trim();
+    if (!trimmed) {
+      return;
     }
     if (!this.matchId) {
       throw new Error("Match context missing");
     }
-    const trimmed = text.trim();
-    if (!trimmed) {
-      return;
+    await this.ensureChannel(this.matchId);
+    const socket = this.socket;
+    const channel = this.channel;
+    if (!socket || !channel) {
+      throw new Error("Chat is not connected");
     }
     const message = trimmed.slice(0, MAX_MESSAGE_LENGTH);
     const contentPayload: { message: string; displayName?: string } = {
@@ -195,10 +189,7 @@ export class MatchChatService {
     if (cleanDisplayName) {
       contentPayload.displayName = cleanDisplayName;
     }
-    const ack = await this.socket.writeChatMessage(
-      this.channel.id,
-      contentPayload
-    );
+    const ack = await socket.writeChatMessage(channel.id, contentPayload);
     this.persistSentMessage(ack, message, cleanDisplayName).catch((error) => {
       console.warn("chat persist failed", error);
     });
@@ -208,8 +199,24 @@ export class MatchChatService {
     return this.fetchRecentMessages();
   }
 
+  private async ensureChannel(matchId: string): Promise<void> {
+    const socket = await this.ensureSocket();
+    if (this.channel && this.matchId === matchId) {
+      return;
+    }
+    await this.leaveChannel();
+    const room = this.buildRoomName(matchId);
+    this.channel = await socket.joinChat(
+      room,
+      MATCH_CHAT_ROOM_CHANNEL_TYPE,
+      true,
+      false
+    );
+    this.matchId = matchId;
+  }
+
   private async ensureSocket(): Promise<Socket> {
-    if (this.socket) {
+    if (this.socket && this.socketConnected) {
       return this.socket;
     }
     const client = this.turnService.getClient();
@@ -219,9 +226,24 @@ export class MatchChatService {
     socket.onchannelmessage = (payload) => {
       this.handleChannelMessage(payload);
     };
-    await socket.connect(session, false);
+    socket.ondisconnect = () => {
+      if (this.socket === socket) {
+        this.socket = null;
+        this.socketConnected = false;
+        this.channel = null;
+      }
+    };
     this.socket = socket;
-    return socket;
+    try {
+      await socket.connect(session, false);
+      this.socketConnected = true;
+      return socket;
+    } catch (error) {
+      if (this.socket === socket) {
+        this.socket = null;
+      }
+      throw error;
+    }
   }
 
   private async leaveChannel(): Promise<void> {

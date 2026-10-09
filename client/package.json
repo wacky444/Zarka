@@ -11,6 +11,7 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test:smoke:login": "node ./scripts/smoke-login.mjs",
     "test:tutorial-ui": "node ./scripts/test-tutorial-ui.mjs",
+    "test:chat": "node ./scripts/test-chat-service.mjs",
     "test:push": "node ./scripts/test-push-notifications.mjs"
   },
   "dependencies": {
