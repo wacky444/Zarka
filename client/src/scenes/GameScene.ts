@@ -2498,6 +2498,7 @@ export class GameScene extends Phaser.Scene {
         message.messageId?.trim().length > 0
           ? message.messageId
           : `${message.createdAt}:${message.senderId}`,
+      senderId: message.senderId,
       senderLabel: message.system ? "System" : resolvedName,
       content:
         message.senderId === TUTORIAL_BOT_ID

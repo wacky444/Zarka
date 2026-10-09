@@ -1,18 +1,14 @@
 import Phaser from "phaser";
 import { t } from "../services/i18n";
 import { isMobile } from "../utils/isMobile";
+import { groupChatMessages, type ChatMessageGroupItem } from "./chatMessageGrouping";
 import { THEME } from "./ColorPalette";
 import { makeButton, type UIButton } from "./button";
 
 export type ChatConnectionState = "idle" | "connecting" | "ready" | "error";
 
-export interface ChatMessageViewModel {
+export interface ChatMessageViewModel extends ChatMessageGroupItem {
   id: string;
-  senderLabel: string;
-  content: string;
-  timestamp: number;
-  isSelf: boolean;
-  isSystem?: boolean;
 }
 
 interface CharacterPanelChatViewOptions {
@@ -515,9 +511,10 @@ export class CharacterPanelChatView {
       this.updateOverlayVisibility();
       return;
     }
+    const groups = groupChatMessages(this.messages);
     let startIndex = 0;
-    while (startIndex < this.messages.length) {
-      const lines = this.messages.slice(startIndex).map((entry) => {
+    while (startIndex < groups.length) {
+      const lines = groups.slice(startIndex).map(({ first: entry, content }) => {
         const time = formatTime(entry.timestamp);
         const name = entry.senderLabel.trim();
         const label = entry.isSystem
@@ -529,12 +526,12 @@ export class CharacterPanelChatView {
               : `${name} (You)`
             : "You"
           : name || "Unknown";
-        return `${time} ${label}: ${entry.content}`;
+        return `${time} ${label}: ${content}`;
       });
       this.messagesText.setText(lines.join("\n"));
       if (
         this.messagesText.height <= this.messageAreaHeight ||
-        startIndex === this.messages.length - 1
+        startIndex === groups.length - 1
       ) {
         break;
       }

@@ -9,6 +9,7 @@ import type {
   Socket
 } from "@heroiclabs/nakama-js";
 import { MatchChatService } from "../src/services/chatService";
+import { groupChatMessages } from "../src/ui/chatMessageGrouping";
 import type { TurnService } from "../src/services/turnService";
 
 interface FakeSocket {
@@ -30,6 +31,82 @@ interface FakeSocket {
   ) => Promise<ChannelMessageAck>;
   disconnect: (fireDisconnectEvent?: boolean) => void;
 }
+
+test("groups adjacent messages from same sender within two minutes", () => {
+  const grouped = groupChatMessages([
+    {
+      senderId: "pepe",
+      senderLabel: "Pepe",
+      content: "hola",
+      timestamp: 1_000,
+      isSelf: false
+    },
+    {
+      senderId: "pepe",
+      senderLabel: "Pepe",
+      content: "voy a mover",
+      timestamp: 61_000,
+      isSelf: false
+    },
+    {
+      senderId: "alicia",
+      senderLabel: "Alicia",
+      content: "OK",
+      timestamp: 90_000,
+      isSelf: false
+    },
+    {
+      senderId: "pepe",
+      senderLabel: "Pepe",
+      content: "voy ya",
+      timestamp: 120_000,
+      isSelf: false
+    }
+  ]);
+
+  assert.deepEqual(
+    grouped.map(({ first, content }) => ({
+      sender: first.senderLabel,
+      content
+    })),
+    [
+      { sender: "Pepe", content: "hola. voy a mover" },
+      { sender: "Alicia", content: "OK" },
+      { sender: "Pepe", content: "voy ya" }
+    ]
+  );
+});
+
+test("groups at the two-minute boundary without duplicate punctuation", () => {
+  const grouped = groupChatMessages([
+    {
+      senderId: "pepe",
+      senderLabel: "Pepe",
+      content: "Ready.",
+      timestamp: 1_000,
+      isSelf: false
+    },
+    {
+      senderId: "pepe",
+      senderLabel: "Pepe",
+      content: "on my way",
+      timestamp: 121_000,
+      isSelf: false
+    },
+    {
+      senderId: "pepe",
+      senderLabel: "Pepe",
+      content: "again",
+      timestamp: 241_001,
+      isSelf: false
+    }
+  ]);
+
+  assert.deepEqual(
+    grouped.map((group) => group.content),
+    ["Ready. on my way", "again"]
+  );
+});
 
 test("chat reconnects and rejoins after socket disconnect before sending", async () => {
   const sockets: FakeSocket[] = [];
