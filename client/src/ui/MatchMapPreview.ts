@@ -41,7 +41,7 @@ export class MatchMapPreview extends Phaser.GameObjects.Container {
       return;
     }
 
-    const hexHeight = Math.sqrt(3) / 2 + 0.15;
+    const hexHeight = Math.sqrt(3) / 2;
     const rowStep = hexHeight;
     const positionedCells: PositionedCell[] = cells.map((cell) => ({
       cell,
@@ -68,7 +68,7 @@ export class MatchMapPreview extends Phaser.GameObjects.Container {
       const centerX = offsetX + (x - minX) * scale;
       const centerY = offsetY + (y - minY) * scale;
       const points = Array.from({ length: 6 }, (_, index) => {
-        const angle = (index * 60 * Math.PI) / 180;
+        const angle = (index * 60 + 30) * (Math.PI / 180);
         return new Phaser.Geom.Point(
           centerX + Math.cos(angle) * radius,
           centerY + Math.sin(angle) * radius
