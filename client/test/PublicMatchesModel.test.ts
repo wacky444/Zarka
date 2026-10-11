@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MatchCardSummary } from "@shared";
-import { appendUniquePublicMatches, createPublicMatchSelection, PUBLIC_MATCH_PAGE_SIZE, sortPublicMatches } from "../src/scenes/PublicMatchesModel";
+import { appendUniquePublicMatches, createPublicMatchSelection, openPublicMatchSelection, PUBLIC_MATCH_PAGE_SIZE, sortPublicMatches } from "../src/scenes/PublicMatchesModel";
 
 const match = (id: string, status: MatchCardSummary["status"], values: Partial<MatchCardSummary> = {}): MatchCardSummary => ({
   match_id: id,
@@ -41,4 +41,29 @@ test("public selection reports match and server-provided joinability without rea
   createPublicMatchSelection(selected, (summary, canJoin) => { callbackMatch = summary; joinable = canJoin; })();
   assert.equal(callbackMatch, selected);
   assert.equal(joinable, false);
+});
+
+test("public lobby selection joins and opens when server summary allows joining", async () => {
+  let joins = 0;
+  const result = await openPublicMatchSelection(match("lobby", "waiting"), false, async () => { joins++; return true; });
+  assert.equal(result, "opened");
+  assert.equal(joins, 1);
+});
+
+test("public running-match selection joins when permitted and opens existing member without blocking on full status", async () => {
+  let joins = 0;
+  const allowed = await openPublicMatchSelection(match("running", "in_progress"), false, async () => { joins++; return true; });
+  const existing = await openPublicMatchSelection(match("full-existing", "in_progress", { isJoinable: false }), true, async () => { joins++; return true; });
+  assert.equal(allowed, "opened");
+  assert.equal(existing, "opened");
+  assert.equal(joins, 2);
+});
+
+test("public selection rejects stale or server-rejected joins without navigation", async () => {
+  let attempts = 0;
+  const unavailable = await openPublicMatchSelection(match("full", "waiting", { isJoinable: false }), false, async () => { attempts++; return true; });
+  const rejected = await openPublicMatchSelection(match("stale", "waiting"), false, async () => { attempts++; return false; });
+  assert.equal(unavailable, "unavailable");
+  assert.equal(rejected, "rejected");
+  assert.equal(attempts, 1);
 });

@@ -25,9 +25,12 @@ import { MenuAshEffect } from "../animation/MenuAshEffect";
 import { getLocale, t, toggleLocale } from "../services/i18n";
 import {
   TUTORIAL_MATCH_METADATA_KEY,
-  type MatchCardStatus
+  type MatchCardStatus,
+  type MatchCardSummary,
+  type ListMyMatchesPayload
 } from "@shared";
 import { resolveMyMatchRoute } from "./MyMatchesListModel";
+import { openPublicMatchSelection } from "./PublicMatchesModel";
 import { assetPath } from "../utils/assetPath";
 import { isMobile } from "../utils/isMobile";
 import { hideStartupLoadingScreen } from "../ui/StartupLoadingScreen";
@@ -226,7 +229,7 @@ export class MainScene extends Phaser.Scene {
       }
       this.showView("inMatch");
     } else {
-      this.statusText.setText("join_match error (see console).");
+      this.statusText.setText(this.getPublicJoinFailureMessage(parsed?.error));
       console.log("join_match response:", parsed);
     }
   }
@@ -415,6 +418,9 @@ export class MainScene extends Phaser.Scene {
       // Instantiate Matches List view (hidden by default)
       this.matchesListView = new MatchesListView(this);
       this.matchesListView.setTurnService(this.turnService);
+      this.matchesListView.setOnSelectMatch(async (match, joinable) => {
+        await this.handlePublicMatchSelected(match, joinable);
+      });
       this.matchesListView.setOnBack(() => {
         this.showView("main");
       });
@@ -662,6 +668,54 @@ export class MainScene extends Phaser.Scene {
 
   public showMyMatchesView() {
     this.showView("myMatchList");
+  }
+
+  private async handlePublicMatchSelected(
+    match: MatchCardSummary,
+    joinable: boolean
+  ): Promise<void> {
+    let isMember = this.currentMatchId === match.match_id;
+    if (!isMember && this.turnService) {
+      try {
+        const payload = this.parseRpcPayload<ListMyMatchesPayload>(
+          await this.turnService.listMyMatches()
+        );
+        isMember = Boolean(payload.matches?.some((item) => item.match_id === match.match_id));
+      } catch (error) {
+        console.warn("Could not check current match membership", error);
+      }
+    }
+
+    let joinError: unknown;
+    const result = await openPublicMatchSelection(
+      { ...match, isJoinable: joinable },
+      isMember,
+      async () => {
+        try {
+          await this.joinMatch(match.match_id);
+          return this.currentMatchId === match.match_id;
+        } catch (error) {
+          joinError = error;
+          return false;
+        }
+      }
+    );
+    if (result === "unavailable") {
+      this.statusText.setText(t("This match is no longer available."));
+    } else if (result === "rejected") {
+      this.statusText.setText(this.getPublicJoinFailureMessage(joinError));
+    }
+  }
+
+  private getPublicJoinFailureMessage(reason: unknown): string {
+    const message = reason instanceof Error ? reason.message : String(reason ?? "");
+    const normalized = message.toLowerCase();
+    if (normalized.includes("match_full")) return t("Match is full.");
+    if (normalized.includes("ranked_roster_locked")) return t("Ranked match roster is locked.");
+    if (normalized.includes("tutorial_incomplete")) return t("Complete the tutorial before joining matches.");
+    if (normalized.includes("max_current_matches") || normalized.includes("match_limit")) return t("You have reached your active match limit.");
+    if (normalized.includes("not_found") || normalized.includes("removed")) return t("This match is no longer available.");
+    return t("Could not join match. Try again.");
   }
 
   private async handleMyMatchSelected(

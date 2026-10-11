@@ -32,3 +32,18 @@ export function createPublicMatchSelection(
 ): () => void {
   return () => onSelect(match, match.isJoinable);
 }
+
+export type PublicMatchOpenResult = "opened" | "unavailable" | "rejected";
+
+export async function openPublicMatchSelection(
+  match: MatchCardSummary,
+  isMember: boolean,
+  joinAndOpen: () => Promise<boolean>
+): Promise<PublicMatchOpenResult> {
+  if (!match.isJoinable && !isMember) return "unavailable";
+  try {
+    return await joinAndOpen() ? "opened" : "rejected";
+  } catch {
+    return "rejected";
+  }
+}
