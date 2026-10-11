@@ -11,7 +11,7 @@ Replace compact text rows in **My Matches** and **Matches** with larger, reusabl
 - `client/src/scenes/MatchesList.ts` calls Nakama `listMatches` with a 50-match limit and parses the public label. `server/modules/src/utils/label.ts` currently publishes only mode, match ID, name, capacity, player count, started state, and creator. It does not publish readiness, turns, alive counts, or time remaining.
 - `MatchRecord` already stores `readyStates`, `playerCharacters`, `current_turn`, `roundTime`, `autoSkip`, and start state. Do not send full match records or other players' readiness to public match cards.
 - Auto-advance uses the server's local-time `roundTime` and `autoSkip` behavior in `server/modules/src/match/async_turn/loop.ts`; there is no existing `timeLeft` field. Calculate countdowns from the same server scheduling rules, not an independent client guess.
-- Account data lives under Nakama `metadata.zarka`. The account API exposes `rankedMatchSlots`, but no maximum-current-matches preference exists. `createMatchRpc` has a separate hard-coded limit of 3 matches created by one user; `joinMatchRpc` checks capacity but has no account-based concurrent-match cap. These rules must be reconciled rather than layered into contradictory limits.
+- Account data lives under Nakama `metadata.zarka`. `rankedMatchSlots` remains a separate ranked-only preference. `maxCurrentMatches` defaults to 10 and is bounded to 1–20; create, join, and ranked assignment share active-membership enforcement under per-user locks. The old creator-only limit of 3 is removed.
 - The server already stores map layout in `MatchRecord.map.tiles` as cell snapshots with coordinates, `localizationType`, and destruction metadata. Current match-list payloads and public labels do not include a map preview. Project only the preview fields from this existing map data; do not fetch full match state per card.
 
 ## Proposed card and list behavior
@@ -65,10 +65,10 @@ Create one typed summary shape shared by both views. Include only fields the car
 ### Maximum current matches preference
 
 - Add an account setting under `metadata.zarka`, exposed through `UserAccount`/`get_user_account` and an authenticated setter RPC. Default missing or invalid values to **10**.
-- Add the control to the account settings UI and save it using the existing safe account-metadata update mechanism. Define and enforce a bounded valid range before implementation; the user request specifies the default but not the range.
+- Add the control to the account settings UI and save it using the existing safe account-metadata update mechanism. Allowed range is 1–20; default is 10.
 - Treat this as a cap on active match memberships, not a display-only row limit. Count active matches where the user is a participant and include a user's own waiting match; exclude finished and tutorial matches. Ranked matches count toward this total, while `rankedMatchSlots` remains a separate ranked-only preference.
 - Enforce the cap server-side before create, join, and ranked assignment. If a user lowers the cap below their current count, keep existing matches and reject only new memberships until the count falls below the cap.
-- Reconcile or replace the current creator-only limit of 3 in `createMatchRpc`; do not let it silently override the new default of 10. Preserve any separate abuse-prevention ceiling only if it is explicitly distinct from the user preference.
+- Creator-only limit of 3 is removed; `maxCurrentMatches` is authoritative.
 - Handle duplicate joins idempotently and prevent concurrent create/join requests from exceeding the cap, using an appropriate per-user reservation/serialization mechanism if needed.
 
 ## Implementation tasks
@@ -99,6 +99,5 @@ Task 1 unblocks Tasks 2, 3, 5, and 7. Tasks 3 and 5 can proceed in parallel afte
 
 - What does the `R` marker in the example mean (ranked, round, or another badge)?
 - Should player totals include bots? Current My Matches adds configured `botPlayers`; public match labels count current players. Choose one server-defined policy and use it consistently for lobby, running, and finished cards.
-- What is the allowed range for `maxCurrentMatches`? Default is 10; current code's creator-only limit is 3.
 - What should time-left show when auto-advance is disabled or an advance is already ready? Recommended: localized `Manual` / `Resolving`, not a numeric guess.
 - Should cell-type artwork be sprite-based or minimal glyphs? Keep destruction colors clear either way; use a placeholder only before map data exists.

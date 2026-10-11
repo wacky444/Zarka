@@ -49,6 +49,9 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Available for random games": "Disponible para partidas aleatorias",
   "Choose how many ranked matches Zarka can assign at once. Another match may be assigned while one is in progress.":
     "Elige cuántas partidas clasificatorias puede asignarte Zarka a la vez. Puede asignarte otra mientras una partida está en curso.",
+  "Maximum active matches": "Máximo de partidas activas",
+  "Choose how many active matches you can join. Existing matches remain if you lower this limit.": "Elige cuántas partidas activas puedes tener. Las partidas actuales se conservan si reduces este límite.",
+  Saved: "Guardado",
   Disabled: "Desactivado",
   Enabled: "Activado",
   "Saving...": "Guardando...",

@@ -18,8 +18,9 @@ import {
   ensurePlayerCharacter,
 } from "../utils/playerCharacter";
 import { getRuntimeMatchId } from "../utils/matchIds";
+import { assertCanAddMembership, withMatchMembershipLocks } from "../services/matchMembershipLimit";
 
-export function joinMatchRpc(
+function joinMatchRpcLocked(
   ctx: nkruntime.Context,
   logger: nkruntime.Logger,
   nk: nkruntime.Nakama,
@@ -123,6 +124,7 @@ export function joinMatchRpc(
   };
 
   if (match.players.indexOf(ctx.userId) === -1) {
+    assertCanAddMembership(nk, storage, ctx.userId);
     const current = match.players.length;
     if (current >= (match.size || 2)) {
       throw makeNakamaError("match_full", nkruntime.Codes.FAILED_PRECONDITION);
@@ -175,4 +177,16 @@ export function joinMatchRpc(
   };
 
   return JSON.stringify(response);
+}
+
+export function joinMatchRpc(
+  ctx: nkruntime.Context,
+  logger: nkruntime.Logger,
+  nk: nkruntime.Nakama,
+  payload: string
+): string {
+  if (!ctx?.userId) return joinMatchRpcLocked(ctx, logger, nk, payload);
+  return withMatchMembershipLocks(nk, [ctx.userId], logger, () =>
+    joinMatchRpcLocked(ctx, logger, nk, payload)
+  );
 }

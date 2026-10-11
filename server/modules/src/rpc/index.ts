@@ -19,6 +19,7 @@ export { getChatHistoryRpc } from "./getChatHistory";
 export { getRankedQueueStatusRpc } from "./getRankedQueueStatus";
 export { getUserAccountRpc } from "./getUserAccount";
 export { setRankedMatchSlotsRpc } from "./setRankedMatchSlots";
+export { setMaxCurrentMatchesRpc } from "./setMaxCurrentMatches";
 export { touchRankedPresenceRpc } from "./touchRankedPresence";
 export { updateSkinRpc } from "./updateSkin";
 export { upgradeSkillRpc } from "./upgradeSkill";

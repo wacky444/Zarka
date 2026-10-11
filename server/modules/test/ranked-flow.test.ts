@@ -305,3 +305,35 @@ test("ranked flow queues, starts offline, notifies, places, and settles ELO once
   storage.writeMatch(match, storedMatch.version);
   assert.equal(storage.getMatch(match.match_id)?.match.removed, 1);
 });
+
+test("ranked assignment respects max-current-matches preference", () => {
+  const harness = createHarness();
+  const storage = new StorageService(createNakamaWrapper(harness.nk));
+  const user = harness.users.get("human-a")!;
+  const metadata = user.metadata as { zarka: Record<string, unknown> };
+  user.metadata = { ...metadata, zarka: { ...metadata.zarka, maxCurrentMatches: 1 } };
+  storage.writeMatch({
+    match_id: "already-active",
+    runtime_match_id: "runtime-already-active",
+    players: ["human-a"],
+    playerCharacters: {},
+    playerList: {},
+    readyStates: {},
+    size: 2,
+    creator: "other-user",
+    started: true,
+    removed: 0
+  } as MatchRecord);
+  for (const userId of ["human-a", "human-b"]) {
+    recordRankedSlotPreference(harness.nk, userId, 1, NOW);
+    touchRankedPresence(harness.nk, userId, NOW);
+  }
+
+  processRankedQueue(harness.nk, harness.logger, NOW, CONTEXT);
+
+  assert.equal(harness.matchParams.length, 0);
+  const assignments = Array.from(harness.records.values()).filter(
+    (record) => record.collection === RANKED_ASSIGNMENT_COLLECTION
+  );
+  assert.equal((assignments[0].value as { state: string }).state, "failed");
+});

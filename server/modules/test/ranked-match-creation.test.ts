@@ -85,7 +85,7 @@ function createHarness(humanIds: string[]) {
       for (const request of requests) {
         const key = keyFor(request);
         const current = records.get(key);
-        if (request.version !== undefined && request.version !== current?.version) {
+        if (request.version !== undefined && request.version !== "*" && request.version !== current?.version) {
           throw new Error("version conflict");
         }
         records.set(key, {
@@ -176,6 +176,31 @@ test("normal match creation defaults to 16 and enforces 100-player maximum", () 
     )
   ) as { size: number };
   assert.equal(settingsResponse.size, MAX_NORMAL_MATCH_SIZE);
+});
+
+test("normal match membership limit counts creator waiting match and duplicate joins stay idempotent", () => {
+  const harness = createHarness(["creator", "joiner"]);
+  const creator = { userId: "creator" } as nkruntime.Context;
+  const created = JSON.parse(createMatchRpc(creator, harness.logger, harness.nakama, "{}")) as { match_id: string };
+  const joiner = { userId: "joiner" } as nkruntime.Context;
+  const first = JSON.parse(joinMatchRpc(joiner, harness.logger, harness.nakama, JSON.stringify({ match_id: created.match_id }))) as { ok: boolean; joined: boolean };
+  const second = JSON.parse(joinMatchRpc(joiner, harness.logger, harness.nakama, JSON.stringify({ match_id: created.match_id }))) as { ok: boolean; joined: boolean };
+  assert.equal(first.ok, true);
+  assert.equal(first.joined, true);
+  assert.equal(second.joined, false);
+
+  const creatorUser = harness.users.get("creator");
+  const joinerUser = harness.users.get("joiner");
+  assert.ok(creatorUser);
+  assert.ok(joinerUser);
+  const secondMatch = JSON.parse(createMatchRpc(creator, harness.logger, harness.nakama, "{}")) as { match_id: string };
+  creatorUser.metadata = { zarka: { tutorialCompleted: true, maxCurrentMatches: 1 } };
+  assert.throws(() => createMatchRpc(creator, harness.logger, harness.nakama, "{}"), /max_current_matches_reached/);
+  joinerUser.metadata = { zarka: { tutorialCompleted: true, maxCurrentMatches: 1 } };
+  assert.throws(
+    () => joinMatchRpc(joiner, harness.logger, harness.nakama, JSON.stringify({ match_id: secondMatch.match_id })),
+    /max_current_matches_reached/
+  );
 });
 
 test("normal start rejects insufficient walkable spawns until map is expanded", () => {

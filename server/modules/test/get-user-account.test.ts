@@ -62,7 +62,7 @@ test("get_user_account preserves a valid max-current-matches preference", () => 
 });
 
 test("get_user_account defaults invalid max-current-matches values to ten", () => {
-  for (const value of [0, -1, 1.5, "10", null, true]) {
+  for (const value of [0, -1, 1.5, 21, "10", null, true]) {
     const response = getAccount({ zarka: { maxCurrentMatches: value } });
     assert.equal(response.account?.maxCurrentMatches, 10);
   }

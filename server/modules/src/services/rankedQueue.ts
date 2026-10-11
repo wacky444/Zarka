@@ -27,6 +27,7 @@ import {
 } from "./rankedPresence";
 import { createNakamaWrapper } from "./nakamaWrapper";
 import { StorageService } from "./storageService";
+import { assertCanAddMembership, createMembershipStorage, withMatchMembershipLocks } from "./matchMembershipLimit";
 
 type RankedQueueEnrollment = {
   userId: string;
@@ -453,17 +454,32 @@ function tryCreateReservedAssignment(
   }
 
   try {
-    const match = createRankedMatch(
+    const match = withMatchMembershipLocks(
       nk,
+      currentAssignment.value.humanIds,
       logger,
-      {
-        assignmentId: currentAssignment.value.assignmentId,
-        humanIds: currentAssignment.value.humanIds,
-        botCount: currentAssignment.value.botCount,
-        queueMode: currentAssignment.value.queueMode
-      },
-      nowMs,
-      ctx
+      () => {
+        const membershipStorage = createMembershipStorage(nk);
+        for (const userId of currentAssignment.value.humanIds) {
+          try {
+            assertCanAddMembership(nk, membershipStorage, userId);
+          } catch {
+            throw new Error(`max_current_matches_reached:${userId}`);
+          }
+        }
+        return createRankedMatch(
+          nk,
+          logger,
+          {
+            assignmentId: currentAssignment.value.assignmentId,
+            humanIds: currentAssignment.value.humanIds,
+            botCount: currentAssignment.value.botCount,
+            queueMode: currentAssignment.value.queueMode
+          },
+          nowMs,
+          ctx
+        );
+      }
     );
     const latestAssignment = readAssignment(nk, currentAssignment.key);
     if (latestAssignment) {
@@ -508,6 +524,11 @@ function tryCreateReservedAssignment(
     );
     const latestAssignment = readAssignment(nk, currentAssignment.key);
     if (!latestAssignment) return false;
+    const matchLimitUserId = String((error as Error)?.message ?? "").match(/max_current_matches_reached:([^\s]+)/)?.[1];
+    if (matchLimitUserId) {
+      failCreatingAssignment(nk, latestAssignment, nowMs, matchLimitUserId);
+      return false;
+    }
     const attempts = latestAssignment.value.attempts + 1;
     if (attempts >= 3) {
       failCreatingAssignment(nk, latestAssignment, nowMs);

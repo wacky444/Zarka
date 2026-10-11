@@ -23,6 +23,7 @@ import {
   getRankedQueueStatusRpc,
   getUserAccountRpc,
   setRankedMatchSlotsRpc,
+  setMaxCurrentMatchesRpc,
   touchRankedPresenceRpc,
   updateSkinRpc,
   upgradeSkillRpc,
@@ -122,6 +123,7 @@ export function InitModule(
   }
   try {
     initializer.registerRpc("set_ranked_match_slots", setRankedMatchSlotsRpc);
+    initializer.registerRpc("set_max_current_matches", setMaxCurrentMatchesRpc);
   } catch (error) {
     logger.error(
       "Failed to register set_ranked_match_slots: %s",

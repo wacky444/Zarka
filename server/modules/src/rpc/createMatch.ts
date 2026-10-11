@@ -7,35 +7,16 @@ import { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { normalizeMatchName } from "../utils/normalize";
+import { assertCanAddMembership, createMembershipStorage, withMatchMembershipLocks } from "../services/matchMembershipLimit";
 import { clampNumber, validateTime } from "../utils/validation";
 import {
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
-  TUTORIAL_MATCH_METADATA_KEY,
   DEFAULT_NORMAL_MATCH_SIZE,
   MAX_NORMAL_MATCH_SIZE
 } from "@shared";
 
-function getNumberOfMatches(storage: StorageService, userId: string): number {
-  const allMatches = storage.listAllMatches();
-  let creatorMatchCount = 0;
-
-  for (const { match } of allMatches) {
-    if (match.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
-      continue;
-    }
-    if (
-      match.creator === userId &&
-      (match.removed === 0 || match.removed === undefined)
-    ) {
-      creatorMatchCount++;
-    }
-  }
-
-  return creatorMatchCount;
-}
-
-export function createMatchRpc(
+function createMatchRpcLocked(
   ctx: nkruntime.Context,
   logger: nkruntime.Logger,
   nk: nkruntime.Nakama,
@@ -100,15 +81,6 @@ export function createMatchRpc(
   const nkWrapper = createNakamaWrapper(nk);
   const storage = new StorageService(nkWrapper);
 
-  const creatorMatchCount = getNumberOfMatches(storage, ctx.userId);
-
-  if (creatorMatchCount >= 3) {
-    throw {
-      message: "Maximum of 3 matches per user reached",
-      code: 8
-    } as nkruntime.Error;
-  }
-
   const gameId = nk.uuidv4();
   const params: { [key: string]: string } = {
     size: String(size),
@@ -157,4 +129,18 @@ export function createMatchRpc(
   };
 
   return JSON.stringify(response);
+}
+
+export function createMatchRpc(
+  ctx: nkruntime.Context,
+  logger: nkruntime.Logger,
+  nk: nkruntime.Nakama,
+  payload: string
+): string {
+  const userId = ctx?.userId;
+  if (!userId) return createMatchRpcLocked(ctx, logger, nk, payload);
+  return withMatchMembershipLocks(nk, [userId], logger, () => {
+    assertCanAddMembership(nk, createMembershipStorage(nk), userId);
+    return createMatchRpcLocked(ctx, logger, nk, payload);
+  });
 }

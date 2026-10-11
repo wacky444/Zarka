@@ -329,6 +329,12 @@ export type SetRankedMatchSlotsPayload = {
   error?: string;
 };
 
+export type SetMaxCurrentMatchesPayload = {
+  ok?: boolean;
+  max_current_matches?: number;
+  error?: string;
+};
+
 export type TouchRankedPresencePayload = {
   ok?: boolean;
   error?: string;

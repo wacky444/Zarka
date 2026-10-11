@@ -1,7 +1,9 @@
 export const DEFAULT_MAX_CURRENT_MATCHES = 10;
+export const MIN_MAX_CURRENT_MATCHES = 1;
+export const MAX_MAX_CURRENT_MATCHES = 20;
 
 export function normalizeMaxCurrentMatches(value: unknown): number {
-  return typeof value === "number" && Number.isSafeInteger(value) && value > 0
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= MIN_MAX_CURRENT_MATCHES && value <= MAX_MAX_CURRENT_MATCHES
     ? value
     : DEFAULT_MAX_CURRENT_MATCHES;
 }
