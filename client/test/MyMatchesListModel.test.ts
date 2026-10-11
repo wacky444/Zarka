@@ -8,7 +8,9 @@ import {
   sortMyActiveMatches,
   sortMyFinishedMatches,
   toggleSectionCollapse,
-  createSelectMatchHandler
+  createSelectMatchHandler,
+  resolveMyMatchRoute,
+  dispatchMyMatchSelection
 } from "../src/scenes/MyMatchesListModel";
 import { getMatchCardPresentation } from "../src/ui/MatchCardModel";
 
@@ -19,6 +21,7 @@ function createMyMatch(
   return {
     match_id: "match-1",
     status,
+    isJoinable: status !== "finished",
     isRanked: false,
     size: 10,
     joinedPlayers: 4,

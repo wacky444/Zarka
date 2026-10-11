@@ -129,6 +129,7 @@ export function buildMatchCardSummary(
     runtime_match_id: match.runtime_match_id ?? match.match_id,
     name: typeof match.name === "string" ? match.name : undefined,
     status,
+    isJoinable: status !== "finished" && joinedPlayers < size,
     isRanked: Boolean(match.metadata?.[RANKED_MATCH_METADATA_KEY]),
     size,
     joinedPlayers,

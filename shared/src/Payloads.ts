@@ -169,6 +169,7 @@ export interface MatchCardSummary {
   runtime_match_id?: string;
   name?: string;
   status: MatchCardStatus;
+  isJoinable: boolean;
   isRanked: boolean;
   size: number;
   joinedPlayers: number;

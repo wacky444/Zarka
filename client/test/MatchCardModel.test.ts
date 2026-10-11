@@ -16,6 +16,7 @@ function createMatch(
   return {
     match_id: "match-1",
     status,
+    isJoinable: status !== "finished",
     isRanked: false,
     size: 18,
     joinedPlayers: 5,

@@ -14,6 +14,7 @@
     "test:chat": "node ./scripts/test-chat-service.mjs",
     "test:match-card": "node ./scripts/test-match-card.mjs",
     "test:my-matches": "node ./scripts/test-my-matches.mjs",
+    "test:public-matches": "node ./scripts/test-public-matches.mjs",
     "test:push": "node ./scripts/test-push-notifications.mjs"
   },
   "dependencies": {

@@ -415,9 +415,6 @@ export class MainScene extends Phaser.Scene {
       // Instantiate Matches List view (hidden by default)
       this.matchesListView = new MatchesListView(this);
       this.matchesListView.setTurnService(this.turnService);
-      this.matchesListView.setOnJoin(async (matchId: string) => {
-        await this.joinMatch(matchId);
-      });
       this.matchesListView.setOnBack(() => {
         this.showView("main");
       });
