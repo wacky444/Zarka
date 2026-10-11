@@ -84,3 +84,9 @@
 	- also in all matches view
 
 - in the replay(tested in an end game report replay), changing the turn to view, doesnt put the characters on the positions pre turn
+
+- Matches list title is in the middle
+	- remove the sceneand reuse my matches
+	- it doesnt have scrollview
+
+- my matches only scroll in gaps
