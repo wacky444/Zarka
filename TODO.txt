@@ -90,3 +90,7 @@
 	- it doesnt have scrollview
 
 - my matches only scroll in gaps
+
+- detonate requires a target location, but with extra power doesn't show a extra target locator
+
+- when a character is dead, show in the banner the team, also reveal the team in player list
