@@ -1,5 +1,6 @@
 import { Axial } from "./hexTile";
 import type { ItemId } from "./Item";
+import type { ManipulateOperationSelection } from "./RecipesLibrary";
 
 export enum ActionCategory {
   Primary = "Primary",
@@ -178,6 +179,8 @@ export interface ActionSubmission {
   notes?: string;
   targetItemIds?: string[];
   secondTargetItemIds?: string[];
+  craftedItemId?: ItemId;
+  manipulateOperations?: ManipulateOperationSelection[];
 }
 
 export enum ExtraExecutionEffect {

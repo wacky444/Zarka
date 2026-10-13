@@ -85,12 +85,8 @@
 
 - in the replay(tested in an end game report replay), changing the turn to view, doesnt put the characters on the positions pre turn
 
-- Matches list title is in the middle
-	- remove the sceneand reuse my matches
-	- it doesnt have scrollview
-
-- my matches only scroll in gaps
-
 - detonate requires a target location, but with extra power doesn't show a extra target locator
 
 - when a character is dead, show in the banner the team, also reveal the team in player list
+
+- no notifications in matches with only one human player, like tutorial

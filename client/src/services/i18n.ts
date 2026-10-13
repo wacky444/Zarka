@@ -737,6 +737,31 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Select action": "Seleccionar acción",
   "Choose action": "Elegir acción",
   "Choose Items": "Elegir objetos",
+  "Choose crafted item": "Elegir objeto fabricado",
+  "Choose item": "Elegir objeto",
+  "Choose operation": "Elegir operación",
+  "Choose operation 1": "Elegir operación 1",
+  "Choose operation 2": "Elegir operación 2",
+  "Choose operation 3": "Elegir operación 3",
+  "Choose operation 4": "Elegir operación 4",
+  "Choose Combine or Separate recipe": "Elige una receta para combinar o separar",
+  "Crafting uses no inventory ingredients": "La fabricación no consume ingredientes del inventario",
+  Requires: "Requiere",
+  Produces: "Produce",
+  crafted: "fabricó",
+  combined: "combinó",
+  separated: "separó",
+  returned: "devolvió",
+  "requires Workshop or Dexterity 4": "requiere un taller o Destreza 4",
+  "inventory is full": "el inventario está lleno",
+  "invalid product selection": "selección de producto no válida",
+  "invalid recipe selection": "selección de receta no válida",
+  "missing required items": "faltan objetos necesarios",
+  "selected item": "objeto seleccionado",
+  "Operation 1": "Operación 1",
+  "Operation 2": "Operación 2",
+  "Operation 3": "Operación 3",
+  "Operation 4": "Operación 4",
   "No available players": "No hay jugadores disponibles",
   "No target": "Sin objetivo",
   "No priority": "Sin prioridad",
@@ -746,6 +771,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "No secondary action": "Sin acción secundaria",
   "Crafting": "Fabricar",
   "Combine/Separate": "Combinar/Separar",
+  "Combine": "Combinar",
+  "Separate": "Separar",
   "Tap a player to target them": "Pulsa un jugador para seleccionarlo",
   "Tap an action to select it": "Pulsa una acción para seleccionarla",
   "Tap an item to prioritize it": "Pulsa un objeto para priorizarlo",
@@ -1124,8 +1151,41 @@ function readInitialLocale(): Locale {
   return "en";
 }
 
+function translateRecipeText(value: string): string | null {
+  const itemName = (name: string) => ENGLISH_GAME_NAMES[name] ?? name;
+  const components = (value: string) =>
+    value.split(", ").map((component) => {
+      const match = component.match(/^(.+) ×(\d+)$/);
+      return match ? `${itemName(match[1])} ×${match[2]}` : itemName(component);
+    }).join(", ");
+  const label = value.match(/^(Combinar|Separar): (.+)$/);
+  if (label) {
+    return `${label[1] === "Combinar" ? "Combine" : "Separate"}: ${itemName(label[2])}`;
+  }
+  const translatedLines = value.split("\n").map((line) => {
+    const match = line.match(/^(Requiere|Produce|Falta): (.*)$/);
+    if (!match) {
+      return null;
+    }
+    const prefix =
+      match[1] === "Requiere"
+        ? "Requires"
+        : match[1] === "Produce"
+          ? "Produces"
+          : "Missing";
+    return `${prefix}: ${components(match[2])}`;
+  });
+  return translatedLines.every((line) => line !== null)
+    ? translatedLines.join("\n")
+    : null;
+}
+
 function translateValue(value: string): string {
   if (locale === "en") {
+    const recipeText = translateRecipeText(value);
+    if (recipeText !== null) {
+      return recipeText;
+    }
     const numberedTeamName = value.match(/^Equipo (\d+)$/);
     if (numberedTeamName) {
       return `Team ${numberedTeamName[1]}`;

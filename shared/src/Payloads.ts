@@ -16,6 +16,8 @@ import type { Skin, UserAccount } from "./UserAccount";
 import type { MatchReport } from "./matchReport";
 import type { SkillId } from "./skills/Skill";
 import type { ShopId } from "./Shop";
+import type { ItemId } from "./Item";
+import type { ManipulateOperationSelection } from "./RecipesLibrary";
 
 export const OPCODE_SETTINGS_UPDATE = 100;
 export const OPCODE_MATCH_REMOVED = 101;
@@ -88,6 +90,8 @@ export type UpdateSecondaryActionPayload = {
   sellInstead?: boolean;
   singleTarget?: boolean;
   inspectAdditionalTarget?: boolean;
+  craftedItemId?: ItemId;
+  manipulateOperations?: ManipulateOperationSelection[];
   error?: string;
 };
 

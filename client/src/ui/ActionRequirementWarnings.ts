@@ -1,6 +1,7 @@
 import {
   ItemLibrary,
   LocalizationType,
+  getSkillRank,
   type ActionDefinition,
   type ActionId,
   type GameMap,
@@ -96,7 +97,14 @@ export function getMissingRequirement(
   map: GameMap | undefined
 ): string | null {
   const requiredLocations = ACTION_REQUIRED_LOCATIONS[definition.id];
-  if (requiredLocations && requiredLocations.length > 0) {
+  const hasCraftingSkill =
+    definition.id === "fabricate" &&
+    getSkillRank(character, "dexterity4") > 0;
+  if (
+    requiredLocations &&
+    requiredLocations.length > 0 &&
+    !hasCraftingSkill
+  ) {
     const currentTile = getCurrentCharacterTile(character, map);
     const currentLocType = currentTile?.localizationType;
     if (!currentLocType || !requiredLocations.includes(currentLocType)) {

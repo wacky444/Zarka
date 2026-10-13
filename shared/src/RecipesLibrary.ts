@@ -80,7 +80,30 @@ export const MANIPULATE_RECIPES = [
   }
 ] as const satisfies readonly ManipulateRecipe[];
 
+export type CraftableItemId = (typeof CRAFTABLE_ITEMS)[number];
 export type ManipulateRecipeId = (typeof MANIPULATE_RECIPES)[number]["id"];
+export type ManipulateMode = "combine" | "separate";
+
+export interface ManipulateOperationSelection {
+  readonly mode: ManipulateMode;
+  readonly recipeId: ManipulateRecipeId;
+}
+
+export function isCraftableItemId(value: unknown): value is CraftableItemId {
+  return (
+    typeof value === "string" &&
+    CRAFTABLE_ITEMS.includes(value as CraftableItemId)
+  );
+}
+
+export function isManipulateRecipeId(
+  value: unknown
+): value is ManipulateRecipeId {
+  return (
+    typeof value === "string" &&
+    MANIPULATE_RECIPES.some((recipe) => recipe.id === value)
+  );
+}
 
 export const SEPARATE_RECIPES = MANIPULATE_RECIPES.map(
   ({ id, inputs, outputs }) => ({ id, inputs: outputs, outputs: inputs })

@@ -9,6 +9,7 @@ import {
   type ActionSubmission,
   type Axial,
   type MatchRecord,
+  type ManipulateOperationSelection,
   type PlayerPlannedAction,
   type UpdateMainActionPayload,
   type UpdateSecondaryActionPayload,
@@ -365,6 +366,11 @@ export class ActionPlanSynchronizer {
       sellInstead: selection?.sellInstead === true,
       singleTarget: selection?.singleTarget === true,
       inspectAdditionalTarget: selection?.inspectAdditionalTarget === true,
+      craftedItemId: selection?.craftedItemId,
+      manipulateOperations: selection?.manipulateOperations?.map((operation) => ({
+        mode: operation.mode,
+        recipeId: operation.recipeId
+      }))
     };
     const character =
       this.context.getCurrentMatch()?.playerCharacters?.[currentUserId] ?? null;
@@ -397,7 +403,12 @@ export class ActionPlanSynchronizer {
       normalizedSelection.sellInstead === (previousPlan?.sellInstead ?? false) &&
       normalizedSelection.singleTarget === (previousPlan?.singleTarget ?? false) &&
       normalizedSelection.inspectAdditionalTarget ===
-        (previousPlan?.inspectAdditionalTarget ?? false)
+        (previousPlan?.inspectAdditionalTarget ?? false) &&
+      normalizedSelection.craftedItemId === previousPlan?.craftedItemId &&
+      this.isSameManipulateOperations(
+        normalizedSelection.manipulateOperations,
+        previousPlan?.manipulateOperations
+      )
     ) {
       return;
     }
@@ -419,6 +430,8 @@ export class ActionPlanSynchronizer {
             normalizedSelection.sellInstead,
             normalizedSelection.singleTarget,
             normalizedSelection.inspectAdditionalTarget,
+            normalizedSelection.craftedItemId,
+            normalizedSelection.manipulateOperations
           )
         : null;
       const response = await turnService.updateSecondaryAction(
@@ -499,6 +512,18 @@ export class ActionPlanSynchronizer {
         } else {
           delete nextPlan.inspectAdditionalTarget;
         }
+        if (payload.craftedItemId) {
+          nextPlan.craftedItemId = payload.craftedItemId;
+        } else {
+          delete nextPlan.craftedItemId;
+        }
+        if (payload.manipulateOperations) {
+          nextPlan.manipulateOperations = payload.manipulateOperations.map(
+            (operation) => ({ ...operation })
+          );
+        } else {
+          delete nextPlan.manipulateOperations;
+        }
         target.actionPlan.secondary = nextPlan;
       }
       if (
@@ -544,6 +569,11 @@ export class ActionPlanSynchronizer {
       prioritizeFoodDrink: selection?.prioritizeFoodDrink === true,
       sellInstead: selection?.sellInstead === true,
       singleTarget: selection?.singleTarget === true,
+      craftedItemId: selection?.craftedItemId,
+      manipulateOperations: selection?.manipulateOperations?.map((operation) => ({
+        mode: operation.mode,
+        recipeId: operation.recipeId
+      }))
     };
     const character =
       this.context.getCurrentMatch()?.playerCharacters?.[currentUserId] ?? null;
@@ -567,7 +597,12 @@ export class ActionPlanSynchronizer {
       normalizedSelection.prioritizeFoodDrink ===
         (previousPlan?.prioritizeFoodDrink ?? false) &&
       normalizedSelection.sellInstead === (previousPlan?.sellInstead ?? false) &&
-      normalizedSelection.singleTarget === (previousPlan?.singleTarget ?? false)
+      normalizedSelection.singleTarget === (previousPlan?.singleTarget ?? false) &&
+      normalizedSelection.craftedItemId === previousPlan?.craftedItemId &&
+      this.isSameManipulateOperations(
+        normalizedSelection.manipulateOperations,
+        previousPlan?.manipulateOperations
+      )
     ) {
       return;
     }
@@ -588,6 +623,9 @@ export class ActionPlanSynchronizer {
             normalizedSelection.prioritizeFoodDrink,
             normalizedSelection.sellInstead,
             normalizedSelection.singleTarget,
+            false,
+            normalizedSelection.craftedItemId,
+            normalizedSelection.manipulateOperations
           )
         : null;
       const response = await turnService.updateSecondaryAction(
@@ -661,6 +699,18 @@ export class ActionPlanSynchronizer {
           nextPlan.singleTarget = true;
         } else {
           delete nextPlan.singleTarget;
+        }
+        if (payload.craftedItemId) {
+          nextPlan.craftedItemId = payload.craftedItemId;
+        } else {
+          delete nextPlan.craftedItemId;
+        }
+        if (payload.manipulateOperations) {
+          nextPlan.manipulateOperations = payload.manipulateOperations.map(
+            (operation) => ({ ...operation })
+          );
+        } else {
+          delete nextPlan.manipulateOperations;
         }
         target.actionPlan.extraSecondary = nextPlan;
       }
@@ -740,6 +790,8 @@ export class ActionPlanSynchronizer {
     sellInstead = false,
     singleTarget?: boolean,
     inspectAdditionalTarget = false,
+    craftedItemId?: ActionSubmission["craftedItemId"],
+    manipulateOperations?: ActionSubmission["manipulateOperations"]
   ): ActionSubmission {
     const typedId = actionId as ActionId;
     const definition = ActionLibrary[typedId] ?? null;
@@ -774,6 +826,14 @@ export class ActionPlanSynchronizer {
     }
     if (inspectAdditionalTarget) {
       submission.inspectAdditionalTarget = true;
+    }
+    if (craftedItemId) {
+      submission.craftedItemId = craftedItemId;
+    }
+    if (manipulateOperations) {
+      submission.manipulateOperations = manipulateOperations.map(
+        (operation) => ({ ...operation })
+      );
     }
     return submission;
   }
@@ -843,6 +903,23 @@ export class ActionPlanSynchronizer {
       normalized.push(trimmed);
     }
     return normalized;
+  }
+
+  private isSameManipulateOperations(
+    first: readonly ManipulateOperationSelection[] | undefined,
+    second: readonly ManipulateOperationSelection[] | undefined
+  ): boolean {
+    if (!first || !second) {
+      return !first && !second;
+    }
+    return (
+      first.length === second.length &&
+      first.every(
+        (operation, index) =>
+          operation.mode === second[index]?.mode &&
+          operation.recipeId === second[index]?.recipeId
+      )
+    );
   }
 
   private isSameAxial(a: Axial | null, b: Axial | null): boolean {

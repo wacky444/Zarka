@@ -11,6 +11,7 @@ import {
   type Axial,
   type HexTileSnapshot,
   type ItemId,
+  type ManipulateOperationSelection,
   type MatchRecord,
   type PlayerCharacter,
   type TutorialStepId,
@@ -18,6 +19,8 @@ import {
   getSkillEffectTotal
 } from "@shared";
 import { GridSelect, type GridSelectItem } from "../GridSelect";
+import { CraftingSelector } from "../CraftingSelector";
+import { ManipulateSelector } from "../ManipulateSelector";
 import { LocationSelector } from "../LocationSelector";
 import { ExtraExecutionSelector } from "../ExtraExecutionSelector";
 import { THEME } from "../ColorPalette";
@@ -27,6 +30,7 @@ import {
   type ItemPriorityOption
 } from "../ItemPrioritySelector";
 import { getTutorialUiPolicy } from "../../tutorial/TutorialUiPolicy";
+import { getMissingRequirement } from "../ActionRequirementWarnings";
 import { t } from "../../services/i18n";
 import {
   buildMainActionItems,
@@ -66,6 +70,8 @@ export type SecondaryActionSelection = {
   singleTarget?: boolean;
   inspectAdditionalTarget?: boolean;
   sellInstead?: boolean;
+  craftedItemId?: ItemId;
+  manipulateOperations?: ManipulateOperationSelection[];
 };
 
 export interface MainActionPlanSnapshot {
@@ -103,6 +109,8 @@ export interface SecondaryActionPlanSnapshot {
   supportsItems: boolean;
   supportsExtra: boolean;
   hasAdditionalTarget: boolean;
+  craftedItemId?: ItemId;
+  manipulateOperations?: ManipulateOperationSelection[];
 }
 
 export function buildMainActionSelection(
@@ -173,7 +181,11 @@ export function buildSecondaryActionSelection(
             ? [...state.targetItemIds]
             : undefined
         }),
-    extraExecutions: state.supportsExtra ? state.extraExecutions : undefined
+    extraExecutions: state.supportsExtra ? state.extraExecutions : undefined,
+    craftedItemId:
+      state.actionId === "fabricate" ? state.craftedItemId : undefined,
+    manipulateOperations:
+      state.actionId === "manipulate" ? state.manipulateOperations : undefined
   };
 }
 
@@ -212,7 +224,11 @@ export function buildExtraSecondaryActionSelection(
             : undefined
         }
       : {}),
-    extraExecutions: state.supportsExtra ? state.extraExecutions : undefined
+    extraExecutions: state.supportsExtra ? state.extraExecutions : undefined,
+    craftedItemId:
+      state.actionId === "fabricate" ? state.craftedItemId : undefined,
+    manipulateOperations:
+      state.actionId === "manipulate" ? state.manipulateOperations : undefined
   };
 }
 
@@ -316,6 +332,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   private readonly secondaryActionDropdown: GridSelect;
   private secondaryActionDropdownWidth: number;
   private readonly secondaryExtraExecutionSelector: ExtraExecutionSelector;
+  private readonly secondaryCraftingSelector: CraftingSelector;
+  private readonly secondaryManipulateSelector: ManipulateSelector;
   private readonly secondaryLocationSelector: LocationSelector;
   private readonly secondaryPlayerSelector: PlayerSelector;
   private readonly secondaryInspectAdditionalTargetToggle: Phaser.GameObjects.Text;
@@ -330,6 +348,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   private readonly extraSecondaryActionDropdown: GridSelect;
   private extraSecondaryActionDropdownWidth: number;
   private readonly extraSecondaryExtraExecutionSelector: ExtraExecutionSelector;
+  private readonly extraSecondaryCraftingSelector: CraftingSelector;
+  private readonly extraSecondaryManipulateSelector: ManipulateSelector;
   private readonly extraSecondaryLocationSelector: LocationSelector;
   private readonly extraSecondaryPlayerSelector: PlayerSelector;
   private readonly extraSecondaryItemSelector: ItemPrioritySelector;
@@ -363,6 +383,10 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   private extraSecondaryPrioritizeFoodDrink = false;
   private extraSecondaryChemicalSingleTarget = false;
   private extraSecondarySellInstead = false;
+  private secondarySelectionPromptPrevious: string | null = null;
+  private extraSecondarySelectionPromptPrevious: string | null = null;
+  private secondarySelectionPromptPending = false;
+  private extraSecondarySelectionPromptPending = false;
   private lastMainActionItem: GridSelectItem | null = null;
   private lastSecondaryActionItem: GridSelectItem | null = null;
   private lastExtraSecondaryActionItem: GridSelectItem | null = null;
@@ -628,6 +652,26 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.secondaryExtraExecutionSelector.on("change", this.handleSecondaryExtraExecutionChange);
     this.scrollContent.add(this.secondaryExtraExecutionSelector);
 
+    this.secondaryCraftingSelector = new CraftingSelector(
+      scene,
+      this.secondaryActionDropdownWidth
+    );
+    this.secondaryCraftingSelector.setVisible(false);
+    this.secondaryCraftingSelector.on("product-selected", this.handleSecondaryCraftedItemSelection);
+    this.secondaryCraftingSelector.on("modal-open", this.handleModalOpen);
+    this.secondaryCraftingSelector.on("modal-close", this.handleSecondarySelectorModalClose);
+    this.scrollContent.add(this.secondaryCraftingSelector);
+
+    this.secondaryManipulateSelector = new ManipulateSelector(
+      scene,
+      this.secondaryActionDropdownWidth
+    );
+    this.secondaryManipulateSelector.setVisible(false);
+    this.secondaryManipulateSelector.on("change", this.handleSecondaryManipulateSelection);
+    this.secondaryManipulateSelector.on("modal-open", this.handleModalOpen);
+    this.secondaryManipulateSelector.on("modal-close", this.handleSecondarySelectorModalClose);
+    this.scrollContent.add(this.secondaryManipulateSelector);
+
     this.secondaryLocationSelector = new LocationSelector(
       scene,
       0,
@@ -776,6 +820,26 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.extraSecondaryExtraExecutionSelector.on("change", this.handleExtraSecondaryExtraExecutionChange);
     this.scrollContent.add(this.extraSecondaryExtraExecutionSelector);
 
+    this.extraSecondaryCraftingSelector = new CraftingSelector(
+      scene,
+      this.extraSecondaryActionDropdownWidth
+    );
+    this.extraSecondaryCraftingSelector.setVisible(false);
+    this.extraSecondaryCraftingSelector.on("product-selected", this.handleExtraSecondaryCraftedItemSelection);
+    this.extraSecondaryCraftingSelector.on("modal-open", this.handleModalOpen);
+    this.extraSecondaryCraftingSelector.on("modal-close", this.handleExtraSecondarySelectorModalClose);
+    this.scrollContent.add(this.extraSecondaryCraftingSelector);
+
+    this.extraSecondaryManipulateSelector = new ManipulateSelector(
+      scene,
+      this.extraSecondaryActionDropdownWidth
+    );
+    this.extraSecondaryManipulateSelector.setVisible(false);
+    this.extraSecondaryManipulateSelector.on("change", this.handleExtraSecondaryManipulateSelection);
+    this.extraSecondaryManipulateSelector.on("modal-open", this.handleModalOpen);
+    this.extraSecondaryManipulateSelector.on("modal-close", this.handleExtraSecondarySelectorModalClose);
+    this.scrollContent.add(this.extraSecondaryManipulateSelector);
+
     this.extraSecondaryLocationSelector = new LocationSelector(
       scene,
       0,
@@ -866,11 +930,15 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.parent.bringToTop(this.itemSelector);
     this.parent.bringToTop(this.secondStealItemSelector);
     this.parent.bringToTop(this.secondaryActionDropdown);
+    this.parent.bringToTop(this.secondaryCraftingSelector);
+    this.parent.bringToTop(this.secondaryManipulateSelector);
     this.parent.bringToTop(this.secondaryLocationSelector);
     this.parent.bringToTop(this.secondaryPlayerSelector);
     this.parent.bringToTop(this.secondaryInspectAdditionalTargetToggle);
     this.parent.bringToTop(this.secondaryInspectSecondPlayerSelector);
     this.parent.bringToTop(this.extraSecondaryActionDropdown);
+    this.parent.bringToTop(this.extraSecondaryCraftingSelector);
+    this.parent.bringToTop(this.extraSecondaryManipulateSelector);
     this.parent.bringToTop(this.extraSecondaryLocationSelector);
     this.parent.bringToTop(this.extraSecondaryPlayerSelector);
   }
@@ -969,6 +1037,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.itemOptions = itemOptions;
     this.stealItemOptions = stealItemOptions;
     this.inventoryItemOptions = inventoryItemOptions;
+    const projectedInventory = this.getProjectedInventoryForManipulate();
+    this.secondaryManipulateSelector.setInventory(projectedInventory);
+    this.extraSecondaryManipulateSelector.setInventory(projectedInventory);
     this.refreshItemSelectorState();
     this.refreshSecondStealItemSelectorState();
     this.refreshSecondaryItemSelectorState();
@@ -994,6 +1065,22 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       this.applyMainActions([], null, null);
       this.applySecondaryActions([], null, null);
       this.applyExtraSecondaryActions([], null, null);
+      this.refreshActionSpecificSelectors(
+        null,
+        undefined,
+        undefined,
+        0,
+        this.secondaryCraftingSelector,
+        this.secondaryManipulateSelector
+      );
+      this.refreshActionSpecificSelectors(
+        null,
+        undefined,
+        undefined,
+        0,
+        this.extraSecondaryCraftingSelector,
+        this.extraSecondaryManipulateSelector
+      );
       this.updateScrollLayout();
       return;
     }
@@ -1077,6 +1164,14 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       secondaryExtraExecutions,
       hasExtraSecondary ? extraSecondaryId : null
     );
+    this.refreshActionSpecificSelectors(
+      secondaryId,
+      character.actionPlan?.secondary?.craftedItemId,
+      character.actionPlan?.secondary?.manipulateOperations,
+      secondaryExtraExecutions,
+      this.secondaryCraftingSelector,
+      this.secondaryManipulateSelector
+    );
 
     const secondaryTargetLocation = character.actionPlan?.secondary?.targetLocationId ?? null;
     const normalizedSecondaryTargetLocation = normalizeAxial(secondaryTargetLocation);
@@ -1142,6 +1237,14 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       character,
       extraSecondaryExtraExecutions,
       secondaryId
+    );
+    this.refreshActionSpecificSelectors(
+      extraSecondaryId,
+      character.actionPlan?.extraSecondary?.craftedItemId,
+      character.actionPlan?.extraSecondary?.manipulateOperations,
+      extraSecondaryExtraExecutions,
+      this.extraSecondaryCraftingSelector,
+      this.extraSecondaryManipulateSelector
     );
 
     const extraSecondaryTargetLocation = character.actionPlan?.extraSecondary?.targetLocationId ?? null;
@@ -1238,6 +1341,10 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.mainActionDropdown.setEnabled(false);
     this.secondaryActionDropdown.setEnabled(false);
     this.extraSecondaryActionDropdown.setEnabled(false);
+    this.secondaryCraftingSelector.setEnabled(false);
+    this.secondaryManipulateSelector.setSelectorEnabled(false);
+    this.extraSecondaryCraftingSelector.setEnabled(false);
+    this.extraSecondaryManipulateSelector.setSelectorEnabled(false);
     this.extraExecutionSelector.setEnabled(false);
     this.secondaryExtraExecutionSelector.setEnabled(false);
     this.extraSecondaryExtraExecutionSelector.setEnabled(false);
@@ -1267,6 +1374,10 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.secondaryInspectSecondPlayerSelector.hideDropdown();
     this.secondaryItemSelector.hideDropdown();
     this.extraSecondaryActionDropdown.hideModal();
+    this.secondaryCraftingSelector.hideModal();
+    this.secondaryManipulateSelector.closeModals();
+    this.extraSecondaryCraftingSelector.hideModal();
+    this.extraSecondaryManipulateSelector.closeModals();
     this.extraSecondaryPlayerSelector.hideDropdown();
     this.extraSecondaryItemSelector.hideDropdown();
   }
@@ -1398,7 +1509,12 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
         supportsPlayer: this.selectedSecondaryActionSupportsSingleTarget(),
         supportsItems: this.selectedSecondaryActionSupportsItemPriority(),
         supportsExtra: this.selectedSecondaryActionSupportsExtraExecution(),
-        hasAdditionalTarget: this.secondaryInspectAdditionalTarget
+        hasAdditionalTarget: this.secondaryInspectAdditionalTarget,
+        craftedItemId: this.secondaryCraftingSelector.getCraftedItemId() ?? undefined,
+        manipulateOperations:
+          this.secondaryActionSelection === "manipulate"
+            ? this.secondaryManipulateSelector.getOperations() ?? undefined
+            : undefined
       },
       { includeSellInstead: false }
     );
@@ -1420,7 +1536,13 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
         supportsPlayer: this.selectedExtraSecondaryActionSupportsSingleTarget(),
         supportsItems: this.selectedExtraSecondaryActionSupportsItemPriority(),
         supportsExtra: this.selectedExtraSecondaryActionSupportsExtraExecution(),
-        hasAdditionalTarget: false
+        hasAdditionalTarget: false,
+        craftedItemId:
+          this.extraSecondaryCraftingSelector.getCraftedItemId() ?? undefined,
+        manipulateOperations:
+          this.extraSecondaryActionSelection === "manipulate"
+            ? this.extraSecondaryManipulateSelector.getOperations() ?? undefined
+            : undefined
       },
       { includeToggles: false, includeTargetLists: false }
     );
@@ -1597,6 +1719,18 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.extraSecondaryActionDropdown.off("change", this.handleExtraSecondaryActionSelection);
     this.extraSecondaryActionDropdown.off("modal-open", this.handleModalOpen);
     this.extraSecondaryActionDropdown.off("modal-close", this.handleModalClose);
+    this.secondaryCraftingSelector.off("product-selected", this.handleSecondaryCraftedItemSelection);
+    this.secondaryCraftingSelector.off("modal-open", this.handleModalOpen);
+    this.secondaryCraftingSelector.off("modal-close", this.handleSecondarySelectorModalClose);
+    this.secondaryManipulateSelector.off("change", this.handleSecondaryManipulateSelection);
+    this.secondaryManipulateSelector.off("modal-open", this.handleModalOpen);
+    this.secondaryManipulateSelector.off("modal-close", this.handleSecondarySelectorModalClose);
+    this.extraSecondaryCraftingSelector.off("product-selected", this.handleExtraSecondaryCraftedItemSelection);
+    this.extraSecondaryCraftingSelector.off("modal-open", this.handleModalOpen);
+    this.extraSecondaryCraftingSelector.off("modal-close", this.handleExtraSecondarySelectorModalClose);
+    this.extraSecondaryManipulateSelector.off("change", this.handleExtraSecondaryManipulateSelection);
+    this.extraSecondaryManipulateSelector.off("modal-open", this.handleModalOpen);
+    this.extraSecondaryManipulateSelector.off("modal-close", this.handleExtraSecondarySelectorModalClose);
     this.playerSelector.off("modal-open", this.handleModalOpen);
     this.playerSelector.off("modal-close", this.handleModalClose);
     this.scareSecondPlayerSelector.off("modal-open", this.handleModalOpen);
@@ -1622,6 +1756,10 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.extraSecondarySearchPriorityToggle.off(Phaser.Input.Events.POINTER_UP, this.handleExtraSecondarySearchPriorityToggle);
     this.extraSecondaryDropSellToggle.off(Phaser.Input.Events.POINTER_UP, this.handleExtraSecondaryDropSellToggle);
     this.extraSecondaryChemicalTargetToggle.off(Phaser.Input.Events.POINTER_UP, this.handleExtraSecondaryChemicalTargetToggle);
+    this.secondaryCraftingSelector.destroy();
+    this.secondaryManipulateSelector.destroy();
+    this.extraSecondaryCraftingSelector.destroy();
+    this.extraSecondaryManipulateSelector.destroy();
     this.scrollMask?.destroy();
     this.scrollMaskShape?.destroy();
     this.scrollPanel?.destroy();
@@ -1648,15 +1786,27 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
 
   private readonly handleSecondaryExtraExecutionChange = (reps: number) => {
     this.secondaryExtraExecutions = reps;
+    this.secondaryManipulateSelector.setOperationCount(reps + 1);
     this.refreshSecondaryInspectAdditionalTargetState();
     this.emit("ready-refresh-request");
-    this.emitSecondaryActionChange();
+    if (
+      this.secondaryActionSelection !== "manipulate" ||
+      this.secondaryManipulateSelector.getOperations()
+    ) {
+      this.emitSecondaryActionChange();
+    }
   };
 
   private readonly handleExtraSecondaryExtraExecutionChange = (reps: number) => {
     this.extraSecondaryExtraExecutions = reps;
+    this.extraSecondaryManipulateSelector.setOperationCount(reps + 1);
     this.emit("ready-refresh-request");
-    this.emitExtraSecondaryActionChange();
+    if (
+      this.extraSecondaryActionSelection !== "manipulate" ||
+      this.extraSecondaryManipulateSelector.getOperations()
+    ) {
+      this.emitExtraSecondaryActionChange();
+    }
   };
 
   private readonly handleMainActionSelection = (actionId: string | null) => {
@@ -1928,14 +2078,23 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   }
 
   private readonly handleSecondaryActionSelection = (actionId: string | null) => {
+    const previousActionId = this.secondaryActionSelection;
     this.secondaryActionSelection = actionId ?? null;
     this.lastSecondaryActionItem = this.secondaryActionDropdown.getSelectedItem() ?? null;
     this.secondaryPrioritizeFoodDrink = false;
     this.secondaryChemicalSingleTarget = false;
     this.secondarySellInstead = false;
+    this.secondarySelectionPromptPending = false;
     this.updateSearchPriorityToggleText(this.secondarySearchPriorityToggle, false);
     this.updateDropSellToggleText(this.secondaryDropSellToggle, false);
     this.updateChemicalTargetToggleText(this.secondaryChemicalTargetToggle, false);
+    if (previousActionId !== this.secondaryActionSelection) {
+      this.secondaryExtraExecutions = 0;
+      this.secondaryExtraExecutionSelector.setValue(0);
+      this.secondaryCraftingSelector.setValue(null, false);
+      this.secondaryManipulateSelector.setOperations([]);
+      this.secondaryManipulateSelector.setOperationCount(1);
+    }
     if (!this.secondaryActionSelection) {
       this.setSecondaryActionTarget(null, false);
       this.setSecondaryActionTargetPlayer(null, false);
@@ -1951,20 +2110,46 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.refreshSecondarySearchPriorityState();
     this.refreshSecondaryDropSellState();
     this.refreshSecondaryChemicalTargetState();
+    this.refreshActionSpecificSelectors(
+      this.secondaryActionSelection,
+      undefined,
+      undefined,
+      this.secondaryExtraExecutions,
+      this.secondaryCraftingSelector,
+      this.secondaryManipulateSelector
+    );
     this.refreshSecondaryDropdownItems();
     this.emit("ready-refresh-request");
-    this.emitSecondaryActionChange();
+    this.updateScrollLayout();
+    if (this.secondaryActionSelection === "fabricate") {
+      this.secondarySelectionPromptPending = true;
+      this.secondaryCraftingSelector.showModal();
+    } else if (this.secondaryActionSelection === "manipulate") {
+      this.secondarySelectionPromptPending = true;
+      this.secondaryManipulateSelector.openFirstEmptyOperation();
+    } else {
+      this.emitSecondaryActionChange();
+    }
   };
 
   private readonly handleExtraSecondaryActionSelection = (actionId: string | null) => {
+    const previousActionId = this.extraSecondaryActionSelection;
     this.extraSecondaryActionSelection = actionId ?? null;
     this.lastExtraSecondaryActionItem = this.extraSecondaryActionDropdown.getSelectedItem() ?? null;
     this.extraSecondaryPrioritizeFoodDrink = false;
     this.extraSecondaryChemicalSingleTarget = false;
     this.extraSecondarySellInstead = false;
+    this.extraSecondarySelectionPromptPending = false;
     this.updateSearchPriorityToggleText(this.extraSecondarySearchPriorityToggle, false);
     this.updateDropSellToggleText(this.extraSecondaryDropSellToggle, false);
     this.updateChemicalTargetToggleText(this.extraSecondaryChemicalTargetToggle, false);
+    if (previousActionId !== this.extraSecondaryActionSelection) {
+      this.extraSecondaryExtraExecutions = 0;
+      this.extraSecondaryExtraExecutionSelector.setValue(0);
+      this.extraSecondaryCraftingSelector.setValue(null, false);
+      this.extraSecondaryManipulateSelector.setOperations([]);
+      this.extraSecondaryManipulateSelector.setOperationCount(1);
+    }
     if (!this.extraSecondaryActionSelection) {
       this.setExtraSecondaryActionTarget(null, false);
       this.setExtraSecondaryActionTargetPlayer(null, false);
@@ -1978,9 +2163,98 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.refreshExtraSecondarySearchPriorityState();
     this.refreshExtraSecondaryDropSellState();
     this.refreshExtraSecondaryChemicalTargetState();
+    this.refreshActionSpecificSelectors(
+      this.extraSecondaryActionSelection,
+      undefined,
+      undefined,
+      this.extraSecondaryExtraExecutions,
+      this.extraSecondaryCraftingSelector,
+      this.extraSecondaryManipulateSelector
+    );
     this.refreshSecondaryDropdownItems();
     this.emit("ready-refresh-request");
+    this.updateScrollLayout();
+    if (this.extraSecondaryActionSelection === "fabricate") {
+      this.extraSecondarySelectionPromptPending = true;
+      this.extraSecondaryCraftingSelector.showModal();
+    } else if (this.extraSecondaryActionSelection === "manipulate") {
+      this.extraSecondarySelectionPromptPending = true;
+      this.extraSecondaryManipulateSelector.openFirstEmptyOperation();
+    } else {
+      this.emitExtraSecondaryActionChange();
+    }
+  };
+
+  private readonly handleSecondaryCraftedItemSelection = (
+    itemId: ItemId
+  ) => {
+    if (this.secondaryActionSelection !== "fabricate" || !itemId) {
+      return;
+    }
+    this.secondarySelectionPromptPending = false;
+    this.emitSecondaryActionChange();
+  };
+
+  private readonly handleExtraSecondaryCraftedItemSelection = (
+    itemId: ItemId
+  ) => {
+    if (this.extraSecondaryActionSelection !== "fabricate" || !itemId) {
+      return;
+    }
+    this.extraSecondarySelectionPromptPending = false;
     this.emitExtraSecondaryActionChange();
+  };
+
+  private readonly handleSecondaryManipulateSelection = (
+    operations: ManipulateOperationSelection[] | null
+  ) => {
+    if (this.secondaryActionSelection !== "manipulate" || !operations) {
+      return;
+    }
+    this.secondaryExtraExecutions = operations.length - 1;
+    this.secondaryExtraExecutionSelector.setValue(this.secondaryExtraExecutions);
+    this.secondarySelectionPromptPending = false;
+    this.emit("ready-refresh-request");
+    this.emitSecondaryActionChange();
+  };
+
+  private readonly handleExtraSecondaryManipulateSelection = (
+    operations: ManipulateOperationSelection[] | null
+  ) => {
+    if (this.extraSecondaryActionSelection !== "manipulate" || !operations) {
+      return;
+    }
+    this.extraSecondaryExtraExecutions = operations.length - 1;
+    this.extraSecondaryExtraExecutionSelector.setValue(
+      this.extraSecondaryExtraExecutions
+    );
+    this.extraSecondarySelectionPromptPending = false;
+    this.emit("ready-refresh-request");
+    this.emitExtraSecondaryActionChange();
+  };
+
+  private readonly handleSecondarySelectorModalClose = () => {
+    this.handleModalClose();
+    if (
+      this.secondarySelectionPromptPending &&
+      (this.secondaryActionSelection === "fabricate"
+        ? this.secondaryCraftingSelector.getCraftedItemId() !== null
+        : this.secondaryManipulateSelector.getOperations() !== null)
+    ) {
+      this.secondarySelectionPromptPending = false;
+    }
+  };
+
+  private readonly handleExtraSecondarySelectorModalClose = () => {
+    this.handleModalClose();
+    if (
+      this.extraSecondarySelectionPromptPending &&
+      (this.extraSecondaryActionSelection === "fabricate"
+        ? this.extraSecondaryCraftingSelector.getCraftedItemId() !== null
+        : this.extraSecondaryManipulateSelector.getOperations() !== null)
+    ) {
+      this.extraSecondarySelectionPromptPending = false;
+    }
   };
 
   private readonly handleSecondaryInspectAdditionalTargetToggle = () => {
@@ -2075,6 +2349,105 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       allowedMainActionIds: this.tutorialAllowedMainActionIds,
       allowedSecondaryActionIds: this.tutorialAllowedSecondaryActionIds
     };
+  }
+
+  private refreshActionSpecificSelectors(
+    actionId: string | null,
+    craftedItemId: ItemId | undefined,
+    operations: readonly ManipulateOperationSelection[] | undefined,
+    extraExecutions: number,
+    craftingSelector: CraftingSelector,
+    manipulateSelector: ManipulateSelector
+  ): void {
+    const craftingSelected = actionId === "fabricate";
+    craftingSelector.setRequirementWarning(
+      getMissingRequirement(
+        ActionLibrary.fabricate,
+        this.currentCharacter,
+        this.currentMatch?.map
+      )
+    );
+    craftingSelector.setValue(
+      craftingSelected ? craftedItemId ?? null : null,
+      false
+    );
+    craftingSelector.setVisible(craftingSelected);
+    craftingSelector.setActive(craftingSelected);
+    craftingSelector.setEnabled(
+      !this.tutorialActive || this.tutorialActionEditingEnabled
+    );
+
+    const manipulateSelected = actionId === "manipulate";
+    manipulateSelector.setInventory(this.getProjectedInventoryForManipulate());
+    manipulateSelector.setOperations(manipulateSelected ? operations ?? [] : []);
+    manipulateSelector.setOperationCount(
+      manipulateSelected ? 1 + Math.max(0, Math.floor(extraExecutions)) : 1
+    );
+    manipulateSelector.setVisible(manipulateSelected);
+    manipulateSelector.setActive(manipulateSelected);
+    manipulateSelector.setSelectorEnabled(
+      !this.tutorialActive || this.tutorialActionEditingEnabled
+    );
+  }
+
+  private getProjectedInventoryForManipulate(): Partial<Record<ItemId, number>> {
+    const inventory: Partial<Record<ItemId, number>> = {};
+    for (const stack of this.currentCharacter?.inventory?.carriedItems ?? []) {
+      if (
+        !stack ||
+        !ItemLibrary[stack.itemId as ItemId] ||
+        !Number.isFinite(stack.quantity) ||
+        stack.quantity <= 0
+      ) {
+        continue;
+      }
+      const itemId = stack.itemId as ItemId;
+      inventory[itemId] =
+        (inventory[itemId] ?? 0) + Math.max(0, Math.floor(stack.quantity));
+    }
+
+    const pickupPlan = this.currentCharacter?.actionPlan?.main;
+    if (pickupPlan?.actionId !== "pick_up") {
+      return inventory;
+    }
+    const itemTypes = new Map(
+      (this.currentMatch?.items ?? []).map((item) => [item.item_id, item.item_type])
+    );
+    const visibleIds = this.itemOptions
+      .map((item) => item.id)
+      .filter((id) => itemTypes.has(id));
+    const priorities = (pickupPlan.targetItemIds ?? []).filter(
+      (id) => id !== PICKUP_NONE_PRIORITY_ID && visibleIds.includes(id)
+    );
+    const noneIndex = (pickupPlan.targetItemIds ?? []).indexOf(
+      PICKUP_NONE_PRIORITY_ID
+    );
+    const limit =
+      noneIndex < 0
+        ? 3 + getSkillEffectTotal(this.currentCharacter, "pickup_scope_increase") +
+          Math.max(0, Math.floor(pickupPlan.extraExecutions ?? 0))
+        : Math.min(
+            3 + getSkillEffectTotal(this.currentCharacter, "pickup_scope_increase") +
+              Math.max(0, Math.floor(pickupPlan.extraExecutions ?? 0)),
+            Math.max(1, noneIndex)
+          );
+    const prioritized = new Set(priorities);
+    const queue = [
+      ...priorities,
+      ...visibleIds.filter((id) => !prioritized.has(id))
+    ];
+    for (const itemId of queue.slice(0, limit)) {
+      const itemType = itemTypes.get(itemId);
+      if (
+        !itemType ||
+        itemType === "zarkan3" ||
+        ItemLibrary[itemType].canBePickedUp === false
+      ) {
+        continue;
+      }
+      inventory[itemType] = (inventory[itemType] ?? 0) + 1;
+    }
+    return inventory;
   }
 
   private applyMainActions(
@@ -2865,6 +3238,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
         label: this.secondaryActionLabel,
         dropdown: this.secondaryActionDropdown,
         extraExecutionSelector: this.secondaryExtraExecutionSelector,
+        craftingSelector: this.secondaryCraftingSelector,
+        manipulateSelector: this.secondaryManipulateSelector,
         locationSelector: this.secondaryLocationSelector,
         secondLocationSelector: null,
         playerSelector: this.secondaryPlayerSelector,
@@ -2880,6 +3255,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
         label: this.extraSecondaryActionLabel,
         dropdown: this.extraSecondaryActionDropdown,
         extraExecutionSelector: this.extraSecondaryExtraExecutionSelector,
+        craftingSelector: this.extraSecondaryCraftingSelector,
+        manipulateSelector: this.extraSecondaryManipulateSelector,
         locationSelector: this.extraSecondaryLocationSelector,
         secondLocationSelector: null,
         playerSelector: this.extraSecondaryPlayerSelector,
@@ -3592,6 +3969,8 @@ export interface ActionPlanBlockLayout {
   label: Phaser.GameObjects.Text;
   dropdown: GridSelect;
   extraExecutionSelector: ExtraExecutionSelector | null;
+  craftingSelector?: CraftingSelector | null;
+  manipulateSelector?: ManipulateSelector | null;
   locationSelector: LocationSelector;
   secondLocationSelector: LocationSelector | null;
   playerSelector: PlayerSelector;
@@ -3624,6 +4003,8 @@ export function layoutActionPlan(options: {
       label,
       dropdown,
       extraExecutionSelector,
+      craftingSelector,
+      manipulateSelector,
       locationSelector,
       secondLocationSelector,
       playerSelector,
@@ -3647,6 +4028,20 @@ export function layoutActionPlan(options: {
       extraExecutionSelector.setPosition(padding, innerCursor);
       if (extraExecutionSelector.visible) {
         innerCursor += extraExecutionSelector.height + 8;
+      }
+    }
+    if (craftingSelector) {
+      craftingSelector.setDisplayWidth(options.width - padding * 2);
+      craftingSelector.setPosition(padding, innerCursor);
+      if (craftingSelector.visible) {
+        innerCursor += craftingSelector.height + 8;
+      }
+    }
+    if (manipulateSelector) {
+      manipulateSelector.setSelectorWidth(options.width - padding * 2);
+      manipulateSelector.setPosition(padding, innerCursor);
+      if (manipulateSelector.visible) {
+        innerCursor += manipulateSelector.height + 8;
       }
     }
     locationSelector.setSelectorWidth(options.width - padding * 2);

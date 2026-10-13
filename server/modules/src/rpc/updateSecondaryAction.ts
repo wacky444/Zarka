@@ -5,7 +5,11 @@ import {
   ActionLibrary,
   getSkillEffectTotal,
   PICKUP_NONE_PRIORITY_ID,
-  type ActionId
+  isCraftableItemId,
+  isManipulateRecipeId,
+  type ActionId,
+  type ItemId,
+  type ManipulateOperationSelection
 } from "@shared";
 import { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
@@ -65,6 +69,8 @@ export function updateSecondaryActionRpc(
   let sellInstead = false;
   let singleTarget = false;
   let inspectAdditionalTarget = false;
+  let craftedItemId: ItemId | undefined;
+  let manipulateOperations: ManipulateOperationSelection[] | undefined;
   if (submission) {
     actionId = normalizeActionId(submission.actionId);
     if (actionId.length === 0) {
@@ -158,6 +164,83 @@ export function updateSecondaryActionRpc(
       }
       extraExecutions = clamped > 0 ? clamped : undefined;
     }
+
+    const rawCraftedItemId: unknown = submission.craftedItemId;
+    const rawManipulateOperations: unknown = submission.manipulateOperations;
+    if (normalizedActionId === "fabricate") {
+      if (
+        !isCraftableItemId(rawCraftedItemId) ||
+        rawManipulateOperations !== undefined
+      ) {
+        throw makeNakamaError(
+          "invalid_crafting_selection",
+          nkruntime.Codes.INVALID_ARGUMENT
+        );
+      }
+      craftedItemId = rawCraftedItemId;
+    } else if (normalizedActionId === "manipulate") {
+      if (rawCraftedItemId !== undefined) {
+        throw makeNakamaError(
+          "invalid_manipulation_selection",
+          nkruntime.Codes.INVALID_ARGUMENT
+        );
+      }
+      if (
+        !Array.isArray(rawManipulateOperations) ||
+        rawManipulateOperations.length < 1 ||
+        rawManipulateOperations.length > 4
+      ) {
+        throw makeNakamaError(
+          "invalid_manipulation_selection",
+          nkruntime.Codes.INVALID_ARGUMENT
+        );
+      }
+      const operationValues: unknown[] = rawManipulateOperations;
+      manipulateOperations = operationValues.map((rawOperation: unknown) => {
+        if (
+          typeof rawOperation !== "object" ||
+          rawOperation === null ||
+          Array.isArray(rawOperation)
+        ) {
+          throw makeNakamaError(
+            "invalid_manipulation_selection",
+            nkruntime.Codes.INVALID_ARGUMENT
+          );
+        }
+        const operation = rawOperation as Record<string, unknown>;
+        if (
+          Object.keys(operation).some(
+            (key) => key !== "mode" && key !== "recipeId"
+          ) ||
+          (operation.mode !== "combine" && operation.mode !== "separate") ||
+          !isManipulateRecipeId(operation.recipeId)
+        ) {
+          throw makeNakamaError(
+            "invalid_manipulation_selection",
+            nkruntime.Codes.INVALID_ARGUMENT
+          );
+        }
+        return {
+          mode: operation.mode,
+          recipeId: operation.recipeId
+        };
+      });
+      if (manipulateOperations.length !== 1 + (extraExecutions ?? 0)) {
+        throw makeNakamaError(
+          "manipulation_count_mismatch",
+          nkruntime.Codes.INVALID_ARGUMENT
+        );
+      }
+    } else if (
+      rawCraftedItemId !== undefined ||
+      rawManipulateOperations !== undefined
+    ) {
+      throw makeNakamaError(
+        "action_selection_mismatch",
+        nkruntime.Codes.INVALID_ARGUMENT
+      );
+    }
+
     if (inspectAdditionalTarget) {
       if (!extraExecutions || extraExecutions < 1) {
         throw makeNakamaError(
@@ -309,6 +392,16 @@ export function updateSecondaryActionRpc(
     } else {
       delete nextPlan.inspectAdditionalTarget;
     }
+    if (craftedItemId) {
+      nextPlan.craftedItemId = craftedItemId;
+    } else {
+      delete nextPlan.craftedItemId;
+    }
+    if (manipulateOperations) {
+      nextPlan.manipulateOperations = manipulateOperations;
+    } else {
+      delete nextPlan.manipulateOperations;
+    }
     character.actionPlan[planKey] = nextPlan;
   }
   storage.writeMatch(match, read.version);
@@ -332,7 +425,9 @@ export function updateSecondaryActionRpc(
     singleTarget: clearAction ? undefined : singleTarget,
     inspectAdditionalTarget: clearAction
       ? undefined
-      : inspectAdditionalTarget
+      : inspectAdditionalTarget,
+    craftedItemId: clearAction ? undefined : craftedItemId,
+    manipulateOperations: clearAction ? undefined : manipulateOperations
   };
   return JSON.stringify(response);
 }

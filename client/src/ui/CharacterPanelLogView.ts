@@ -1,6 +1,12 @@
 import Phaser from "phaser";
 import { getLocale, t } from "../services/i18n";
 import {
+  formatCraftingFailureLine,
+  formatCraftingReplayLine,
+  formatManipulateFailureLine,
+  formatManipulateReplayLine
+} from "./craftingReplayFormatting";
+import {
   ActionLibrary,
   ItemLibrary,
   type ActionId,
@@ -640,6 +646,20 @@ export class CharacterPanelLogView {
         }
         if (actionId === "failedAction") {
           lines.push(this.buildFailedActionLine(actor, event.action.metadata));
+          continue;
+        }
+        if (actionId === "fabricate") {
+          const line = formatCraftingReplayLine(actor, event.action.metadata);
+          if (line) {
+            lines.push(line);
+          }
+          continue;
+        }
+        if (actionId === "manipulate") {
+          const line = formatManipulateReplayLine(actor, event.action.metadata);
+          if (line) {
+            lines.push(line);
+          }
           continue;
         }
         if (actionId === "look_through_window") {
@@ -1291,6 +1311,10 @@ export class CharacterPanelLogView {
     const container = metadata as {
       attemptedActionId?: unknown;
       missingItemId?: unknown;
+      reason?: unknown;
+      mode?: unknown;
+      recipeId?: unknown;
+      craftedItemId?: unknown;
     };
     const attemptedId =
       typeof container.attemptedActionId === "string"
@@ -1302,6 +1326,14 @@ export class CharacterPanelLogView {
       : attemptedId
       ? t(this.options.formatActionName(attemptedId))
       : t("an action");
+    const craftingFailure = formatCraftingFailureLine(actor, metadata);
+    if (craftingFailure) {
+      return craftingFailure;
+    }
+    const manipulateFailure = formatManipulateFailureLine(actor, metadata);
+    if (manipulateFailure) {
+      return manipulateFailure;
+    }
     const missingItemId =
       typeof container.missingItemId === "string"
         ? container.missingItemId

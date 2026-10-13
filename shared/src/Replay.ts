@@ -2,6 +2,12 @@ import type { ActionId } from "./Action";
 import type { Axial, GameMap } from "./hexTile";
 import type { C4Record, MatchItemRecord, TrapRecord } from "./match";
 import type { PlayerCharacter } from "./playerCharacter";
+import type { ItemId } from "./Item";
+import type {
+  ManipulateMode,
+  ManipulateRecipeId,
+  RecipeComponent
+} from "./RecipesLibrary";
 
 export interface ReplayTurn {
   turnNumber: number;
@@ -33,6 +39,21 @@ export interface ReplayActionDone {
   damageDealt?: number;
   effects?: ReplayActionEffectMask;
   metadata?: Record<string, unknown>;
+}
+
+export interface FabricateReplayMetadata {
+  craftedItemId: ItemId;
+  outcome: "success" | "failure";
+  reason?: "location_skill_requirement" | "inventory_capacity" | "invalid_selection";
+}
+
+export interface ManipulateReplayMetadata {
+  mode: ManipulateMode;
+  recipeId: ManipulateRecipeId;
+  outcome: "success" | "failure";
+  operationIndex: number;
+  resultingItems?: RecipeComponent[];
+  reason?: "missing_items" | "inventory_capacity" | "invalid_selection";
 }
 
 export interface ReplayActionTarget {

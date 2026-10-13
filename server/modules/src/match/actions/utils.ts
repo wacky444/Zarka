@@ -81,11 +81,21 @@ export function buildGuardedEffectMask(
   return guarded ? baseMask | ReplayActionEffect.Guard : baseMask;
 }
 
-export type FailedActionReason = "missing_item" | "invalid_target";
+export type FailedActionReason =
+  | "missing_item"
+  | "invalid_target"
+  | "location_skill_requirement"
+  | "inventory_capacity"
+  | "invalid_selection"
+  | "missing_items";
 
 export interface FailedActionDetails {
   reason: FailedActionReason;
   missingItemId?: string;
+  craftedItemId?: string;
+  mode?: "combine" | "separate";
+  recipeId?: string;
+  operationIndex?: number;
 }
 
 export function createFailedActionEvent(

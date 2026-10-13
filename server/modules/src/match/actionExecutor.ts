@@ -28,6 +28,8 @@ import { executeSleepAction } from "./actions/sleep";
 import { executeRecoverAction } from "./actions/recover";
 import { executeBreakfastAction } from "./actions/breakfast";
 import { executeRefuelAction } from "./actions/refuel";
+import { executeFabricateAction } from "./actions/fabricate";
+import { executeManipulateAction } from "./actions/manipulate";
 import { canFeedParticipant, executeFeedAction } from "./actions/feed";
 import { executeFocusAction } from "./actions/focus";
 import { executeUseBandageAction } from "./actions/useBandage";
@@ -976,6 +978,28 @@ export function executeAction(
       }
       handled = true;
     }
+  } else if (action.id === ActionLibrary.manipulate.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = executeManipulateAction(participants, match);
+      eventsForAction = [...energyEvents, ...actionEvents];
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
   } else if (action.id === ActionLibrary.place_tracker.id) {
     const participants = collectParticipants(match, action.id);
     if (participants.length > 0) {
@@ -1037,6 +1061,28 @@ export function executeAction(
       eventsForAction = energyEvents.length
         ? [...energyEvents, ...actionEvents]
         : actionEvents;
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.fabricate.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = executeFabricateAction(participants, match);
+      eventsForAction = [...energyEvents, ...actionEvents];
       for (const participant of participants) {
         applyActionCooldown(
           participant.character,

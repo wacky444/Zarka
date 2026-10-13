@@ -1,6 +1,8 @@
 import type { Axial } from "./hexTile";
 import type { ActionCondition } from "./Action";
 import type { SkillId } from "./skills/Skill";
+import type { ItemId } from "./Item";
+import type { ManipulateOperationSelection } from "./RecipesLibrary";
 
 export interface PlayerCharacter {
   id: string;
@@ -178,6 +180,8 @@ export interface PlayerPlannedAction {
   secondTargetPlayerId?: string;
   targetItemIds?: string[];
   secondTargetItemIds?: string[];
+  craftedItemId?: ItemId;
+  manipulateOperations?: ManipulateOperationSelection[];
 }
 
 export type PlayerConditionFlag =
