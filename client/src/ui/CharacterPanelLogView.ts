@@ -46,6 +46,7 @@ interface CharacterPanelLogViewOptions {
     playerId: string;
     playerName: string;
     turn: number;
+    teamId?: string;
   }) => void;
 }
 
@@ -1258,7 +1259,10 @@ export class CharacterPanelLogView {
     if (!Array.isArray(events) || events.length === 0) {
       return;
     }
-    const handleElimination = (actorId: string | undefined) => {
+    const handleElimination = (
+      actorId: string | undefined,
+      teamId?: string
+    ) => {
       if (typeof actorId !== "string" || actorId.length === 0) {
         return;
       }
@@ -1272,6 +1276,7 @@ export class CharacterPanelLogView {
         playerId: actorId,
         playerName,
         turn,
+        teamId: teamId?.trim() || this.resolvePlayerTeam(actorId) || undefined,
       });
     };
 
@@ -1280,18 +1285,20 @@ export class CharacterPanelLogView {
         continue;
       }
       if (event.action.actionId === "status_dead") {
-        handleElimination(event.actorId);
+        const teamId = (event.action.metadata as { teamId?: unknown } | undefined)
+          ?.teamId;
+        handleElimination(
+          event.actorId,
+          typeof teamId === "string" ? teamId : undefined
+        );
       }
-      const targets = (
-        event.action as {
-          targets?: Array<{ targetId?: string; eliminated?: boolean }>;
-        }
-      ).targets;
-      if (Array.isArray(targets)) {
-        for (const target of targets) {
-          if (target.eliminated && target.targetId) {
-            handleElimination(target.targetId);
-          }
+      for (const target of event.targets ?? []) {
+        if (target.eliminated && target.targetId) {
+          const teamId = target.metadata?.teamId;
+          handleElimination(
+            target.targetId,
+            typeof teamId === "string" ? teamId : undefined
+          );
         }
       }
     }

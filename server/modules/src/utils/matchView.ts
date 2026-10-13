@@ -239,6 +239,7 @@ export function tailorPlayerCharactersForViewer(
         Array.isArray(viewer.relationships?.confirmedTeammates) &&
         viewer.relationships.confirmedTeammates.indexOf(id) !== -1;
       const sanitized = redactVirusStatus(candidate);
+      delete sanitized.secretTeamId;
       delete sanitized.discoveredItemIds;
       delete sanitized.revealedItemTypesByPlayerId;
       delete sanitized.revealedTeamIdsByPlayerId;
@@ -246,10 +247,14 @@ export function tailorPlayerCharactersForViewer(
       delete sanitized.remoteView;
       delete sanitized.cameraView;
       delete sanitized.trackerViews;
+      const publicDeadTeamId = isDead
+        ? candidate.secretTeamId?.trim() || candidate.teamId?.trim()
+        : undefined;
       if (typeof revealedTeamId === "string" && revealedTeamId.length > 0) {
         sanitized.teamId = revealedTeamId;
+      } else if (publicDeadTeamId) {
+        sanitized.teamId = publicDeadTeamId;
       } else if (
-        !isDead &&
         !isConfirmedTeammate &&
         candidate.teamId !== undefined
       ) {
@@ -308,10 +313,26 @@ export function tailorMatchForPlayer(
     viewAll,
     match.current_turn
   );
-  const revealedTeamsByPlayerId =
-    !viewAll && character?.revealedTeamIdsByPlayerId
-      ? { ...character.revealedTeamIdsByPlayerId }
-      : undefined;
+  const revealedTeamsByPlayerId = !viewAll && character
+    ? { ...(character.revealedTeamIdsByPlayerId ?? {}) }
+    : undefined;
+  if (revealedTeamsByPlayerId) {
+    for (const id in match.playerCharacters) {
+      if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, id)) {
+        continue;
+      }
+      const candidate = match.playerCharacters[id];
+      const isDead =
+        isCharacterDead(candidate) ||
+        (typeof candidate.stats?.health?.current === "number" &&
+          candidate.stats.health.current <= 0);
+      const teamId =
+        candidate.secretTeamId?.trim() || candidate.teamId?.trim();
+      if (isDead && teamId) {
+        revealedTeamsByPlayerId[id] = teamId;
+      }
+    }
+  }
   const playerList: Record<string, PlayerCharacterUnknown> = {};
   const deadCharacters: Record<string, boolean> = {};
   for (const id in match.playerCharacters) {

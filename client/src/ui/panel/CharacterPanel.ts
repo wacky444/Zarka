@@ -68,6 +68,7 @@ type LogEliminationPayload = {
   playerId: string;
   playerName: string;
   turn: number;
+  teamId?: string;
 };
 
 type PlayerEliminatedPayload = {
@@ -76,6 +77,7 @@ type PlayerEliminatedPayload = {
   texture: string;
   frame: string;
   turn: number;
+  teamId?: string;
 };
 
 export class CharacterPanel extends Phaser.GameObjects.Container {
@@ -183,7 +185,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       playerName: payload.playerName,
       texture: sprite.texture,
       frame: sprite.frame ?? DEFAULT_SKIN.body,
-      turn: payload.turn
+      turn: payload.turn,
+      teamId: payload.teamId
     };
     this.emit("player-eliminated", eventPayload);
   };

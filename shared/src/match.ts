@@ -100,7 +100,7 @@ export interface MatchRecord {
   zarkanDonations?: ZarkanDonationRecord[];
   teams?: string[];
   teamCounts?: Record<string, number>;
-  /** Team identities revealed to the viewing player by Detective purchases. */
+  /** Team identities revealed to the viewer, including eliminated characters. */
   revealedTeamsByPlayerId?: Record<string, string>;
   lastAutoAdvanceAt?: number;
   reportProgress?: MatchReportProgress;

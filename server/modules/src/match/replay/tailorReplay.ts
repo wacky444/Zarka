@@ -67,10 +67,17 @@ export function tailorReplayEvents(
   for (const event of events) {
     if (event.kind === "player") {
       if (event.action.actionId === "status_dead") {
+        const teamId = (event.action.metadata as { teamId?: unknown } | undefined)
+          ?.teamId;
         result.push({
           kind: "player",
           actorId: event.actorId,
-          action: { actionId: event.action.actionId },
+          action: {
+            actionId: event.action.actionId,
+            ...(typeof teamId === "string" && teamId.trim()
+              ? { metadata: { teamId: teamId.trim() } }
+              : {}),
+          },
           visibility: { scope: "all" },
         });
       } else if (filterPlayerEvent(event, playerId)) {

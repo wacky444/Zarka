@@ -10,7 +10,12 @@ test("public elimination and destruction notices survive replay tailoring", () =
       actorId: "victim",
       action: {
         actionId: "status_dead",
-        metadata: { previous: 1, current: 0, teamId: "secret-team" },
+        metadata: {
+          previous: 1,
+          current: 0,
+          teamId: "secret-team",
+          privateDetail: "keep-hidden",
+        },
       },
       targets: [
         {
@@ -44,7 +49,10 @@ test("public elimination and destruction notices survive replay tailoring", () =
     {
       kind: "player",
       actorId: "victim",
-      action: { actionId: "status_dead" },
+      action: {
+        actionId: "status_dead",
+        metadata: { teamId: "secret-team" },
+      },
       visibility: { scope: "all" },
     },
     {

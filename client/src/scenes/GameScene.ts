@@ -89,6 +89,7 @@ type PlayerEliminationBannerEvent = {
   texture: string;
   frame: string;
   turn: number;
+  teamId?: string;
 };
 
 type MobileViewMode = "map" | "sidebar";
@@ -1405,8 +1406,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePlayerEliminated(payload: PlayerEliminationBannerEvent) {
+    const character = this.currentMatch?.playerCharacters?.[payload.playerId];
+    const teamId =
+      payload.teamId?.trim() ||
+      this.currentMatch?.revealedTeamsByPlayerId?.[payload.playerId]?.trim() ||
+      character?.secretTeamId?.trim() ||
+      character?.teamId?.trim();
+    const teamSuffix = teamId ? ` (${t("Team")}: ${t(teamId)})` : "";
     const bannerPayload: TopBannerPayload = {
-      text: `${payload.playerName} ${t("was eliminated")}`,
+      text: `${payload.playerName}${teamSuffix} ${t("was eliminated")}`,
       texture: payload.texture,
       frame: payload.frame
     };

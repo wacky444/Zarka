@@ -60,11 +60,13 @@ export function applyScheduledDestruction(
 
     const outcome = applyHealthDelta(character, -999, true, logger, true);
     match.playerCharacters[playerId] = outcome.character;
+    const teamId = character.secretTeamId?.trim() || character.teamId?.trim();
     replayEvents.push({
       kind: "player",
       actorId: character.id,
       action: {
         actionId: "status_dead",
+        ...(teamId ? { metadata: { teamId } } : {}),
       },
       visibility: { scope: "all" },
     });
