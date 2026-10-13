@@ -84,6 +84,33 @@ export function applyProjectedManipulateOperation(
   return next;
 }
 
+export function getProjectedManipulateWeightGain(
+  inventory: InventoryProjection,
+  operations: readonly ManipulateOperationSelection[]
+): number {
+  let projected = { ...inventory };
+  let totalGain = 0;
+  let maximumGain = 0;
+  const getWeight = (items: InventoryProjection): number =>
+    Object.entries(items).reduce((weight, [itemId, quantity]) => {
+      const definition = ItemLibrary[itemId as ItemId];
+      return definition && typeof quantity === "number" && quantity > 0
+        ? weight + definition.weight * quantity
+        : weight;
+    }, 0);
+
+  for (const operation of operations) {
+    const next = applyProjectedManipulateOperation(projected, operation);
+    if (!next) {
+      break;
+    }
+    totalGain += getWeight(next) - getWeight(projected);
+    maximumGain = Math.max(maximumGain, totalGain);
+    projected = next;
+  }
+  return maximumGain;
+}
+
 export function buildManipulateOperationItems(
   inventory: InventoryProjection,
   textureResolver: typeof resolveItemTexture = resolveItemTexture

@@ -18,6 +18,7 @@ import {
 import {
   applyProjectedManipulateOperation,
   buildManipulateOperationItems,
+  getProjectedManipulateWeightGain,
   type InventoryProjection
 } from "../src/ui/manipulateSelectorItems.ts";
 import { getMissingRequirement } from "../src/ui/ActionRequirementWarnings.ts";
@@ -447,6 +448,57 @@ test("Action plan synchronizer sends custom selections for both secondary slots"
     calls[1]?.submission?.manipulateOperations
   );
   synchronizer.destroy();
+});
+
+test("Manipulate weight preview follows recipe inputs and returned components", () => {
+  for (const recipe of MANIPULATE_RECIPES) {
+    const separate = SEPARATE_RECIPES.find(({ id }) => id === recipe.id);
+    assert.ok(separate);
+    for (const [mode, parts] of [
+      ["combine", recipe],
+      ["separate", separate]
+    ] as const) {
+      const inventory = Object.fromEntries(
+        parts.inputs.map(({ itemId, quantity }) => [itemId, quantity])
+      ) as InventoryProjection;
+      const expectedGain = Math.max(
+        0,
+        parts.outputs.reduce(
+          (weight, { itemId, quantity }) =>
+            weight + ItemLibrary[itemId].weight * quantity,
+          0
+        ) -
+          parts.inputs.reduce(
+            (weight, { itemId, quantity }) =>
+              weight + ItemLibrary[itemId].weight * quantity,
+            0
+          )
+      );
+      assert.equal(
+        getProjectedManipulateWeightGain(inventory, [
+          { mode, recipeId: recipe.id }
+        ]),
+        expectedGain
+      );
+    }
+  }
+  assert.equal(
+    getProjectedManipulateWeightGain(
+      { wood: 4 },
+      [
+        { mode: "combine", recipeId: "bat" },
+        { mode: "separate", recipeId: "bat" }
+      ]
+    ),
+    0
+  );
+  assert.equal(
+    getProjectedManipulateWeightGain(
+      { wood: 3 },
+      [{ mode: "combine", recipeId: "bat" }]
+    ),
+    0
+  );
 });
 
 test("Manipulate projections consume earlier outputs and leave failed operation state unchanged", () => {

@@ -21,6 +21,7 @@ import {
 import { GridSelect, type GridSelectItem } from "../GridSelect";
 import { CraftingSelector } from "../CraftingSelector";
 import { ManipulateSelector } from "../ManipulateSelector";
+import { getProjectedManipulateWeightGain } from "../manipulateSelectorItems";
 import { LocationSelector } from "../LocationSelector";
 import { ExtraExecutionSelector } from "../ExtraExecutionSelector";
 import { THEME } from "../ColorPalette";
@@ -1450,17 +1451,17 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       this.getPlannedWeightGain(
         this.mainActionSelection,
         this.mainExtraExecutions,
-        true
+        "main"
       ) +
       this.getPlannedWeightGain(
         this.secondaryActionSelection,
         this.secondaryExtraExecutions,
-        false
+        "secondary"
       ) +
       this.getPlannedWeightGain(
         this.extraSecondaryActionSelection,
         this.extraSecondaryExtraExecutions,
-        false
+        "extraSecondary"
       );
     return plannedWeightGain > 0 && load.current + plannedWeightGain > load.max;
   }
@@ -1853,7 +1854,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   private getPlannedWeightGain(
     actionId: string | null,
     extraExecutions: number,
-    isMainAction: boolean
+    slot: "main" | "secondary" | "extraSecondary"
   ): number {
     if (!actionId) {
       return 0;
@@ -1876,10 +1877,27 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
         ? ItemLibrary.fuel.weight * 3
         : 0;
     }
-    if (isMainAction && actionId === "pick_up") {
+    if (actionId === "fabricate" && slot !== "main") {
+      const craftedItemId =
+        slot === "secondary"
+          ? this.secondaryCraftingSelector.getCraftedItemId()
+          : this.extraSecondaryCraftingSelector.getCraftedItemId();
+      return craftedItemId ? ItemLibrary[craftedItemId].weight : 0;
+    }
+    if (actionId === "manipulate" && slot !== "main") {
+      const operations =
+        slot === "secondary"
+          ? this.secondaryManipulateSelector.getSelectedOperations()
+          : this.extraSecondaryManipulateSelector.getSelectedOperations();
+      return getProjectedManipulateWeightGain(
+        this.getProjectedInventoryForManipulate(),
+        operations
+      );
+    }
+    if (slot === "main" && actionId === "pick_up") {
       return this.getPlannedPickupWeight(extraExecutions);
     }
-    if (isMainAction && actionId === "steal") {
+    if (slot === "main" && actionId === "steal") {
       return this.getPotentialStealWeight(extraExecutions);
     }
     return 0;

@@ -147,6 +147,17 @@ export class ManipulateSelector extends Phaser.GameObjects.Container {
     return selected as ManipulateOperationSelection[];
   }
 
+  getSelectedOperations(): ManipulateOperationSelection[] {
+    const selected: ManipulateOperationSelection[] = [];
+    for (const operation of this.operations.slice(0, this.operationCount)) {
+      if (!operation) {
+        break;
+      }
+      selected.push(operation);
+    }
+    return selected;
+  }
+
   openFirstEmptyOperation(): void {
     const index = this.operations
       .slice(0, this.operationCount)

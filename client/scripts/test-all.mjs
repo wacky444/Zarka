@@ -7,51 +7,84 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const temporary = mkdtempSync(join(tmpdir(), "zarka-client-tests-"));
-const run = (args, cwd = root) => {
-  const result = spawnSync(process.execPath, args, { cwd, stdio: "inherit" });
-  if (result.error) throw result.error;
-  if (result.status !== 0) process.exit(result.status ?? 1);
-};
+const sharedAlias = resolve(root, "../shared/src/index.ts");
+const phaserShim = resolve(root, "scripts/empty-phaser-shim.cjs");
+const suites = [
+  { name: "tutorial-ui", entryPoint: "test/TutorialProgressController.test.ts" },
+  {
+    name: "chat-service",
+    entryPoint: "test/ChatService.test.ts",
+    define: {
+      "import.meta.env": JSON.stringify({
+        VITE_NAKAMA_HOST: "127.0.0.1",
+        VITE_NAKAMA_PORT: "7350",
+        VITE_NAKAMA_SSL: "false"
+      })
+    }
+  },
+  { name: "match-card", entryPoint: "test/MatchCardModel.test.ts" },
+  {
+    name: "my-matches",
+    entryPoint: "test/MyMatchesListModel.test.ts",
+    external: ["phaser", "phaser3spectorjs"]
+  },
+  {
+    name: "public-matches",
+    entryPoint: "test/PublicMatchesModel.test.ts",
+    external: ["phaser", "phaser3spectorjs"]
+  },
+  {
+    name: "push-notifications",
+    entryPoint: "test/PushNotifications.test.ts",
+    define: {
+      "import.meta.env": JSON.stringify({
+        BASE_URL: "/Zarka/",
+        VITE_WEB_PUSH_VAPID_PUBLIC_KEY: "A".repeat(87)
+      })
+    },
+    alias: { phaser: phaserShim, phaser3spectorjs: phaserShim }
+  },
+  {
+    name: "crafting-catalog",
+    entryPoint: "test/CraftingCatalogAndMetadata.test.ts"
+  },
+  { name: "ranked-matchmaking", entryPoint: "test/RankedMatchmaking.test.ts" }
+];
 
 try {
-  const testScripts = [
-    "test-tutorial-ui.mjs",
-    "test-chat-service.mjs",
-    "test-match-card.mjs",
-    "test-my-matches.mjs",
-    "test-public-matches.mjs",
-    "test-push-notifications.mjs"
+  const bundledTests = suites.map((suite) => {
+    const { name, entryPoint, alias: suiteAlias, ...options } = suite;
+    const outfile = join(temporary, `${name}.test.cjs`);
+    buildSync({
+      absWorkingDir: root,
+      ...options,
+      entryPoints: [entryPoint],
+      outfile,
+      bundle: true,
+      platform: "node",
+      format: "cjs",
+      target: "node18",
+      alias: { "@shared": sharedAlias, ...suiteAlias }
+    });
+    return outfile;
+  });
+  const testFiles = [
+    ...bundledTests,
+    join(root, "test/service-worker-notifications.test.mjs"),
+    join(root, "scripts/smoke-login.mjs")
   ];
-  for (const script of testScripts) run([join(root, "scripts", script)]);
-
-  const craftingTest = join(temporary, "crafting-catalog.test.cjs");
-  buildSync({
-    absWorkingDir: root,
-    entryPoints: ["test/CraftingCatalogAndMetadata.test.ts"],
-    outfile: craftingTest,
-    bundle: true,
-    platform: "node",
-    format: "cjs",
-    target: "node18",
-    alias: { "@shared": resolve(root, "../shared/src/index.ts") }
-  });
-  run(["--test", craftingTest]);
-
-  const rankedTest = join(temporary, "ranked-matchmaking.test.cjs");
-  buildSync({
-    absWorkingDir: root,
-    entryPoints: ["test/RankedMatchmaking.test.ts"],
-    outfile: rankedTest,
-    bundle: true,
-    platform: "node",
-    format: "cjs",
-    target: "node18",
-    alias: { "@shared": resolve(root, "../shared/src/index.ts") }
-  });
-  run(["--test", rankedTest]);
-  run(["--test", join(root, "test/service-worker-notifications.test.mjs")]);
-  run([join(root, "scripts/smoke-login.mjs")]);
-  console.log("All client tests passed.");
+  const result = spawnSync(
+    process.execPath,
+    ["--test", "--test-concurrency=1", ...testFiles],
+    { cwd: root, stdio: "inherit" }
+  );
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status === 0) {
+    console.log("All client tests passed.");
+  }
+  process.exitCode = result.status ?? 1;
 } finally {
   rmSync(temporary, { recursive: true, force: true });
 }
