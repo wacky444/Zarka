@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { THEME } from "./ColorPalette";
+import { isPointerTap } from "./pointerInput";
 
 export type UIButton = Phaser.GameObjects.Text & { tags: string[] };
 
@@ -53,36 +54,24 @@ export function makeButton(
     })
     .on(
       "pointerdown",
-      (
-        pointer: Phaser.Input.Pointer,
-        _localX: number,
-        _localY: number,
-        event?: Phaser.Types.Input.EventData
-      ) => {
+      (pointer: Phaser.Input.Pointer) => {
         downPointerId = pointer.id;
-        event?.stopPropagation();
       }
     )
-    .on(
-      "pointerup",
-      async (
-        pointer: Phaser.Input.Pointer,
-        _localX: number,
-        _localY: number,
-        event?: Phaser.Types.Input.EventData
-      ) => {
-        if (downPointerId === null || downPointerId !== pointer.id) {
-          return;
-        }
-        event?.stopPropagation();
-        downPointerId = null;
-        try {
-          await onClick();
-        } catch (e) {
-          console.error(e);
-        }
+    .on("pointerup", async (pointer: Phaser.Input.Pointer) => {
+      if (downPointerId === null || downPointerId !== pointer.id) {
+        return;
       }
-    );
+      downPointerId = null;
+      if (!isPointerTap(pointer)) {
+        return;
+      }
+      try {
+        await onClick();
+      } catch (e) {
+        console.error(e);
+      }
+    });
 
   // Attach tags for view-based visibility control
   const button = txt as UIButton;

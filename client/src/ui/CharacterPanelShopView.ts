@@ -14,6 +14,7 @@ import { getCellTypeLabel } from "./CellContentsPanel";
 import { THEME } from "./ColorPalette";
 import { ZarkanDonationModal, type ZarkanDonationSelection } from "./ZarkanDonationModal";
 import { t } from "../services/i18n";
+import { isPointerTap } from "./pointerInput";
 
 export interface CharacterPanelShopViewLayout {
   margin: number;
@@ -724,9 +725,14 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     };
     card.on(Phaser.Input.Events.POINTER_WHEEL, forwardWheel);
     buyBackground?.on(Phaser.Input.Events.POINTER_WHEEL, forwardWheel);
-    buyBackground?.on(Phaser.Input.Events.POINTER_UP, () => {
-      this.beginShopPurchase(definition.id);
-    });
+    buyBackground?.on(
+      Phaser.Input.Events.POINTER_UP,
+      (pointer: Phaser.Input.Pointer) => {
+        if (isPointerTap(pointer)) {
+          this.beginShopPurchase(definition.id);
+        }
+      }
+    );
     this.scrollContent.add(card);
     this.scrollContent.add(name);
     this.scrollContent.add(cost);

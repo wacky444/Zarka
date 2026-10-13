@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MatchCardSummary } from "@shared";
+import { isPointerTap } from "../src/ui/pointerInput";
 import {
   MATCH_PREVIEW_COLORS,
   createMatchCardClickHandler,
@@ -34,6 +35,12 @@ function createMatch(
     ...values
   };
 }
+
+test("pointer movement beyond scroll threshold is not treated as a tap", () => {
+  assert.equal(isPointerTap({ getDistance: () => 9 }), true);
+  assert.equal(isPointerTap({ getDistance: () => 10 }), false);
+  assert.equal(isPointerTap({ getDistance: () => 24 }), false);
+});
 
 test("map preview destruction states use distinct green, yellow, and red colors", () => {
   assert.equal(MATCH_PREVIEW_COLORS.safe, 0x4ade80);

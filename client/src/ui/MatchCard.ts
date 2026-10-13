@@ -8,6 +8,7 @@ import {
   getMatchTypeBadge
 } from "./MatchCardModel";
 import { MatchMapPreview } from "./MatchMapPreview";
+import { isPointerTap } from "./pointerInput";
 
 const CARD_HEIGHT = 124;
 const CARD_PADDING = 8;
@@ -217,26 +218,14 @@ export class MatchCard extends Phaser.GameObjects.Container {
     let downPointerId: number | null = null;
     hitArea.on(
       Phaser.Input.Events.POINTER_DOWN,
-      (
-        pointer: Phaser.Input.Pointer,
-        _localX: number,
-        _localY: number,
-        event: Phaser.Types.Input.EventData
-      ) => {
+      (pointer: Phaser.Input.Pointer) => {
         downPointerId = pointer.id;
-        event.stopPropagation();
       }
     );
     hitArea.on(
       Phaser.Input.Events.POINTER_UP,
-      (
-        pointer: Phaser.Input.Pointer,
-        _localX: number,
-        _localY: number,
-        event: Phaser.Types.Input.EventData
-      ) => {
-        event.stopPropagation();
-        if (downPointerId === pointer.id) {
+      (pointer: Phaser.Input.Pointer) => {
+        if (downPointerId === pointer.id && isPointerTap(pointer)) {
           createMatchCardClickHandler(this.summary, this.options.onSelect)();
         }
         downPointerId = null;

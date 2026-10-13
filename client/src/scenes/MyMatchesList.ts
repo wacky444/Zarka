@@ -4,6 +4,7 @@ import { t } from "../services/i18n";
 import { makeButton, type UIButton } from "../ui/button";
 import { THEME } from "../ui/ColorPalette";
 import { MatchCard } from "../ui/MatchCard";
+import { isPointerTap } from "../ui/pointerInput";
 import type {
   GetRankedQueueStatusPayload,
   ListMyMatchesPayload,
@@ -49,6 +50,7 @@ class CollapsibleSectionHeader extends Phaser.GameObjects.Container {
   private readonly arrowText: Phaser.GameObjects.Text;
   private readonly titleText: Phaser.GameObjects.Text;
   private readonly hitArea: Phaser.GameObjects.Zone;
+  private downPointerId: number | null = null;
 
   constructor(scene: Phaser.Scene, onToggle: () => void) {
     super(scene, 0, 0);
@@ -79,13 +81,29 @@ class CollapsibleSectionHeader extends Phaser.GameObjects.Container {
       .zone(0, 0, 100, 38)
       .setOrigin(0)
       .setInteractive({ useHandCursor: true });
-    this.hitArea.on(Phaser.Input.Events.POINTER_UP, () => {
-      onToggle();
-    });
+    this.hitArea.on(
+      Phaser.Input.Events.POINTER_DOWN,
+      (pointer: Phaser.Input.Pointer) => {
+        this.downPointerId = pointer.id;
+      }
+    );
+    this.hitArea.on(
+      Phaser.Input.Events.POINTER_UP,
+      (pointer: Phaser.Input.Pointer) => {
+        if (
+          this.downPointerId === pointer.id &&
+          isPointerTap(pointer)
+        ) {
+          onToggle();
+        }
+        this.downPointerId = null;
+      }
+    );
     this.hitArea.on(Phaser.Input.Events.POINTER_OVER, () => {
       this.background.setAlpha(0.8);
     });
     this.hitArea.on(Phaser.Input.Events.POINTER_OUT, () => {
+      this.downPointerId = null;
       this.background.setAlpha(1);
     });
     this.add(this.hitArea);
