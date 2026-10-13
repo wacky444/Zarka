@@ -950,7 +950,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     for (const [playerId, character] of Object.entries(
       match?.playerCharacters ?? {}
     )) {
-      if (typeof character?.teamId === "string" && character.teamId.length > 0) {
+      if (
+        !teamMap[playerId] &&
+        typeof character?.teamId === "string" &&
+        character.teamId.length > 0
+      ) {
         teamMap[playerId] = character.teamId;
       }
     }

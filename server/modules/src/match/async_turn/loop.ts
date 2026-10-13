@@ -10,6 +10,7 @@ import { resolveTurnForMatch } from "../turnResolution";
 import { sendTutorialBotMessageForTurn } from "../TutorialBotChat";
 import { isBotId } from "../botAI";
 import { getNextAutoAdvanceAtMs } from "../../utils/autoSkip";
+import { getEliminatedTeamsByPlayerId } from "../../utils/matchView";
 import {
   isCharacterDead,
   isCharacterIncapacitated,
@@ -241,6 +242,9 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
           readyStates: match.readyStates,
           lastAutoAdvanceAt: match.lastAutoAdvanceAt,
           deadCharacters: match.deadCharacters,
+          eliminatedTeamsByPlayerId: getEliminatedTeamsByPlayerId(
+            match.playerCharacters
+          ),
           playerCharacters: match.playerCharacters,
           teams: match.teams,
           events: outcome.events,

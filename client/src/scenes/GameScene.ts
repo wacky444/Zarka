@@ -3027,6 +3027,12 @@ export class GameScene extends Phaser.Scene {
         ...payload.deadCharacters,
       };
     }
+    if (payload.eliminatedTeamsByPlayerId) {
+      match.revealedTeamsByPlayerId = {
+        ...(match.revealedTeamsByPlayerId ?? {}),
+        ...payload.eliminatedTeamsByPlayerId,
+      };
+    }
     if (payload.playerCharacters) {
       match.playerCharacters = payload.playerCharacters;
     }

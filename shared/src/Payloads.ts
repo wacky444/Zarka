@@ -251,6 +251,7 @@ export type TurnAdvancedMessagePayload = {
   readyStates?: Record<string, boolean>;
   lastAutoAdvanceAt?: number;
   deadCharacters?: Record<string, boolean>;
+  eliminatedTeamsByPlayerId?: Record<string, string>;
   playerCharacters?: Record<string, PlayerCharacter>;
   advanced?: boolean;
   replay?: ReplayEvent[];

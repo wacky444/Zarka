@@ -282,6 +282,27 @@ export function tailorMatchItemsForCharacter(
   return filterItemsByDiscoveredLookup(items, discovered);
 }
 
+export function getEliminatedTeamsByPlayerId(
+  playerCharacters: Record<string, PlayerCharacter>
+): Record<string, string> {
+  const teamsByPlayerId: Record<string, string> = {};
+  for (const id in playerCharacters) {
+    if (!Object.prototype.hasOwnProperty.call(playerCharacters, id)) {
+      continue;
+    }
+    const character = playerCharacters[id];
+    const isDead =
+      isCharacterDead(character) ||
+      (typeof character.stats?.health?.current === "number" &&
+        character.stats.health.current <= 0);
+    const teamId = character.secretTeamId?.trim() || character.teamId?.trim();
+    if (isDead && teamId) {
+      teamsByPlayerId[id] = teamId;
+    }
+  }
+  return teamsByPlayerId;
+}
+
 export function tailorMatchForPlayer(
   match: MatchRecord,
   playerId: string | undefined | null,
@@ -314,25 +335,11 @@ export function tailorMatchForPlayer(
     match.current_turn
   );
   const revealedTeamsByPlayerId = !viewAll && character
-    ? { ...(character.revealedTeamIdsByPlayerId ?? {}) }
+    ? {
+        ...(character.revealedTeamIdsByPlayerId ?? {}),
+        ...getEliminatedTeamsByPlayerId(match.playerCharacters)
+      }
     : undefined;
-  if (revealedTeamsByPlayerId) {
-    for (const id in match.playerCharacters) {
-      if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, id)) {
-        continue;
-      }
-      const candidate = match.playerCharacters[id];
-      const isDead =
-        isCharacterDead(candidate) ||
-        (typeof candidate.stats?.health?.current === "number" &&
-          candidate.stats.health.current <= 0);
-      const teamId =
-        candidate.secretTeamId?.trim() || candidate.teamId?.trim();
-      if (isDead && teamId) {
-        revealedTeamsByPlayerId[id] = teamId;
-      }
-    }
-  }
   const playerList: Record<string, PlayerCharacterUnknown> = {};
   const deadCharacters: Record<string, boolean> = {};
   for (const id in match.playerCharacters) {

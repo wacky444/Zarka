@@ -11,6 +11,7 @@ import { makeNakamaError } from "../utils/errors";
 import { MatchRecord } from "../models/types";
 import type { AdvanceTurnResult } from "../match/advanceTurn";
 import {
+  getEliminatedTeamsByPlayerId,
   tailorC4sForViewer,
   tailorMapForCharacter,
   tailorMatchItemsForCharacter,
@@ -285,6 +286,9 @@ export function updateReadyStateRpc(
           readyStates: match.readyStates,
           lastAutoAdvanceAt: match.lastAutoAdvanceAt,
           deadCharacters: match.deadCharacters,
+          eliminatedTeamsByPlayerId: getEliminatedTeamsByPlayerId(
+            match.playerCharacters
+          ),
           playerCharacters: match.playerCharacters,
           teams: match.teams,
           events,
