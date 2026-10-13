@@ -744,6 +744,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
     "Se detiene tras los objetos anteriores; si es el primero, recoge uno al azar.",
   "No prioritized items": "No hay objetos prioritarios",
   "No secondary action": "Sin acción secundaria",
+  "Crafting": "Fabricar",
+  "Combine/Separate": "Combinar/Separar",
   "Tap a player to target them": "Pulsa un jugador para seleccionarlo",
   "Tap an action to select it": "Pulsa una acción para seleccionarla",
   "Tap an item to prioritize it": "Pulsa un objeto para priorizarlo",
@@ -833,7 +835,22 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   "Obtiene 3 unidades de combustible.": "Obtains 3 units of fuel.",
   Coger: "Pick up",
   Buscar: "Search",
-  Manipular: "Manipulate",
+  Manipular: "Combine/Separate",
+  "Combinar/Separar": "Combine/Separate",
+  "Debe poseer los objetos a transformar.":
+    "Requires the items to be transformed.",
+  "Requiere tener en el inventario los objetos necesarios para la operación seleccionada.":
+    "Requires the items needed for the selected operation to be in your inventory.",
+  "Combina o separa objetos del inventario siguiendo las recetas disponibles.":
+    "Combines or separates inventory items using the available recipes.",
+  "Debe realizarse en el taller salvo que se posea la habilidad Destreza 4.":
+    "Must be performed at a Workshop unless you have Dexterity 4.",
+  "Permite fabricar pistola, bala, molotov, bate, hacha, cuchillo, arpón, flecha, trampa o C4 con recursos del entorno o del taller, sin consumir objetos del inventario.":
+    "Creates a Pistol, Bullet, Molotov, Bat, Axe, Knife, Harpoon, Arrow, Trap, or C4 using resources available at the Workshop or in the environment, without consuming inventory items.",
+  "Debe realizarse en el taller salvo que se posea la habilidad Destreza 4.\n\nPermite fabricar pistola, bala, molotov, bate, hacha, cuchillo, arpón, flecha, trampa o C4 con recursos del entorno o del taller, sin consumir objetos del inventario.":
+    "Must be performed at a Workshop unless you have Dexterity 4.\n\nCreates a Pistol, Bullet, Molotov, Bat, Axe, Knife, Harpoon, Arrow, Trap, or C4 using resources available at the Workshop or in the environment, without consuming inventory items.",
+  "Requiere tener en el inventario los objetos necesarios para la operación seleccionada.\n\nCombina o separa objetos del inventario siguiendo las recetas disponibles.":
+    "Requires the items needed for the selected operation to be in your inventory.\n\nCombines or separates inventory items using the available recipes.",
   Dar: "Give",
   "Debe tener el objeto a entregar.": "Must have an item to give.",
   "Transfiere un objeto a otro personaje.":
@@ -859,7 +876,7 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   Puñetazo: "Punch",
   "Forzar cerradura": "Pick lock",
   Robar: "Steal",
-  Fabricar: "Craft",
+  Fabricar: "Crafting",
   "Traficar en el mercado negro": "Black market trade",
   "Debe realizarse en el mercado negro.":
     "Must be performed at the black market.",

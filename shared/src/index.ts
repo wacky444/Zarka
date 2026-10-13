@@ -11,6 +11,7 @@ export * from "./Action";
 export * from "./ActionLibrary";
 export * from "./Item";
 export * from "./ItemLibrary";
+export * from "./RecipesLibrary";
 export * from "./Replay";
 export * from "./chat";
 export * from "./UserAccount";

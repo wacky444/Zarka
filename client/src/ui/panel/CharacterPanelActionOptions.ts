@@ -12,6 +12,11 @@ import { deriveBoardIconKey, isBoardIconTexture } from "../actionIcons";
 import type { GridSelectItem } from "../GridSelect";
 import { t } from "../../services/i18n";
 
+const ACTION_DISPLAY_NAMES: Partial<Record<ActionId, string>> = {
+  fabricate: "Crafting",
+  manipulate: "Combine/Separate"
+};
+
 function compareActionIdsByOrder(a: ActionId, b: ActionId): number {
   const actionA = ActionLibrary[a];
   const actionB = ActionLibrary[b];
@@ -220,6 +225,7 @@ function resolveActionMetadata(
   const definition = ActionLibrary[actionId] ?? null;
   if (definition) {
     const visual = resolveActionTexture(definition);
+    const displayName = ACTION_DISPLAY_NAMES[actionId];
     const developed = definition.developed === true;
     if (!developed) {
       disabled = true;
@@ -235,7 +241,7 @@ function resolveActionMetadata(
       : 0;
     return {
       id: definition.id,
-      name: definition.name,
+      name: displayName ? t(displayName) : definition.name,
       description,
       texture: visual.texture,
       frame: visual.frame,

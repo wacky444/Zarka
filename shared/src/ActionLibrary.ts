@@ -461,12 +461,23 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   manipulate: {
     id: "manipulate",
-    name: "Manipular",
+    name: "Combinar/Separar",
     category: ActionCategory.Secondary,
     energyCost: 1,
     cooldown: 3,
-    requirements: [{ description: "Debe poseer los objetos a transformar." }],
-    effects: [{ description: "Combina o separa objetos para generar otros." }],
+    developed: true,
+    requirements: [
+      {
+        description:
+          "Requiere tener en el inventario los objetos necesarios para la operación seleccionada."
+      }
+    ],
+    effects: [
+      {
+        description:
+          "Combina o separa objetos del inventario siguiendo las recetas disponibles."
+      }
+    ],
     extraExecution: {
       cost: 1,
       maxRepetitions: 3,
@@ -1009,6 +1020,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 3,
     cooldown: 3,
+    developed: true,
     experience: {
       base: 2
     },
@@ -1021,7 +1033,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Permite fabricar pistola, bala, molotov, bate, hacha, cuchillo, arpón, flecha, trampa o C4 utilizando los recursos del entorno."
+          "Permite fabricar pistola, bala, molotov, bate, hacha, cuchillo, arpón, flecha, trampa o C4 con recursos del entorno o del taller, sin consumir objetos del inventario."
       }
     ],
     texture: "Board Game Icons",

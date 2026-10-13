@@ -24,6 +24,19 @@ try {
   ];
   for (const script of testScripts) run([join(root, "scripts", script)]);
 
+  const craftingTest = join(temporary, "crafting-catalog.test.cjs");
+  buildSync({
+    absWorkingDir: root,
+    entryPoints: ["test/CraftingCatalogAndMetadata.test.ts"],
+    outfile: craftingTest,
+    bundle: true,
+    platform: "node",
+    format: "cjs",
+    target: "node18",
+    alias: { "@shared": resolve(root, "../shared/src/index.ts") }
+  });
+  run(["--test", craftingTest]);
+
   const rankedTest = join(temporary, "ranked-matchmaking.test.cjs");
   buildSync({
     absWorkingDir: root,
