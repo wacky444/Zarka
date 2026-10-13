@@ -1,7 +1,5 @@
 - menu icons for, inventory, character, status, skills, players, teams, log/replay, map, chat, arrow right, left
 
-- crafting
-
 - improve ground visuals, alley and road have the similar sprite, check kenney hexagon pack examples
 
 - train and experience
@@ -21,13 +19,7 @@
 
 - improve the ready checkbox, to a cool button, if is the last player, show a confirm dialog
 
--t protect, dodge and sleep in case the turn is skipped
-
 - review scare tutorial hint
-
-- changing window size doesn't swap between mobile and pc, like its calculated once, making the gui show incorrect modal positions
-
-- donate doesnt work with bots
 
 - bots doesnt buy
 
@@ -62,34 +54,9 @@
 
 -t enough spawn locations for 100 players? test to create a small map for 20 bots
 
-7. Queue status and coordinator scan global records repeatedly
-    (server/modules/src/services/rankedQueue.ts:L515-525,L813-845,L867-874)
-     - What this is: Queue status scans every assignment; each 10-second coordinator run scans all assignments and enrollments.
-     - Problem: Every foreground status request reads all assignment records, including unrelated users. Zero-slot enrollments
-       remain stored and keep getting reconciled.
-     - Fix: Use per-user assignment lookup and process queue records in bounded batches; remove inactive enrollments.
-     - If we skip it: Storage reads and processing grow with all past opt-ins and active matches.
-	 
-- my matches remake and matches list
-	- order by matches where ready is not set then by timeleft, place a green play button over the image on the ones with ready not set
-	- cards instead of rows, in a reusable component in ui folder
-			R Name
-	Image  5/18		Timeleft 11 <- rounds played
-
-			^ players alive, players started
-
-	- two groups collapsable, "3/10 Partidas online" "Partidas terminadas"
-
-	- max current matches, default 10, store in account settings, check nakama if already has something
-	- also in all matches view
-
 - in the replay(tested in an end game report replay), changing the turn to view, doesnt put the characters on the positions pre turn
 
 - detonate requires a target location, but with extra power doesn't show a extra target locator
-
-- when a character is dead, show in the banner the team, also reveal the team in player list
-
-- no notifications in matches with only one human player, like tutorial
 
 - chemical weapon   "[ ] Single target (Area)": "[ ] Objetivo único (área)",
 	- change text to less confusing
