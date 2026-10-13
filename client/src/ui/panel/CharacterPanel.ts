@@ -719,6 +719,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.tutorialActionEditingEnabled = !active || policy.actionEditingEnabled;
     this.tutorialReadyEnabled = !active || policy.readyEnabled;
 
+    this.skillsView.setAllowedSkillIds(active ? policy.skillIds : null);
+    this.shopView.setTutorialShopPolicy(
+      active ? policy.shopIds : null,
+      policy.highlightedControls.includes("detective") ? "detective" : null
+    );
+    this.actionPlanView?.setTutorialHighlight(stepId, active);
     if (active && policy.highlightedTab) {
       this.tabsController.setActiveTab(policy.highlightedTab);
       this.tabLayout.reveal(policy.highlightedTab);
@@ -734,12 +740,6 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       );
       this.updateCharacterSubtabVisibility();
     }
-    this.actionPlanView?.setTutorialHighlight(stepId, active);
-    this.skillsView.setAllowedSkillIds(active ? policy.skillIds : null);
-    this.shopView.setTutorialShopPolicy(
-      active ? policy.shopIds : null,
-      policy.highlightedControls.includes("detective") ? "detective" : null
-    );
     this.updateFromMatch(this.currentMatch, this.currentUserId, this.lastUserMap);
     if (active && policy.actionEditingEnabled) {
       this.actionPlanView?.syncTutorialActionSelection(
