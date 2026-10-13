@@ -2,6 +2,19 @@ import type { MatchCardSummary } from "@shared";
 
 export const PUBLIC_MATCH_PAGE_SIZE = 20;
 export const PUBLIC_MATCH_MAX_PAGES = 10;
+export const PUBLIC_MATCH_REFRESH_COOLDOWN_MS = 2_000;
+export const PUBLIC_MATCH_PULL_REFRESH_THRESHOLD_PX = 72;
+
+export function canStartPublicMatchRefresh(
+  lastStartedAtMs: number,
+  nowMs: number
+): boolean {
+  return nowMs - lastStartedAtMs >= PUBLIC_MATCH_REFRESH_COOLDOWN_MS;
+}
+
+export function isPullDownRefreshGesture(startY: number, endY: number): boolean {
+  return endY - startY >= PUBLIC_MATCH_PULL_REFRESH_THRESHOLD_PX;
+}
 
 export function sortPublicMatches(matches: MatchCardSummary[]): MatchCardSummary[] {
   return [...matches].sort((left, right) => {

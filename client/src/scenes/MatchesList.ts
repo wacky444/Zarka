@@ -10,6 +10,8 @@ import {
 import type { TurnService } from "../services/turnService";
 import {
   appendUniquePublicMatches,
+  canStartPublicMatchRefresh,
+  isPullDownRefreshGesture,
   PUBLIC_MATCH_MAX_PAGES,
   PUBLIC_MATCH_PAGE_SIZE,
   sortPublicMatches
@@ -22,6 +24,7 @@ const ACTIONS_GAP = 24;
 export class MatchesListView {
   private readonly scene: Phaser.Scene;
   private readonly container: Phaser.GameObjects.Container;
+  private readonly contentRoot: Phaser.GameObjects.Container;
   private readonly scrollPanel: MatchCardScrollPanel;
   private readonly cardList: MatchCardList<MatchCardSummary>;
   private readonly titleText: Phaser.GameObjects.Text;
@@ -35,17 +38,53 @@ export class MatchesListView {
   private nextOffset: number | null = null;
   private pageIndex = 0;
   private fetching = false;
+  private lastRefreshAtMs = 0;
+  private pullStart: { pointerId: number; y: number } | null = null;
   private onSelectMatch?: (match: MatchCardSummary, joinable: boolean) => void | Promise<void>;
   private onBack?: () => void;
   private turnService: TurnService | null = null;
 
+  private readonly handlePullStart = (pointer: Phaser.Input.Pointer): void => {
+    if (
+      !this.container.visible ||
+      !pointer.wasTouch ||
+      this.fetching ||
+      this.pullStart ||
+      typeof this.scrollPanel.t !== "number" ||
+      this.scrollPanel.t > 0.001 ||
+      pointer.x < 0 ||
+      pointer.y < 0 ||
+      pointer.x > this.scene.scale.width ||
+      pointer.y > this.scene.scale.height
+    ) {
+      return;
+    }
+    this.pullStart = { pointerId: pointer.id, y: pointer.y };
+  };
+
+  private readonly handlePullEnd = (pointer: Phaser.Input.Pointer): void => {
+    const start = this.pullStart;
+    if (!start || start.pointerId !== pointer.id) {
+      return;
+    }
+    this.pullStart = null;
+    if (
+      !pointer.wasCanceled &&
+      isPullDownRefreshGesture(start.y, pointer.y)
+    ) {
+      void this.refresh();
+    }
+  };
+
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     this.container = scene.add.container(0, 0).setVisible(false).setActive(false);
+    this.contentRoot = scene.add.container(0, 0);
     this.cardList = new MatchCardList(scene, false, (match) => {
       void this.onSelectMatch?.(match, match.isJoinable);
     });
-    this.scrollPanel = createMatchCardScrollPanel(scene, this.cardList);
+    this.contentRoot.add(this.cardList);
+    this.scrollPanel = createMatchCardScrollPanel(scene, this.contentRoot);
     this.scrollPanel.setOrigin?.(0, 0);
     this.scrollPanel.setVisible?.(false);
     this.scrollPanel.setActive?.(false);
@@ -93,7 +132,7 @@ export class MatchesListView {
       () => this.nextPage(),
       ["matchList"]
     ).setOrigin(0.5);
-    this.container.add([
+    this.contentRoot.add([
       this.titleText,
       this.statusText,
       this.refreshButton,
@@ -105,9 +144,16 @@ export class MatchesListView {
     this.updatePager();
     scene.scale.on(Phaser.Scale.Events.RESIZE, this.layoutMatches, this);
     scene.events.on(Phaser.Scenes.Events.WAKE, this.layoutMatches, this);
+    scene.input.on(Phaser.Input.Events.POINTER_DOWN, this.handlePullStart);
+    scene.input.on(Phaser.Input.Events.POINTER_UP, this.handlePullEnd);
+    scene.input.on(Phaser.Input.Events.POINTER_UP_OUTSIDE, this.handlePullEnd);
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       scene.scale.off(Phaser.Scale.Events.RESIZE, this.layoutMatches, this);
       scene.events.off(Phaser.Scenes.Events.WAKE, this.layoutMatches, this);
+      scene.input.off(Phaser.Input.Events.POINTER_DOWN, this.handlePullStart);
+      scene.input.off(Phaser.Input.Events.POINTER_UP, this.handlePullEnd);
+      scene.input.off(Phaser.Input.Events.POINTER_UP_OUTSIDE, this.handlePullEnd);
+      this.pullStart = null;
     });
   }
 
@@ -137,11 +183,20 @@ export class MatchesListView {
     this.container.setVisible(false).setActive(false);
     this.scrollPanel.setVisible?.(false);
     this.scrollPanel.setActive?.(false);
+    this.pullStart = null;
   }
 
   async refresh(): Promise<void> {
-    if (this.fetching || !this.turnService) return;
+    const nowMs = Date.now();
+    if (
+      this.fetching ||
+      !this.turnService ||
+      !canStartPublicMatchRefresh(this.lastRefreshAtMs, nowMs)
+    ) {
+      return;
+    }
     this.fetching = true;
+    this.lastRefreshAtMs = nowMs;
     this.matches = [];
     this.offsets = [0];
     this.pageIndex = 0;
@@ -235,41 +290,48 @@ export class MatchesListView {
     this.container.setPosition(0, 0);
     this.cardList.layout(viewportWidth);
 
-    const titleY = 24;
-    this.titleText.setPosition(centerX, titleY);
-    this.statusText.setWordWrapWidth(contentWidth, true);
-    const statusY = titleY + this.titleText.height / 2 + this.statusText.height / 2 + 10;
-    this.statusText.setPosition(centerX, statusY);
+    let cursorY = 24;
+    this.titleText.setPosition(centerX, cursorY);
+    cursorY += this.titleText.height + 6;
 
-    const actionHeight = Math.max(this.refreshButton.height, this.backButton.height);
-    const actionsY = statusY + this.statusText.height / 2 + actionHeight / 2 + 14;
-    const actionsWidth =
-      this.refreshButton.width + ACTIONS_GAP + this.backButton.width;
+    if (this.statusText.text.length > 0) {
+      this.statusText.setVisible(true);
+      this.statusText.setWordWrapWidth(contentWidth, true);
+      this.statusText.setPosition(centerX, cursorY);
+      cursorY += this.statusText.height + 12;
+    } else {
+      this.statusText.setVisible(false);
+    }
+
+    const actionsWidth = this.refreshButton.width + ACTIONS_GAP + this.backButton.width;
     this.refreshButton.setPosition(
       centerX - actionsWidth / 2 + this.refreshButton.width / 2,
-      actionsY
+      cursorY
     );
     this.backButton.setPosition(
       centerX + actionsWidth / 2 - this.backButton.width / 2,
-      actionsY
+      cursorY
     );
+    cursorY += Math.max(this.refreshButton.height, this.backButton.height) + 18;
+
+    this.cardList.setPosition(0, cursorY);
+    cursorY += this.cardList.height;
 
     const pagerHeight = Math.max(
       this.previousButton.visible ? this.previousButton.height : 0,
       this.nextButton.visible ? this.nextButton.height : 0
     );
-    const pagerY = viewportHeight - pagerHeight / 2 - 12;
-    this.previousButton.setPosition(centerX - 80, pagerY);
-    this.nextButton.setPosition(centerX + 80, pagerY);
+    if (pagerHeight > 0) {
+      cursorY += 18;
+      this.previousButton.setPosition(centerX - 80, cursorY + pagerHeight / 2);
+      this.nextButton.setPosition(centerX + 80, cursorY + pagerHeight / 2);
+      cursorY += pagerHeight + 24;
+    }
 
-    const listTop = actionsY + actionHeight / 2 + 14;
-    const listBottom = pagerHeight > 0
-      ? pagerY - pagerHeight / 2 - 12
-      : viewportHeight - 12;
-    const listHeight = Math.max(100, listBottom - listTop);
-    this.scrollPanel.setPosition?.(0, listTop);
-    this.scrollPanel.setSize?.(viewportWidth, listHeight);
-    this.scrollPanel.setMinSize?.(viewportWidth, listHeight);
+    this.contentRoot.setSize(viewportWidth, cursorY);
+    this.scrollPanel.setPosition?.(0, 0);
+    this.scrollPanel.setSize?.(viewportWidth, viewportHeight);
+    this.scrollPanel.setMinSize?.(viewportWidth, viewportHeight);
     this.scrollPanel.layout?.();
   };
 }

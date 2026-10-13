@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MatchCardSummary } from "@shared";
-import { appendUniquePublicMatches, createPublicMatchSelection, openPublicMatchSelection, PUBLIC_MATCH_PAGE_SIZE, sortPublicMatches } from "../src/scenes/PublicMatchesModel";
+import {
+  appendUniquePublicMatches,
+  canStartPublicMatchRefresh,
+  createPublicMatchSelection,
+  isPullDownRefreshGesture,
+  openPublicMatchSelection,
+  PUBLIC_MATCH_PAGE_SIZE,
+  sortPublicMatches
+} from "../src/scenes/PublicMatchesModel";
 
 const match = (id: string, status: MatchCardSummary["status"], values: Partial<MatchCardSummary> = {}): MatchCardSummary => ({
   match_id: id,
@@ -17,6 +25,17 @@ const match = (id: string, status: MatchCardSummary["status"], values: Partial<M
   timeStatus: status === "in_progress" ? "manual" : status === "finished" ? "finished" : "not_started",
   mapPreviewCells: [],
   ...values
+});
+
+test("public refresh cooldown enforces two seconds between requests", () => {
+  assert.equal(canStartPublicMatchRefresh(10_000, 11_999), false);
+  assert.equal(canStartPublicMatchRefresh(10_000, 12_000), true);
+});
+
+test("pull-to-refresh needs downward pull past threshold", () => {
+  assert.equal(isPullDownRefreshGesture(100, 171), false);
+  assert.equal(isPullDownRefreshGesture(100, 172), true);
+  assert.equal(isPullDownRefreshGesture(100, 250), true);
 });
 
 test("public match pages append without duplicates and respect bounded page size", () => {

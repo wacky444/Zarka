@@ -15,6 +15,7 @@ export type MatchCardScrollPanel = Phaser.GameObjects.GameObject & {
   setVisible?: (visible: boolean) => void;
   setActive?: (active: boolean) => void;
   scrollToTop?: () => void;
+  t?: number;
 };
 
 export function createMatchCardScrollPanel(
