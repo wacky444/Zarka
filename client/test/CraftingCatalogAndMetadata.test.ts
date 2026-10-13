@@ -23,6 +23,7 @@ import {
 import { getMissingRequirement } from "../src/ui/ActionRequirementWarnings.ts";
 import { ActionPlanSynchronizer } from "../src/scenes/ActionPlanSynchronizer.ts";
 import type { TurnService } from "../src/services/turnService.ts";
+import { buildCraftingAnimationPlan } from "../src/animation/replayActions/CraftingAnimationData.ts";
 import {
   formatCraftingFailureLine,
   formatCraftingReplayLine,
@@ -240,6 +241,63 @@ test("Manipulate selector keeps both catalogs visible and warns from projected i
   } finally {
     setLocale(previousLocale);
   }
+});
+
+test("Crafting animations use only successful catalog-backed results", () => {
+  assert.deepEqual(
+    buildCraftingAnimationPlan("fabricate", {
+      craftedItemId: "bat",
+      outcome: "success",
+      ingredients: [{ itemId: "wood", quantity: 4 }]
+    }),
+    {
+      kind: "fabricate",
+      inputs: [],
+      outputs: [{ itemId: "bat", quantity: 1 }]
+    }
+  );
+  assert.deepEqual(
+    buildCraftingAnimationPlan("manipulate", {
+      mode: "combine",
+      recipeId: "bat",
+      outcome: "success",
+      resultingItems: [{ itemId: "bat", quantity: 1 }]
+    }),
+    {
+      kind: "combine",
+      inputs: [{ itemId: "wood", quantity: 4 }],
+      outputs: [{ itemId: "bat", quantity: 1 }]
+    }
+  );
+  assert.deepEqual(
+    buildCraftingAnimationPlan("manipulate", {
+      mode: "separate",
+      recipeId: "bat",
+      outcome: "success",
+      resultingItems: [{ itemId: "wood", quantity: 4 }]
+    }),
+    {
+      kind: "separate",
+      inputs: [{ itemId: "bat", quantity: 1 }],
+      outputs: [{ itemId: "wood", quantity: 4 }]
+    }
+  );
+  assert.equal(
+    buildCraftingAnimationPlan("fabricate", {
+      craftedItemId: "bat",
+      outcome: "failure"
+    }),
+    null
+  );
+  assert.equal(
+    buildCraftingAnimationPlan("manipulate", {
+      mode: "combine",
+      recipeId: "bat",
+      outcome: "success",
+      resultingItems: [{ itemId: "wood", quantity: 1 }]
+    }),
+    null
+  );
 });
 
 test("Crafting replay formatter localizes products and actual operation results", () => {
