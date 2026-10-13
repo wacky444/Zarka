@@ -3,7 +3,11 @@ import { TurnService } from "../services/turnService";
 import { t } from "../services/i18n";
 import { makeButton, type UIButton } from "../ui/button";
 import { THEME } from "../ui/ColorPalette";
-import { MatchCard } from "../ui/MatchCard";
+import {
+  createMatchCardScrollPanel,
+  MatchCardList,
+  type MatchCardScrollPanel
+} from "../ui/MatchCardList";
 import { isPointerTap } from "../ui/pointerInput";
 import type {
   GetRankedQueueStatusPayload,
@@ -20,17 +24,6 @@ import {
   type SectionCollapseState,
   type SectionId
 } from "./MyMatchesListModel";
-type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
-  layout?: () => void;
-  setMinSize?: (width: number, height: number) => void;
-  setSize?: (width: number, height: number) => void;
-  setPosition?: (x: number, y: number) => void;
-  setOrigin?: (x: number, y?: number) => void;
-  setVisible?: (visible: boolean) => void;
-  setActive?: (active: boolean) => void;
-  scrollToTop?: () => void;
-};
-
 export type MyMatchSelectHandler = (
   matchId: string,
   status: MatchCardStatus,
@@ -123,7 +116,7 @@ export class MyMatchesListView {
   private readonly scene: Phaser.Scene;
   private readonly container: Phaser.GameObjects.Container;
   private readonly contentRoot: Phaser.GameObjects.Container;
-  private readonly scrollPanel?: ScrollablePanelInstance;
+  private readonly scrollPanel?: MatchCardScrollPanel;
 
   private readonly titleText: Phaser.GameObjects.Text;
   private readonly statusText: Phaser.GameObjects.Text;
@@ -136,12 +129,11 @@ export class MyMatchesListView {
   private readonly finishedHeader: CollapsibleSectionHeader;
   private readonly finishedEmptyText: Phaser.GameObjects.Text;
 
-  private onlineCards: MatchCard[] = [];
-  private finishedCards: MatchCard[] = [];
+  private readonly onlineCardList: MatchCardList<MyMatchCardSummary>;
+  private readonly finishedCardList: MatchCardList<MyMatchCardSummary>;
   private onlineMatches: MyMatchCardSummary[] = [];
   private finishedMatches: MyMatchCardSummary[] = [];
   private maxCurrentMatches = 10;
-  private currentCardWidth = 0;
 
   private collapseState: SectionCollapseState = {
     onlineCollapsed: false,
@@ -165,52 +157,10 @@ export class MyMatchesListView {
 
     this.contentRoot = scene.add.container(0, 0);
 
-    const rexUi = (
-      scene as unknown as {
-        rexUI?: {
-          add: {
-            scrollablePanel: (options: unknown) => ScrollablePanelInstance;
-            roundRectangle: (
-              x: number,
-              y: number,
-              width: number,
-              height: number,
-              radius: number,
-              fillColor: number
-            ) => unknown;
-          };
-        };
-      }
-    ).rexUI;
+    const rexUi = (scene as unknown as { rexUI?: unknown }).rexUI;
 
     if (rexUi) {
-      this.scrollPanel = rexUi.add.scrollablePanel({
-        x: 0,
-        y: 0,
-        width: scene.scale.width,
-        height: scene.scale.height,
-        scrollMode: 0,
-        panel: {
-          child: this.contentRoot,
-          mask: true
-        },
-        slider: {
-          track: rexUi.add.roundRectangle(0, 0, 4, 120, 2, 0x1f2a4a),
-          thumb: rexUi.add.roundRectangle(0, 0, 6, 36, 3, 0x3b82f6)
-        },
-        scroller: {
-          threshold: 10,
-          rectBoundsInteractive: true,
-          slidingDeceleration: 5000,
-          backDeceleration: 2000,
-          pointerOutRelease: true
-        },
-        mouseWheelScroller: {
-          focus: 2,
-          speed: 0.35
-        },
-        space: { left: 0, right: 8, top: 0, bottom: 0, panel: 8 }
-      });
+      this.scrollPanel = createMatchCardScrollPanel(scene, this.contentRoot);
       this.scrollPanel.setOrigin?.(0, 0);
       this.scrollPanel.setVisible?.(false);
       this.scrollPanel.setActive?.(false);
@@ -301,6 +251,14 @@ export class MyMatchesListView {
       .setOrigin(0.5, 0)
       .setVisible(false);
     this.contentRoot.add(this.finishedEmptyText);
+
+    this.onlineCardList = new MatchCardList(scene, true, (match) => {
+      this.handleCardSelect(match);
+    });
+    this.finishedCardList = new MatchCardList(scene, true, (match) => {
+      this.handleCardSelect(match);
+    });
+    this.contentRoot.add([this.onlineCardList, this.finishedCardList]);
 
     this.layoutMyMatches();
     scene.scale.on(Phaser.Scale.Events.RESIZE, this.layoutMyMatches, this);
@@ -439,68 +397,15 @@ export class MyMatchesListView {
   }
 
   private clearCards(): void {
-    for (const card of this.onlineCards) {
-      card.destroy();
-    }
-    for (const card of this.finishedCards) {
-      card.destroy();
-    }
-    this.onlineCards = [];
-    this.finishedCards = [];
     this.onlineMatches = [];
     this.finishedMatches = [];
+    this.onlineCardList.setMatches([]);
+    this.finishedCardList.setMatches([]);
   }
 
   private rebuildCards(): void {
-    for (const card of this.onlineCards) {
-      card.destroy();
-    }
-    for (const card of this.finishedCards) {
-      card.destroy();
-    }
-    this.onlineCards = [];
-    this.finishedCards = [];
-
-    const viewportWidth = this.scene.scale.width;
-    const contentWidth = Math.min(
-      MY_MATCHES_LAYOUT.contentWidth,
-      Math.max(300, viewportWidth - MY_MATCHES_LAYOUT.horizontalPadding)
-    );
-    this.currentCardWidth = contentWidth;
-
-    this.onlineCards = this.onlineMatches.map((summary) => {
-      const card = new MatchCard(
-        this.scene,
-        0,
-        0,
-        contentWidth,
-        summary,
-        {
-          isMyMatch: true,
-          currentUserReady: summary.currentUserReady,
-          onSelect: () => this.handleCardSelect(summary)
-        }
-      );
-      this.contentRoot.add(card);
-      return card;
-    });
-
-    this.finishedCards = this.finishedMatches.map((summary) => {
-      const card = new MatchCard(
-        this.scene,
-        0,
-        0,
-        contentWidth,
-        summary,
-        {
-          isMyMatch: true,
-          currentUserReady: false,
-          onSelect: () => this.handleCardSelect(summary)
-        }
-      );
-      this.contentRoot.add(card);
-      return card;
-    });
+    this.onlineCardList.setMatches(this.onlineMatches);
+    this.finishedCardList.setMatches(this.finishedMatches);
   }
 
   private handleCardSelect(match: MyMatchCardSummary): void {
@@ -517,12 +422,8 @@ export class MyMatchesListView {
     const contentLeft = (viewportWidth - contentWidth) / 2;
     const centerX = viewportWidth / 2;
 
-    if (
-      this.currentCardWidth !== contentWidth &&
-      (this.onlineMatches.length > 0 || this.finishedMatches.length > 0)
-    ) {
-      this.rebuildCards();
-    }
+    this.onlineCardList.layout(viewportWidth);
+    this.finishedCardList.layout(viewportWidth);
 
     let cursorY = 24;
 
@@ -566,21 +467,18 @@ export class MyMatchesListView {
 
     if (this.collapseState.onlineCollapsed) {
       this.onlineEmptyText.setVisible(false);
-      for (const card of this.onlineCards) {
-        card.setVisible(false).setActive(false);
-      }
+      this.onlineCardList.setItemsVisible(false);
     } else {
       if (this.onlineMatches.length === 0) {
+        this.onlineCardList.setItemsVisible(false);
         this.onlineEmptyText.setVisible(true);
         this.onlineEmptyText.setPosition(centerX, cursorY + 6);
         cursorY += this.onlineEmptyText.height + 16;
       } else {
         this.onlineEmptyText.setVisible(false);
-        for (const card of this.onlineCards) {
-          card.setVisible(true).setActive(true);
-          card.setPosition(contentLeft, cursorY);
-          cursorY += 124 + MY_MATCHES_LAYOUT.cardGap;
-        }
+        this.onlineCardList.setItemsVisible(true);
+        this.onlineCardList.setPosition(0, cursorY);
+        cursorY += this.onlineCardList.height + MY_MATCHES_LAYOUT.cardGap;
       }
     }
 
@@ -596,21 +494,18 @@ export class MyMatchesListView {
 
     if (this.collapseState.finishedCollapsed) {
       this.finishedEmptyText.setVisible(false);
-      for (const card of this.finishedCards) {
-        card.setVisible(false).setActive(false);
-      }
+      this.finishedCardList.setItemsVisible(false);
     } else {
       if (this.finishedMatches.length === 0) {
+        this.finishedCardList.setItemsVisible(false);
         this.finishedEmptyText.setVisible(true);
         this.finishedEmptyText.setPosition(centerX, cursorY + 6);
         cursorY += this.finishedEmptyText.height + 16;
       } else {
         this.finishedEmptyText.setVisible(false);
-        for (const card of this.finishedCards) {
-          card.setVisible(true).setActive(true);
-          card.setPosition(contentLeft, cursorY);
-          cursorY += 124 + MY_MATCHES_LAYOUT.cardGap;
-        }
+        this.finishedCardList.setItemsVisible(true);
+        this.finishedCardList.setPosition(0, cursorY);
+        cursorY += this.finishedCardList.height + MY_MATCHES_LAYOUT.cardGap;
       }
     }
 
