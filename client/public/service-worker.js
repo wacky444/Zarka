@@ -24,8 +24,8 @@ self.addEventListener("push", (event) => {
       : "Your ranked match is ready."
     : turn
       ? spanish
-        ? `Turno ${turn} avanzado.`
-        : `Turn ${turn} advanced.`
+        ? `Turno ${turn} + ${payload.matchName || ""}`.trim()
+        : `Turn ${turn} + ${payload.matchName || ""}`.trim()
       : spanish
         ? "Avanzó un turno de la partida."
         : "A match turn advanced.";

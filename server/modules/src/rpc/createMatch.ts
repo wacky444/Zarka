@@ -7,6 +7,7 @@ import { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { normalizeMatchName } from "../utils/normalize";
+import { getRandomColorMatchName } from "../match/teams";
 import { assertCanAddMembership, createMembershipStorage, withMatchMembershipLocks } from "../services/matchMembershipLimit";
 import { clampNumber, validateTime } from "../utils/validation";
 import {
@@ -77,6 +78,9 @@ function createMatchRpcLocked(
   }
 
   name = normalizeMatchName(name);
+  if (name === DEFAULT_MATCH_NAME) {
+    name = getRandomColorMatchName();
+  }
 
   const nkWrapper = createNakamaWrapper(nk);
   const storage = new StorageService(nkWrapper);

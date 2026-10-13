@@ -72,17 +72,19 @@ test("turn notifications keep existing English and Spanish copy", async () => {
     event: "turn_advanced",
     matchId: "match-1",
     turn: 4,
+    matchName: "Test Match",
     locale: "en"
   });
   await dispatchPush(worker, {
     event: "turn_advanced",
     matchId: "match-2",
     turn: 5,
+    matchName: "Partida de prueba",
     locale: "es"
   });
 
   assert.equal(worker.notifications[0].title, "Zarka: new turn");
-  assert.equal(worker.notifications[0].options.body, "Turn 4 advanced.");
+  assert.equal(worker.notifications[0].options.body, "Turn 4 + Test Match");
   assert.equal(worker.notifications[1].title, "Zarka: nuevo turno");
-  assert.equal(worker.notifications[1].options.body, "Turno 5 avanzado.");
+  assert.equal(worker.notifications[1].options.body, "Turno 5 + Partida de prueba");
 });

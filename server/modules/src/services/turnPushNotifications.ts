@@ -172,6 +172,7 @@ export function createTurnNotificationOutbox(
     matchId: match.match_id,
     event: "turn_advanced",
     turn,
+    ...(match.name ? { matchName: match.name } : {}),
     targets,
     status: "pending",
     attempts: 0,
@@ -418,7 +419,9 @@ function dispatchNotificationOutbox(
           idempotencyKey: `${id}:batch:${batchIndex}`,
           event: outbox.event,
           matchId: outbox.matchId,
-          ...(outbox.event === "turn_advanced" ? { turn: outbox.turn } : {}),
+          ...(outbox.event === "turn_advanced"
+            ? { turn: outbox.turn, ...(outbox.matchName ? { matchName: outbox.matchName } : {}) }
+            : {}),
           subscriptions: batch
         }),
         1500

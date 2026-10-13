@@ -103,7 +103,12 @@ function parseJob(value) {
     idempotencyKey: value.idempotencyKey,
     event,
     matchId: value.matchId,
-    ...(event === "turn_advanced" ? { turn: value.turn } : {}),
+    ...(event === "turn_advanced"
+      ? {
+          turn: value.turn,
+          ...(typeof value.matchName === "string" ? { matchName: value.matchName } : {})
+        }
+      : {}),
     subscriptions
   };
 }
@@ -151,7 +156,9 @@ async function deliverJob(job, sendNotification) {
         const payload = JSON.stringify({
           event: job.event,
           matchId: job.matchId,
-          ...(job.event === "turn_advanced" ? { turn: job.turn } : {}),
+          ...(job.event === "turn_advanced"
+            ? { turn: job.turn, ...(job.matchName ? { matchName: job.matchName } : {}) }
+            : {}),
           locale: entry.locale
         });
         await sendNotification(entry.subscription, payload, {

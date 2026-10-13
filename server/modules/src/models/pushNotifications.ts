@@ -39,6 +39,7 @@ export interface PushNotificationOutboxBase {
 export interface TurnNotificationOutbox extends PushNotificationOutboxBase {
   event: "turn_advanced";
   turn: number;
+  matchName?: string;
 }
 
 export interface RankedMatchStartedOutbox extends PushNotificationOutboxBase {

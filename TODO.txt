@@ -90,3 +90,9 @@
 - when a character is dead, show in the banner the team, also reveal the team in player list
 
 - no notifications in matches with only one human player, like tutorial
+
+- chemical weapon   "[ ] Single target (Area)": "[ ] Objetivo único (área)",
+	- change text to less confusing
+	- in area mode, hide the target selector
+
+- in new turn if the action is not set, show an empty value instead of first action
