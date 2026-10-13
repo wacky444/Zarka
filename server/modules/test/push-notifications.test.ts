@@ -384,7 +384,7 @@ test("turn outbox snapshots subscribed human participants and skips ended matche
   const { nk } = createFakeNakama();
   writeSubscription(nk, "human-player");
   const outbox = createTurnNotificationOutbox(
-    createMatch(),
+    createMatch({ players: ["human-player", "second-human", "bot1"] }),
     context("human-player"),
     nk,
     logger()
@@ -394,7 +394,10 @@ test("turn outbox snapshots subscribed human participants and skips ended matche
   ]);
   assert.equal(
     createTurnNotificationOutbox(
-      createMatch({ removed: 1 }),
+      createMatch({
+        players: ["human-player", "second-human", "bot1"],
+        removed: 1
+      }),
       context("human-player"),
       nk,
       logger()
@@ -409,6 +412,26 @@ test("turn outbox snapshots subscribed human participants and skips ended matche
       logger()
     ),
     null
+  );
+});
+
+test("single-human turn notifications only send after time-skip advancement", () => {
+  const { nk } = createFakeNakama();
+  writeSubscription(nk, "human-player");
+  const match = createMatch();
+  assert.equal(
+    createTurnNotificationOutbox(match, context("human-player"), nk, logger()),
+    null
+  );
+  assert.deepEqual(
+    createTurnNotificationOutbox(
+      match,
+      context("human-player"),
+      nk,
+      logger(),
+      true
+    )?.targets,
+    [{ userId: "human-player", deviceId: DEVICE_ID, locale: "en" }]
   );
 });
 

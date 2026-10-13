@@ -180,7 +180,13 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
     logger.debug("Auto-advancing turn for match %s", runtimeMatchId);
     const timestampSeconds = Math.floor(nowMs / 1000);
     match.lastAutoAdvanceAt = timestampSeconds;
-    const pushOutbox = createTurnNotificationOutbox(match, ctx, nk, logger);
+    const pushOutbox = createTurnNotificationOutbox(
+      match,
+      ctx,
+      nk,
+      logger,
+      !botOnlyAlive
+    );
 
     try {
       if (pushOutbox) {

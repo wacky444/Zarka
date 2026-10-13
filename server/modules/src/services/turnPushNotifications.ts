@@ -29,6 +29,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function getHumanPlayerIds(match: MatchRecord): string[] {
+  return Array.from(new Set(match.players ?? [])).filter(
+    (playerId) =>
+      playerId !== NAKAMA_SYSTEM_USER_ID &&
+      playerId !== SERVER_USER_ID &&
+      !isBotId(playerId)
+  );
+}
+
 function getTurnOutboxId(matchId: string, turn: number): string {
   return `turn_${matchId}_${turn}`;
 }
@@ -117,12 +126,7 @@ function createNotificationTargets(
   }
 
   const targets: TurnNotificationTarget[] = [];
-  const playerIds = Array.from(new Set(match.players)).filter(
-    (playerId) =>
-      playerId !== NAKAMA_SYSTEM_USER_ID &&
-      playerId !== SERVER_USER_ID &&
-      !isBotId(playerId)
-  );
+  const playerIds = getHumanPlayerIds(match);
   for (const userId of playerIds) {
     try {
       const response = nk.storageList(userId, PUSH_SUBSCRIPTION_COLLECTION, 20);
@@ -152,9 +156,14 @@ export function createTurnNotificationOutbox(
   match: MatchRecord,
   ctx: nkruntime.Context,
   nk: nkruntime.Nakama,
-  logger: nkruntime.Logger
+  logger: nkruntime.Logger,
+  wasTimeSkipped = false
 ): TurnNotificationOutbox | null {
   if (!Number.isFinite(match.current_turn)) return null;
+  const humanPlayerIds = getHumanPlayerIds(match);
+  if (humanPlayerIds.length === 1 && !wasTimeSkipped) {
+    return null;
+  }
   const targets = createNotificationTargets(match, ctx, nk, logger);
   if (!targets) return null;
   const turn = match.current_turn;
