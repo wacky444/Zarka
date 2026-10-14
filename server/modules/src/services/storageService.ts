@@ -112,7 +112,7 @@ export class StorageService {
 
   writeMatchWithPushOutbox(
     match: MatchRecord,
-    outbox: TurnNotificationOutbox,
+    outbox: PushNotificationOutbox,
     version?: string
   ): void {
     this.nk.storageWrite([

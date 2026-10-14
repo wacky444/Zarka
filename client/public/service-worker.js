@@ -11,24 +11,34 @@ self.addEventListener("push", (event) => {
   const turn = payload && Number.isSafeInteger(payload.turn) ? payload.turn : null;
   const spanish = payload && payload.locale === "es";
   const rankedMatchStarted = payload?.event === "ranked_match_started";
+  const turnExpiring = payload?.event === "turn_expiring";
   const title = rankedMatchStarted
     ? spanish
       ? "Zarka: partida clasificatoria iniciada"
       : "Zarka: ranked match started"
-    : spanish
-      ? "Zarka: nuevo turno"
-      : "Zarka: new turn";
+    : turnExpiring
+      ? spanish
+        ? "Zarka: turno por expirar"
+        : "Zarka: turn expiring"
+      : spanish
+        ? "Zarka: nuevo turno"
+        : "Zarka: new turn";
+  const matchNamePrefix = payload?.matchName ? `${payload.matchName} ` : "";
   const body = rankedMatchStarted
     ? spanish
       ? "Tu partida clasificatoria ya está lista."
       : "Your ranked match is ready."
-    : turn
+    : turnExpiring
       ? spanish
-        ? `Turno ${turn} + ${payload.matchName || ""}`.trim()
-        : `Turn ${turn} + ${payload.matchName || ""}`.trim()
-      : spanish
-        ? "Avanzó un turno de la partida."
-        : "A match turn advanced.";
+        ? `${matchNamePrefix}3 horas para enviar tus acciones`.trim()
+        : `${matchNamePrefix}3 hours to send your actions`.trim()
+      : turn
+        ? spanish
+          ? `${matchNamePrefix}Turno ${turn}`.trim()
+          : `${matchNamePrefix}Turn ${turn}`.trim()
+        : spanish
+          ? "Avanzó un turno de la partida."
+          : "A match turn advanced.";
   const options = {
     body,
     lang: spanish ? "es" : "en",
@@ -37,7 +47,9 @@ self.addEventListener("push", (event) => {
     tag: matchId
       ? rankedMatchStarted
         ? `zarka-${matchId}-ranked-start`
-        : `zarka-${matchId}-${turn ?? "update"}`
+        : turnExpiring
+          ? `zarka-${matchId}-expiring-${turn ?? "current"}`
+          : `zarka-${matchId}-${turn ?? "update"}`
       : "zarka-turn",
     renotify: false,
     data: {

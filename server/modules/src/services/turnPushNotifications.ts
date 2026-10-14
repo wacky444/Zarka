@@ -12,11 +12,13 @@ import type {
   PushSubscriptionDeviceIndex,
   RankedMatchStartedOutbox,
   StoredPushSubscription,
+  TurnExpiringOutbox,
   TurnNotificationOutbox,
   TurnNotificationTarget
 } from "../models/pushNotifications";
 import type { MatchRecord } from "../models/types";
 import { isBotId } from "../match/botAI";
+import { isCharacterIncapacitated } from "../utils/playerCharacter";
 import { RANKED_MATCH_METADATA_KEY } from "@shared";
 import { isPushDispatchConfigured, parsePushSubscription } from "./pushSubscriptions";
 
@@ -40,6 +42,10 @@ function getHumanPlayerIds(match: MatchRecord): string[] {
 
 function getTurnOutboxId(matchId: string, turn: number): string {
   return `turn_${matchId}_${turn}`;
+}
+
+function getTurnExpiringOutboxId(matchId: string, turn: number): string {
+  return `turn_expiring_${matchId}_${turn}`;
 }
 
 function getRankedMatchStartedOutboxId(matchId: string): string {
@@ -102,10 +108,23 @@ function parseOutbox(value: unknown): PushNotificationOutbox | null {
   };
   const event = value.event ?? "turn_advanced";
   if (event === "turn_advanced" && typeof value.turn === "number") {
-    return { ...common, event: "turn_advanced", turn: value.turn };
+    return {
+      ...common,
+      event: "turn_advanced",
+      turn: value.turn,
+      ...(typeof value.matchName === "string" ? { matchName: value.matchName } : {})
+    };
   }
   if (event === "ranked_match_started") {
     return { ...common, event: "ranked_match_started" };
+  }
+  if (event === "turn_expiring" && typeof value.turn === "number") {
+    return {
+      ...common,
+      event: "turn_expiring",
+      turn: value.turn,
+      ...(typeof value.matchName === "string" ? { matchName: value.matchName } : {})
+    };
   }
   return null;
 }
@@ -179,6 +198,104 @@ export function createTurnNotificationOutbox(
     nextAttemptAtMs: 0,
     createdAtMs: Date.now()
   };
+}
+
+function getUnreadyHumanPlayerIds(match: MatchRecord): string[] {
+  const readyStates = match.readyStates ?? {};
+  return getHumanPlayerIds(match).filter((playerId) => {
+    const character = match.playerCharacters?.[playerId] ?? null;
+    return !isCharacterIncapacitated(character) && readyStates[playerId] !== true;
+  });
+}
+
+function createUnreadyNotificationTargets(
+  match: MatchRecord,
+  ctx: nkruntime.Context,
+  nk: nkruntime.Nakama,
+  logger: nkruntime.Logger
+): TurnNotificationTarget[] | null {
+  if (
+    !isPushDispatchConfigured(ctx.env) ||
+    match.started !== true ||
+    (typeof match.removed === "number" && match.removed !== 0) ||
+    !Array.isArray(match.players)
+  ) {
+    return null;
+  }
+
+  const targets: TurnNotificationTarget[] = [];
+  const playerIds = getUnreadyHumanPlayerIds(match);
+  for (const userId of playerIds) {
+    try {
+      const response = nk.storageList(userId, PUSH_SUBSCRIPTION_COLLECTION, 20);
+      for (const entry of response?.objects ?? []) {
+        if (typeof entry?.key !== "string") continue;
+        const subscription = getStoredSubscription(entry.value, userId, entry.key);
+        if (subscription) {
+          targets.push({
+            userId,
+            deviceId: entry.key,
+            locale: subscription.locale
+          });
+        }
+      }
+    } catch (error) {
+      logger.warn(
+        "push subscription lookup failed for user %s: %s",
+        userId,
+        (error as Error).message || String(error)
+      );
+    }
+  }
+  return targets.length > 0 ? targets : null;
+}
+
+export function createTurnExpiringOutbox(
+  match: MatchRecord,
+  ctx: nkruntime.Context,
+  nk: nkruntime.Nakama,
+  logger: nkruntime.Logger
+): TurnExpiringOutbox | null {
+  if (!Number.isFinite(match.current_turn)) return null;
+  const outboxId = getTurnExpiringOutboxId(match.match_id, match.current_turn);
+  const existing = nk.storageRead([
+    {
+      collection: PUSH_NOTIFICATION_OUTBOX_COLLECTION,
+      key: outboxId,
+      userId: SERVER_USER_ID
+    }
+  ])[0];
+  if (existing && existing.value) {
+    return null;
+  }
+  const targets = createUnreadyNotificationTargets(match, ctx, nk, logger);
+  if (!targets) return null;
+  const turn = match.current_turn;
+  return {
+    id: outboxId,
+    matchId: match.match_id,
+    event: "turn_expiring",
+    turn,
+    ...(match.name ? { matchName: match.name } : {}),
+    targets,
+    status: "pending",
+    attempts: 0,
+    nextAttemptAtMs: 0,
+    createdAtMs: Date.now()
+  };
+}
+
+export function checkAndSendTurnExpiringNotification(
+  match: MatchRecord,
+  ctx: nkruntime.Context,
+  nk: nkruntime.Nakama,
+  logger: nkruntime.Logger
+): void {
+  const outbox = createTurnExpiringOutbox(match, ctx, nk, logger);
+  if (outbox) {
+    persistOutbox(nk, outbox, "");
+    dispatchTurnExpiringOutbox(match.match_id, match.current_turn, ctx, nk, logger);
+  }
 }
 
 export function createRankedMatchStartedOutbox(
@@ -419,7 +536,7 @@ function dispatchNotificationOutbox(
           idempotencyKey: `${id}:batch:${batchIndex}`,
           event: outbox.event,
           matchId: outbox.matchId,
-          ...(outbox.event === "turn_advanced"
+          ...(outbox.event === "turn_advanced" || outbox.event === "turn_expiring"
             ? { turn: outbox.turn, ...(outbox.matchName ? { matchName: outbox.matchName } : {}) }
             : {}),
           subscriptions: batch
@@ -496,6 +613,16 @@ export function dispatchTurnNotificationOutbox(
   logger: nkruntime.Logger
 ): void {
   dispatchNotificationOutbox(getTurnOutboxId(matchId, turn), ctx, nk, logger);
+}
+
+export function dispatchTurnExpiringOutbox(
+  matchId: string,
+  turn: number,
+  ctx: nkruntime.Context,
+  nk: nkruntime.Nakama,
+  logger: nkruntime.Logger
+): void {
+  dispatchNotificationOutbox(getTurnExpiringOutboxId(matchId, turn), ctx, nk, logger);
 }
 
 export function dispatchRankedMatchStartedOutbox(

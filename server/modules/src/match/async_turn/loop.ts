@@ -18,13 +18,16 @@ import {
 import { getAliveCharacterIds } from "../checkEndGame";
 import { createReplaySnapshot } from "../replay/snapshot";
 import {
+  checkAndSendTurnExpiringNotification,
   createTurnNotificationOutbox,
   dispatchRankedMatchStartedOutbox,
+  dispatchTurnExpiringOutbox,
   dispatchTurnNotificationOutbox
 } from "../../services/turnPushNotifications";
 
 const AUTO_CHECK_INTERVAL_MS = 60 * 1000;
 const BOT_AUTO_CHECK_INTERVAL_MS = 5 * 1000;
+const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 
 function areOnlyBotsAlive(match: MatchRecord): boolean {
   const characters = match.playerCharacters;
@@ -106,6 +109,13 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       nk,
       logger
     );
+    dispatchTurnExpiringOutbox(
+      match.match_id,
+      match.current_turn,
+      ctx,
+      nk,
+      logger
+    );
 
     const botOnlyAlive = areOnlyBotsAlive(match);
     if (botOnlyAlive) {
@@ -133,6 +143,12 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
         },
         nowMs
       );
+      if (nextAutoAdvanceAt !== undefined && nextAutoAdvanceAt > nowMs) {
+        const timeLeftMs = nextAutoAdvanceAt - nowMs;
+        if (timeLeftMs <= THREE_HOURS_MS) {
+          checkAndSendTurnExpiringNotification(match, ctx, nk, logger);
+        }
+      }
       if (nextAutoAdvanceAt === undefined || nowMs < nextAutoAdvanceAt) {
         return { state };
       }

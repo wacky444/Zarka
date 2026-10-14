@@ -118,6 +118,42 @@ test("push dispatcher sends valid payload and deduplicates idempotency key", asy
   });
 });
 
+test("push dispatcher handles turn_expiring payload with matchName", async () => {
+  let sendCount = 0;
+  let sentPayload = "";
+  const handler = makeHandler(async (_subscription, payload) => {
+    sendCount += 1;
+    sentPayload = payload;
+  });
+  const job = createJob({
+    idempotencyKey: "turn_expiring_match-1_2",
+    event: "turn_expiring",
+    turn: 2,
+    matchName: "Test Match"
+  });
+  await withServer(handler, async (baseUrl) => {
+    const request = () =>
+      fetch(`${baseUrl}/send`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${SECRET}`,
+          "content-type": "application/json"
+        },
+        body: JSON.stringify(job)
+      });
+    const response = await request();
+    assert.equal(response.status, 200);
+    assert.equal(sendCount, 1);
+    assert.deepEqual(JSON.parse(sentPayload), {
+      event: "turn_expiring",
+      matchId: "match-1",
+      turn: 2,
+      matchName: "Test Match",
+      locale: "es"
+    });
+  });
+});
+
 test("ranked-match start payload omits turn state and deduplicates by event key", async () => {
   let sendCount = 0;
   let sentPayload = "";

@@ -46,6 +46,13 @@ export interface RankedMatchStartedOutbox extends PushNotificationOutboxBase {
   event: "ranked_match_started";
 }
 
+export interface TurnExpiringOutbox extends PushNotificationOutboxBase {
+  event: "turn_expiring";
+  turn: number;
+  matchName?: string;
+}
+
 export type PushNotificationOutbox =
   | TurnNotificationOutbox
-  | RankedMatchStartedOutbox;
+  | RankedMatchStartedOutbox
+  | TurnExpiringOutbox;

@@ -24,8 +24,10 @@ import {
 } from "../src/rpc/unregisterPushSubscription";
 import {
   createRankedMatchStartedOutbox,
+  createTurnExpiringOutbox,
   createTurnNotificationOutbox,
   dispatchRankedMatchStartedOutbox,
+  dispatchTurnExpiringOutbox,
   dispatchTurnNotificationOutbox
 } from "../src/services/turnPushNotifications";
 
@@ -433,6 +435,63 @@ test("single-human turn notifications only send after time-skip advancement", ()
     )?.targets,
     [{ userId: "human-player", deviceId: DEVICE_ID, locale: "en" }]
   );
+});
+
+test("turn expiring outbox targets only unready conscious human players", () => {
+  const { nk } = createFakeNakama();
+  writeSubscription(nk, "p1");
+  writeSubscription(nk, "p2");
+  const match = createMatch({
+    players: ["p1", "p2", "bot1"],
+    name: "Match 1",
+    readyStates: {
+      p1: true,
+      p2: false
+    }
+  });
+  const outbox = createTurnExpiringOutbox(
+    match,
+    context("p2"),
+    nk,
+    logger()
+  );
+  assert.equal(outbox?.event, "turn_expiring");
+  assert.equal(outbox?.matchName, "Match 1");
+  assert.deepEqual(outbox?.targets, [
+    { userId: "p2", deviceId: DEVICE_ID, locale: "en" }
+  ]);
+});
+
+test("turn expiring outbox deduplicates if outbox already exists", () => {
+  const { nk } = createFakeNakama();
+  writeSubscription(nk, "p2");
+  const match = createMatch({
+    players: ["p2"],
+    current_turn: 1,
+    readyStates: { p2: false }
+  });
+  const outbox = createTurnExpiringOutbox(
+    match,
+    context("p2"),
+    nk,
+    logger()
+  );
+  assert.ok(outbox);
+  nk.storageWrite([
+    {
+      collection: PUSH_NOTIFICATION_OUTBOX_COLLECTION,
+      key: outbox!.id,
+      userId: SERVER_USER_ID,
+      value: outbox
+    }
+  ]);
+  const duplicate = createTurnExpiringOutbox(
+    match,
+    context("p2"),
+    nk,
+    logger()
+  );
+  assert.equal(duplicate, null);
 });
 
 test("match and turn outbox share one atomic storage write", () => {

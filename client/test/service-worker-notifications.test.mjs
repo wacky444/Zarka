@@ -84,7 +84,30 @@ test("turn notifications keep existing English and Spanish copy", async () => {
   });
 
   assert.equal(worker.notifications[0].title, "Zarka: new turn");
-  assert.equal(worker.notifications[0].options.body, "Turn 4 + Test Match");
+  assert.equal(worker.notifications[0].options.body, "Test Match Turn 4");
   assert.equal(worker.notifications[1].title, "Zarka: nuevo turno");
-  assert.equal(worker.notifications[1].options.body, "Turno 5 + Partida de prueba");
+  assert.equal(worker.notifications[1].options.body, "Partida de prueba Turno 5");
+});
+
+test("turn expiring notifications send 3-hour warning", async () => {
+  const worker = loadWorker();
+  await dispatchPush(worker, {
+    event: "turn_expiring",
+    matchId: "match-1",
+    turn: 4,
+    matchName: "Test Match",
+    locale: "en"
+  });
+  await dispatchPush(worker, {
+    event: "turn_expiring",
+    matchId: "match-2",
+    turn: 5,
+    matchName: "Partida de prueba",
+    locale: "es"
+  });
+
+  assert.equal(worker.notifications[0].title, "Zarka: turn expiring");
+  assert.equal(worker.notifications[0].options.body, "Test Match 3 hours to send your actions");
+  assert.equal(worker.notifications[1].title, "Zarka: turno por expirar");
+  assert.equal(worker.notifications[1].options.body, "Partida de prueba 3 horas para enviar tus acciones");
 });
