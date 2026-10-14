@@ -63,3 +63,7 @@
 	- in area mode, hide the target selector
 
 - in new turn if the action is not set, show an empty value instead of first action
+
+- confirmed teams, supporting circles A->B->C->A
+	- changes color name in map
+	- avoid damage when there is no target selected

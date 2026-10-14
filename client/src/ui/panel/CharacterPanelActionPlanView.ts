@@ -766,7 +766,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.scrollContent.add(this.secondaryDropSellToggle);
 
     this.secondaryChemicalTargetToggle = scene.add
-      .text(0, 0, "[ ] Single target (Area)", {
+      .text(0, 0, "[ ] Single target", {
         fontSize: "13px",
         color: "#facc15"
       })
@@ -905,7 +905,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.scrollContent.add(this.extraSecondaryDropSellToggle);
 
     this.extraSecondaryChemicalTargetToggle = scene.add
-      .text(0, 0, "[ ] Single target (Area)", {
+      .text(0, 0, "[ ] Single target", {
         fontSize: "13px",
         color: "#facc15"
       })
@@ -2318,6 +2318,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       this.secondaryChemicalTargetToggle,
       this.secondaryChemicalSingleTarget
     );
+    this.refreshSecondaryPlayerSelectorState();
     this.emitSecondaryActionChange();
   };
 
@@ -2354,6 +2355,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       this.extraSecondaryChemicalTargetToggle,
       this.extraSecondaryChemicalSingleTarget
     );
+    this.refreshExtraSecondaryPlayerSelectorState();
     this.emitExtraSecondaryActionChange();
   };
 
@@ -2779,7 +2781,13 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
 
   private refreshExtraSecondaryPlayerSelectorState(): void {
     const supports = this.selectedExtraSecondaryActionSupportsSingleTarget();
-    const shouldShow = supports && this.extraSecondaryPlayerOptions.length > 0;
+    const singleTargetChemical =
+      this.extraSecondaryActionSelection === "use_chemical_weapon" &&
+      this.extraSecondaryChemicalSingleTarget;
+    const shouldShow =
+      supports &&
+      this.extraSecondaryPlayerOptions.length > 0 &&
+      (!this.extraSecondaryChemicalTargetToggle.visible || singleTargetChemical);
     this.extraSecondaryPlayerSelector.setVisible(shouldShow);
     this.extraSecondaryPlayerSelector.setActive(shouldShow);
     if (!shouldShow) {
@@ -2886,7 +2894,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     enabled: boolean
   ): void {
     toggle.setText(
-      enabled ? "[x] Single target (Area)" : "[ ] Single target (Area)"
+      enabled ? "[x] Single target" : "[ ] Single target"
     );
   }
 
@@ -3117,7 +3125,13 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
 
   private refreshSecondaryPlayerSelectorState(): void {
     const supports = this.selectedSecondaryActionSupportsSingleTarget();
-    const shouldShow = supports && this.secondaryPlayerOptions.length > 0;
+    const singleTargetChemical =
+      this.secondaryActionSelection === "use_chemical_weapon" &&
+      this.secondaryChemicalSingleTarget;
+    const shouldShow =
+      supports &&
+      this.secondaryPlayerOptions.length > 0 &&
+      (!this.secondaryChemicalTargetToggle.visible || singleTargetChemical);
     this.secondaryPlayerSelector.setVisible(shouldShow);
     this.secondaryPlayerSelector.setActive(shouldShow);
     if (!shouldShow) {
