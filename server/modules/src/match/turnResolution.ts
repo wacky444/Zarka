@@ -4,6 +4,7 @@ import { advanceTurn } from "./advanceTurn";
 import { processBotActions } from "./botAI";
 import { planTutorialBotActions } from "./TutorialBotPlanner";
 import { isCharacterDead, isCharacterIncapacitated } from "../utils/playerCharacter";
+import { assignAfkActions } from "./afkActions";
 
 export interface TurnResolutionResult {
   advanced: boolean;
@@ -27,6 +28,7 @@ export function resolveTurnForMatch(
   } else {
     processBotActions(match, logger);
   }
+  assignAfkActions(match);
   const { events } = advanceTurn(match, resolvedTurn, logger, nk);
 
   const resetStates: Record<string, boolean> = {};

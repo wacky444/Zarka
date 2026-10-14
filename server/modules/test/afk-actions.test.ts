@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { ActionLibrary } from "@shared";
 import type { MatchRecord } from "../src/models/types";
 import { assignAfkActions } from "../src/match/afkActions";
+import { resolveTurnForMatch } from "../src/match/turnResolution";
 import { createDefaultCharacter } from "../src/utils/playerCharacter";
 
 function createMatch(playerIds: string[]): MatchRecord {
@@ -87,4 +88,33 @@ test("auto-skip fills missing main actions with a random off-cooldown AFK action
   assert.equal(plannedCharacter.actionPlan?.main?.actionId, ActionLibrary.protect.id);
   assert.equal(blockedCharacter.actionPlan?.main, undefined);
   assert.equal(unconsciousCharacter.actionPlan?.main, undefined);
+});
+
+test("resolveTurnForMatch assigns random AFK action when server received no action", () => {
+  const match = createMatch(["p1"]);
+  const logger = {
+    debug: () => undefined,
+    info: () => undefined,
+    warn: () => undefined,
+    error: () => undefined
+  } as unknown as nkruntime.Logger;
+
+  delete match.playerCharacters.p1.actionPlan;
+
+  const result = withRandom(() => 0, () =>
+    resolveTurnForMatch(match, logger, undefined as unknown as nkruntime.Nakama)
+  );
+
+  assert.equal(result.advanced, true);
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.kind === "player" &&
+        event.actorId === "p1" &&
+        (event.action.actionId === ActionLibrary.dodge.id ||
+          event.action.actionId === ActionLibrary.protect.id ||
+          event.action.actionId === ActionLibrary.sleep.id)
+    ),
+    true
+  );
 });

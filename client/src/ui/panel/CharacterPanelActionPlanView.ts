@@ -501,6 +501,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       title: "Select Main Action",
       placeholder: "Choose action",
       emptyLabel: "Unknown",
+      autoSelectFirst: false,
       columns: 3,
       desktopMinCellWidth: 210,
       cellHeight: 260,
@@ -2488,11 +2489,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     );
     if (preferredId) {
       this.mainActionDropdown.setValue(preferredId, false);
-      if (!this.mainActionDropdown.getValue() && items[0]) {
-        this.mainActionDropdown.setValue(items[0].id, false);
-      }
-    } else if (!this.mainActionDropdown.getValue() && items[0]) {
-      this.mainActionDropdown.setValue(items[0].id, false);
+    } else {
+      this.mainActionDropdown.setValue(null, false);
     }
     this.lastMainActionItem = this.mainActionDropdown.getSelectedItem() ?? null;
     this.mainActionSelection = this.mainActionDropdown.getValue();
