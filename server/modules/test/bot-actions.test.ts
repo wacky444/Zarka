@@ -105,6 +105,21 @@ function chooseBotPlan(
   return match.playerCharacters?.[playerId].actionPlan;
 }
 
+test("bots assign testament to a living random teammate", () => {
+  const bot = createCharacter("bot1", "bots", "origin");
+  const teammate = createCharacter("bot2", "bots", "origin");
+  const enemy = createCharacter("human", "humans", "origin");
+  const match = createMatch(
+    [bot, teammate, enemy],
+    [createTile("origin", { q: 0, r: 0 })]
+  );
+
+  withRandom(() => 0, () => processBotActions(match, logger));
+
+  assert.equal(match.playerCharacters.bot1.testamentRecipientId, "bot2");
+  assert.notEqual(match.playerCharacters.bot1.testamentRecipientId, "human");
+});
+
 test("bot uses create_fire against an enemy when fuel covers target distance", () => {
   const bot = createCharacter("bot1", "bots", "origin", { q: 0, r: 0 });
   const enemy = createCharacter("human", "humans", "enemy-tile", { q: 1, r: 0 });

@@ -184,6 +184,46 @@ interface BotActionContext {
   rng: () => number;
 }
 
+function setBotTestamentRecipient(
+  match: MatchRecord,
+  playerId: string,
+  character: PlayerCharacter,
+): void {
+  const teamId = character.secretTeamId?.trim() || character.teamId?.trim();
+  if (!teamId || !match.playerCharacters) {
+    return;
+  }
+  const currentRecipientId = character.testamentRecipientId;
+  const currentRecipient = currentRecipientId
+    ? match.playerCharacters[currentRecipientId]
+    : undefined;
+  if (
+    currentRecipient &&
+    currentRecipientId !== playerId &&
+    !isCharacterDead(currentRecipient) &&
+    (currentRecipient.secretTeamId?.trim() || currentRecipient.teamId?.trim()) === teamId
+  ) {
+    return;
+  }
+  const candidates = Object.entries(match.playerCharacters).filter(
+    ([candidateId, candidate]) =>
+      candidateId !== playerId &&
+      !!candidate &&
+      !isCharacterDead(candidate) &&
+      (candidate.secretTeamId?.trim() || candidate.teamId?.trim()) === teamId,
+  );
+  if (candidates.length === 0) {
+    return;
+  }
+  let hash = 2166136261;
+  const seed = `${match.match_id}:${playerId}:testament`;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = Math.imul(hash ^ seed.charCodeAt(index), 16777619);
+  }
+  const recipientIndex = (hash >>> 0) % candidates.length;
+  character.testamentRecipientId = candidates[recipientIndex][0];
+}
+
 export function processBotActions(match: MatchRecord, logger: any): void {
   if (!match.playerCharacters) {
     return;
@@ -205,6 +245,7 @@ export function processBotActions(match: MatchRecord, logger: any): void {
     if (!character) {
       continue;
     }
+    setBotTestamentRecipient(match, playerId, character);
     const personality = determinePersonality(playerId);
     if (
       !isCharacterDead(character) &&
