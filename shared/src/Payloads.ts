@@ -126,6 +126,7 @@ export type GetReplayPayload = {
   max_turn?: number;
   events?: ReplayEvent[];
   snapshot?: ReplaySnapshot;
+  preTurnSnapshot?: ReplaySnapshot;
   error?: string;
 };
 

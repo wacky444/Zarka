@@ -19,6 +19,37 @@ import {
 } from "../utils/matchView";
 import { isAdminUser } from "../utils/admin";
 
+function tailorReplaySnapshot(
+  snapshot: ReplaySnapshot,
+  viewerId: string,
+  viewAll: boolean,
+  turn: number,
+  sourceCharacters: import("@shared").MatchRecord["playerCharacters"]
+): ReplaySnapshot {
+  if (viewAll) {
+    return snapshot;
+  }
+  const viewerCharacter = sourceCharacters?.[viewerId] ?? null;
+  return {
+    ...snapshot,
+    map: tailorMapForCharacter(snapshot.map, viewerCharacter),
+    items: tailorMatchItemsForCharacter(snapshot.items, viewerCharacter),
+    traps: tailorTrapsForViewer(snapshot.traps, viewerId),
+    c4s: tailorC4sForViewer(
+      snapshot.c4s,
+      viewerId,
+      false,
+      viewerCharacter?.discoveredC4Ids
+    ),
+    playerCharacters: tailorPlayerCharactersForViewer(
+      snapshot.playerCharacters,
+      viewerId,
+      false,
+      turn
+    ),
+  };
+}
+
 export function getReplayRpc(
   ctx: nkruntime.Context,
   _logger: nkruntime.Logger,
@@ -86,6 +117,7 @@ export function getReplayRpc(
     (json.view_all === true && isAdmin) || hasMatchReport;
   let events: ReplayEvent[] = [];
   let snapshot: ReplaySnapshot | undefined;
+  let preTurnSnapshot: ReplaySnapshot | undefined;
   if (turn >= 0) {
     const replay = storage.readReplay(matchId, turn);
     if (replay) {
@@ -101,32 +133,31 @@ export function getReplayRpc(
           )
         : [];
       if (replay.snapshot) {
-        if (viewAll) {
-          snapshot = replay.snapshot;
-        } else {
-          const viewerCharacter = sourceCharacters?.[ctx.userId] ?? null;
-          snapshot = {
-            ...replay.snapshot,
-            map: tailorMapForCharacter(replay.snapshot.map, viewerCharacter),
-            items: tailorMatchItemsForCharacter(
-              replay.snapshot.items,
-              viewerCharacter,
-            ),
-            traps: tailorTrapsForViewer(replay.snapshot.traps, ctx.userId),
-            c4s: tailorC4sForViewer(
-              replay.snapshot.c4s,
-              ctx.userId,
-              false,
-              viewerCharacter?.discoveredC4Ids
-            ),
-            playerCharacters: tailorPlayerCharactersForViewer(
-              replay.snapshot.playerCharacters,
-              ctx.userId,
-              false,
-              turn,
-            ),
-          };
-        }
+        snapshot = tailorReplaySnapshot(
+          replay.snapshot,
+          ctx.userId,
+          viewAll,
+          turn,
+          sourceCharacters
+        );
+        preTurnSnapshot =
+          turn === 0
+            ? snapshot
+            : undefined;
+      }
+    }
+    if (turn > 0) {
+      const previousReplay = storage.readReplay(matchId, turn - 1);
+      if (previousReplay?.snapshot) {
+        const previousCharacters =
+          previousReplay.snapshot.playerCharacters ?? match.playerCharacters;
+        preTurnSnapshot = tailorReplaySnapshot(
+          previousReplay.snapshot,
+          ctx.userId,
+          viewAll,
+          turn - 1,
+          previousCharacters
+        );
       }
     }
   }
@@ -138,6 +169,7 @@ export function getReplayRpc(
     max_turn: maxTurn,
     events,
     snapshot,
+    preTurnSnapshot,
   };
 
   return JSON.stringify(response);

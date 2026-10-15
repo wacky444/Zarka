@@ -44,6 +44,15 @@ function createHarness(reportAvailable: boolean) {
     turn: 1,
     events: [HIDDEN_EVENT],
     snapshot: {
+      playerCharacters: {
+        [VIEWER_ID]: {
+          id: VIEWER_ID,
+          position: {
+            tileId: "tile-after-turn",
+            coord: { q: 2, r: 1 },
+          },
+        },
+      },
       c4s: [
         {
           id: "hidden-c4",
@@ -55,6 +64,31 @@ function createHarness(reportAvailable: boolean) {
       ],
     },
     created_at: 1,
+  } as unknown as ReplayRecord;
+  const previousReplay = {
+    ...replay,
+    turn: 0,
+    events: [],
+    snapshot: {
+      playerCharacters: {
+        [VIEWER_ID]: {
+          id: VIEWER_ID,
+          position: {
+            tileId: "tile-before-turn",
+            coord: { q: 1, r: 0 },
+          },
+        },
+      },
+      c4s: [
+        {
+          id: "pre-turn-c4",
+          ownerId: "other-player",
+          tileId: "tile-before",
+          coord: { q: 1, r: 0 },
+          placedTurn: 0,
+        },
+      ],
+    },
   } as unknown as ReplayRecord;
   const fake = {
     storageRead: (requests: nkruntime.StorageReadRequest[]) =>
@@ -97,7 +131,7 @@ function createHarness(reportAvailable: boolean) {
             collection: request.collection,
             key: request.key,
             userId: SERVER_USER_ID,
-            value: replay,
+            value: request.key === `0:${MATCH_ID}` ? previousReplay : replay,
             version: "replay-v1",
             permissionRead: 2,
             permissionWrite: 0,
@@ -141,10 +175,20 @@ test("finished-match report viewers can load unfiltered replay events and snapsh
   const result = JSON.parse(callReplay(nk, logger, VIEWER_ID, true)) as {
     events: unknown[];
     snapshot: unknown;
+    preTurnSnapshot: unknown;
   };
 
   assert.deepEqual(result.events, [HIDDEN_EVENT]);
   assert.deepEqual(result.snapshot, {
+    playerCharacters: {
+      [VIEWER_ID]: {
+        id: VIEWER_ID,
+        position: {
+          tileId: "tile-after-turn",
+          coord: { q: 2, r: 1 },
+        },
+      },
+    },
     c4s: [
       {
         id: "hidden-c4",
@@ -152,6 +196,26 @@ test("finished-match report viewers can load unfiltered replay events and snapsh
         tileId: "tile-hidden",
         coord: { q: 2, r: 0 },
         placedTurn: 1,
+      },
+    ],
+  });
+  assert.deepEqual(result.preTurnSnapshot, {
+    playerCharacters: {
+      [VIEWER_ID]: {
+        id: VIEWER_ID,
+        position: {
+          tileId: "tile-before-turn",
+          coord: { q: 1, r: 0 },
+        },
+      },
+    },
+    c4s: [
+      {
+        id: "pre-turn-c4",
+        ownerId: "other-player",
+        tileId: "tile-before",
+        coord: { q: 1, r: 0 },
+        placedTurn: 0,
       },
     ],
   });

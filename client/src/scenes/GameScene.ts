@@ -103,6 +103,7 @@ type LocationSelectionTarget =
 type CachedReplay = {
   events: ReplayEvent[];
   snapshot?: ReplaySnapshot;
+  preTurnSnapshot?: ReplaySnapshot;
 };
 
 interface GameSceneStartData {
@@ -3754,7 +3755,10 @@ export class GameScene extends Phaser.Scene {
     const cached = this.logReplayCache.get(targetTurn);
     if (cached !== undefined) {
       this.characterPanel.setLogReplay(targetTurn, maxTurn, cached.events);
-      this.applyReplaySnapshot(targetTurn, cached.snapshot);
+      this.applyReplaySnapshot(
+        targetTurn,
+        cached.preTurnSnapshot ?? cached.snapshot
+      );
       return;
     }
     void this.fetchReplayForTurn(targetTurn);
@@ -3799,11 +3803,15 @@ export class GameScene extends Phaser.Scene {
       const replay: CachedReplay = {
         events,
         snapshot: payload.snapshot,
+        preTurnSnapshot: payload.preTurnSnapshot,
       };
       this.logReplayCache.set(resolvedTurn, replay);
       panel.setLogReplay(resolvedTurn, maxTurn, events);
       this.completeVisibleTutorialSteps();
-      this.applyReplaySnapshot(resolvedTurn, payload.snapshot);
+      this.applyReplaySnapshot(
+        resolvedTurn,
+        payload.preTurnSnapshot ?? payload.snapshot
+      );
     } catch (error) {
       if (!this.sceneShuttingDown) {
         console.warn("get_replay failed", error);
@@ -3845,7 +3853,10 @@ export class GameScene extends Phaser.Scene {
     }
     this.replayPlaybackCancelled = false;
     this.enterReplayMode();
-    this.applyReplaySnapshot(turn, replay.snapshot);
+    this.applyReplaySnapshot(
+      turn,
+      replay.preTurnSnapshot ?? replay.snapshot
+    );
     this.manualReplayPlaying = true;
     this.replayPaused = false;
     this.characterPanel?.setLogPlaybackState(true);
@@ -3862,6 +3873,9 @@ export class GameScene extends Phaser.Scene {
       }
       this.resolveReplayResumeWaiters();
       if (!this.sceneShuttingDown) {
+        if (this.replayView && replay.snapshot) {
+          this.applyReplaySnapshot(turn, replay.snapshot);
+        }
         this.characterPanel?.setLogPlaybackState(false);
         this.updateReplayControls();
         if (this.replayView) {

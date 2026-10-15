@@ -255,6 +255,7 @@ Check the following scenarios:
 - Only the 10 latest finished matches are sent to the client; active matches remain visible.
 - Finished matches show duration and a win indicator only when the player's team won.
 - The full report button opens the correct historical report.
+- Selecting replay turn N shows the pre-turn snapshot; playback ends at post-turn N positions.
 - End event waits for replay completion and opens the report exactly once.
 - Fireworks, living-player dance, and group zoom work on desktop and mobile and cannot be skipped.
 - Report remains usable with many players and achievements.
