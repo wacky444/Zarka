@@ -587,21 +587,19 @@ export class CharacterPanelLogView {
         }
         if (actionId === "buy_bomber") {
           const metadata = event.action.metadata as
-            | { targetLocation?: unknown; targetCount?: unknown }
+            | { targetLocation?: unknown; personalDamage?: unknown }
             | undefined;
+          if (typeof metadata?.personalDamage === "number") {
+            lines.push(
+              `${actor} ${t("was hit by a bomber and lost")} ${metadata.personalDamage} ${t("health")}`
+            );
+            continue;
+          }
           const location = readAxialMetadata(metadata?.targetLocation);
-          const count =
-            typeof metadata?.targetCount === "number"
-              ? metadata.targetCount
-              : 0;
           lines.push(
             location
-              ? `${actor} ${t("hired a bomber")} ${t("at")} (${location.q}, ${location.r}) ${t(
-                  "and hit"
-                )} ${count} ${t("characters")}`
-              : `${actor} ${t("hired a bomber")} ${t("and hit")} ${count} ${t(
-                  "characters"
-                )}`
+              ? `${actor} ${t("hired a bomber")} ${t("at")} (${location.q}, ${location.r})`
+              : `${actor} ${t("hired a bomber")}`
           );
           continue;
         }

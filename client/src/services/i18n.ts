@@ -433,6 +433,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
     "Crea un incendio de tres turnos en una ubicación.",
   "hired a pyromaniac": "contrató un pirómano",
   "hired a bomber": "contrató un bombardero",
+  "was hit by a bomber and lost": "fue alcanzado por un bombardero y perdió",
   "Deals five unavoidable damage to every player in a location.":
     "Inflige cinco puntos de daño inevitable a todos los jugadores de una ubicación.",
   "A mercenary that attacks the assigned target team.":

@@ -189,7 +189,6 @@ export function buyShopItemRpc(
   actor.economy.zarkans = balance - cost;
   const characters = match.playerCharacters ?? {};
   let observedPlayerIds: string[] = [];
-  const targetDamages: Record<string, number> = {};
   const postPurchaseEvents: ReplayPlayerEvent[] = [];
   let targetTeamId: string | undefined;
   let fire: BuyShopItemPayload["fire"];
@@ -360,7 +359,7 @@ export function buyShopItemRpc(
         fireTurns: 3,
       };
     } else {
-      observedPlayerIds = Object.keys(characters).filter((playerId) => {
+      const bomberTargetIds = Object.keys(characters).filter((playerId) => {
         const candidate = characters[playerId];
         return (
           !!candidate &&
@@ -368,7 +367,7 @@ export function buyShopItemRpc(
           isSameCoord(candidate.position?.coord, targetLocation)
         );
       });
-      for (const playerId of observedPlayerIds) {
+      for (const playerId of bomberTargetIds) {
         const candidate = characters[playerId];
         if (!candidate) {
           continue;
@@ -385,15 +384,24 @@ export function buyShopItemRpc(
           true,
         );
         characters[playerId] = outcome.character;
-        targetDamages[playerId] = Math.max(0, -outcome.result.delta);
+        const damageTaken = Math.max(0, -outcome.result.delta);
+        if (damageTaken > 0) {
+          postPurchaseEvents.push({
+            kind: "player",
+            actorId: playerId,
+            action: {
+              actionId: "buy_bomber",
+              metadata: { personalDamage: damageTaken },
+            },
+            visibility: { scope: "limited", playerIds: [playerId] },
+          });
+        }
         if (outcome.event) {
           postPurchaseEvents.push(outcome.event);
         }
       }
       metadata = {
         ...metadata,
-        damage: 5,
-        targetCount: observedPlayerIds.length,
         targetLocation,
       };
     }
@@ -427,12 +435,6 @@ export function buyShopItemRpc(
       observedPlayerIds.length > 0
         ? observedPlayerIds.map((playerId) => ({
             targetId: playerId,
-            ...(targetDamages[playerId] !== undefined
-              ? {
-                  damageTaken: targetDamages[playerId],
-                  eliminated: isCharacterDead(match.playerCharacters[playerId]),
-                }
-              : {}),
           }))
         : undefined,
     visibility:
