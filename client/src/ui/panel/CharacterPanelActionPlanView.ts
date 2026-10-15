@@ -304,6 +304,7 @@ export interface ActionPlanUpdateContext {
 }
 
 const BOX_HEIGHT = 180;
+const ACTION_ORDER_HELP_BUTTON_Y = 20;
 
 export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   private readonly scene: Phaser.Scene;
@@ -501,7 +502,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.scrollContent.add(this.mainActionLabel);
     this.actionOrderHelpButton = scene.add.rectangle(
       Math.max(20, boxWidth - 36),
-      12,
+      ACTION_ORDER_HELP_BUTTON_Y,
       26,
       26,
       THEME.colors.cardSelected,
@@ -994,7 +995,10 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.margin = options.margin;
     this.scrollTop = options.scrollTop;
     this.scrollContentWidth = options.scrollWidth;
-    this.actionOrderHelpButton.setPosition(Math.max(20, options.scrollWidth - 36), 12);
+    this.actionOrderHelpButton.setPosition(
+      Math.max(20, options.scrollWidth - 36),
+      ACTION_ORDER_HELP_BUTTON_Y,
+    );
     this.actionOrderHelpLabel.setPosition(this.actionOrderHelpButton.x, this.actionOrderHelpButton.y);
 
     this.mainActionDropdownWidth = Math.max(0, options.scrollWidth - 24);
