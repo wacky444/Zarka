@@ -3,23 +3,23 @@
 
 - improvement, ground visuals, alley and road have the similar sprite, check kenney hexagon pack examples
 
-- feature, train and experience
+-t feature, train and experience
 	- implement gaining experience and leveling up
 	- can send the turn without spending skill points to save them for an expensive skill
 	- ignore the restriction of multiple of turns 5, can level up when the character wants
 
-- improvement, add a confirm when buying pyro
+-t improvement, add a confirm when buying pyro
 
 - improvement, tutorial step 6 should teach about prioritize items
 
-- feature, overweight should drop items at the end of the turn
+-t feature, overweight should drop items at the end of the turn
 	- from lower value to higher
 	- item drop on ground is revealed to the character
 
-- improvement, check if bombard has animation,
+-t improvement, check if bombard has animation,
 	- it should have it similar to cell destroyed
 
-- improvement, help screen with action orders
+-t improvement, help screen with action orders
 	- a modal that opens with a close X button at top right, clicking outside also closes it
 		- maybe reuse select Main Action modal, a modal with a title, subtitle, and close button, pressing back on mobile already closes it
 		- title, Orden de sucesos
@@ -56,18 +56,18 @@ Dron espía
 Traficante
 Cell destruction
 	
-- improvement, pressing back on mobile while the panel is opened, it should go back to map, not lobby
+-t improvement, pressing back on mobile while the panel is opened, it should go back to map, not lobby
 	- in the map, it goes to lobby, currently ok
 
 -t bug, i never got hero team, check if its because i only played with bots
 
-- improvement, improve the ready checkbox, to a cool button, if is the last player, show a confirm dialog
+-t improvement, improve the ready checkbox, to a cool button, if is the last player, show a confirm dialog
 	- think how to differentiate the setted ready state of unready
 	- when not ready, show a pulsating effect in the button
 		- the effect is orange, the color tutorial 
 	- setting ready will advance the turn, continue?
 
-- improvement, bots doesnt buy
+-t improvement, bots doesnt buy
 	- for now set their inherit target to a random team member
 	- in the future they should waste coins on detective
 	
@@ -83,7 +83,7 @@ Cell destruction
 	- example, kill by throwing food, first win, push to death, friendly fire, think of more achievements, about 24 total
 	- tutorial doesn't trigger achievements
 
-- feature, dexterity 2, when stealing should show a list of all possible items in the game, allowing max 3
+-t feature, dexterity 2, when stealing should show a list of all possible items in the game, allowing max 3
 	- bug, extra power should show two selectors
 
 - improvement, action icons that need new icons:
@@ -93,16 +93,16 @@ Cell destruction
 	-t like it hits in area
 	- registered items didnt stay in players view for the char that has been hit
 
-- feature, search can reveal placed c4, but can't be picked up
+-t feature, search can reveal placed c4, but can't be picked up
 	- add it to the pool of possible findable items in the cell
 	
-- improvement, end game animation improve, alive players dance, zoom to players, fireworks intead of confetti, 
+-t improvement, end game animation improve, alive players dance, zoom to players, fireworks intead of confetti,
 	- dance, like a metronome, tilt to one side being the feet the rotation point, also moving in the diagonal a bit, then return to original position and repeat in the other side) takes 1 second to move to one side, then half second in the original position, then another second to the other side
 	- fireworks like the menu particles, using the same library but in fireworks mode instead of raining from the sky
 
-- bug, in the replay(tested in an end game report replay), changing the turn to view, doesnt put the characters on the positions pre turn
+-t bug, in the replay(tested in an end game report replay), changing the turn to view, doesnt put the characters on the positions pre turn
 
-- bug, detonate requires a target location, but with extra power doesn't show a extra target locator
+-t bug, detonate requires a target location, but with extra power doesn't show a extra target locator
 	- extra power should show two selectors
 
 - bug, chemical weapon   "[ ] Single target (Area)": "[ ] Objetivo único (área)",
@@ -115,4 +115,4 @@ Cell destruction
 	- changes color name in map
 	- avoid damage when there is no target selected
 	
-- feature, implement the skill that allows to fabricate anywhere without workshop
+-t feature, implement the skill that allows to fabricate anywhere without workshop
