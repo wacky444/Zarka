@@ -18,6 +18,7 @@ export interface CharacterPanelReadyRefreshOptions {
   isCharacterActive: boolean;
   isStatusActive: boolean;
   unspentSkillPoints: number;
+  currentTurn: number;
   plannedEnergyCost: number;
   availableEnergy: number;
   willBeOverweight: boolean;
@@ -170,12 +171,13 @@ export class CharacterPanelReadyView {
 
   refresh(options: CharacterPanelReadyRefreshOptions): void {
     this.lastRefreshOptions = options;
-    this.readyEnabled = options.enabled;
-
     const hasUnspentSkillPoints = options.unspentSkillPoints > 0;
+    const mustSpendSkillPoints =
+      options.currentTurn === 0 && hasUnspentSkillPoints;
+    this.readyEnabled = options.enabled && !mustSpendSkillPoints;
+
     const showReady =
-      options.enabled &&
-      !hasUnspentSkillPoints &&
+      this.readyEnabled &&
       (!options.tutorialActive ||
         (options.tutorialReadyEnabled && options.tutorialReadyAllowed)) &&
       options.isCharacterActive &&
@@ -195,7 +197,7 @@ export class CharacterPanelReadyView {
       ) {
         this.setReadyState(false, true);
       }
-      if (hasUnspentSkillPoints && this.readyState) {
+      if (mustSpendSkillPoints && this.readyState) {
         this.setReadyState(false, true);
       }
     }

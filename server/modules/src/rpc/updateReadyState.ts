@@ -103,6 +103,17 @@ export function updateReadyStateRpc(
   }
   const viewerCharacter = match.playerCharacters?.[ctx.userId] ?? null;
   const viewerIsIncapadited = isCharacterIncapacitated(viewerCharacter);
+  if (
+    requestedReady &&
+    !viewerIsIncapadited &&
+    match.current_turn === 0 &&
+    (viewerCharacter?.progression?.availableSkillPoints ?? 0) > 0
+  ) {
+    throw makeNakamaError(
+      "initial_skill_points_unspent",
+      nkruntime.Codes.FAILED_PRECONDITION,
+    );
+  }
   if (viewerIsIncapadited) {
     // throw makeNakamaError("character_incapacitated", 9); TODO uncomment when the turn advances automatically when only bots remain
   }

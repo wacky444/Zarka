@@ -182,7 +182,29 @@ test("assignAfkSkillPoints assigns skills to players with unspent points and ign
   );
 });
 
-test("updateReadyStateRpc allows ready: true with unspent skill points", () => {
+test("updateReadyStateRpc blocks turn-zero readiness with unspent points", () => {
+  const harness = createHarness();
+  const playerId = "player-ready-turn-zero";
+  const match = createMatch([playerId, "player-2"]);
+  match.current_turn = 0;
+  match.playerCharacters[playerId].progression.availableSkillPoints = 5;
+  harness.storage.writeMatch(match);
+
+  const context = harness.createContext({ userId: playerId });
+  assert.throws(
+    () =>
+      updateReadyStateRpc(
+        context,
+        harness.logger,
+        harness.nakama,
+        JSON.stringify({ match_id: match.match_id, ready: true })
+      ),
+    (error: { message?: string; code?: number }) =>
+      error.message === "initial_skill_points_unspent" && error.code === 9
+  );
+});
+
+test("updateReadyStateRpc allows ready: true with unspent skill points after turn zero", () => {
   const harness = createHarness();
   const playerId = "player-ready-test";
   const match = createMatch([playerId, "player-2"]);
