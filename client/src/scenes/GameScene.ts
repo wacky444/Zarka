@@ -2808,6 +2808,13 @@ export class GameScene extends Phaser.Scene {
     if (!matchId || !currentUserId) {
       return;
     }
+    if (
+      payload.shopId === "pyromaniac" &&
+      !window.confirm(t("Confirm hiring Pyromaniac for 20 Zarkans?"))
+    ) {
+      this.characterPanel?.beginPyromaniacPurchase();
+      return;
+    }
     this.isBuyingShopItem = true;
     try {
       const response = await this.turnService.buyShopItem(

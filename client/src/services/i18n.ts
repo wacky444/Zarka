@@ -390,6 +390,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Helicopter: "Helicóptero",
   Fumigator: "Fumigador",
   Pyromaniac: "Pirómano",
+  "Confirm hiring Pyromaniac for 20 Zarkans?":
+    "¿Confirmas contratar al Pirómano por 20 zarkans?",
   Bomber: "Bombardero",
   Hitman: "Sicario",
   Cocoman: "Cocoman",
