@@ -19,6 +19,7 @@ import {
   getSkillEffectTotal
 } from "@shared";
 import { GridSelect, type GridSelectItem } from "../GridSelect";
+import { ActionOrderHelpModal } from "../ActionOrderHelpModal";
 import { CraftingSelector } from "../CraftingSelector";
 import { ManipulateSelector } from "../ManipulateSelector";
 import { getProjectedManipulateWeightGain } from "../manipulateSelectorItems";
@@ -318,6 +319,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
 
   private readonly mainActionBox: Phaser.GameObjects.Rectangle;
   private readonly mainActionLabel: Phaser.GameObjects.Text;
+  private readonly actionOrderHelpButton: Phaser.GameObjects.Rectangle;
+  private readonly actionOrderHelpLabel: Phaser.GameObjects.Text;
+  private readonly actionOrderHelpModal: ActionOrderHelpModal;
   private readonly mainActionDropdown: GridSelect;
   private mainActionDropdownWidth: number;
   private readonly extraExecutionSelector: ExtraExecutionSelector;
@@ -495,6 +499,31 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       })
       .setOrigin(0, 0);
     this.scrollContent.add(this.mainActionLabel);
+    this.actionOrderHelpButton = scene.add.rectangle(
+      Math.max(20, boxWidth - 36),
+      12,
+      26,
+      26,
+      THEME.colors.cardSelected,
+    ).setStrokeStyle(1, 0x93c5fd, 1).setInteractive({ useHandCursor: true });
+    this.actionOrderHelpLabel = scene.add.text(
+      this.actionOrderHelpButton.x,
+      this.actionOrderHelpButton.y,
+      "?",
+      { fontSize: "16px", color: "#bfdbfe", fontStyle: "bold" },
+    ).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    this.scrollContent.add([this.actionOrderHelpButton, this.actionOrderHelpLabel]);
+    this.actionOrderHelpModal = new ActionOrderHelpModal(scene);
+    this.actionOrderHelpModal.setCallbacks(this.handleModalOpen, this.handleModalClose);
+    const openActionOrderHelp = (): void => {
+      this.actionOrderHelpModal.open([
+        this.mainActionSelection,
+        this.secondaryActionSelection,
+        this.extraSecondaryActionSelection,
+      ]);
+    };
+    this.actionOrderHelpButton.on(Phaser.Input.Events.POINTER_UP, openActionOrderHelp);
+    this.actionOrderHelpLabel.on(Phaser.Input.Events.POINTER_UP, openActionOrderHelp);
     this.mainActionDropdownWidth = boxWidth - 24;
     this.mainActionDropdown = new GridSelect(scene, 0, 0, {
       width: this.mainActionDropdownWidth,
@@ -965,6 +994,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.margin = options.margin;
     this.scrollTop = options.scrollTop;
     this.scrollContentWidth = options.scrollWidth;
+    this.actionOrderHelpButton.setPosition(Math.max(20, options.scrollWidth - 36), 12);
+    this.actionOrderHelpLabel.setPosition(this.actionOrderHelpButton.x, this.actionOrderHelpButton.y);
 
     this.mainActionDropdownWidth = Math.max(0, options.scrollWidth - 24);
     this.secondaryActionDropdownWidth = Math.max(0, options.scrollWidth - 24);
@@ -988,6 +1019,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   setVisible(visible: boolean): void {
     this.scrollPanel?.setVisible?.(visible);
     if (!visible) {
+      this.actionOrderHelpModal.close();
       this.locationSelector.setPending(false);
       this.secondLocationSelector.setPending(false);
       this.secondaryLocationSelector.setPending(false);
@@ -1366,6 +1398,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   }
 
   closeCurrentGridSelect(): void {
+    this.actionOrderHelpModal.close();
     this.mainActionDropdown.hideModal();
     this.playerSelector.hideDropdown();
     this.scareSecondPlayerSelector.hideDropdown();
@@ -1712,6 +1745,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   }
 
   destroy(): void {
+    this.actionOrderHelpButton.off(Phaser.Input.Events.POINTER_UP);
+    this.actionOrderHelpLabel.off(Phaser.Input.Events.POINTER_UP);
+    this.actionOrderHelpModal.destroy();
     this.mainActionDropdown.off("change", this.handleMainActionSelection);
     this.mainActionDropdown.off("modal-open", this.handleModalOpen);
     this.mainActionDropdown.off("modal-close", this.handleModalClose);
