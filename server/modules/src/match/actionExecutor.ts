@@ -60,6 +60,7 @@ import {
   type PlannedActionParticipant,
 } from "./actions/utils";
 import { executeDetectAction } from "./actions/detect";
+import { awardExperience } from "./progression";
 
 export type TileLookup = Record<string, HexTileSnapshot>;
 
@@ -1562,6 +1563,51 @@ export function executeAction(
       }
       handled = true;
     }
+  } else if (action.id === ActionLibrary.train.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const extraParticipants = participants.filter(
+        (participant) => (participant.plan.extraExecutions ?? 0) > 0,
+      );
+      const extraEnergyEvents = extraParticipants.length
+        ? applyEnergyForParticipants(
+            extraParticipants,
+            action.extraExecution?.cost ?? 0,
+            match,
+            logger,
+          )
+        : [];
+      const actionEvents: ReplayEvent[] = participants.map((participant) => {
+        const extraExperience = (participant.plan.extraExecutions ?? 0) > 0 ? 3 : 0;
+        const awarded = awardExperience(participant.character, 5 + extraExperience);
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+        return {
+          kind: "player",
+          actorId: participant.playerId,
+          action: {
+            actionId: action.id,
+            metadata: {
+              experienceGained: awarded.experienceGained,
+              levelsGained: awarded.levelsGained,
+            },
+          },
+        };
+      });
+      eventsForAction = [...energyEvents, ...extraEnergyEvents, ...actionEvents];
+      handled = true;
+    }
   } else if (action.id === ActionLibrary.detect.id) {
     const participants = collectParticipants(match, action.id);
     if (participants.length > 0) {
@@ -1585,6 +1631,29 @@ export function executeAction(
         match.playerCharacters![participant.playerId] = participant.character;
       }
       handled = true;
+    }
+  }
+
+  const baseExperience = action.experience?.base ?? 0;
+  if (baseExperience > 0) {
+    for (const event of eventsForAction) {
+      if (
+        event.kind !== "player" ||
+        event.action.actionId !== action.id ||
+        event.actorId === undefined
+      ) {
+        continue;
+      }
+      const character = match.playerCharacters?.[event.actorId];
+      if (!character) {
+        continue;
+      }
+      const awarded = awardExperience(character, baseExperience);
+      event.action.metadata = {
+        ...event.action.metadata,
+        experienceGained: awarded.experienceGained,
+        levelsGained: awarded.levelsGained,
+      };
     }
   }
 

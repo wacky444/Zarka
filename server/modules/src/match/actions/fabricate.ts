@@ -73,11 +73,6 @@ export class FabricateAction extends BaseAction {
           })
         );
       } else if (itemId) {
-        const progression = participant.character.progression;
-        progression.experience =
-          (Number.isFinite(progression.experience)
-            ? Math.max(0, progression.experience)
-            : 0) + 2;
         const coord = participant.character.position?.coord;
         const metadata: FabricateReplayMetadata = {
           craftedItemId: itemId,

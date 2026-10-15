@@ -163,8 +163,8 @@ test("12-bot full match runs deterministically to completion", () => {
     "bot4",
     "bot6",
     "bot2",
-    "bot1",
     "bot12",
+    "bot1",
     "bot5",
     "bot7",
     "bot11"

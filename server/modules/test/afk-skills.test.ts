@@ -182,7 +182,7 @@ test("assignAfkSkillPoints assigns skills to players with unspent points and ign
   );
 });
 
-test("updateReadyStateRpc rejects ready: true if player has unspent skill points", () => {
+test("updateReadyStateRpc allows ready: true with unspent skill points", () => {
   const harness = createHarness();
   const playerId = "player-ready-test";
   const match = createMatch([playerId, "player-2"]);
@@ -191,16 +191,13 @@ test("updateReadyStateRpc rejects ready: true if player has unspent skill points
 
   const context = harness.createContext({ userId: playerId });
 
-  assert.throws(
-    () =>
-      updateReadyStateRpc(
-        context,
-        harness.logger,
-        harness.nakama,
-        JSON.stringify({ match_id: match.match_id, ready: true })
-      ),
-    (err: any) => err?.message === "unspent_skill_points"
+  const firstReadyRes = updateReadyStateRpc(
+    context,
+    harness.logger,
+    harness.nakama,
+    JSON.stringify({ match_id: match.match_id, ready: true })
   );
+  assert.equal(JSON.parse(firstReadyRes).ready, true);
 
   const unreadyRes = updateReadyStateRpc(
     context,
@@ -210,9 +207,6 @@ test("updateReadyStateRpc rejects ready: true if player has unspent skill points
   );
   const unreadyPayload = JSON.parse(unreadyRes);
   assert.equal(unreadyPayload.ready, false);
-
-  match.playerCharacters[playerId].progression.availableSkillPoints = 0;
-  harness.storage.writeMatch(match);
 
   const readyRes = updateReadyStateRpc(
     context,

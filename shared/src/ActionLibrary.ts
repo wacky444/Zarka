@@ -1123,6 +1123,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     id: "train",
     name: "Entrenar",
     category: ActionCategory.Primary,
+    developed: true,
     energyCost: 3,
     cooldown: 3,
     effects: [{ description: "Gana 5 puntos de experiencia." }],
