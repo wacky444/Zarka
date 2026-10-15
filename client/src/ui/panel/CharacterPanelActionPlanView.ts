@@ -3008,6 +3008,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
 
   private refreshSecondLocationSelectorState(): void {
     const supports = this.selectedMainActionSupportsSecondLocation();
+    this.secondLocationSelector.setLabel(
+      this.mainActionSelection === "detonate_c4"
+        ? t("Second C4 Destination")
+        : t("Second Shot Destination")
+    );
     this.secondLocationSelector.setVisible(supports);
     this.secondLocationSelector.setActive(supports);
     if (!supports) {
@@ -3811,7 +3816,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
 
   private selectedMainActionSupportsSecondLocation(): boolean {
     return (
-      this.mainActionSelection === "shoot_pistol" &&
+      (this.mainActionSelection === "shoot_pistol" ||
+        this.mainActionSelection === "detonate_c4") &&
       this.mainExtraExecutions > 0
     );
   }
