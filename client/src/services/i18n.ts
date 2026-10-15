@@ -720,6 +720,9 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Not available in this build.": "No disponible en esta versión.",
   "[ ] Ready": "[ ] Listo",
   "[x] Ready": "[x] Listo",
+  Ready: "Listo",
+  "All other players are ready. Ready now to advance the turn?":
+    "Todos los demás jugadores están listos. ¿Listo para avanzar el turno?",
   "[ ] Prioritize food/drink": "[ ] Priorizar comida/bebida",
   "[x] Prioritize food/drink": "[x] Priorizar comida/bebida",
   "[ ] Sell instead": "[ ] Vender en su lugar",

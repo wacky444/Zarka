@@ -2593,6 +2593,15 @@ export class GameScene extends Phaser.Scene {
     if (this.replayView) {
       return;
     }
+    if (ready && this.isLastPlayerNeededToReady()) {
+      const confirmed = window.confirm(
+        t("All other players are ready. Ready now to advance the turn?")
+      );
+      if (!confirmed) {
+        this.characterPanel?.setReadyState(false, false);
+        return;
+      }
+    }
     const matchId = this.registry.get("currentMatchId") as string | null;
     if (!this.turnService || !this.currentUserId || !matchId) {
       return;
@@ -2702,6 +2711,35 @@ export class GameScene extends Phaser.Scene {
         void this.handleReadyStateChange(next);
       }
     }
+  }
+
+  private isLastPlayerNeededToReady(): boolean {
+    const match = this.currentMatch;
+    const currentUserId = this.currentUserId;
+    const players = match?.players ?? [];
+    if (
+      !match ||
+      !currentUserId ||
+      (match.readyStates?.[currentUserId] ?? false)
+    ) {
+      return false;
+    }
+    const otherPlayers = players.filter(
+      (playerId) => playerId !== currentUserId
+    );
+    return (
+      otherPlayers.length > 0 &&
+      otherPlayers.every((playerId) => {
+        if (match.readyStates?.[playerId] === true) {
+          return true;
+        }
+        const conditions =
+          match.playerCharacters?.[playerId]?.statuses?.conditions ?? [];
+        return (
+          conditions.includes("dead") || conditions.includes("unconscious")
+        );
+      })
+    );
   }
 
   private isUpgradingSkill = false;

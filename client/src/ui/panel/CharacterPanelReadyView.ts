@@ -38,6 +38,8 @@ export class CharacterPanelReadyView {
   private readyState = false;
   private readyEnabled = false;
   private readyPointerIsDown = false;
+  private readyCanToggle = false;
+  private readyPulse: Phaser.Tweens.Tween | null = null;
   private lastRefreshOptions: CharacterPanelReadyRefreshOptions | null = null;
   private activeWarning: ReadyWarning | null = null;
 
@@ -47,11 +49,16 @@ export class CharacterPanelReadyView {
     this.onReadyChange = onReadyChange;
 
     this.readyToggle = scene.add
-      .text(x, y, "[ ] Ready", {
+      .text(x, y, t("Ready"), {
         fontSize: "15px",
-        color: "#ffffff"
+        color: "#ffffff",
+        fontStyle: "bold",
+        backgroundColor: "#c2410c",
+        padding: { left: 14, right: 14, top: 8, bottom: 8 }
       })
-      .setOrigin(0, 0);
+      .setOrigin(0, 0)
+      .setStroke("#7c2d12", 2)
+      .setShadow(0, 2, "#000000", 0.45);
     this.readyToggle.setInteractive({ useHandCursor: true });
 
     this.readyToggle.on(
@@ -139,7 +146,12 @@ export class CharacterPanelReadyView {
     const changed = this.readyState !== normalized;
     this.readyState = normalized;
 
-    this.readyToggle.setText(normalized ? "[x] Ready" : "[ ] Ready");
+    this.readyToggle.setText(normalized ? `✓ ${t("Ready")}` : t("Ready"));
+    this.readyToggle.setStyle({
+      backgroundColor: normalized ? "#15803d" : "#c2410c"
+    });
+    this.readyToggle.setStroke(normalized ? "#14532d" : "#7c2d12", 2);
+    this.syncReadyPulse();
     this.updateWarningPosition();
 
     if (emit && changed) {
@@ -169,6 +181,7 @@ export class CharacterPanelReadyView {
       options.isCharacterActive &&
       options.isStatusActive;
 
+    this.readyCanToggle = showReady;
     if (showReady) {
       this.readyToggle.setAlpha(1);
       this.readyToggle.setInteractive({ useHandCursor: true });
@@ -240,10 +253,13 @@ export class CharacterPanelReadyView {
     } else {
       this.readyToggle.setColor("#ffffff");
     }
+    this.syncReadyPulse();
   }
 
   disableInteractive(): void {
+    this.readyCanToggle = false;
     this.readyToggle.disableInteractive();
+    this.syncReadyPulse();
   }
 
   destroy(): void {
@@ -262,11 +278,30 @@ export class CharacterPanelReadyView {
       this.handleScenePointerMove
     );
     this.scene.input.off(Phaser.Input.Events.GAME_OUT, this.handleSceneGameOut);
+    this.readyPulse?.stop();
+    this.readyPulse = null;
     this.warningTooltip.destroy();
     this.readyToggle.destroy();
     this.unspentSkillsWarning.destroy();
     this.energyWarning.destroy();
     this.overweightWarning.destroy();
+  }
+
+  private syncReadyPulse(): void {
+    const shouldPulse = this.readyCanToggle && !this.readyState;
+    if (shouldPulse && !this.readyPulse) {
+      this.readyPulse = this.scene.tweens.add({
+        targets: this.readyToggle,
+        alpha: { from: 1, to: 0.68 },
+        duration: 750,
+        yoyo: true,
+        repeat: -1
+      });
+    } else if (!shouldPulse && this.readyPulse) {
+      this.readyPulse.stop();
+      this.readyPulse = null;
+      this.readyToggle.setAlpha(this.readyCanToggle ? 1 : 0.5);
+    }
   }
 
   private updateWarningPosition(): void {
