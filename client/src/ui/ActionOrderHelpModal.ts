@@ -15,6 +15,8 @@ type PressState = {
   action?: ActionDefinition;
   moved: boolean;
   longPressed: boolean;
+  velocityY: number;
+  lastMoveTime: number;
   timer?: Phaser.Time.TimerEvent;
 };
 
@@ -30,6 +32,7 @@ export class ActionOrderHelpModal {
   private maskShape: Phaser.GameObjects.Rectangle | null = null;
   private mask: Phaser.Display.Masks.GeometryMask | null = null;
   private press: PressState | null = null;
+  private scrollVelocityY = 0;
   private isOpen = false;
   private contentHeight = 0;
   private viewport = { x: 0, y: 0, width: 0, height: 0 };
@@ -49,6 +52,11 @@ export class ActionOrderHelpModal {
       }
     }
     if (!press.moved || this.viewport.height <= 0) return;
+    const now = this.scene.time.now;
+    const elapsed = Math.max(8, now - press.lastMoveTime);
+    const instantVelocity = Phaser.Math.Clamp(deltaY / elapsed, -2, 2);
+    press.velocityY = press.velocityY * 0.35 + instantVelocity * 0.65;
+    press.lastMoveTime = now;
     const minY = this.viewport.y - Math.max(0, this.contentHeight - this.viewport.height);
     this.content.y = Phaser.Math.Clamp(this.content.y + deltaY, minY, this.viewport.y);
     press.startY = pointer.y;
@@ -61,7 +69,25 @@ export class ActionOrderHelpModal {
     if (!press.moved && !press.longPressed && press.action) {
       this.showActionTooltip(pointer, press.action);
     }
+    const moveAge = this.scene.time.now - press.lastMoveTime;
+    this.scrollVelocityY = press.moved && moveAge < 90 ? press.velocityY : 0;
     this.press = null;
+  };
+
+  private readonly handleScrollMomentum = (_time: number, delta: number): void => {
+    if (!this.isOpen || Math.abs(this.scrollVelocityY) < 0.025) {
+      this.scrollVelocityY = 0;
+      return;
+    }
+    const minY = this.viewport.y - Math.max(0, this.contentHeight - this.viewport.height);
+    const nextY = this.content.y + this.scrollVelocityY * Math.min(delta, 50);
+    const clampedY = Phaser.Math.Clamp(nextY, minY, this.viewport.y);
+    this.content.y = clampedY;
+    if (clampedY !== nextY) {
+      this.scrollVelocityY = 0;
+      return;
+    }
+    this.scrollVelocityY *= Math.pow(0.92, delta / 16.67);
   };
 
   private readonly handleEscape = (event: KeyboardEvent): void => {
@@ -95,6 +121,7 @@ export class ActionOrderHelpModal {
     this.root.setVisible(false);
     scene.input.on(Phaser.Input.Events.POINTER_MOVE, this.handlePointerMove);
     scene.input.on(Phaser.Input.Events.POINTER_UP, this.handlePointerUp);
+    scene.events.on(Phaser.Scenes.Events.UPDATE, this.handleScrollMomentum);
     scene.input.keyboard?.on("keydown", this.handleEscape);
     scene.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize);
   }
@@ -115,6 +142,7 @@ export class ActionOrderHelpModal {
   close(): void {
     if (!this.isOpen) return;
     this.isOpen = false;
+    this.scrollVelocityY = 0;
     this.cancelPress();
     this.tooltip.hide();
     this.root.setVisible(false);
@@ -125,6 +153,7 @@ export class ActionOrderHelpModal {
     this.close();
     this.scene.input.off(Phaser.Input.Events.POINTER_MOVE, this.handlePointerMove);
     this.scene.input.off(Phaser.Input.Events.POINTER_UP, this.handlePointerUp);
+    this.scene.events.off(Phaser.Scenes.Events.UPDATE, this.handleScrollMomentum);
     this.scene.input.keyboard?.off("keydown", this.handleEscape);
     this.scene.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize);
     this.mask?.destroy();
@@ -138,6 +167,7 @@ export class ActionOrderHelpModal {
   };
 
   private build(): void {
+    this.scrollVelocityY = 0;
     this.cancelPress();
     this.mask?.destroy();
     this.mask = null;
@@ -256,6 +286,7 @@ export class ActionOrderHelpModal {
   }
 
   private beginPress(pointer: Phaser.Input.Pointer, action?: ActionDefinition): void {
+    this.scrollVelocityY = 0;
     this.cancelPress();
     const press: PressState = {
       pointerId: pointer.id,
@@ -264,6 +295,8 @@ export class ActionOrderHelpModal {
       action,
       moved: false,
       longPressed: false,
+      velocityY: 0,
+      lastMoveTime: this.scene.time.now,
     };
     this.press = press;
     if (action) {
