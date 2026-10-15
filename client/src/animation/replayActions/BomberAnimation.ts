@@ -2,6 +2,7 @@ import type { ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
 import type { SkinContainer } from "../../ui/PlayerSkinRenderer";
 import { playRandomSound } from "../soundPlayer";
+import { animateTileDestroyedEvent } from "./TileDestroyedAnimation";
 
 const BOMBER_SOUNDS = ["explosion_large", "explosion_medium", "explosion_small"];
 const BLAST_COLOR = 0xfacc15;
@@ -12,10 +13,14 @@ export async function animateBomberEvent(
   event: ReplayPlayerEvent,
 ): Promise<void> {
   const targets = event.targets ?? [];
-  if (targets.length === 0) {
+  const targetLocation = event.action.targetLocation;
+  if (targets.length === 0 && !targetLocation) {
     return;
   }
   playRandomSound(context.scene, BOMBER_SOUNDS, { volume: 0.65 });
+  if (targetLocation) {
+    await animateTileDestroyedEvent(context, targetLocation);
+  }
   const animations: Array<Promise<void>> = [];
   for (const target of targets) {
     if (!target?.targetId) {
