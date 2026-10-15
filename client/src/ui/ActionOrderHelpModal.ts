@@ -75,6 +75,9 @@ export class ActionOrderHelpModal {
     this.cover.on(Phaser.Input.Events.POINTER_UP, () => this.close());
     this.panel = scene.add.rectangle(0, 0, 1, 1, THEME.colors.modalBackground, 1)
       .setOrigin(0, 0).setStrokeStyle(2, 0x334155, 1).setInteractive();
+    this.panel.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
+      this.beginPress(pointer);
+    });
     this.panel.on(Phaser.Input.Events.POINTER_UP, (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => event.stopPropagation());
     this.titleText = scene.add.text(0, 0, t("Orden de sucesos"), {
       fontSize: "20px", color: THEME.colors.modalHeader, fontStyle: "bold"
@@ -176,11 +179,15 @@ export class ActionOrderHelpModal {
     this.root.add(this.maskShape);
     this.root.bringToTop(this.maskShape);
     this.root.bringToTop(this.content);
-    this.contentHeight = this.drawActions(this.viewport.width);
+    const leftInset = 8;
+    this.contentHeight = this.drawActions(
+      Math.max(0, this.viewport.width - leftInset),
+      leftInset,
+    );
     this.content.y = this.viewport.y;
   }
 
-  private drawActions(width: number): number {
+  private drawActions(width: number, leftInset: number): number {
     const actions = Object.values(ActionLibrary).sort((a, b) =>
       a.actionOrder - b.actionOrder || a.actionSubOrder - b.actionSubOrder || a.id.localeCompare(b.id)
     );
@@ -188,14 +195,14 @@ export class ActionOrderHelpModal {
     const chipHeight = 36;
     const rowGap = 8;
     const arrowWidth = 18;
-    let x = 0;
+    let x = leftInset;
     let y = 8;
     let rowHasAction = false;
     let previousOrder: number | null = null;
 
     for (const action of actions) {
       if (previousOrder !== null && action.actionOrder !== previousOrder) {
-        x = 0;
+        x = leftInset;
         y += chipHeight + rowGap;
         rowHasAction = false;
       }
@@ -206,7 +213,7 @@ export class ActionOrderHelpModal {
       measure.destroy();
       const neededWidth = chipWidth + (rowHasAction ? arrowWidth : 0);
       if (rowHasAction && x + neededWidth > width) {
-        x = 0;
+        x = leftInset;
         y += chipHeight + rowGap;
         rowHasAction = false;
       }
@@ -244,25 +251,29 @@ export class ActionOrderHelpModal {
     action?: ActionDefinition,
   ): void {
     object.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
-      this.cancelPress();
-      const press: PressState = {
-        pointerId: pointer.id,
-        startX: pointer.x,
-        startY: pointer.y,
-        action,
-        moved: false,
-        longPressed: false,
-      };
-      this.press = press;
-      if (action) {
-        press.timer = this.scene.time.delayedCall(LONG_PRESS_MS, () => {
-          if (this.press === press && !press.moved) {
-            press.longPressed = true;
-            this.showActionTooltip(pointer, action);
-          }
-        });
-      }
+      this.beginPress(pointer, action);
     });
+  }
+
+  private beginPress(pointer: Phaser.Input.Pointer, action?: ActionDefinition): void {
+    this.cancelPress();
+    const press: PressState = {
+      pointerId: pointer.id,
+      startX: pointer.x,
+      startY: pointer.y,
+      action,
+      moved: false,
+      longPressed: false,
+    };
+    this.press = press;
+    if (action) {
+      press.timer = this.scene.time.delayedCall(LONG_PRESS_MS, () => {
+        if (this.press === press && !press.moved) {
+          press.longPressed = true;
+          this.showActionTooltip(pointer, action);
+        }
+      });
+    }
   }
 
   private showActionTooltip(pointer: Phaser.Input.Pointer, action: ActionDefinition): void {
