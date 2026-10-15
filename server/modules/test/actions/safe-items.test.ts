@@ -11,6 +11,7 @@ import {
 import type { MatchRecord } from "../../src/models/types";
 import { executePickUpAction } from "../../src/match/actions/pickup";
 import { executeSearchAction } from "../../src/match/actions/search";
+import { tailorMatchForPlayer } from "../../src/utils/matchView";
 import type { PlannedActionParticipant } from "../../src/match/actions/utils";
 import { createDefaultCharacter } from "../../src/utils/playerCharacter";
 
@@ -162,6 +163,52 @@ test("generated house safe gets its own seeded random contents and a searchable 
   )?.discoveredItemIds;
 
   assert.ok(discoveredItemIds?.includes(safeItem.item_id));
+});
+
+test("search reveals enemy placed C4 without making it pickup-able", () => {
+  const { character, match, participant } = createScenario("food");
+  match.map!.tiles[0].itemIds = [];
+  match.items = [];
+  match.c4s = [
+    {
+      id: "c4_enemy_0",
+      ownerId: "enemy",
+      tileId: "tile",
+      coord: { q: 0, r: 0 },
+      placedTurn: 0,
+    },
+  ];
+  const plan = { actionId: "search" as const };
+  const searchEvents = executeSearchAction(
+    [{ ...participant, plan }],
+    match
+  );
+  const searchMetadata = searchEvents[0]?.action.metadata as
+    | { discoveredItems?: Array<{ id?: string; itemType?: string }> }
+    | undefined;
+
+  assert.deepEqual(character.discoveredC4Ids, ["c4_enemy_0"]);
+  assert.deepEqual(tailorMatchForPlayer(match, character.id).c4s, match.c4s);
+  assert.deepEqual(tailorMatchForPlayer(match, "observer").c4s, []);
+  assert.equal(
+    searchMetadata?.discoveredItems?.some(
+      (entry) => entry.id === "c4_enemy_0" && entry.itemType === "c4"
+    ),
+    true
+  );
+  assert.deepEqual(match.map?.tiles[0].itemIds, []);
+  assert.deepEqual(match.items, []);
+
+  executePickUpAction(
+    [{ ...participant, plan: { actionId: "pick_up" } }],
+    match
+  );
+
+  assert.equal(match.c4s?.length, 1);
+  assert.equal(
+    character.inventory.carriedItems.some((stack) => stack.itemId === "c4"),
+    false
+  );
 });
 
 test("picking up a three-zarkan coin credits the wallet instead of inventory", () => {

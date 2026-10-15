@@ -1002,9 +1002,18 @@ export class GameBoardRenderer {
     this.clearC4Visuals();
     const currentUserId = this.callbacks.getCurrentUserId();
     const canSeeAllC4 = this.callbacks.isAdminViewEnabled();
+    const discoveredC4Ids = new Set(
+      this.callbacks
+        .getCurrentMatch()
+        ?.playerCharacters?.[currentUserId ?? ""]?.discoveredC4Ids ?? []
+    );
     const chargesByTile = new Map<string, C4Record[]>();
     for (const charge of c4s ?? []) {
-      if (!canSeeAllC4 && charge.ownerId !== currentUserId) {
+      if (
+        !canSeeAllC4 &&
+        charge.ownerId !== currentUserId &&
+        !discoveredC4Ids.has(charge.id)
+      ) {
         continue;
       }
       const existing = chargesByTile.get(charge.tileId);

@@ -113,7 +113,12 @@ export function getReplayRpc(
               viewerCharacter,
             ),
             traps: tailorTrapsForViewer(replay.snapshot.traps, ctx.userId),
-            c4s: tailorC4sForViewer(replay.snapshot.c4s, ctx.userId),
+            c4s: tailorC4sForViewer(
+              replay.snapshot.c4s,
+              ctx.userId,
+              false,
+              viewerCharacter?.discoveredC4Ids
+            ),
             playerCharacters: tailorPlayerCharactersForViewer(
               replay.snapshot.playerCharacters,
               ctx.userId,

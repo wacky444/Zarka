@@ -318,7 +318,12 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
                       msg.playerCharacters?.[playerId] ?? null,
                     ),
                 traps: tailorTrapsForViewer(msg.traps, playerId, viewAll),
-                c4s: tailorC4sForViewer(msg.c4s, playerId, viewAll),
+                c4s: tailorC4sForViewer(
+                  msg.c4s,
+                  playerId,
+                  viewAll,
+                  msg.playerCharacters?.[playerId]?.discoveredC4Ids
+                ),
               });
               dispatcher.broadcastMessage(
                 OPCODE_TURN_ADVANCED,

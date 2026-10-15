@@ -399,7 +399,12 @@ export function updateReadyStateRpc(
       ? match.items
       : tailorMatchItemsForCharacter(match.items, viewerCharacter),
     traps: tailorTrapsForViewer(match.traps, ctx.userId, viewAll),
-    c4s: tailorC4sForViewer(match.c4s, ctx.userId, viewAll),
+    c4s: tailorC4sForViewer(
+      match.c4s,
+      ctx.userId,
+      viewAll,
+      viewerCharacter?.discoveredC4Ids
+    ),
   };
 
   return JSON.stringify(response);

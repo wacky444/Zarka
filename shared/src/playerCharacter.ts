@@ -20,6 +20,8 @@ export interface PlayerCharacter {
   actionPlan?: PlayerActionPlan;
   /** Item records discovered on the map by this character. */
   discoveredItemIds?: string[];
+  /** Placed C4 charges discovered by this character. */
+  discoveredC4Ids?: string[];
   /** Item types this character has revealed in each player's inventory. */
   revealedItemTypesByPlayerId?: Record<string, string[]>;
   /** Team identities revealed to this character by Detective purchases. */

@@ -28,6 +28,10 @@ type DiscoveredItemTracking = {
   lookup: Record<string, true>;
 };
 
+type SearchTarget =
+  | { kind: "item"; id: string }
+  | { kind: "c4"; id: string };
+
 export function buildItemLookup(match: MatchRecord): ItemLookup {
   const lookup: ItemLookup = {};
   const items = Array.isArray(match.items) ? match.items : [];
@@ -75,7 +79,7 @@ function ensureDiscoveredItemTracking(
   return { list, lookup };
 }
 
-function shuffleItems(items: string[]): string[] {
+function shuffleItems<T>(items: T[]): T[] {
   const shuffled = items.slice();
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(Math.random() * (index + 1));
@@ -86,12 +90,12 @@ function shuffleItems(items: string[]): string[] {
   return shuffled;
 }
 
-function sampleItems(
-  pool: string[],
+function sampleSearchTargets(
+  pool: SearchTarget[],
   count: number,
   itemLookup: ItemLookup,
   prioritizeFoodDrink: boolean
-): string[] {
+): SearchTarget[] {
   const limit = Math.min(count, pool.length);
   if (limit <= 0) {
     return [];
@@ -102,25 +106,28 @@ function sampleItems(
     return shuffledPool.slice(0, limit);
   }
 
-  const priority = shuffledPool.filter((itemId) => {
-    const itemType = itemLookup[itemId]?.item_type;
+  const priority = shuffledPool.filter((target) => {
+    if (target.kind !== "item") {
+      return false;
+    }
+    const itemType = itemLookup[target.id]?.item_type;
     return itemType === "food" || itemType === "drink";
   });
   const selected = priority.slice(0, limit);
   if (selected.length >= limit) {
     return selected;
   }
-  const selectedIds: Record<string, true> = {};
-  for (const itemId of selected) {
-    selectedIds[itemId] = true;
-  }
-  for (const itemId of shuffledPool) {
+  const selectedIds = new Set(
+    selected.map((target) => `${target.kind}:${target.id}`)
+  );
+  for (const target of shuffledPool) {
     if (selected.length >= limit) {
       break;
     }
-    if (!Object.prototype.hasOwnProperty.call(selectedIds, itemId)) {
-      selected.push(itemId);
-      selectedIds[itemId] = true;
+    const key = `${target.kind}:${target.id}`;
+    if (!selectedIds.has(key)) {
+      selected.push(target);
+      selectedIds.add(key);
     }
   }
   return selected;
@@ -170,11 +177,27 @@ export class SearchAction extends BaseAction {
       const tile = findTileById(match, tileId);
       const tileItems = Array.isArray(tile?.itemIds) ? tile!.itemIds : [];
       const { list, lookup } = ensureDiscoveredItemTracking(participant.character);
-      const undiscovered = tile
+      const undiscoveredItems = tile
         ? tileItems.filter(
             (itemId) => !Object.prototype.hasOwnProperty.call(lookup, itemId)
           )
         : [];
+      const discoveredC4Ids = new Set(
+        participant.character.discoveredC4Ids ?? []
+      );
+      const tileC4s = (match.c4s ?? []).filter(
+        (charge) => charge.tileId === tileId
+      );
+      const undiscoveredC4s = tileC4s.filter(
+        (charge) => !discoveredC4Ids.has(charge.id)
+      );
+      const searchTargets: SearchTarget[] = [
+        ...undiscoveredItems.map((id) => ({ kind: "item" as const, id })),
+        ...undiscoveredC4s.map((charge) => ({
+          kind: "c4" as const,
+          id: charge.id,
+        })),
+      ];
       const definition = ActionLibrary[actionId];
       const extraReps = getUsableExtraExecutions(
         participant.character,
@@ -186,32 +209,43 @@ export class SearchAction extends BaseAction {
             participant.character,
             extraReps,
             definition,
-            undiscovered.length
+            searchTargets.length
           )
         : 0;
       const discovered =
         discoveryCount > 0
-          ? sampleItems(
-              undiscovered,
+          ? sampleSearchTargets(
+              searchTargets,
               discoveryCount,
               itemLookup,
               participant.plan.prioritizeFoodDrink === true
             )
           : [];
+      const discoveredItemIds = discovered
+        .filter((target) => target.kind === "item")
+        .map((target) => target.id);
+      const foundC4Ids = discovered
+        .filter((target) => target.kind === "c4")
+        .map((target) => target.id);
 
-      if (discovered.length > 0) {
-        for (const itemId of discovered) {
-          if (Object.prototype.hasOwnProperty.call(lookup, itemId)) {
-            continue;
-          }
-          lookup[itemId] = true;
-          list.push(itemId);
+      for (const itemId of discoveredItemIds) {
+        if (Object.prototype.hasOwnProperty.call(lookup, itemId)) {
+          continue;
         }
+        lookup[itemId] = true;
+        list.push(itemId);
+      }
+      if (discoveredItemIds.length > 0) {
         participant.character.discoveredItemIds = list;
+      }
+      if (foundC4Ids.length > 0) {
+        participant.character.discoveredC4Ids = Array.from(
+          new Set([...discoveredC4Ids, ...foundC4Ids])
+        );
       }
       const remainingHidden = Math.max(
         0,
-        undiscovered.length - discovered.length
+        searchTargets.length - discovered.length
       );
       const action: ReplayActionDone = {
         actionId,
@@ -221,14 +255,19 @@ export class SearchAction extends BaseAction {
           tileId,
           tileMissing: !tile,
           foundAny: discovered.length > 0,
-          discoveredItemIds: discovered,
-          discoveredItems: discovered.map((itemId) => ({
-            id: itemId,
-            itemType: itemLookup[itemId]?.item_type ?? null,
+          discoveredItemIds,
+          discoveredC4Ids: foundC4Ids,
+          discoveredItems: discovered.map((target) => ({
+            id: target.id,
+            itemType:
+              target.kind === "c4"
+                ? "c4"
+                : itemLookup[target.id]?.item_type ?? null,
           })),
           revealedCount: discovered.length,
           remainingHidden,
-          totalItems: tileItems.length,
+          totalItems: tileItems.length + tileC4s.length,
+          totalC4: tileC4s.length,
           extraExecutions: extraReps,
         },
       };

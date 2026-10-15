@@ -93,6 +93,7 @@ export function tailorC4sForViewer(
   c4s: C4Record[] | undefined,
   viewerId: string | undefined | null,
   viewAll = false,
+  discoveredC4Ids: string[] = [],
 ): C4Record[] | undefined {
   if (!Array.isArray(c4s) || viewAll) {
     return c4s;
@@ -100,7 +101,10 @@ export function tailorC4sForViewer(
   if (!viewerId) {
     return [];
   }
-  return c4s.filter((charge) => charge.ownerId === viewerId);
+  const discovered = new Set(discoveredC4Ids);
+  return c4s.filter(
+    (charge) => charge.ownerId === viewerId || discovered.has(charge.id)
+  );
 }
 
 export function tailorTrapsForViewer(
@@ -241,6 +245,7 @@ export function tailorPlayerCharactersForViewer(
       const sanitized = redactVirusStatus(candidate);
       delete sanitized.secretTeamId;
       delete sanitized.discoveredItemIds;
+      delete sanitized.discoveredC4Ids;
       delete sanitized.revealedItemTypesByPlayerId;
       delete sanitized.revealedTeamIdsByPlayerId;
       delete sanitized.actionPlan;
@@ -320,7 +325,12 @@ export function tailorMatchForPlayer(
     ? match.items
     : filterItemsByDiscoveredLookup(match.items, discovered);
   const traps = tailorTrapsForViewer(match.traps, playerId, viewAll);
-  const c4s = tailorC4sForViewer(match.c4s, playerId, viewAll);
+  const c4s = tailorC4sForViewer(
+    match.c4s,
+    playerId,
+    viewAll,
+    character?.discoveredC4Ids
+  );
   const zarkanDonations = viewAll
     ? match.zarkanDonations ?? []
     : (match.zarkanDonations ?? []).filter(
