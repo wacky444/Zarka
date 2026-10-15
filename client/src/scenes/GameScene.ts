@@ -357,11 +357,11 @@ export class GameScene extends Phaser.Scene {
   private handleBackNavigation(fromBrowser: boolean): void {
     if (this.cellContentsPanel?.isOpen) {
       this.cellContentsPanel.close();
+    } else if (this.mobileLayout && this.mobileViewMode === "sidebar") {
+      this.showMobileMap();
     } else if (this.gridModalActive) {
       this.characterPanel?.closeCurrentGridSelect();
       this.gridModalActive = false;
-    } else if (this.mobileLayout && this.mobileViewMode === "sidebar") {
-      this.showMobileMap();
     } else {
       if (fromBrowser && this.browserHistoryGuardInstalled) {
         this.restoreBrowserHistoryGuard();
