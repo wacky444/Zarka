@@ -1,69 +1,118 @@
-- menu icons for, inventory, character, status, skills, players, teams, log/replay, map, chat, arrow right, left
+- improvement, menu icons for, inventory, character, status, skills, players, teams, log/replay, map, chat, arrow right, left
+	- then use them instead of text for tabs/buttons
 
-- improve ground visuals, alley and road have the similar sprite, check kenney hexagon pack examples
+- improvement, ground visuals, alley and road have the similar sprite, check kenney hexagon pack examples
 
-- train and experience
+- feature, train and experience
+	- implement gaining experience and leveling up
+	- can send the turn without spending skill points to save them for an expensive skill
+	- ignore the restriction of multiple of turns 5, can level up when the character wants
 
-- on pyro, also didnt get a confirm when bought
+- improvement, add a confirm when buying pyro
 
-- tutorial step 6 should teach about prioritize items
+- improvement, tutorial step 6 should teach about prioritize items
 
-- overweight should drop items at the end of the turn
+- feature, overweight should drop items at the end of the turn
+	- from lower value to higher
+	- item drop on ground is revealed to the character
 
-- bombard has animation? it should have it similar to cell destroyed
+- improvement, check if bombard has animation,
+	- it should have it similar to cell destroyed
 
-- help screen with action orders
-	- highlights current selected actions
-
--t i never got hero team
-
-- improve the ready checkbox, to a cool button, if is the last player, show a confirm dialog
-
-- review scare tutorial hint
-
-- bots doesnt buy
-
-- achievements, kill throwing food
-
-"git:github.com/jonjonrankin/pi-caveman"
-
-- dexterity 2, when stealing should show a list of all possible items in the game, allowing max 3
-	- extra power should show two selectors
-
-- steal with power doesn't show an extra target selector
-
-- action icons that need new icons:
-	use antidote, use quemical weapon, use medicine
+- improvement, help screen with action orders
+	- a modal that opens with a close X button at top right, clicking outside also closes it
+		- maybe reuse select Main Action modal, a modal with a title, subtitle, and close button, pressing back on mobile already closes it
+		- title, Orden de sucesos
+		- subtitle, Orden descendente, y dentro de la misma línea, de izquierda a derecha	
+	- Each action is the action.Name with an rectangle border around the text, 
+		- clicking or long pressing on them shows a tooltip with the action card, the same as shown in action select grid
+		- highlights current selected actions, secondary actions and extra secondary action
+			- the rectangle of the current selected ations is light blue, the same color when a main action is selected in the grid
+		- small arrows between items in rows
+	- responsive, if an action doesn't fit in the row, jump to the next one
+		- scrollable vertically, draggable on mobile, draggable from any element, including action texts
+	- list of actions is obtained from ActionLibrary, it should look something like:
 	
-- throwing a moltov, threw 3 foods to three different players
-	-t like it hits in area
+Crear incendio – Pirómano
+Recuperarse – Alimentarse – Desayunar – Usar venda – Usar medicamento
+Hablar – Poner localizador – Colocar C4 – Colocar trampa
+Proteger – Esquivar
+Atacar con cuchillo
+Desplazarse
+Repostar – Coger – Buscar – Manipular – Dar
+Envenenar alimento
+Dejar – Lanzar
+Arma química
+Asustar
+Detonar C4 – Hacha – Bate – Arrancar motosierra – Atacar motosierra – Pistola – Arpón – Lanzacohetes – Puñetazo
+Forzar cerradura
+Robar
+Fabricar – Traficar – Registrar
+Concentrarse – Entrenar
+Observar monitores – Mirar ventana – Usar prismáticos – Detectar
+Usar antídoto – Inyectar virus – Inyectar vacuna – Dormir – Infección de virus
+Fumigador – Helicóptero – Bombardero – Sicario
+Dron espía
+Traficante
+Cell destruction
+	
+- improvement, pressing back on mobile while the panel is opened, it should go back to map, not lobby
+	- in the map, it goes to lobby, currently ok
 
-- registered items didnt stay in players view for the char that has been hit
+-t bug, i never got hero team, check if its because i only played with bots
 
-- search reveals placed c4, but can't be picked up
+- improvement, improve the ready checkbox, to a cool button, if is the last player, show a confirm dialog
+	- think how to differentiate the setted ready state of unready
+	- when not ready, show a pulsating effect in the button
+		- the effect is orange, the color tutorial 
+	- setting ready will advance the turn, continue?
 
-- social
+- improvement, bots doesnt buy
+	- for now set their inherit target to a random team member
+	- in the future they should waste coins on detective
+	
+	
+- improvement, social
 	- inspect others profiles
 	- friends
+
+- improvement, achievements, 
+	- show a popup when received, reuse the message popup at the top
+		- with a glow around the icon of the achievement 
+		- new button to view achievements in the menu, hidden with a tip
+	- example, kill by throwing food, first win, push to death, friendly fire, think of more achievements, about 24 total
+	- tutorial doesn't trigger achievements
+
+- feature, dexterity 2, when stealing should show a list of all possible items in the game, allowing max 3
+	- bug, extra power should show two selectors
+
+- improvement, action icons that need new icons:
+	use antidote, use quemical weapon, use medicine
 	
-- end game animation improve, alive players dance, zoom to players, fireworks intead of confetti, check menu particles
+- bug, throwing a moltov, threw 3 foods to three different players
+	-t like it hits in area
+	- registered items didnt stay in players view for the char that has been hit
 
-- matchmaking
-	-t pause auto matchmaking if the player hasn't logged in 24h, even it the account has a free slot, don't queue players with more than 24 offline time
-	-t match name and creator name for ranked games
+- feature, search can reveal placed c4, but can't be picked up
+	- add it to the pool of possible findable items in the cell
+	
+- improvement, end game animation improve, alive players dance, zoom to players, fireworks intead of confetti, 
+	- dance, like a metronome, tilt to one side being the feet the rotation point, also moving in the diagonal a bit, then return to original position and repeat in the other side) takes 1 second to move to one side, then half second in the original position, then another second to the other side
+	- fireworks like the menu particles, using the same library but in fireworks mode instead of raining from the sky
 
--t enough spawn locations for 100 players? test to create a small map for 20 bots
+- bug, in the replay(tested in an end game report replay), changing the turn to view, doesnt put the characters on the positions pre turn
 
-- in the replay(tested in an end game report replay), changing the turn to view, doesnt put the characters on the positions pre turn
+- bug, detonate requires a target location, but with extra power doesn't show a extra target locator
+	- extra power should show two selectors
 
-- detonate requires a target location, but with extra power doesn't show a extra target locator
+- bug, chemical weapon   "[ ] Single target (Area)": "[ ] Objetivo único (área)",
+	-t change text to less confusing
+	-t in area mode, hide the target selector
 
-- chemical weapon   "[ ] Single target (Area)": "[ ] Objetivo único (área)",
-	- change text to less confusing
-	- in area mode, hide the target selector
+-t feature, in new turn if the action is not set, show an empty value instead of first action
 
-- in new turn if the action is not set, show an empty value instead of first action
-
-- confirmed teams, supporting circles A->B->C->A
+- feature, confirmed teams, supporting circles A->B->C->A
 	- changes color name in map
 	- avoid damage when there is no target selected
+	
+- feature, implement the skill that allows to fabricate anywhere without workshop
