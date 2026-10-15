@@ -321,9 +321,6 @@ export class CharacterPanelReadyView {
       return false;
     }
     if (this.lastRefreshOptions) {
-      if (this.lastRefreshOptions.unspentSkillPoints > 0) {
-        return false;
-      }
       if (
         this.lastRefreshOptions.tutorialActive &&
         !this.lastRefreshOptions.tutorialReadyAllowed
