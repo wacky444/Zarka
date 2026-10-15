@@ -122,7 +122,7 @@ export const SkillLibrary: SkillLibraryDefinition = {
     description: "Permite realizar la acción fabricar sin estar en el taller",
     cost: 10,
     max: 1,
-    implemented: false,
+    implemented: true,
     category: "utility"
   },
   resilience1: {
