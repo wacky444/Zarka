@@ -1,6 +1,9 @@
 import Phaser from "phaser";
 import { t } from "../services/i18n";
 
+const FIREWORK_TEXTURE = "endgame-firework-spark";
+const FIREWORK_COLORS = [0xfbbf24, 0xfef08a, 0xf59e0b, 0x34d399, 0x60a5fa];
+
 export interface VictoryOverlayOptions {
   depth?: number;
   onTransitionComplete: () => void;
@@ -28,7 +31,8 @@ export class VictoryOverlay {
   private readonly menuButton: Phaser.GameObjects.Text;
   private readonly emitterContainer: Phaser.GameObjects.Container;
   private readonly onTransitionComplete: () => void;
-  private particleGraphics: Phaser.GameObjects.Graphics[] = [];
+  private fireworkEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  private fireworkTimer: Phaser.Time.TimerEvent | null = null;
   private pulseTween: Phaser.Tweens.Tween | null = null;
   private isVisible = false;
   private reportTransitionStarted = false;
@@ -47,7 +51,7 @@ export class VictoryOverlay {
     this.container.setVisible(false);
 
     this.backdrop = scene.add
-      .rectangle(0, 0, width, height, 0x070913, 0.88)
+      .rectangle(0, 0, width, height, 0x070913, 0.62)
       .setOrigin(0, 0)
       .setInteractive();
     this.container.add(this.backdrop);
@@ -173,7 +177,7 @@ export class VictoryOverlay {
       this.rewardBadge.setVisible(false);
     }
 
-    this.createVictoryParticles();
+    this.createVictoryFireworks();
 
     if (data.tutorial && data.result === "win") {
       this.statsText.setText(
@@ -266,6 +270,9 @@ export class VictoryOverlay {
 
   ignoreCamera(camera: Phaser.Cameras.Scene2D.Camera) {
     camera.ignore(this.container);
+    if (this.fireworkEmitter) {
+      camera.ignore(this.fireworkEmitter);
+    }
   }
 
   destroy() {
@@ -285,48 +292,61 @@ export class VictoryOverlay {
     this.onTransitionComplete();
   }
 
-  private createVictoryParticles() {
-    const colors = [0xfbbf24, 0xfef08a, 0xf59e0b, 0x34d399, 0x60a5fa];
-    for (let i = 0; i < 30; i++) {
-      const g = this.scene.add.graphics();
-      const color = colors[i % colors.length];
-      const size = Phaser.Math.Between(4, 10);
-      g.fillStyle(color, 1);
-      g.fillCircle(0, 0, size);
-
-      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-      const speed = Phaser.Math.FloatBetween(100, 350);
-      const startX = 0;
-      const startY = 0;
-      const targetX = Math.cos(angle) * speed;
-      const targetY = Math.sin(angle) * speed;
-
-      g.setPosition(startX, startY);
-      g.setAlpha(1);
-
-      this.emitterContainer.add(g);
-      this.particleGraphics.push(g);
-
-      this.scene.tweens.add({
-        targets: g,
-        x: targetX,
-        y: targetY,
-        alpha: 0,
-        scaleX: 0.2,
-        scaleY: 0.2,
-        duration: Phaser.Math.Between(1200, 2200),
-        repeat: -1,
-        repeatDelay: Phaser.Math.Between(100, 500),
-        ease: "Quad.out"
-      });
+  private createVictoryFireworks() {
+    if (!this.scene.textures.exists(FIREWORK_TEXTURE)) {
+      const texture = this.scene.textures.createCanvas(FIREWORK_TEXTURE, 24, 24);
+      if (texture) {
+        const glow = texture.context.createRadialGradient(12, 12, 0, 12, 12, 12);
+        glow.addColorStop(0, "rgba(255,255,255,1)");
+        glow.addColorStop(0.25, "rgba(255,255,255,0.95)");
+        glow.addColorStop(1, "rgba(255,255,255,0)");
+        texture.context.fillStyle = glow;
+        texture.context.fillRect(0, 0, 24, 24);
+        texture.refresh();
+      }
     }
+    if (!this.scene.textures.exists(FIREWORK_TEXTURE)) {
+      return;
+    }
+    const emitter = this.scene.add.particles(0, 0, FIREWORK_TEXTURE, {
+      lifespan: { min: 700, max: 1250 },
+      speed: { min: 90, max: 260 },
+      angle: { min: 0, max: 360 },
+      gravityY: 90,
+      scale: { start: 0.9, end: 0.04 },
+      alpha: { start: 1, end: 0 },
+      tint: FIREWORK_COLORS,
+      blendMode: Phaser.BlendModes.ADD,
+      frequency: -1,
+      maxAliveParticles: 360,
+      reserve: 360,
+    });
+    emitter.setScrollFactor(0).setDepth(this.container.depth - 1);
+    this.fireworkEmitter = emitter;
+    this.scene.cameras.main.ignore(emitter);
+    this.fireworkTimer = this.scene.time.addEvent({
+      delay: 650,
+      loop: true,
+      callback: () => {
+        if (!this.isVisible || !emitter.active) {
+          return;
+        }
+        const width = this.scene.scale.width;
+        const height = this.scene.scale.height;
+        emitter.explode(
+          Phaser.Math.Between(36, 56),
+          Phaser.Math.Between(64, Math.max(65, width - 64)),
+          Phaser.Math.Between(70, Math.max(71, Math.floor(height * 0.62)))
+        );
+      },
+    });
   }
 
   private clearParticles() {
-    for (const g of this.particleGraphics) {
-      g.destroy();
-    }
-    this.particleGraphics = [];
+    this.fireworkTimer?.remove(false);
+    this.fireworkTimer = null;
+    this.fireworkEmitter?.destroy();
+    this.fireworkEmitter = null;
     this.emitterContainer.removeAll(true);
   }
 }

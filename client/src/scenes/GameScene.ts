@@ -77,6 +77,7 @@ import { assetPath } from "../utils/assetPath";
 import { isMobile } from "../utils/isMobile";
 import { AccountService } from "../services/AccountService";
 import { VictoryOverlay } from "../ui/VictoryOverlay";
+import { startVictoryDance } from "../animation/VictoryDance";
 import { TutorialInstructionView } from "../ui/TutorialInstructionView";
 import { isAdminViewEnabled } from "../services/adminView";
 import { t } from "../services/i18n";
@@ -176,6 +177,7 @@ export class GameScene extends Phaser.Scene {
   private playerSkinMap = new Map<string, import("@shared").Skin>();
   private accountService: AccountService | null = null;
   private victoryOverlay: VictoryOverlay | null = null;
+  private stopVictoryDance: (() => void) | null = null;
   private tutorialInstructionView: TutorialInstructionView | null = null;
   private reportTransitionStarted = false;
   private reportReplayMode = false;
@@ -965,6 +967,8 @@ export class GameScene extends Phaser.Scene {
       this.cellContentsPanel?.destroy();
       this.cellContentsPanel = null;
       this.stopAutoAdvanceTimer();
+      this.stopVictoryDance?.();
+      this.stopVictoryDance = null;
       this.boardRenderer?.destroy();
       this.boardRenderer = null;
       this.itemTooltip?.destroy();
@@ -1517,23 +1521,62 @@ export class GameScene extends Phaser.Scene {
       turns,
       tutorial: !!this.currentMatch?.metadata?.[TUTORIAL_MATCH_METADATA_KEY],
     });
-    this.animateEndGameCamera(payload.winnerId);
+    const alivePlayerIds = Object.entries(
+      this.currentMatch?.playerCharacters ?? {}
+    )
+      .filter(([, character]) => {
+        const conditions = character?.statuses?.conditions ?? [];
+        const health = character?.stats?.health?.current;
+        return !conditions.includes("dead") && !(typeof health === "number" && health <= 0);
+      })
+      .map(([playerId]) => playerId);
+    const aliveSprites = alivePlayerIds
+      .map((playerId) => this.boardRenderer?.getPlayerSprite(playerId))
+      .filter(
+        (sprite): sprite is NonNullable<typeof sprite> => sprite !== undefined
+      );
+    this.stopVictoryDance?.();
+    this.stopVictoryDance = startVictoryDance(this, aliveSprites);
+    this.animateEndGameCamera(alivePlayerIds);
   }
 
-  private animateEndGameCamera(winnerId?: string) {
-    const winner = winnerId
-      ? this.boardRenderer?.getPlayerSprite(winnerId)
-      : undefined;
-    const targetZoom = Math.max(this.cam.zoom, 1.25);
+  private animateEndGameCamera(alivePlayerIds: string[]) {
+    const sprites = alivePlayerIds
+      .map((playerId) => this.boardRenderer?.getPlayerSprite(playerId))
+      .filter(
+        (sprite): sprite is NonNullable<typeof sprite> => sprite !== undefined
+      );
+    const minX = sprites.length
+      ? Math.min(...sprites.map((sprite) => sprite.x))
+      : 0;
+    const maxX = sprites.length
+      ? Math.max(...sprites.map((sprite) => sprite.x))
+      : 0;
+    const minY = sprites.length
+      ? Math.min(...sprites.map((sprite) => sprite.y))
+      : 0;
+    const maxY = sprites.length
+      ? Math.max(...sprites.map((sprite) => sprite.y))
+      : 0;
+    const groupCenterX = (minX + maxX) / 2;
+    const groupCenterY = (minY + maxY) / 2;
+    const fitZoom = Math.min(
+      this.cam.width / Math.max(240, maxX - minX + 240),
+      this.cam.height / Math.max(200, maxY - minY + 200)
+    );
+    const targetZoom = Math.max(
+      this.cam.zoom,
+      Math.min(1.65, Math.max(1.1, fitZoom))
+    );
     const config: Phaser.Types.Tweens.TweenBuilderConfig = {
       targets: this.cam,
       zoom: targetZoom,
       duration: 1800,
       ease: "Cubic.out",
     };
-    if (winner) {
-      config.scrollX = winner.x - this.cam.width / (2 * targetZoom);
-      config.scrollY = winner.y - this.cam.height / (2 * targetZoom);
+    if (sprites.length > 0) {
+      config.scrollX = groupCenterX - this.cam.width / (2 * targetZoom);
+      config.scrollY = groupCenterY - this.cam.height / (2 * targetZoom);
     }
     this.tweens.add(config);
   }
@@ -1543,6 +1586,8 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.reportTransitionStarted = true;
+    this.stopVictoryDance?.();
+    this.stopVictoryDance = null;
     const matchId = this.registry.get("currentMatchId") as string | null;
     if (matchId && this.currentMatch?.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
       clearActiveTutorialMatchId(

@@ -202,7 +202,7 @@ Repurpose `VictoryOverlay` as the end-game transition layer. It is not retained 
 
 1. Stop accepting action and map-selection input.
 2. Finish any queued replay animation.
-3. Show a short confetti burst and map/camera zoom toward the winning team or final board.
+3. Show a short fireworks burst, animate living players with a repeating side-to-side dance, and zoom the camera toward the living group or final board.
 4. Fade or scale into the report scene.
 5. Stop `GameScene` and leave the realtime match cleanly.
 6. Start `EndGameReportScene` with the stable match ID.
@@ -256,7 +256,7 @@ Check the following scenarios:
 - Finished matches show duration and a win indicator only when the player's team won.
 - The full report button opens the correct historical report.
 - End event waits for replay completion and opens the report exactly once.
-- Confetti and zoom transition work on desktop and mobile and cannot be skipped.
+- Fireworks, living-player dance, and group zoom work on desktop and mobile and cannot be skipped.
 - Report remains usable with many players and achievements.
 - Winning character sprite row renders all winners and scrolls on narrow screens.
 - Finished-match reports load correctly after a server restart.
