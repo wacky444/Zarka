@@ -29,6 +29,7 @@ import {
 import { applyScheduledDestruction } from "./turnDestruction";
 import { refreshTrackerViews } from "./trackerState";
 import { createPerception4DetectionEvents } from "./perception4";
+import { dropOverweightItems } from "./dropOverweightItems";
 
 function sortedActions(): ActionDefinition[] {
   const keys = Object.keys(ActionLibrary) as Array<keyof typeof ActionLibrary>;
@@ -332,6 +333,7 @@ export function advanceTurn(
       replayEvents.push(...events);
     }
   }
+  replayEvents.push(...dropOverweightItems(match));
   replayEvents.push(...applyVirusInfection(match, resolvedTurn, logger));
   replayEvents.push(
     ...applyScheduledDestruction(match, resolvedTurn, logger),
