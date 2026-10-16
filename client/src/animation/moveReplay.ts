@@ -20,6 +20,8 @@ import { animatePunchEvent } from "./replayActions/PunchAnimation";
 import { animateAxeAttackEvent } from "./replayActions/AxeAttackAnimation";
 import { animateBatAttackEvent } from "./replayActions/BatAttackAnimation";
 import { animateKnifeAttackEvent } from "./replayActions/KnifeAttackAnimation";
+import { animateChainsawAttackEvent } from "./replayActions/ChainsawAttackAnimation";
+import { animateStartChainsawEvent } from "./replayActions/StartChainsawAnimation";
 import { animateRecoverEvent } from "./replayActions/RecoverAnimation";
 import { animateScareEvent } from "./replayActions/ScareAnimation";
 import { animateSearchEvent } from "./replayActions/SearchAnimation";
@@ -103,6 +105,10 @@ export async function playReplayEvents(
       await animateAxeAttackEvent(context, event);
     } else if (actionId === ActionLibrary.bat_attack.id) {
       await animateBatAttackEvent(context, event);
+    } else if (actionId === ActionLibrary.chainsaw_attack.id) {
+      await animateChainsawAttackEvent(context, event);
+    } else if (actionId === ActionLibrary.start_chainsaw.id) {
+      await animateStartChainsawEvent(context, event);
     } else if (actionId === ActionLibrary.shoot_pistol.id) {
       await animateShootPistolEvent(context, event);
     } else if (actionId === ActionLibrary.shoot_harpoon.id) {

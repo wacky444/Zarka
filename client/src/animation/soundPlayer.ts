@@ -40,7 +40,7 @@ export const SOUND_ASSET_FILES: Record<string, string[]> = {
   weapon_pick_up: ["weapon_pick_up.ogg", "weapon_pick_up.mp3"],
   item_equip: ["item_equip.ogg", "item_equip.mp3"],
   wood_small_pickup: ["wood_small_pickup.ogg", "wood_small_pickup.mp3"],
-  weapon_drop: ["weapon_drop.ogg", "weapon_drop.mp3"],
+  weapon_drop: ["weapon_drop.ogg", "weapon_drop.mp3", "weapon_drop.wav"],
   wood_small_drop: ["wood_small_drop.ogg", "wood_small_drop.mp3"],
   cardboard_drop: ["cardboard_drop.ogg", "cardboard_drop.mp3"],
   page_turn: ["page_turn.ogg", "page_turn.mp3"],
@@ -59,7 +59,7 @@ export const SOUND_ASSET_FILES: Record<string, string[]> = {
   air_burst: ["air_burst.ogg", "air_burst.mp3"],
   sword_clash: ["sword_clash.ogg", "sword_clash.mp3"],
   sword_clash_2: ["sword_clash_2.ogg", "sword_clash_2.mp3"],
-  metal_clang: ["metal_clang.ogg", "metal_clang.mp3"],
+  metal_clang: ["metal_clang.ogg", "metal_clang.mp3", "metal_clang.wav"],
   horror_sting: ["horror_sting.ogg", "horror_sting.mp3"],
   ghost: ["ghost.ogg", "ghost.mp3"],
   ghost_long: ["ghost_long.ogg", "ghost_long.mp3"],
@@ -86,13 +86,27 @@ export const SOUND_ASSET_FILES: Record<string, string[]> = {
   shot_muffled: ["shot_muffled.ogg", "shot_muffled.mp3"],
   air_pump: ["air_pump.ogg", "air_pump.mp3"],
   gurgling: ["gurgling.ogg", "gurgling.mp3"],
+  drill_whizz: ["drill_whizz.ogg", "drill_whizz.mp3", "drill_whizz.wav"],
+  "8_bit_chime_positive": [
+    "8_bit_chime_positive.ogg",
+    "8_bit_chime_positive.mp3",
+    "8_bit_chime_positive.wav",
+  ],
 };
 
 export const ACTION_SOUNDS: Record<string, string[]> = {
   punch: ["punch", "punch_2", "punch_3"],
   axe_attack: ["sword_slice", "swipe", "crunch_quick"],
   bat_attack: ["harsh_thud", "cardboard_hit", "metal_blunt_tap"],
-  knife_attack: ["sword_light", "cork_stabbed", "sword_sharpen"],
+  knife_attack: ["sword_light", "cork_stabbed", "sword_sharpen", "metal_clang"],
+  chainsaw_attack: [
+    "sword_slice",
+    "crunch_quick",
+    "bone_snap",
+    "swipe",
+    "weapon_drop",
+  ],
+  start_chainsaw: ["drill_whizz"],
   shoot_pistol: ["shot_muffled", "explosion_small", "air_burst"],
   shoot_harpoon: ["whoosh_1", "swipe", "cork_stabbed"],
   move: [
@@ -122,6 +136,7 @@ export const ACTION_SOUNDS: Record<string, string[]> = {
   buy_bomber: ["explosion_large", "explosion_medium", "explosion_small"],
   failedAction: ["undesired_effect", "sci_fi_error", "cancel"],
   tile_destroyed: ["explosion_small", "explosion_medium"],
+  level_up: ["8_bit_chime_positive"],
 };
 
 export function preloadReplaySounds(scene: Phaser.Scene): void {

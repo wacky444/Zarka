@@ -265,6 +265,28 @@ function appendHiddenStatusEvents(
   }
 }
 
+function decrementChainsawTurns(match: MatchRecord): void {
+  const characters = match.playerCharacters;
+  if (!characters) {
+    return;
+  }
+  for (const playerId in characters) {
+    if (!Object.prototype.hasOwnProperty.call(characters, playerId)) {
+      continue;
+    }
+    const character = characters[playerId];
+    if (character?.statuses?.chainsaw) {
+      const nextRemaining = character.statuses.chainsaw.remainingTurns - 1;
+      if (nextRemaining <= 0) {
+        delete character.statuses.chainsaw;
+      } else {
+        character.statuses.chainsaw.remainingTurns = nextRemaining;
+      }
+      characters[playerId] = character;
+    }
+  }
+}
+
 export function advanceTurn(
   match: MatchRecord,
   resolvedTurn: number,
@@ -354,6 +376,7 @@ export function advanceTurn(
     ...applyScheduledDestruction(match, resolvedTurn, logger),
   );
   clearExpiredFires(match, resolvedTurn);
+  decrementChainsawTurns(match);
   replayEvents.push(...createPerception4DetectionEvents(match));
   // removeProtectedState(match);
 

@@ -48,6 +48,10 @@ const suites = [
     name: "crafting-catalog",
     entryPoint: "test/CraftingCatalogAndMetadata.test.ts"
   },
+  {
+    name: "chainsaw-action-warnings",
+    entryPoint: "test/ChainsawActionWarnings.test.ts"
+  },
   { name: "ranked-matchmaking", entryPoint: "test/RankedMatchmaking.test.ts" }
 ];
 

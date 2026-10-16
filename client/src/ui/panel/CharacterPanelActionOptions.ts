@@ -57,6 +57,9 @@ export interface CharacterPanelActionOptionsContext {
   currentTurn: number;
   allowedMainActionIds: ReadonlySet<ActionId> | null;
   allowedSecondaryActionIds: ReadonlySet<ActionId> | null;
+  selectedMainActionId?: string | null;
+  selectedSecondaryActionId?: string | null;
+  selectedExtraSecondaryActionId?: string | null;
 }
 
 export function collectMainActions(character: PlayerCharacter): ActionId[] {
@@ -252,7 +255,10 @@ function resolveActionMetadata(
         ? getMissingRequirement(
             definition,
             context.character,
-            context.match?.map
+            context.match?.map,
+            context.selectedSecondaryActionId,
+            context.selectedMainActionId,
+            context.selectedExtraSecondaryActionId
           )
         : null,
       disabled

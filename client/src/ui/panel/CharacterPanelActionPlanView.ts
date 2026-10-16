@@ -578,7 +578,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     });
     this.scrollContent.add(this.mainActionDropdown);
     this.mainActionDropdown.on("change", this.handleMainActionSelection);
-    this.mainActionDropdown.on("modal-open", this.handleModalOpen);
+    this.mainActionDropdown.on("modal-open", this.handleMainActionModalOpen);
     this.mainActionDropdown.on("modal-close", this.handleModalClose);
 
     this.extraExecutionSelector = new ExtraExecutionSelector(
@@ -708,7 +708,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     });
     this.scrollContent.add(this.secondaryActionDropdown);
     this.secondaryActionDropdown.on("change", this.handleSecondaryActionSelection);
-    this.secondaryActionDropdown.on("modal-open", this.handleModalOpen);
+    this.secondaryActionDropdown.on("modal-open", this.handleSecondaryActionModalOpen);
     this.secondaryActionDropdown.on("modal-close", this.handleModalClose);
 
     this.secondaryExtraExecutionSelector = new ExtraExecutionSelector(
@@ -876,7 +876,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.extraSecondaryActionDropdown.setVisible(false);
     this.scrollContent.add(this.extraSecondaryActionDropdown);
     this.extraSecondaryActionDropdown.on("change", this.handleExtraSecondaryActionSelection);
-    this.extraSecondaryActionDropdown.on("modal-open", this.handleModalOpen);
+    this.extraSecondaryActionDropdown.on("modal-open", this.handleSecondaryActionModalOpen);
     this.extraSecondaryActionDropdown.on("modal-close", this.handleModalClose);
 
     this.extraSecondaryExtraExecutionSelector = new ExtraExecutionSelector(
@@ -1809,13 +1809,13 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.dexterity3Selector.off("modal-close", this.handleModalClose);
     this.dexterity3Selector.destroy();
     this.mainActionDropdown.off("change", this.handleMainActionSelection);
-    this.mainActionDropdown.off("modal-open", this.handleModalOpen);
+    this.mainActionDropdown.off("modal-open", this.handleMainActionModalOpen);
     this.mainActionDropdown.off("modal-close", this.handleModalClose);
     this.secondaryActionDropdown.off("change", this.handleSecondaryActionSelection);
-    this.secondaryActionDropdown.off("modal-open", this.handleModalOpen);
+    this.secondaryActionDropdown.off("modal-open", this.handleSecondaryActionModalOpen);
     this.secondaryActionDropdown.off("modal-close", this.handleModalClose);
     this.extraSecondaryActionDropdown.off("change", this.handleExtraSecondaryActionSelection);
-    this.extraSecondaryActionDropdown.off("modal-open", this.handleModalOpen);
+    this.extraSecondaryActionDropdown.off("modal-open", this.handleSecondaryActionModalOpen);
     this.extraSecondaryActionDropdown.off("modal-close", this.handleModalClose);
     this.secondaryCraftingSelector.off("product-selected", this.handleSecondaryCraftedItemSelection);
     this.secondaryCraftingSelector.off("modal-open", this.handleModalOpen);
@@ -1863,6 +1863,16 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.scrollPanel?.destroy();
     this.removeAllListeners();
   }
+
+  private handleMainActionModalOpen = () => {
+    this.refreshMainDropdownItems();
+    this.handleModalOpen();
+  };
+
+  private handleSecondaryActionModalOpen = () => {
+    this.refreshSecondaryDropdownItems();
+    this.handleModalOpen();
+  };
 
   private handleModalOpen = () => {
     this.emit("modal-open");
@@ -1924,6 +1934,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.refreshScareSecondPlayerSelectorState();
     this.refreshItemSelectorState();
     this.refreshSecondStealItemSelectorState();
+    this.refreshSecondaryDropdownItems();
     this.emit("ready-refresh-request");
     this.emitMainActionChange();
   };
@@ -2234,6 +2245,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       this.secondaryManipulateSelector
     );
     this.refreshSecondaryDropdownItems();
+    this.refreshMainDropdownItems();
     this.emit("ready-refresh-request");
     this.updateScrollLayout();
     if (this.secondaryActionSelection === "fabricate") {
@@ -2287,6 +2299,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       this.extraSecondaryManipulateSelector
     );
     this.refreshSecondaryDropdownItems();
+    this.refreshMainDropdownItems();
     this.emit("ready-refresh-request");
     this.updateScrollLayout();
     if (this.extraSecondaryActionSelection === "fabricate") {
@@ -2464,7 +2477,19 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       match: this.currentMatch,
       currentTurn: this.currentTurn,
       allowedMainActionIds: this.tutorialAllowedMainActionIds,
-      allowedSecondaryActionIds: this.tutorialAllowedSecondaryActionIds
+      allowedSecondaryActionIds: this.tutorialAllowedSecondaryActionIds,
+      selectedMainActionId:
+        this.mainActionSelection ??
+        character?.actionPlan?.main?.actionId ??
+        null,
+      selectedSecondaryActionId:
+        this.secondaryActionSelection ??
+        character?.actionPlan?.secondary?.actionId ??
+        null,
+      selectedExtraSecondaryActionId:
+        this.extraSecondaryActionSelection ??
+        character?.actionPlan?.extraSecondary?.actionId ??
+        null
     };
   }
 
@@ -2693,6 +2718,20 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.updateScrollLayout();
   }
 
+  private refreshMainDropdownItems(): void {
+    const character = this.currentCharacter;
+    if (!character) {
+      return;
+    }
+    const mainActions = collectMainActions(character);
+    this.mainActionDropdown.setItems(
+      buildMainActionItems(
+        mainActions,
+        this.getActionOptionsContext(character)
+      )
+    );
+  }
+
   private refreshSecondaryDropdownItems(): void {
     const character = this.currentCharacter;
     if (!character) {
@@ -2712,6 +2751,23 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     if (this.hasExtraSecondaryAction()) {
       this.refreshExtraSecondaryDropdownItems();
     }
+  }
+
+  public hasChainsawOrderConflict(): boolean {
+    const isChainsawRunning =
+      (this.currentCharacter?.statuses?.chainsaw?.remainingTurns ?? 0) > 0;
+    if (isChainsawRunning) {
+      return false;
+    }
+    const isMainChainsawAttack =
+      this.mainActionSelection === "chainsaw_attack" ||
+      this.currentCharacter?.actionPlan?.main?.actionId === "chainsaw_attack";
+    const isSecondaryStartChainsaw =
+      this.secondaryActionSelection === "start_chainsaw" ||
+      this.currentCharacter?.actionPlan?.secondary?.actionId === "start_chainsaw" ||
+      this.extraSecondaryActionSelection === "start_chainsaw" ||
+      this.currentCharacter?.actionPlan?.extraSecondary?.actionId === "start_chainsaw";
+    return isMainChainsawAttack && isSecondaryStartChainsaw;
   }
 
   private refreshExtraSecondaryDropdownItems(): void {

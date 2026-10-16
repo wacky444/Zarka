@@ -6,6 +6,7 @@ import type {
   ActionId,
   HexTileSnapshot,
   ReplayEvent,
+  ReplayPlayerEvent,
   PlayerCharacter,
 } from "@shared";
 import type { MatchRecord } from "../models/types";
@@ -21,6 +22,8 @@ import { executePunchAction } from "./actions/punch";
 import { executeKnifeAttackAction } from "./actions/knifeAttack";
 import { executeAxeAttackAction } from "./actions/axeAttack";
 import { executeBatAttackAction } from "./actions/batAttack";
+import { executeChainsawAttackAction } from "./actions/chainsawAttack";
+import { executeStartChainsawAction } from "./actions/startChainsaw";
 import { executeShootPistolAction } from "./actions/shootPistol";
 import { executeShootHarpoonAction } from "./actions/shootHarpoon";
 import { executeShootRocketLauncherAction } from "./actions/shootRocketLauncher";
@@ -1428,6 +1431,103 @@ export function executeAction(
           )
         : [];
       eventsForAction = [...energyEvents, ...actionEvents, ...failureEvents];
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.chainsaw_attack.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const eligible: PlannedActionParticipant[] = [];
+      const failures: ReplayPlayerEvent[] = [];
+      for (const participant of participants) {
+        if (!hasCarriedItem(participant.character, "chainsaw")) {
+          failures.push(
+            createFailedActionEvent(participant, action.id, {
+              reason: "missing_item",
+              missingItemId: "chainsaw",
+            })
+          );
+          clearPlanByKey(participant.character, participant.planKey);
+          match.playerCharacters![participant.playerId] = participant.character;
+        } else if ((participant.character.statuses?.chainsaw?.remainingTurns ?? 0) <= 0) {
+          failures.push(
+            createFailedActionEvent(participant, action.id, {
+              reason: "chainsaw_not_running",
+            })
+          );
+          clearPlanByKey(participant.character, participant.planKey);
+          match.playerCharacters![participant.playerId] = participant.character;
+        } else {
+          eligible.push(participant);
+        }
+      }
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = eligible.length
+        ? executeChainsawAttackAction(eligible, match)
+        : [];
+      eventsForAction = [...energyEvents, ...actionEvents, ...failures];
+      for (const participant of participants) {
+        applyActionCooldown(
+          participant.character,
+          action.id,
+          action.cooldown,
+          resolvedTurn,
+        );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.start_chainsaw.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const eligible: PlannedActionParticipant[] = [];
+      const failures: ReplayPlayerEvent[] = [];
+      for (const participant of participants) {
+        if (!hasCarriedItem(participant.character, "chainsaw")) {
+          failures.push(
+            createFailedActionEvent(participant, action.id, {
+              reason: "missing_item",
+              missingItemId: "chainsaw",
+            })
+          );
+          clearPlanByKey(participant.character, participant.planKey);
+          match.playerCharacters![participant.playerId] = participant.character;
+        } else if (!hasCarriedItem(participant.character, "fuel")) {
+          failures.push(
+            createFailedActionEvent(participant, action.id, {
+              reason: "missing_item",
+              missingItemId: "fuel",
+            })
+          );
+          clearPlanByKey(participant.character, participant.planKey);
+          match.playerCharacters![participant.playerId] = participant.character;
+        } else {
+          eligible.push(participant);
+        }
+      }
+      const energyEvents = applyEnergyForParticipants(
+        participants,
+        action.energyCost,
+        match,
+        logger,
+      );
+      const actionEvents = eligible.length
+        ? executeStartChainsawAction(eligible, match)
+        : [];
+      eventsForAction = [...energyEvents, ...actionEvents, ...failures];
       for (const participant of participants) {
         applyActionCooldown(
           participant.character,

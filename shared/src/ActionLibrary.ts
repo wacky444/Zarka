@@ -797,6 +797,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "chainsaw.png",
     actionOrder: 11,
     actionSubOrder: 3,
+    developed: true,
     tags: ["Attack", "SingleTarget"]
   },
   start_chainsaw: {
@@ -806,6 +807,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 1,
     cooldown: 3,
+    experience: {
+      base: 1
+    },
     requiredItems: ["chainsaw", "fuel"],
     requirements: [
       {
@@ -823,6 +827,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "start_chainsaw.png",
     actionOrder: 11,
     actionSubOrder: 4,
+    developed: true,
     tags: ["Logistics"]
   },
   shoot_pistol: {

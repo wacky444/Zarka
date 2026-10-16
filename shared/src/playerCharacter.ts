@@ -139,7 +139,12 @@ export interface PlayerStatusState {
   virus?: PlayerVirusStatus;
   vaccine?: PlayerVaccineStatus;
   fire?: PlayerFireStatus;
+  chainsaw?: PlayerChainsawStatus;
   cooldowns?: PlayerActionCooldown[];
+}
+
+export interface PlayerChainsawStatus {
+  remainingTurns: number;
 }
 
 export interface PlayerIntoxicationStatus {

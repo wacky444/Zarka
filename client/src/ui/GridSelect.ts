@@ -1345,7 +1345,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
                 color: THEME.colors.warning,
                 align: "center",
                 wrap: { mode: "word", width: Math.max(1, cellWidth - 16) },
-                maxLines: 2
+                maxLines: 4
               }
             ) as Phaser.GameObjects.Text
           ).setOrigin(0.5)

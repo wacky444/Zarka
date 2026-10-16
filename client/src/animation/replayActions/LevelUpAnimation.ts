@@ -1,5 +1,6 @@
 import type { ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
+import { playRandomSound } from "../soundPlayer";
 
 const FIREWORK_COLORS = [0xfacc15, 0x4ade80, 0x60a5fa, 0xf472b6, 0xffffff];
 
@@ -12,6 +13,8 @@ export async function animateLevelUpEvent(
   const sprite = context.getSprite(actorId) ??
     context.ensureSprite?.(actorId, event.action.targetLocation ?? event.action.originLocation);
   if (!sprite) return;
+
+  playRandomSound(context.scene, "8_bit_chime_positive");
 
   const centerX = sprite.x;
   const centerY = sprite.y - 22;

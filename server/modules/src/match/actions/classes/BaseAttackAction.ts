@@ -21,6 +21,8 @@ import {
 } from "../utils";
 import { ActionLibrary, getDamageReduction, getDodgeSuccessChance } from "@shared";
 import { getUsableExtraExecutions } from "../../../utils/energy";
+import { axialDistance } from "../../../utils/location";
+import { isCharacterDead } from "../../../utils/playerCharacter";
 import { collectTargets } from "../targeting";
 import { maybeTriggerVengefulCounterAttack } from "../vengeful";
 import { BaseAction } from "./BaseAction";
@@ -197,11 +199,50 @@ export abstract class BaseAttackAction extends BaseAction {
       if (participant.plan.targetLocationId) {
         action.targetLocation = participant.plan.targetLocationId;
       }
+      const hearingRadious = definition?.hearingRadious;
+      let visibility: ReplayPlayerEvent["visibility"];
+      if (
+        typeof hearingRadious === "number" &&
+        isFinite(hearingRadious) &&
+        hearingRadious >= 0
+      ) {
+        const hearingPlayerIds = [participant.playerId];
+        for (const target of targetEntries) {
+          if (hearingPlayerIds.indexOf(target.targetId) === -1) {
+            hearingPlayerIds.push(target.targetId);
+          }
+        }
+        const originLocation = participant.character.position?.coord;
+        if (originLocation) {
+          const characters = match.playerCharacters ?? {};
+          for (const playerId in characters) {
+            if (!Object.prototype.hasOwnProperty.call(characters, playerId)) {
+              continue;
+            }
+            const character = characters[playerId];
+            const coord = character?.position?.coord;
+            if (
+              !isCharacterDead(character) &&
+              coord &&
+              axialDistance(originLocation, coord) <= hearingRadious
+            ) {
+              if (hearingPlayerIds.indexOf(playerId) === -1) {
+                hearingPlayerIds.push(playerId);
+              }
+            }
+          }
+        }
+        visibility = {
+          scope: "limited",
+          playerIds: hearingPlayerIds,
+        };
+      }
       events.push({
         kind: "player",
         actorId: participant.playerId,
         action,
         targets: targetEntries,
+        ...(visibility ? { visibility } : {}),
       });
       if (postEvents.length > 0) {
         events.push(...postEvents);

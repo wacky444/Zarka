@@ -26,6 +26,7 @@ export interface CharacterPanelReadyRefreshOptions {
   tutorialStepId: TutorialStepId | null;
   tutorialReadyEnabled: boolean;
   tutorialReadyAllowed: boolean;
+  hasChainsawOrderConflict?: boolean;
 }
 
 export class CharacterPanelReadyView {
@@ -34,6 +35,7 @@ export class CharacterPanelReadyView {
   private readonly unspentSkillsWarning: ReadyWarning;
   private readonly energyWarning: ReadyWarning;
   private readonly overweightWarning: ReadyWarning;
+  private readonly chainsawOrderWarning: ReadyWarning;
   private readonly warningTooltip: ItemTooltipManager;
   private readonly onReadyChange?: (ready: boolean) => void;
   private readyState = false;
@@ -100,6 +102,20 @@ export class CharacterPanelReadyView {
       onTooltipRequested: (message, tooltipX, tooltipY) =>
         this.showWarningTooltip(message, tooltipX, tooltipY),
     });
+    this.chainsawOrderWarning = new ReadyWarning({
+      scene,
+      parent,
+      x: x + this.readyToggle.width + 12,
+      y: y + 1,
+      text: t("Chainsaw order"),
+      emphasized: true,
+      tooltip: () =>
+        t(
+          "The chainsaw attack order goes first, it won't be started, it requires two turns, first start then attack"
+        ),
+      onTooltipRequested: (message, tooltipX, tooltipY) =>
+        this.showWarningTooltip(message, tooltipX, tooltipY),
+    });
 
     this.warningTooltip = new ItemTooltipManager(scene);
     scene.input.on(
@@ -134,6 +150,7 @@ export class CharacterPanelReadyView {
       this.unspentSkillsWarning.gameObject,
       this.energyWarning.gameObject,
       this.overweightWarning.gameObject,
+      this.chainsawOrderWarning.gameObject,
     ];
   }
 
@@ -214,6 +231,12 @@ export class CharacterPanelReadyView {
       !showEnergyWarning &&
       options.willBeOverweight &&
       warningRowIsActive;
+    const showChainsawOrderWarning =
+      !hasUnspentSkillPoints &&
+      !showEnergyWarning &&
+      !showOverweightWarning &&
+      options.hasChainsawOrderConflict === true &&
+      warningRowIsActive;
 
     if (showSkillsWarning) {
       this.unspentSkillsWarning.setText(
@@ -229,13 +252,17 @@ export class CharacterPanelReadyView {
     this.energyWarning.setVisible(showEnergyWarning);
     this.overweightWarning.setText(t("Overweight"));
     this.overweightWarning.setVisible(showOverweightWarning);
+    this.chainsawOrderWarning.setText(t("Chainsaw order"));
+    this.chainsawOrderWarning.setVisible(showChainsawOrderWarning);
     this.activeWarning = showSkillsWarning
       ? this.unspentSkillsWarning
       : showEnergyWarning
         ? this.energyWarning
         : showOverweightWarning
           ? this.overweightWarning
-          : null;
+          : showChainsawOrderWarning
+            ? this.chainsawOrderWarning
+            : null;
     if (this.activeWarning !== previousWarning || this.activeWarning === null) {
       this.hideWarningTooltip();
     }
@@ -287,6 +314,7 @@ export class CharacterPanelReadyView {
     this.unspentSkillsWarning.destroy();
     this.energyWarning.destroy();
     this.overweightWarning.destroy();
+    this.chainsawOrderWarning.destroy();
   }
 
   private syncReadyPulse(): void {
@@ -318,6 +346,11 @@ export class CharacterPanelReadyView {
       warningX,
       this.readyToggle.y +
         (this.readyToggle.height - this.overweightWarning.gameObject.height) / 2
+    );
+    this.chainsawOrderWarning.setPosition(
+      warningX,
+      this.readyToggle.y +
+        (this.readyToggle.height - this.chainsawOrderWarning.gameObject.height) / 2
     );
   }
 

@@ -14,6 +14,13 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   counterattacked: "contraatacó",
   "with a punch": "con un puñetazo",
   "missed with a punch": "falló el puñetazo",
+  "started the chainsaw": "arrancó la motosierra",
+  "a chainsaw": "una motosierra",
+  "Chainsaw is not running": "La motosierra no está arrancada",
+  "The chainsaw attack order goes first, it won't be started, it requires two turns, first start then attack":
+    "El ataque con motosierra va primero, no estará arrancada, requiere dos turnos, primero arrancar y luego atacar",
+  "Chainsaw order": "Orden de motosierra",
+  "Requires running chainsaw": "Requiere la motosierra arrancada",
   "Victory!": "¡Victoria!",
   Defeat: "Derrota",
   "Defeat!": "¡Derrota!",

@@ -87,7 +87,8 @@ export type FailedActionReason =
   | "location_skill_requirement"
   | "inventory_capacity"
   | "invalid_selection"
-  | "missing_items";
+  | "missing_items"
+  | "chainsaw_not_running";
 
 export interface FailedActionDetails {
   reason: FailedActionReason;

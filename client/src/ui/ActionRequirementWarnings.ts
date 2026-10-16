@@ -94,8 +94,20 @@ function getCurrentCharacterTile(
 export function getMissingRequirement(
   definition: ActionDefinition,
   character: PlayerCharacter | null,
-  map: GameMap | undefined
+  map: GameMap | undefined,
+  plannedSecondaryActionId?: string | null,
+  plannedMainActionId?: string | null,
+  plannedExtraSecondaryActionId?: string | null
 ): string | null {
+  const hasStartChainsawPlanned =
+    plannedSecondaryActionId === "start_chainsaw" ||
+    plannedExtraSecondaryActionId === "start_chainsaw" ||
+    character?.actionPlan?.secondary?.actionId === "start_chainsaw" ||
+    character?.actionPlan?.extraSecondary?.actionId === "start_chainsaw";
+  const hasChainsawAttackPlanned =
+    plannedMainActionId === "chainsaw_attack" ||
+    character?.actionPlan?.main?.actionId === "chainsaw_attack";
+
   const requiredLocations = ACTION_REQUIRED_LOCATIONS[definition.id];
   const hasCraftingSkill =
     definition.id === "fabricate" &&
@@ -153,6 +165,53 @@ export function getMissingRequirement(
     );
     if (fuelQuantity < 2) {
       return t("Missing 2 units of fuel");
+    }
+  } else if (definition.id === "chainsaw_attack") {
+    const hasChainsaw = carried.some(
+      (stack) =>
+        stack.itemId === "chainsaw" &&
+        typeof stack.quantity === "number" &&
+        stack.quantity > 0
+    );
+    if (!hasChainsaw) {
+      return `${t("Missing")} ${t("chainsaw")}`;
+    }
+    const isChainsawRunning =
+      (character?.statuses?.chainsaw?.remainingTurns ?? 0) > 0;
+    if (!isChainsawRunning) {
+      if (hasStartChainsawPlanned) {
+        return t(
+          "The chainsaw attack order goes first, it won't be started, it requires two turns, first start then attack"
+        );
+      }
+      return t("Chainsaw is not running");
+    }
+  } else if (definition.id === "start_chainsaw") {
+    const missingItems: string[] = [];
+    for (const itemId of definition.requiredItems ?? []) {
+      const hasItem = carried.some(
+        (stack) =>
+          stack.itemId === itemId &&
+          typeof stack.quantity === "number" &&
+          stack.quantity > 0
+      );
+      if (!hasItem) {
+        const itemName =
+          ItemLibrary[itemId as ItemId]?.name ??
+          ITEM_DISPLAY_NAMES[itemId] ??
+          itemId.replace(/_/g, " ");
+        missingItems.push(t(itemName));
+      }
+    }
+    if (missingItems.length > 0) {
+      return `${t("Missing")} ${missingItems.join(", ")}`;
+    }
+    const isChainsawRunning =
+      (character?.statuses?.chainsaw?.remainingTurns ?? 0) > 0;
+    if (!isChainsawRunning && hasChainsawAttackPlanned) {
+      return t(
+        "The chainsaw attack order goes first, it won't be started, it requires two turns, first start then attack"
+      );
     }
   } else if (definition.id === "bat_attack") {
     const hasBat = carried.some(

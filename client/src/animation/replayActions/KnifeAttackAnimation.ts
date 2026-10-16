@@ -3,7 +3,7 @@ import type { MoveReplayContext } from "../MoveReplayContext";
 import { hasEffect, showGuardOverlay } from "./GuardOverlay";
 import { playRandomSound } from "../soundPlayer";
 
-const KNIFE_ATTACK_SOUNDS = ["sword_light", "cork_stabbed", "sword_sharpen"];
+const KNIFE_ATTACK_SOUNDS = ["sword_light", "sword_sharpen", "metal_clang"];
 
 export async function animateKnifeAttackEvent(
   context: MoveReplayContext,
@@ -51,7 +51,7 @@ export async function animateKnifeAttackEvent(
           topRight: sprite.tintTopRight,
           bottomLeft: sprite.tintBottomLeft,
           bottomRight: sprite.tintBottomRight,
-          tinted: sprite.isTinted,
+          tinted: sprite.isTinted
         };
         sprite.setTint(0xff9f1c);
         context.tweens.add({
@@ -82,7 +82,7 @@ export async function animateKnifeAttackEvent(
               context.positionLabel(label, sprite);
             }
             resolve();
-          },
+          }
         });
       })
     );

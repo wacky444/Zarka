@@ -891,13 +891,16 @@ export class CharacterPanelLogView {
               ?.isCounterAttack === true;
           if (isCounterAttack) {
             lines.push(`${actor} ${t("counterattacked")}`);
+          } else if (actionId === "start_chainsaw") {
+            lines.push(`${actor} ${t("started the chainsaw")}`);
           } else {
             lines.push(`${actor} ${t("used")} ${actionName}${extraLabel}`);
           }
           if (
             actionId === "axe_attack" ||
             actionId === "knife_attack" ||
-            actionId === "bat_attack"
+            actionId === "bat_attack" ||
+            actionId === "chainsaw_attack"
           ) {
             const totalDamage =
               typeof event.action.damageDealt === "number"
@@ -911,6 +914,8 @@ export class CharacterPanelLogView {
                 ? t("an axe")
                 : actionId === "knife_attack"
                 ? t("a knife")
+                : actionId === "chainsaw_attack"
+                ? t("a chainsaw")
                 : weaponUsed === "nail_bat"
                 ? t("a nail bat")
                 : t("a bat");
