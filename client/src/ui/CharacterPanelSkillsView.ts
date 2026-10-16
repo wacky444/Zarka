@@ -49,7 +49,7 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   t?: number;
 };
 
-const HEADER_HEIGHT = 44;
+const HEADER_HEIGHT = 72;
 const CARD_PADDING = 12;
 const CARD_SPACING = 8;
 
@@ -57,6 +57,7 @@ export class CharacterPanelSkillsView {
   private readonly background: Phaser.GameObjects.Rectangle;
   private readonly headerBox: Phaser.GameObjects.Rectangle;
   private readonly unspentPointsLabel: Phaser.GameObjects.Text;
+  private readonly experienceLabel: Phaser.GameObjects.Text;
   private readonly revertBtnBg: Phaser.GameObjects.Rectangle;
   private readonly revertBtnText: Phaser.GameObjects.Text;
   private readonly confirmBtnBg: Phaser.GameObjects.Rectangle;
@@ -111,7 +112,7 @@ export class CharacterPanelSkillsView {
     this.unspentPointsLabel = scene.add
       .text(
         layout.margin + 12,
-        headerY + HEADER_HEIGHT / 2,
+        headerY + 18,
         "Available Skill: 0",
         {
           fontSize: "15px",
@@ -122,12 +123,20 @@ export class CharacterPanelSkillsView {
       .setVisible(false);
     parent.add(this.unspentPointsLabel);
 
+    this.experienceLabel = scene.add.text(
+      layout.margin + 12,
+      headerY + 50,
+      "Experience: 0 / 10 · Level 1",
+      { fontSize: "13px", color: "#cbd5e1" }
+    ).setOrigin(0, 0.5).setVisible(false);
+    parent.add(this.experienceLabel);
+
     const btnHeight = 26;
     const confirmBtnWidth = 70;
     const revertBtnWidth = 64;
     const headerRight = layout.margin + 12 + headerWidth - 10;
     const confirmBtnX = headerRight - confirmBtnWidth;
-    const confirmBtnY = headerY + (HEADER_HEIGHT - btnHeight) / 2;
+    const confirmBtnY = headerY + 6;
     const revertBtnX = confirmBtnX - 8 - revertBtnWidth;
     const revertBtnY = confirmBtnY;
 
@@ -371,6 +380,7 @@ export class CharacterPanelSkillsView {
       this.background,
       this.headerBox,
       this.unspentPointsLabel,
+      this.experienceLabel,
       this.revertBtnBg,
       this.revertBtnText,
       this.confirmBtnBg,
@@ -388,6 +398,7 @@ export class CharacterPanelSkillsView {
     this.headerBox.setVisible(visible);
     this.categoryTabs.setVisible(visible);
     this.unspentPointsLabel.setVisible(visible);
+    this.experienceLabel.setVisible(visible);
     this.revertBtnBg.setVisible(visible);
     this.revertBtnText.setVisible(visible);
     this.confirmBtnBg.setVisible(visible);
@@ -469,13 +480,22 @@ export class CharacterPanelSkillsView {
 
     if (this.pendingUpgrades.length > 0) {
       this.unspentPointsLabel.setText(
-        `Available Skill: ${effectivePoints} (-${spentPending})`
+        t(`Available Skill: ${effectivePoints} (-${spentPending})`)
       );
       this.setButtonsEnabled(true);
     } else {
-      this.unspentPointsLabel.setText(`Available Skill: ${committedPoints}`);
+      this.unspentPointsLabel.setText(t(`Available Skill: ${committedPoints}`));
       this.setButtonsEnabled(false);
     }
+    const progression = this.currentCharacter?.progression;
+    const experience = Math.max(0, progression?.experience ?? 0);
+    const experienceForNextLevel = Math.max(0, progression?.experienceForNextLevel ?? 0);
+    const level = Math.max(1, progression?.level ?? 1);
+    this.experienceLabel.setText(
+      experienceForNextLevel > 0
+        ? `${t("Experience:")} ${experience}/${experienceForNextLevel} · ${t("Level")} ${level}`
+        : `${t("Experience:")} ${experience} · ${t("Level")} ${level}`
+    );
 
     const committedAbilities = this.currentCharacter?.abilities ?? [];
 

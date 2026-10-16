@@ -34,6 +34,8 @@ import { canFeedParticipant, executeFeedAction } from "./actions/feed";
 import { executeFocusAction } from "./actions/focus";
 import { executeUseBandageAction } from "./actions/useBandage";
 import { executeUseMedicineAction } from "./actions/useMedicine";
+import { executePoisonFoodAction } from "./actions/poisonFood";
+import { executeUseAntidoteAction } from "./actions/useAntidote";
 import { executeUseChemicalWeaponAction } from "./actions/UseChemicalWeapon";
 import { executeSearchAction } from "./actions/search";
 import { executePlaceTrackerAction } from "./actions/placeTracker";
@@ -516,6 +518,30 @@ export function executeAction(
           action.cooldown,
           resolvedTurn,
         );
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.use_antidote.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const energyEvents = applyEnergyForParticipants(participants, action.energyCost, match, logger);
+      const actionEvents = executeUseAntidoteAction(participants, match);
+      eventsForAction = [...energyEvents, ...actionEvents];
+      for (const participant of participants) {
+        applyActionCooldown(participant.character, action.id, action.cooldown, resolvedTurn);
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.poison_food.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const energyEvents = applyEnergyForParticipants(participants, action.energyCost, match, logger);
+      const actionEvents = executePoisonFoodAction(participants, match);
+      eventsForAction = [...energyEvents, ...actionEvents];
+      for (const participant of participants) {
+        applyActionCooldown(participant.character, action.id, action.cooldown, resolvedTurn);
         match.playerCharacters![participant.playerId] = participant.character;
       }
       handled = true;

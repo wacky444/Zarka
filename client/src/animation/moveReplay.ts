@@ -39,6 +39,7 @@ import { animateRocketLauncherEvent } from "./replayActions/RocketLauncherAnimat
 import { animateFireDamageEvent } from "./replayActions/FireDamageAnimation";
 import { animateBomberEvent } from "./replayActions/BomberAnimation";
 import { playRandomSound } from "./soundPlayer";
+import { animateLevelUpEvent } from "./replayActions/LevelUpAnimation";
 
 const TILE_DESTROYED_SOUNDS = ["explosion_small", "explosion_medium"];
 
@@ -146,6 +147,10 @@ export async function playReplayEvents(
     ) {
       playRandomSound(context.scene, TILE_DESTROYED_SOUNDS);
       await animateTileDestroyedEvent(context, event.action.targetLocation);
+    }
+    const levelsGained = (event.action.metadata as { levelsGained?: unknown } | undefined)?.levelsGained;
+    if (typeof levelsGained === "number" && levelsGained > 0) {
+      await animateLevelUpEvent(context, event);
     }
   }
 }

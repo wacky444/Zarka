@@ -447,6 +447,10 @@ export class CharacterPanelLogView {
       if (event.kind === "player") {
         const actor = this.resolvePlayerName(event.actorId);
         const actionId = event.action.actionId;
+        const levelsGained = (event.action.metadata as { levelsGained?: unknown } | undefined)?.levelsGained;
+        if (typeof levelsGained === "number" && levelsGained > 0) {
+          lines.push(`${actor} ${t("leveled up")} (+${levelsGained})`);
+        }
         if (actionId === "team_assigned") {
           const meta = event.action.metadata as
             | { teamId?: string; coverTeamId?: string }
@@ -645,6 +649,42 @@ export class CharacterPanelLogView {
         }
         if (actionId === "failedAction") {
           lines.push(this.buildFailedActionLine(actor, event.action.metadata));
+          continue;
+        }
+        if (actionId === "poison_food" && (event.action.metadata as { poisonDamage?: unknown } | undefined)?.poisonDamage === true) {
+          const metadata = event.action.metadata as { damage?: unknown; remainingActions?: unknown } | undefined;
+          const damage = typeof metadata?.damage === "number" ? metadata.damage : 0;
+          const remaining = typeof metadata?.remainingActions === "number" ? metadata.remainingActions : 0;
+          lines.push(
+            damage > 0
+              ? `${actor} ${t("suffered poison damage")} ${damage} (${remaining} ${t("actions remaining")})`
+              : `${actor} ${t("is affected by poison")} (${remaining} ${t("actions remaining")})`
+          );
+          continue;
+        }
+        if (actionId === "poison_food") {
+          const targets = (event.targets ?? []).map((target) => {
+            const quantity = typeof target.metadata?.poisonedServings === "number" ? target.metadata.poisonedServings : 1;
+            return `${this.resolvePlayerName(target.targetId)} ×${quantity}`;
+          });
+          lines.push(`${actor} ${t("poisoned food carried by")} ${targets.join(", ")}`);
+          continue;
+        }
+        if (actionId === "use_antidote") {
+          const targets = (event.targets ?? []).map((target) => this.resolvePlayerName(target.targetId));
+          lines.push(`${actor} ${t("used an antidote on")} ${targets.join(", ")}`);
+          continue;
+        }
+        if (actionId === "feed" && (event.action.metadata as { consumedPoison?: unknown } | undefined)?.consumedPoison === true) {
+          const metadata = event.action.metadata as { intoxicationStarted?: unknown; overdose?: unknown };
+          const result = metadata.overdose === "dead"
+            ? t("the overdose was fatal")
+            : metadata.overdose === "unconscious"
+              ? t("the overdose caused unconsciousness")
+              : metadata.intoxicationStarted === true
+                ? t("became intoxicated")
+                : t("was poisoned again");
+          lines.push(`${actor} ${result}`);
           continue;
         }
         if (actionId === "pick_lock") {

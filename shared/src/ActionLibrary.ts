@@ -511,6 +511,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   poison_food: {
     id: "poison_food",
+    developed: true,
     revealsHidden: true,
     name: "Envenenar alimento",
     category: ActionCategory.Secondary,
@@ -545,7 +546,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "poison_food.png",
     actionOrder: 7,
     actionSubOrder: 0,
-    tags: ["Attack", "Status"]
+    tags: ["Attack", "Status", "SingleTarget"]
   },
   drop: {
     id: "drop",
@@ -1235,6 +1236,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   use_antidote: {
     id: "use_antidote",
+    developed: true,
     name: "Usar antídoto",
     category: ActionCategory.Secondary,
     energyCost: 1,

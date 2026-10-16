@@ -20,6 +20,7 @@ import {
 } from "./utils";
 import { collectTargets } from "./targeting";
 import { BaseAction } from "./classes/BaseAction";
+import { consumePoisonedServing } from "./intoxication";
 
 const FEED_ITEM_PRIORITY: ItemId[] = ["food", "drink"];
 
@@ -184,7 +185,11 @@ export class FeedAction extends BaseAction {
       }
       const energyGain = corpse ? 20 : getEnergyGain(consumedItemId!);
       const restored = applyEnergy(participant.character, energyGain);
-      let healthEvent: ReplayPlayerEvent | undefined;
+      const poisonOutcome = consumedItemId
+        ? consumePoisonedServing(participant.character)
+        : { consumedPoison: false, intoxicationStarted: false };
+      const healthEvents: ReplayPlayerEvent[] = [];
+      if (poisonOutcome.healthEvent) healthEvents.push(poisonOutcome.healthEvent);
       const corpseHealthLoss = corpse
         ? getSkillEffectTotal(participant.character, "corpse_consumption") > 0
           ? 0
@@ -193,7 +198,7 @@ export class FeedAction extends BaseAction {
       if (corpse && corpseHealthLoss > 0) {
         const healthOutcome = applyHealthDelta(participant.character, -1);
         mergeCharacterState(participant.character, healthOutcome.character);
-        healthEvent = healthOutcome.event;
+        if (healthOutcome.event) healthEvents.push(healthOutcome.event);
       }
       const action: ReplayActionDone = {
         actionId,
@@ -202,7 +207,10 @@ export class FeedAction extends BaseAction {
           consumedItemId: corpse ? "corpse" : consumedItemId,
           energyRestored: restored,
           corpseRationsRemaining: corpse?.corpseRations,
-          healthLost: corpseHealthLoss
+          healthLost: corpseHealthLoss,
+          consumedPoison: poisonOutcome.consumedPoison,
+          intoxicationStarted: poisonOutcome.intoxicationStarted,
+          overdose: poisonOutcome.overdose,
         }
       };
       if (participant.character.position?.coord) {
@@ -228,9 +236,7 @@ export class FeedAction extends BaseAction {
         action,
         targets: [target],
       });
-      if (healthEvent) {
-        events.push(healthEvent);
-      }
+      events.push(...healthEvents);
     }
     return events;
   }

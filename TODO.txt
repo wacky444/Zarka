@@ -6,9 +6,9 @@
 
 - improvement, ground visuals, alley and road have the similar sprite, check kenney hexagon pack examples
 
-- improvement, train and experience
-	- log in character log when leveling up
-	- show current exp, in skill subtab, increase the height row of revert confirm buttons to add it under the text Puntos disponibles:
+- [x] improvement, train and experience
+	- Character log reports level-ups; small fireworks play over character sprite.
+	- Skills subtab shows current XP and level beneath available skill points; header row enlarged.
 
 - improvement, tutorial step 6 should teach about prioritize items
 
@@ -53,8 +53,9 @@
 	- Product selector appears above Main Action and persists selection through server RPC.
 	- At cooldown readiness, server fabricates selected product at fabricate action order and logs success/failure.
 	
-- feature, poison
-	- use antidote action
+- [x] feature, poison
+	- Poison food carried by co-located target; poisoned serving causes 5 actions of intoxication.
+	- Intoxication damages 1 health per action and doubles extra-effort cost; antidote cures same-location target.
 
 - feature, chainsaw
 	- animation of start, the character vibrates, visible by others in the same cell

@@ -92,7 +92,11 @@ export function getUsableExtraExecutions(
   const resolvedDefinition =
     definition ??
     (plan?.actionId ? ActionLibrary[plan.actionId as ActionId] : undefined);
-  const costPerRep = resolvedDefinition?.extraExecution?.cost ?? 1;
+  const baseCostPerRep = resolvedDefinition?.extraExecution?.cost ?? 1;
+  const isIntoxicated =
+    (character.statuses?.intoxication?.remainingActions ?? 0) > 0 ||
+    character.statuses?.conditions?.includes("intoxicated") === true;
+  const costPerRep = baseCostPerRep * (isIntoxicated ? 2 : 1);
   if (costPerRep <= 0) {
     return requested;
   }

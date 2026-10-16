@@ -184,7 +184,9 @@ export function tailorPlayerCharactersForViewer(
     }
     const candidate = playerCharacters[id];
     if (id === viewerKey) {
-      filtered[id] = redactVirusStatus(candidate);
+      const sanitizedViewer = redactVirusStatus(candidate);
+      delete sanitizedViewer.poisonedFoodCount;
+      filtered[id] = sanitizedViewer;
       continue;
     }
     if (!isInitialSpawnTurn && isCharacterHidden(candidate, currentTurn ?? 0)) {
@@ -249,6 +251,7 @@ export function tailorPlayerCharactersForViewer(
       delete sanitized.revealedItemTypesByPlayerId;
       delete sanitized.revealedTeamIdsByPlayerId;
       delete sanitized.actionPlan;
+      delete sanitized.poisonedFoodCount;
       delete sanitized.dexterity3SelectedItemId;
       delete sanitized.remoteView;
       delete sanitized.cameraView;

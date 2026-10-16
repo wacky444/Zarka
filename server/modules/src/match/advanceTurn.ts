@@ -17,6 +17,10 @@ import { recordRankedTeamEliminations } from "./rankedPlacements";
 import { updateCooldownsForTurn } from "./actions/cooldowns";
 import { executeAction, type TileLookup } from "./actionExecutor";
 import { executeDexterity3Fabrication } from "./actions/fabricate";
+import {
+  applyIntoxicationBeforeAction,
+  decrementIntoxicationAfterAction,
+} from "./actions/intoxication";
 import { applyVirusInfection } from "./actions/virusInfection";
 import {
   applyPendingZarkanPayout,
@@ -322,6 +326,12 @@ export function advanceTurn(
       ...applyFireDamageBeforeAction(match, action.id, resolvedTurn, logger),
     );
     const playerIds = getPlannedPlayerIds(match, action.id);
+    const intoxicationEvents = applyIntoxicationBeforeAction(match, action.id);
+    replayEvents.push(...intoxicationEvents);
+    const intoxicatedActorIds = intoxicationEvents
+      .filter((event) => event.kind === "player" && event.action.actionId === ActionLibrary.poison_food.id && (event.action.metadata as { poisonDamage?: unknown } | undefined)?.poisonDamage === true)
+      .map((event) => event.kind === "player" ? event.actorId : undefined)
+      .filter((playerId): playerId is string => typeof playerId === "string");
     const events = executeAction(
       match,
       action,
@@ -336,6 +346,7 @@ export function advanceTurn(
     if (action.id === ActionLibrary.fabricate.id) {
       replayEvents.push(...executeDexterity3Fabrication(match, resolvedTurn));
     }
+    decrementIntoxicationAfterAction(match, intoxicatedActorIds);
   }
   replayEvents.push(...dropOverweightItems(match));
   replayEvents.push(...applyVirusInfection(match, resolvedTurn, logger));

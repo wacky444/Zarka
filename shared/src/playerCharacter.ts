@@ -24,6 +24,8 @@ export interface PlayerCharacter {
   discoveredC4Ids?: string[];
   /** Item types this character has revealed in each player's inventory. */
   revealedItemTypesByPlayerId?: Record<string, string[]>;
+  /** Poisoned food servings carried by this character; private until consumed. */
+  poisonedFoodCount?: number;
   /** Team identities revealed to this character by Detective purchases. */
   revealedTeamIdsByPlayerId?: Record<string, string>;
   corpseRations?: number;
