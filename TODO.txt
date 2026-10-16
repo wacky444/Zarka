@@ -12,16 +12,6 @@
 
 - improvement, tutorial step 6 should teach about prioritize items
 
-- improvement, tutorial feedback (Telegram)
-	- Explicar dónde está Vitalidad.
-	- Resaltar las pestañas con un recuadro amarillo.
-	- Restaurar el recuadro amarillo del botón Listo.
-	- En el paso de golpear con hacha, mostrar la acción; esperar al replay y quizá añadir paso para volver al panel.
-	- Ajustar tutorial para que quepa todo el texto.
-	- Explicar cuál casilla corresponde al bot.
-	- Resaltar con un recuadro amarillo “Elegir ubicación” para enseñar cómo elegir destino.
-	- Mostrar el mapa progresivamente para que se vea qué está pasando.
-	- ¿Bloquear Extra Power? better hide it until the step to use it
 
 - improvement, bots doesnt buy	
 	- in the future they should waste coins on detective	
@@ -73,3 +63,35 @@
 	- the action order doesn't allow to use it in the same turn
 
 - feature, npc
+
+
+- improvement, tutorial feedback (Telegram)
+	- Explicar dónde está Vitalidad.
+	- Resaltar las pestañas con un recuadro amarillo.
+	- Restaurar el recuadro amarillo del botón Listo.
+	- En el paso de golpear con hacha, mostrar la acción; esperar al replay y quizá añadir paso para volver al panel.
+	- Ajustar tutorial para que quepa todo el texto.
+	- Explicar cuál casilla corresponde al bot.
+	- Resaltar con un recuadro amarillo “Elegir ubicación” para enseñar cómo elegir destino.
+	- Mostrar el mapa progresivamente para que se vea qué está pasando.
+	- ¿Bloquear Extra Power? better hide it until the step to use it
+
+- improvement, tutorial feedback 2
+	- introduccion, donde estoy, que tengo que hacer, tengo que tener miedo de otros?
+	- in the step of getting skills
+		- orange rectangle for the tab and after selecting, in the confirm button		
+	- the tutorial didnt ask to open the chat
+		- and there wasnt a orange bubble for new message
+	- the tutorial didnt ask to see the log to see what the detective has said
+	- con una ejecucion adicional-> con potencia adicional
+	- continue to report-> traducir 
+	- Tutorial completado parece un boton 
+	- don't auto open tabs in the tutorial, make the player learn muscle memory
+
+- general gui
+	- sacar el chat de la pestaña, en modo pc
+	- iconitos redondos para abrir el log y chat
+	- en el chat: un poco de margen entre mensajes, el nombre del usuario en bold, colores
+
+- autoplay en modo reproducir, al cambiar turno se reproduzca automaticamente
+

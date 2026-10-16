@@ -30,8 +30,7 @@ export const TUTORIAL_INSTRUCTIONS: Record<
     hint: "Open Character → Skills. Buy both skills; you can switch between Offensive and Defense."
   },
   search: {
-    instruction:
-      "Search this cell to reveal objects that are hidden from you.",
+    instruction: "Search this cell to reveal objects that are hidden from you.",
     hint: "Search is the only available secondary action. Submit the turn with Ready."
   },
   pickup_items: {
@@ -86,14 +85,13 @@ export const TUTORIAL_INSTRUCTIONS: Record<
   },
   scare_bot_to_doomed_cell: {
     instruction:
-      "Use Scare with one extra execution to choose the bot’s destination: the doomed cell.",
+      "Use Scare with extra power to choose the bot’s destination: the doomed cell.",
     hint: "Scare is prepared. Set Extra Power to 1, target the bot, and select the skull-marked cell."
   },
   resolve_destruction: {
     instruction:
       "Submit the final plan. The bot will be moved onto the doomed cell and normal destruction will resolve.",
-    hint:
-      "Selecting a target location requires extra power, set the power to 6 and then select the location that is about to be destroyed."
+    hint: "Selecting a target location requires extra power, set the power to 6 and then select the location that is about to be destroyed."
   },
   victory_recap: {
     instruction:

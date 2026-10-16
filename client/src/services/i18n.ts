@@ -57,7 +57,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Choose how many ranked matches Zarka can assign at once. Another match may be assigned while one is in progress.":
     "Elige cuántas partidas clasificatorias puede asignarte Zarka a la vez. Puede asignarte otra mientras una partida está en curso.",
   "Maximum active matches": "Máximo de partidas activas",
-  "Choose how many active matches you can join. Existing matches remain if you lower this limit.": "Elige cuántas partidas activas puedes tener. Las partidas actuales se conservan si reduces este límite.",
+  "Choose how many active matches you can join. Existing matches remain if you lower this limit.":
+    "Elige cuántas partidas activas puedes tener. Las partidas actuales se conservan si reduces este límite.",
   Saved: "Guardado",
   Disabled: "Desactivado",
   Enabled: "Activado",
@@ -65,7 +66,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Could not save. Restored saved value.":
     "No se pudo guardar. Se restauró el valor guardado.",
   "Fetching ranked queue status...": "Consultando la cola clasificatoria...",
-  "Ranked queue status unavailable.": "Estado de la cola clasificatoria no disponible.",
+  "Ranked queue status unavailable.":
+    "Estado de la cola clasificatoria no disponible.",
   "Random games": "Partidas aleatorias",
   Desired: "Solicitadas",
   Queued: "En cola",
@@ -265,7 +267,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "No online matches": "No hay partidas online",
   "No finished matches": "No hay partidas terminadas",
   "Fetching my matches...": "Cargando mis partidas...",
-  "You haven't joined any matches yet.": "Aún no te has unido a ninguna partida.",
+  "You haven't joined any matches yet.":
+    "Aún no te has unido a ninguna partida.",
   "In Progress": "En curso",
   "Carried items:": "Objetos transportados:",
   "Return to Game": "Volver al juego",
@@ -290,10 +293,14 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "No matches found.": "No se encontraron partidas.",
   "This match is no longer available.": "Esta partida ya no está disponible.",
   "Match is full.": "La partida está llena.",
-  "Ranked match roster is locked.": "La lista de jugadores de la partida clasificatoria está bloqueada.",
-  "Complete the tutorial before joining matches.": "Completa el tutorial antes de unirte a partidas.",
-  "You have reached your active match limit.": "Has alcanzado tu límite de partidas activas.",
-  "Could not join match. Try again.": "No se pudo unir a la partida. Inténtalo de nuevo.",
+  "Ranked match roster is locked.":
+    "La lista de jugadores de la partida clasificatoria está bloqueada.",
+  "Complete the tutorial before joining matches.":
+    "Completa el tutorial antes de unirte a partidas.",
+  "You have reached your active match limit.":
+    "Has alcanzado tu límite de partidas activas.",
+  "Could not join match. Try again.":
+    "No se pudo unir a la partida. Inténtalo de nuevo.",
   "No players found.": "No se encontraron jugadores.",
   "No teams found.": "No se encontraron equipos.",
   "Choose your login method": "Elige un método de inicio de sesión",
@@ -526,8 +533,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
     "Observa la calavera: esta casilla será destruida en el próximo turno.",
   "The warning and Log show how many turns remain before destruction.":
     "El aviso y el Registro muestran cuántos turnos faltan para la destrucción.",
-  "Use Scare with one extra execution to choose the bot’s destination: the doomed cell.":
-    "Usa Asustar con una ejecución adicional para elegir el destino del bot: la casilla condenada.",
+  "Use Scare with extra power to choose the bot’s destination: the doomed cell.":
+    "Usa Asustar con una potencia adicional para elegir el destino del bot: la casilla condenada.",
   "Scare is prepared. Set Extra Power to 1, target the bot, and select the skull-marked cell.":
     "Asustar está preparado. Establece Potencia adicional en 1, selecciona al bot y elige la casilla marcada con la calavera.",
   "Submit the final plan. The bot will be moved onto the doomed cell and normal destruction will resolve.":
@@ -770,15 +777,18 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Dexterity 3": "Destreza 3",
   "Dexterity 3 product": "Producto de Destreza 3",
   "No product selected": "Ningún producto seleccionado",
-  "Keep Dexterity 3 available for a later turn.": "Conserva Destreza 3 disponible para un turno posterior.",
+  "Keep Dexterity 3 available for a later turn.":
+    "Conserva Destreza 3 disponible para un turno posterior.",
   "Choose item": "Elegir objeto",
   "Choose operation": "Elegir operación",
   "Choose operation 1": "Elegir operación 1",
   "Choose operation 2": "Elegir operación 2",
   "Choose operation 3": "Elegir operación 3",
   "Choose operation 4": "Elegir operación 4",
-  "Choose Combine or Separate recipe": "Elige una receta para combinar o separar",
-  "Crafting uses no inventory ingredients": "La fabricación no consume ingredientes del inventario",
+  "Choose Combine or Separate recipe":
+    "Elige una receta para combinar o separar",
+  "Crafting uses no inventory ingredients":
+    "La fabricación no consume ingredientes del inventario",
   Requires: "Requiere",
   Produces: "Produce",
   crafted: "fabricó",
@@ -806,10 +816,10 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
     "Se detiene tras los objetos anteriores; si es el primero, recoge uno al azar.",
   "No prioritized items": "No hay objetos prioritarios",
   "No secondary action": "Sin acción secundaria",
-  "Crafting": "Fabricar",
+  Crafting: "Fabricar",
   "Combine/Separate": "Combinar/Separar",
-  "Combine": "Combinar",
-  "Separate": "Separar",
+  Combine: "Combinar",
+  Separate: "Separar",
   "Tap a player to target them": "Pulsa un jugador para seleccionarlo",
   "Tap an action to select it": "Pulsa una acción para seleccionarla",
   "Tap an item to prioritize it": "Pulsa un objeto para priorizarlo",
@@ -1191,10 +1201,15 @@ function readInitialLocale(): Locale {
 function translateRecipeText(value: string): string | null {
   const itemName = (name: string) => ENGLISH_GAME_NAMES[name] ?? name;
   const components = (value: string) =>
-    value.split(", ").map((component) => {
-      const match = component.match(/^(.+) ×(\d+)$/);
-      return match ? `${itemName(match[1])} ×${match[2]}` : itemName(component);
-    }).join(", ");
+    value
+      .split(", ")
+      .map((component) => {
+        const match = component.match(/^(.+) ×(\d+)$/);
+        return match
+          ? `${itemName(match[1])} ×${match[2]}`
+          : itemName(component);
+      })
+      .join(", ");
   const label = value.match(/^(Combinar|Separar): (.+)$/);
   if (label) {
     return `${label[1] === "Combinar" ? "Combine" : "Separate"}: ${itemName(label[2])}`;
