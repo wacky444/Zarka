@@ -103,14 +103,14 @@ export class TutorialInstructionView {
     this.mobileLayout = mobileLayout;
     this.bottomControlsClearance = bottomControlsClearance;
     this.width = Math.max(240, Math.min(420, width - 24));
-    this.height = this.hintVisible ? 174 : 110;
+    this.instructionText.setWordWrapWidth(this.width - 28);
+    this.hintText.setWordWrapWidth(this.width - 28);
+    this.height = this.hintVisible ? 186 : 122;
     const y = mobileLayout
       ? Math.max(8, height - this.height - bottomControlsClearance)
       : 4;
     this.container.setPosition(12, y);
     this.background.setSize(this.width, this.height);
-    this.instructionText.setWordWrapWidth(this.width - 28);
-    this.hintText.setWordWrapWidth(this.width - 28);
     this.hintText.setPosition(14, this.height - 54);
     this.hintButton.setPosition(this.width - this.hintButton.width - 12, 6);
     this.hintButton.setText(`[ ${t("Hint")} ]`);
