@@ -12,6 +12,20 @@
 
 - improvement, tutorial step 6 should teach about prioritize items
 
+- improvement, tutorial feedback (Telegram)
+	- Revisar idioma del método de inicio de sesión (inglés).
+	- El método de inicio de sesión no encaja en la sección Login: añadir banderas de idioma o moverlo.
+	- Reducir la sensación de longitud: muestra “Paso 1 de 18” y puede hacer que la gente desinstale; agrupar pasos y mostrar menos.
+	- Explicar dónde está Vitalidad.
+	- Resaltar las pestañas con un recuadro amarillo.
+	- Restaurar el recuadro amarillo del botón Listo.
+	- En el paso de golpear con hacha, mostrar la acción; esperar al replay y quizá añadir paso para volver al panel.
+	- Ajustar tutorial para que quepa todo el texto.
+	- Explicar cuál casilla corresponde al bot.
+	- Resaltar con un recuadro amarillo “Elegir ubicación” para enseñar cómo elegir destino.
+	- Mostrar el mapa progresivamente para que se vea qué está pasando.
+	- ¿Bloquear Extra Power?
+
 - improvement, bots doesnt buy	
 	- in the future they should waste coins on detective	
 	
