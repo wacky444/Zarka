@@ -1,76 +1,19 @@
 - improvement, menu icons for, inventory, character, status, skills, players, teams, log/replay, map, chat, arrow right, left
 	- then use them instead of text for tabs/buttons
 
+- improvement, action icons that need new icons:
+	use antidote, use quemical weapon, use medicine
+
 - improvement, ground visuals, alley and road have the similar sprite, check kenney hexagon pack examples
 
--t feature, train and experience
-	- implement gaining experience and leveling up
-	- can send the turn without spending skill points to save them for an expensive skill
-	- ignore the restriction of multiple of turns 5, can level up when the character wants
-
--t improvement, add a confirm when buying pyro
+- improvement, train and experience
+	- log in character log when leveling up
+	- show current exp, in skill subtab, increase the height row of revert confirm buttons to add it under the text Puntos disponibles:
 
 - improvement, tutorial step 6 should teach about prioritize items
 
--t feature, overweight should drop items at the end of the turn
-	- from lower value to higher
-	- item drop on ground is revealed to the character
-
--t improvement, check if bombard has animation,
-	- it should have it similar to cell destroyed
-
--t improvement, help screen with action orders
-	- a modal that opens with a close X button at top right, clicking outside also closes it
-		- maybe reuse select Main Action modal, a modal with a title, subtitle, and close button, pressing back on mobile already closes it
-		- title, Orden de sucesos
-		- subtitle, Orden descendente, y dentro de la misma línea, de izquierda a derecha	
-	- Each action is the action.Name with an rectangle border around the text, 
-		- clicking or long pressing on them shows a tooltip with the action card, the same as shown in action select grid
-		- highlights current selected actions, secondary actions and extra secondary action
-			- the rectangle of the current selected ations is light blue, the same color when a main action is selected in the grid
-		- small arrows between items in rows
-	- responsive, if an action doesn't fit in the row, jump to the next one
-		- scrollable vertically, draggable on mobile, draggable from any element, including action texts
-	- list of actions is obtained from ActionLibrary, it should look something like:
-	
-Crear incendio – Pirómano
-Recuperarse – Alimentarse – Desayunar – Usar venda – Usar medicamento
-Hablar – Poner localizador – Colocar C4 – Colocar trampa
-Proteger – Esquivar
-Atacar con cuchillo
-Desplazarse
-Repostar – Coger – Buscar – Manipular – Dar
-Envenenar alimento
-Dejar – Lanzar
-Arma química
-Asustar
-Detonar C4 – Hacha – Bate – Arrancar motosierra – Atacar motosierra – Pistola – Arpón – Lanzacohetes – Puñetazo
-Forzar cerradura
-Robar
-Fabricar – Traficar – Registrar
-Concentrarse – Entrenar
-Observar monitores – Mirar ventana – Usar prismáticos – Detectar
-Usar antídoto – Inyectar virus – Inyectar vacuna – Dormir – Infección de virus
-Fumigador – Helicóptero – Bombardero – Sicario
-Dron espía
-Traficante
-Cell destruction
-	
--t improvement, pressing back on mobile while the panel is opened, it should go back to map, not lobby
-	- in the map, it goes to lobby, currently ok
-
--t bug, i never got hero team, check if its because i only played with bots
-
--t improvement, improve the ready checkbox, to a cool button, if is the last player, show a confirm dialog
-	- think how to differentiate the setted ready state of unready
-	- when not ready, show a pulsating effect in the button
-		- the effect is orange, the color tutorial 
-	- setting ready will advance the turn, continue?
-
--t improvement, bots doesnt buy
-	- for now set their inherit target to a random team member
-	- in the future they should waste coins on detective
-	
+- improvement, bots doesnt buy	
+	- in the future they should waste coins on detective	
 	
 - improvement, social
 	- inspect others profiles
@@ -83,36 +26,41 @@ Cell destruction
 	- example, kill by throwing food, first win, push to death, friendly fire, think of more achievements, about 24 total
 	- tutorial doesn't trigger achievements
 
--t feature, dexterity 2, when stealing should show a list of all possible items in the game, allowing max 3
-	- bug, extra power should show two selectors
-
-- improvement, action icons that need new icons:
-	use antidote, use quemical weapon, use medicine
-	
-- bug, throwing a moltov, threw 3 foods to three different players
-	-t like it hits in area
-	- registered items didnt stay in players view for the char that has been hit
-
 -t feature, search can reveal placed c4, but can't be picked up
 	- add it to the pool of possible findable items in the cell
-	
--t improvement, end game animation improve, alive players dance, zoom to players, fireworks intead of confetti,
-	- dance, like a metronome, tilt to one side being the feet the rotation point, also moving in the diagonal a bit, then return to original position and repeat in the other side) takes 1 second to move to one side, then half second in the original position, then another second to the other side
-	- fireworks like the menu particles, using the same library but in fireworks mode instead of raining from the sky
 
--t bug, in the replay(tested in an end game report replay), changing the turn to view, doesnt put the characters on the positions pre turn
-
--t bug, detonate requires a target location, but with extra power doesn't show a extra target locator
-	- extra power should show two selectors
-
-- bug, chemical weapon   "[ ] Single target (Area)": "[ ] Objetivo único (área)",
+-t bug, chemical weapon   "[ ] Single target (Area)": "[ ] Objetivo único (área)",
 	-t change text to less confusing
 	-t in area mode, hide the target selector
 
--t feature, in new turn if the action is not set, show an empty value instead of first action
-
 - feature, confirmed teams, supporting circles A->B->C->A
 	- changes color name in map
+		- red confirmed enemies
 	- avoid damage when there is no target selected
+	- lovers team
+	- twins, share skin and name
 	
 -t feature, implement the skill that allows to fabricate anywhere without workshop
+
+- feature, lockpick
+	each turn lockpicking, show in the character log, player is lockpicking 1 of 4
+	- dexterity1 skill, reduces 1 turn the lockpick, new feature(change description) or if a lockpicking tool is in inventory, it won't break
+	- lockpick item is changed, now instead of reducing 1 turn, it opens instantly and the lockpick is consumed
+	- warning message if there is not safe visible
+	- changing location interrupts the process with a log
+	- items from the safe are revealed to the opener, and added to the pool of the cell to others to find	
+	
+- feature, dexterity3
+	- instead of fixed turns, it has a cooldown of 7 turns, change the description
+	- is not lost if not specified, change the description
+	- a new container above Accion principal container, it's a select grid, similar to select action, is sent to server when changed
+	- when ready, the server runs the action similar to the fabricate action, following the order and with a character log
+	
+- feature, poison
+	- use antidote action
+
+- feature, chainsaw
+	- animation of start, the character vibrates, visible by others in the same cell
+	- the action order doesn't allow to use it in the same turn
+
+- feature, npc
