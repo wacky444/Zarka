@@ -15,7 +15,13 @@ import {
   saveTutorialPresentationStep,
   type TutorialMatchStorage
 } from "../src/tutorial/ActiveTutorialMatch.ts";
-import { TUTORIAL_STEP_IDS, type TutorialStepId } from "@shared";
+import {
+  TUTORIAL_STEP_IDS,
+  TUTORIAL_STEP_GROUPS,
+  getTutorialStepDisplay,
+  formatTutorialHeader,
+  type TutorialStepId
+} from "@shared";
 
 test("tutorial progress is ordered and repeated events are idempotent", () => {
   const steps: readonly TutorialStepId[] = [
@@ -244,3 +250,46 @@ test("every ordered tutorial step has an instruction and optional hint", () => {
     assert.ok(copy.hint.length > 0, `missing hint: ${stepId}`);
   }
 });
+
+test("tutorial steps are grouped into 5 display steps while preserving all progress steps", () => {
+  assert.equal(TUTORIAL_STEP_GROUPS.length, 5);
+
+  const flattened = TUTORIAL_STEP_GROUPS.flat();
+  assert.deepEqual(flattened, TUTORIAL_STEP_IDS);
+
+  const group1Steps: TutorialStepId[] = [
+    "map_pan",
+    "inspect_current_cell",
+    "inspect_nearby_cell"
+  ];
+  for (const stepId of group1Steps) {
+    const display = getTutorialStepDisplay(stepId);
+    assert.equal(display.step, 1);
+    assert.equal(display.totalSteps, 5);
+  }
+
+  for (let groupIdx = 0; groupIdx < TUTORIAL_STEP_GROUPS.length; groupIdx++) {
+    for (const stepId of TUTORIAL_STEP_GROUPS[groupIdx]) {
+      const display = getTutorialStepDisplay(stepId);
+      assert.equal(display.step, groupIdx + 1);
+      assert.equal(display.totalSteps, 5);
+    }
+  }
+
+  const mockTranslate = (key: string) =>
+    key === "Tutorial" ? "Tutorial" : key === "Step" ? "Paso" : key;
+
+  for (const stepId of group1Steps) {
+    assert.equal(formatTutorialHeader(stepId, mockTranslate), "Tutorial");
+  }
+
+  assert.equal(
+    formatTutorialHeader("choose_skills", mockTranslate),
+    "Tutorial · Paso 2/5"
+  );
+  assert.equal(
+    formatTutorialHeader("victory_recap", mockTranslate),
+    "Tutorial · Paso 5/5"
+  );
+});
+

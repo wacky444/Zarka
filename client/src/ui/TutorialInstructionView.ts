@@ -1,5 +1,8 @@
 import Phaser from "phaser";
-import { TUTORIAL_STEP_IDS, type TutorialStepId } from "@shared";
+import {
+  formatTutorialHeader,
+  type TutorialStepId
+} from "@shared";
 import { t } from "../services/i18n";
 import { makeButton, type UIButton } from "./button";
 import { TUTORIAL_INSTRUCTIONS } from "../tutorial/TutorialInstructions";
@@ -82,11 +85,8 @@ export class TutorialInstructionView {
       return;
     }
 
-    const index = TUTORIAL_STEP_IDS.indexOf(stepId) + 1;
     const copy = TUTORIAL_INSTRUCTIONS[stepId];
-    this.titleText.setText(
-      `${t("Tutorial")} · ${t("Step")} ${index}/${TUTORIAL_STEP_IDS.length}`
-    );
+    this.titleText.setText(formatTutorialHeader(stepId, t));
     this.instructionText.setText(t(copy.instruction));
     this.hintText.setText(t(copy.hint));
     this.hintText.setVisible(false);

@@ -13,9 +13,6 @@
 - improvement, tutorial step 6 should teach about prioritize items
 
 - improvement, tutorial feedback (Telegram)
-	- Revisar idioma del método de inicio de sesión (inglés).
-	- El método de inicio de sesión no encaja en la sección Login: añadir banderas de idioma o moverlo.
-	- Reducir la sensación de longitud: muestra “Paso 1 de 18” y puede hacer que la gente desinstale; agrupar pasos y mostrar menos.
 	- Explicar dónde está Vitalidad.
 	- Resaltar las pestañas con un recuadro amarillo.
 	- Restaurar el recuadro amarillo del botón Listo.
@@ -24,7 +21,7 @@
 	- Explicar cuál casilla corresponde al bot.
 	- Resaltar con un recuadro amarillo “Elegir ubicación” para enseñar cómo elegir destino.
 	- Mostrar el mapa progresivamente para que se vea qué está pasando.
-	- ¿Bloquear Extra Power?
+	- ¿Bloquear Extra Power? better hide it until the step to use it
 
 - improvement, bots doesnt buy	
 	- in the future they should waste coins on detective	
@@ -71,7 +68,7 @@
 	- Poison food carried by co-located target; poisoned serving causes 5 actions of intoxication.
 	- Intoxication damages 1 health per action and doubles extra-effort cost; antidote cures same-location target.
 
-- feature, chainsaw
+- [x] feature, chainsaw
 	- animation of start, the character vibrates, visible by others in the same cell
 	- the action order doesn't allow to use it in the same turn
 

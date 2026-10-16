@@ -56,6 +56,46 @@ export const TUTORIAL_STEP_IDS = [
 
 export type TutorialStepId = (typeof TUTORIAL_STEP_IDS)[number];
 
+export const TUTORIAL_STEP_GROUPS: readonly (readonly TutorialStepId[])[] = [
+  ["map_pan", "inspect_current_cell", "inspect_nearby_cell"],
+  ["choose_skills", "search", "pickup_items", "feed_bot"],
+  ["bot_chat", "open_chat", "buy_detective", "read_detective_result"],
+  ["plan_axe_attack", "resolve_bot_scare", "return_to_bot"],
+  [
+    "observe_destruction_warning",
+    "scare_bot_to_doomed_cell",
+    "resolve_destruction",
+    "victory_recap"
+  ]
+] as const;
+
+export interface TutorialStepDisplay {
+  readonly step: number;
+  readonly totalSteps: number;
+}
+
+export function getTutorialStepDisplay(
+  stepId: TutorialStepId
+): TutorialStepDisplay {
+  for (let i = 0; i < TUTORIAL_STEP_GROUPS.length; i++) {
+    if (TUTORIAL_STEP_GROUPS[i].indexOf(stepId) !== -1) {
+      return { step: i + 1, totalSteps: TUTORIAL_STEP_GROUPS.length };
+    }
+  }
+  return { step: 1, totalSteps: TUTORIAL_STEP_GROUPS.length };
+}
+
+export function formatTutorialHeader(
+  stepId: TutorialStepId,
+  translate: (key: string) => string
+): string {
+  const display = getTutorialStepDisplay(stepId);
+  if (display.step < 2) {
+    return translate("Tutorial");
+  }
+  return `${translate("Tutorial")} · ${translate("Step")} ${display.step}/${display.totalSteps}`;
+}
+
 export interface TutorialMatchMetadata {
   type: "guided_tutorial";
   version: 1;
