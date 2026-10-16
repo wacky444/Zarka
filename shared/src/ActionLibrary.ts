@@ -966,7 +966,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     name: "Forzar cerradura",
     category: ActionCategory.Secondary,
     energyCost: 2,
-    cooldown: 3,
+    cooldown: 0,
     experience: {
       base: 0,
       conditional: [{ value: 2, condition: "Si la cerradura se abre." }]
@@ -978,7 +978,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
           "Tras 4 turnos continuados revela los contenidos de la caja fuerte; moverse interrumpe el proceso."
       }
     ],
-    notes: ["Ganzúas o la habilidad Destreza 1 reducen el tiempo requerido."],
+    developed: true,
+    notes: ["Destreza 1 reduce el proceso a 3 turnos. Debe ver una caja fuerte."],
     texture: "Board Game Icons",
     frame: "lock_open.png",
     actionOrder: 12,

@@ -42,13 +42,11 @@
 	
 -t feature, implement the skill that allows to fabricate anywhere without workshop
 
-- feature, lockpick
-	each turn lockpicking, show in the character log, player is lockpicking 1 of 4
-	- dexterity1 skill, reduces 1 turn the lockpick, new feature(change description) or if a lockpicking tool is in inventory, it won't break
-	- lockpick item is changed, now instead of reducing 1 turn, it opens instantly and the lockpick is consumed
-	- warning message if there is not safe visible
-	- changing location interrupts the process with a log
-	- items from the safe are revealed to the opener, and added to the pool of the cell to others to find	
+- [x] feature, lockpick
+	- Lockpicking takes 4 consecutive turns; Dexterity 1 reduces this to 3.
+	- Lockpick remains reusable and does not break (user-selected rule; replaces instant-consume behavior).
+	- No visible safe produces a failure log; movement interrupts lockpicking with a log.
+	- Opened safe contents become visible to opener and searchable by others.
 	
 - feature, dexterity3
 	- instead of fixed turns, it has a cooldown of 7 turns, change the description

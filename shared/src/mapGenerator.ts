@@ -94,6 +94,7 @@ export interface GeneratedSafeContainer {
   safeItemId: string;
   tileId: string;
   contents: ItemId[];
+  opened?: boolean;
 }
 
 export interface GeneratedGameMap {

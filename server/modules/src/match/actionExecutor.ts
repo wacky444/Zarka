@@ -49,6 +49,7 @@ import { executeStealAction } from "./actions/steal";
 import { executeGiveAction } from "./actions/give";
 import { executeBlackMarketTradeAction } from "./actions/blackMarketTrade";
 import { executePickUpAction } from "./actions/pickup";
+import { executePickLockAction } from "./actions/pickLock";
 import { executeDropAction } from "./actions/drop";
 import { executeThrowObjectAction } from "./actions/throwObject";
 import { applyActionCooldown } from "./actions/cooldowns";
@@ -175,7 +176,19 @@ export function executeAction(
   let eventsForAction: ReplayEvent[] = [];
   let handled = false;
 
-  if (action.id === ActionLibrary.dodge.id) {
+  if (action.id === ActionLibrary.pick_lock.id) {
+    const participants = collectParticipants(match, action.id);
+    if (participants.length > 0) {
+      const energyEvents = applyEnergyForParticipants(participants, action.energyCost, match, logger);
+      const actionEvents = executePickLockAction(participants, match);
+      eventsForAction = [...energyEvents, ...actionEvents];
+      for (const participant of participants) {
+        applyActionCooldown(participant.character, action.id, action.cooldown, resolvedTurn);
+        match.playerCharacters![participant.playerId] = participant.character;
+      }
+      handled = true;
+    }
+  } else if (action.id === ActionLibrary.dodge.id) {
     const participants = collectParticipants(match, action.id);
     if (participants.length > 0) {
       const energyEvents = applyEnergyForParticipants(

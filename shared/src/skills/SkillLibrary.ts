@@ -90,10 +90,10 @@ export const SkillLibrary: SkillLibraryDefinition = {
   dexterity1: {
     id: "dexterity1",
     name: "Destreza 1",
-    description: "Reduce un turno en forzar cerraduras",
+    description: "Reduce en un turno el tiempo para forzar cerraduras y evita que se rompa la ganzúa",
     cost: 2,
     max: 2,
-    implemented: false,
+    implemented: true,
     category: "utility"
   },
   dexterity2: {

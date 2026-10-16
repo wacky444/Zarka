@@ -433,7 +433,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     consumable: false,
     weight: 1,
     description:
-      "Reduce en un turno el tiempo necesario para forzar una caja fuerte.",
+      "Herramienta reutilizable para forzar cajas fuertes; no se rompe con Destreza 1.",
     sellValue: 2,
     tags: ["Tool"]
   },

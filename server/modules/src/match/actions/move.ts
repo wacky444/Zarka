@@ -55,6 +55,17 @@ export class MoveAction extends BaseAction {
         continue;
       }
       const previousPosition = entry.character.position;
+      if (entry.character.lockpickProgress) {
+        events.push({
+          kind: "player",
+          actorId: entry.playerId,
+          action: {
+            actionId: ActionLibrary.pick_lock.id,
+            metadata: { outcome: "interrupted", reason: "moved" },
+          },
+        });
+        entry.character.lockpickProgress = undefined;
+      }
       entry.character.position = {
         tileId: destination.tileId,
         coord: destination.coord,

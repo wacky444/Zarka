@@ -37,6 +37,8 @@ export interface PlayerCharacter {
   trackerViews?: PlayerTrackerView[];
   /** Turn in which a coward character became visible by acting. */
   cowardRevealedTurn?: number;
+  /** Safe and completed lockpicking turns; reset when character changes location. */
+  lockpickProgress?: { tileId: string; safeItemId: string; turnsCompleted: number };
 }
 
 export interface PlayerRemoteView {

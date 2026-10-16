@@ -647,6 +647,19 @@ export class CharacterPanelLogView {
           lines.push(this.buildFailedActionLine(actor, event.action.metadata));
           continue;
         }
+        if (actionId === "pick_lock") {
+          const metadata = event.action.metadata as { outcome?: unknown; turnsCompleted?: unknown; turnsRequired?: unknown } | undefined;
+          if (metadata?.outcome === "progress") {
+            lines.push(`${actor} ${t("is lockpicking")} ${String(metadata.turnsCompleted)} ${t("of")} ${String(metadata.turnsRequired)}`);
+          } else if (metadata?.outcome === "success") {
+            lines.push(`${actor} ${t("opened the safe")}`);
+          } else if (metadata?.outcome === "interrupted") {
+            lines.push(`${actor} ${t("lockpicking was interrupted")}`);
+          } else {
+            lines.push(`${actor} ${t("cannot see a safe")}`);
+          }
+          continue;
+        }
         if (actionId === "fabricate") {
           const line = formatCraftingReplayLine(actor, event.action.metadata);
           if (line) {
