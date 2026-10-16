@@ -975,11 +975,11 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Tras 4 turnos continuados revela los contenidos de la caja fuerte; moverse interrumpe el proceso."
+          "Tras 4 turnos continuados revela los contenidos de la caja fuerte; con ganzúa, la abre al instante. Moverse interrumpe el proceso."
       }
     ],
     developed: true,
-    notes: ["Destreza 1 reduce el proceso a 3 turnos. Debe ver una caja fuerte."],
+    notes: ["Destreza 1 reduce el proceso a 3 turnos y evita que se consuma la ganzúa. Debe ver una caja fuerte."],
     texture: "Board Game Icons",
     frame: "lock_open.png",
     actionOrder: 12,

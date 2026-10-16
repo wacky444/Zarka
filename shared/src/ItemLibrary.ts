@@ -433,7 +433,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     consumable: false,
     weight: 1,
     description:
-      "Herramienta reutilizable para forzar cajas fuertes; no se rompe con Destreza 1.",
+      "Abre una caja fuerte al instante y se consume. Destreza 1 evita que se consuma.",
     sellValue: 2,
     tags: ["Tool"]
   },

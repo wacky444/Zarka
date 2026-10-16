@@ -6,11 +6,12 @@ import { executePickLockAction } from "../../src/match/actions/pickLock";
 import type { PlannedActionParticipant } from "../../src/match/actions/utils";
 import { createDefaultCharacter } from "../../src/utils/playerCharacter";
 
-function setup(hasDexterity = false): { match: MatchRecord; participant: PlannedActionParticipant } {
+function setup(hasDexterity = false, hasLockpick = false): { match: MatchRecord; participant: PlannedActionParticipant } {
   const character = createDefaultCharacter("player");
   character.position = { tileId: "tile", coord: { q: 0, r: 0 } };
   character.discoveredItemIds = ["safe"];
   if (hasDexterity) character.abilities = ["dexterity1"];
+  if (hasLockpick) character.inventory.carriedItems.push({ itemId: "lockpick", quantity: 1, weight: 1 });
   const plan = { actionId: "pick_lock" as const };
   character.actionPlan = { secondary: plan };
   const match: MatchRecord = {
@@ -36,7 +37,22 @@ test("lockpicking opens safe after four turns and reveals contents for opener an
   assert.equal(participant.character.discoveredItemIds?.length, 2);
 });
 
-test("Dexterity 1 opens safe in three turns", () => {
+test("lockpick opens instantly and is consumed without Dexterity 1", () => {
+  const { match, participant } = setup(false, true);
+  const [event] = executePickLockAction([participant], match);
+  assert.equal(event.kind === "player" ? event.action.metadata?.openedInstantly : undefined, true);
+  assert.equal(participant.character.inventory.carriedItems.some((item) => item.itemId === "lockpick"), false);
+  assert.equal(match.safeContainers?.[0].opened, true);
+});
+
+test("Dexterity 1 makes lockpick reusable and still opens instantly", () => {
+  const { match, participant } = setup(true, true);
+  const [event] = executePickLockAction([participant], match);
+  assert.equal(event.kind === "player" ? event.action.metadata?.openedInstantly : undefined, true);
+  assert.equal(participant.character.inventory.carriedItems.some((item) => item.itemId === "lockpick"), true);
+});
+
+test("Dexterity 1 opens safe in three turns without a lockpick", () => {
   const { match, participant } = setup(true);
   executePickLockAction([participant], match);
   executePickLockAction([participant], match);

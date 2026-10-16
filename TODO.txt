@@ -44,7 +44,7 @@
 
 - [x] feature, lockpick
 	- Lockpicking takes 4 consecutive turns; Dexterity 1 reduces this to 3.
-	- Lockpick remains reusable and does not break (user-selected rule; replaces instant-consume behavior).
+	- Carried lockpick opens safe instantly and is consumed; Dexterity 1 prevents consumption.
 	- No visible safe produces a failure log; movement interrupts lockpicking with a log.
 	- Opened safe contents become visible to opener and searchable by others.
 	
