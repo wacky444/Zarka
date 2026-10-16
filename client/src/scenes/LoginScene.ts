@@ -5,13 +5,14 @@ import { getEnv, healthProbe } from "../services/nakama";
 import { SessionManager } from "../services/sessionManager";
 import { FacebookService } from "../services/facebookService";
 import { GoogleService } from "../services/googleService";
-import { getLocale, toggleLocale } from "../services/i18n";
+import { getLocale, setLocale, type Locale } from "../services/i18n";
 import { hideStartupLoadingScreen } from "../ui/StartupLoadingScreen";
+import { assetPath } from "../utils/assetPath";
 
 enum LoginGuiState {
   Entry = "entry",
   Login = "login",
-  Register = "register",
+  Register = "register"
 }
 
 type VisibleGameObject = Phaser.GameObjects.GameObject & {
@@ -23,7 +24,8 @@ const LOGIN_LAYOUT = {
   horizontalPadding: 32,
   titleY: 0,
   statusY: 48,
-  controlsY: 112,
+  languageSelectorY: 114,
+  controlsY: 184,
   entryButtonGap: 58,
   formFieldGap: 18,
   formLabelHeight: 22,
@@ -55,7 +57,9 @@ export class LoginScene extends Phaser.Scene {
   private usernameDisplay!: Phaser.GameObjects.Text;
   private formActionButton!: UIButton;
   private formBackButton!: UIButton;
-  private languageButton!: UIButton;
+  private languageSelector!: Phaser.GameObjects.Container;
+  private languageFrames!: Record<Locale, Phaser.GameObjects.Rectangle>;
+  private languageFlags!: Record<Locale, Phaser.GameObjects.Image>;
 
   private entryObjects: VisibleGameObject[] = [];
   private entryButtons: UIButton[] = [];
@@ -70,7 +74,10 @@ export class LoginScene extends Phaser.Scene {
     this.initialMessage = data?.message || "";
   }
 
-  preload() {}
+  preload() {
+    this.load.image("login-flag-es", assetPath("assets/images/flags/ES.png"));
+    this.load.image("login-flag-en", assetPath("assets/images/flags/GB.png"));
+  }
 
   async create() {
     // Since the LoginScene is the first scene, it will be loaded even if we have a valid session.
@@ -83,7 +90,7 @@ export class LoginScene extends Phaser.Scene {
           this.scene.stop();
           this.scene.start("MainScene", {
             client: restored.client,
-            session: restored.session,
+            session: restored.session
           });
           return;
         }
@@ -94,7 +101,9 @@ export class LoginScene extends Phaser.Scene {
 
     // Initialize Nakama client
     const { host, port, useSSL, serverKey } = getEnv();
-    this.client = SessionManager.attachSessionRefreshHandler(new Client(serverKey, host, port, useSSL));
+    this.client = SessionManager.attachSessionRefreshHandler(
+      new Client(serverKey, host, port, useSSL)
+    );
     await healthProbe(host, parseInt(port, 10), useSSL);
 
     this.loginRoot = this.add.container(0, 0);
@@ -118,17 +127,7 @@ export class LoginScene extends Phaser.Scene {
 
     this.createEntryButtons();
     this.createAuthForm();
-    this.languageButton = makeButton(
-      this,
-      0,
-      0,
-      this.getLanguageToggleLabel(),
-      () => {
-        toggleLocale();
-        this.languageButton.setText(`[ ${this.getLanguageToggleLabel()} ]`);
-      }
-    ).setOrigin(0.5);
-    this.loginRoot.add(this.languageButton);
+    this.createLanguageSelector();
     this.setGuiState(LoginGuiState.Entry);
     this.layoutLogin();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutLogin, this);
@@ -142,6 +141,86 @@ export class LoginScene extends Phaser.Scene {
     hideStartupLoadingScreen();
   }
 
+  private createLanguageSelector(): void {
+    this.languageSelector = this.add.container(0, 0);
+    this.languageFrames = {
+      en: this.add.rectangle(-34, 0, 60, 60),
+      es: this.add.rectangle(34, 0, 60, 60)
+    };
+    this.languageFlags = {
+      en: this.add.image(-34, 0, "login-flag-en").setDisplaySize(48, 48),
+      es: this.add.image(34, 0, "login-flag-es").setDisplaySize(48, 48)
+    };
+
+    const flags: Array<{ locale: Locale }> = [
+      { locale: "en" },
+      { locale: "es" }
+    ];
+
+    for (const { locale } of flags) {
+      const frame = this.languageFrames[locale];
+      const flag = this.languageFlags[locale];
+
+      frame.setInteractive({ useHandCursor: true });
+      flag.setInteractive({ useHandCursor: true });
+
+      const onSelect = () => {
+        this.selectLocale(locale);
+      };
+
+      const onHover = () => {
+        if (getLocale() !== locale) {
+          frame.setStrokeStyle(2, 0xffffff, 0.9);
+          flag.setAlpha(0.9);
+        }
+      };
+
+      const onOut = () => {
+        if (getLocale() !== locale) {
+          frame.setStrokeStyle(1, 0x666666, 0.8);
+          flag.setAlpha(0.65);
+        }
+      };
+
+      frame.on("pointerdown", onSelect);
+      flag.on("pointerdown", onSelect);
+      frame.on("pointerover", onHover);
+      flag.on("pointerover", onHover);
+      frame.on("pointerout", onOut);
+      flag.on("pointerout", onOut);
+
+      this.languageSelector.add([frame, flag]);
+    }
+
+    this.loginRoot.add(this.languageSelector);
+    this.updateLanguageSelector();
+  }
+
+  private selectLocale(locale: Locale): void {
+    if (getLocale() === locale) {
+      return;
+    }
+    setLocale(locale);
+    this.updateLanguageSelector();
+    this.updateDisplays();
+    this.layoutLogin();
+  }
+
+  private updateLanguageSelector(): void {
+    const currentLocale = getLocale();
+    for (const locale of ["en", "es"] as const) {
+      const selected = currentLocale === locale;
+      this.languageFrames[locale]
+        .setFillStyle(selected ? 0xffcc00 : 0x000000, selected ? 0.2 : 0.25)
+        .setStrokeStyle(
+          selected ? 3 : 1,
+          selected ? 0xffcc00 : 0x666666,
+          selected ? 1 : 0.8
+        );
+      this.languageFlags[locale].setAlpha(selected ? 1 : 0.65);
+    }
+  }
+
   private createEntryButtons() {
     const facebookButton = makeButton(
       this,
@@ -150,7 +229,7 @@ export class LoginScene extends Phaser.Scene {
       "Login with Facebook",
       async () => {
         await this.loginWithFacebook();
-      },
+      }
     ).setOrigin(0.5);
 
     const googleButton = makeButton(
@@ -160,7 +239,7 @@ export class LoginScene extends Phaser.Scene {
       "Login with Google",
       async () => {
         await this.loginWithGoogle();
-      },
+      }
     ).setOrigin(0.5);
 
     const loginButton = makeButton(this, 0, 0, "Login", async () => {
@@ -174,7 +253,7 @@ export class LoginScene extends Phaser.Scene {
       "Continue as Guest",
       async () => {
         await this.loginAsGuest();
-      },
+      }
     ).setOrigin(0.5);
 
     const registerButton = makeButton(this, 0, 0, "Register", async () => {
@@ -189,22 +268,20 @@ export class LoginScene extends Phaser.Scene {
       registerButton
     ];
     this.loginRoot.add(this.entryButtons);
-    this.entryObjects.push(
-      ...this.entryButtons as VisibleGameObject[]
-    );
+    this.entryObjects.push(...(this.entryButtons as VisibleGameObject[]));
   }
 
   private createAuthForm() {
     this.emailLabel = this.add.text(0, 0, "Email:", {
       color: "#ffffff",
-      fontSize: "16px",
+      fontSize: "16px"
     });
 
     this.emailDisplay = this.add.text(0, 0, "", {
       color: "#666666",
       fontSize: "14px",
       backgroundColor: "#333333",
-      padding: { x: 8, y: 4 },
+      padding: { x: 8, y: 4 }
     });
     this.emailDisplay.setInteractive({ useHandCursor: true });
     this.emailDisplay.on("pointerdown", () => {
@@ -213,14 +290,14 @@ export class LoginScene extends Phaser.Scene {
 
     this.passwordLabel = this.add.text(0, 0, "Password:", {
       color: "#ffffff",
-      fontSize: "16px",
+      fontSize: "16px"
     });
 
     this.passwordDisplay = this.add.text(0, 0, "", {
       color: "#666666",
       fontSize: "14px",
       backgroundColor: "#333333",
-      padding: { x: 8, y: 4 },
+      padding: { x: 8, y: 4 }
     });
     this.passwordDisplay.setInteractive({ useHandCursor: true });
     this.passwordDisplay.on("pointerdown", () => {
@@ -229,14 +306,14 @@ export class LoginScene extends Phaser.Scene {
 
     this.usernameLabel = this.add.text(0, 0, "Username:", {
       color: "#ffffff",
-      fontSize: "16px",
+      fontSize: "16px"
     });
 
     this.usernameDisplay = this.add.text(0, 0, "", {
       color: "#666666",
       fontSize: "14px",
       backgroundColor: "#333333",
-      padding: { x: 8, y: 4 },
+      padding: { x: 8, y: 4 }
     });
     this.usernameDisplay.setInteractive({ useHandCursor: true });
     this.usernameDisplay.on("pointerdown", () => {
@@ -299,13 +376,16 @@ export class LoginScene extends Phaser.Scene {
     const left = -contentWidth / 2;
 
     this.loginRoot.setPosition(viewportWidth / 2, top);
-    this.languageButton?.setPosition(0, 82);
+    this.languageSelector?.setPosition(0, LOGIN_LAYOUT.languageSelectorY);
     this.titleText.setPosition(0, LOGIN_LAYOUT.titleY);
     this.statusText.setPosition(0, LOGIN_LAYOUT.statusY);
 
     if (this.guiState === LoginGuiState.Entry) {
       this.entryButtons.forEach((button, index) => {
-        button.setPosition(0, LOGIN_LAYOUT.controlsY + index * LOGIN_LAYOUT.entryButtonGap);
+        button.setPosition(
+          0,
+          LOGIN_LAYOUT.controlsY + index * LOGIN_LAYOUT.entryButtonGap
+        );
       });
       return;
     }
@@ -344,10 +424,6 @@ export class LoginScene extends Phaser.Scene {
     );
   }
 
-  private getLanguageToggleLabel(): string {
-    return getLocale() === "en" ? "Español" : "English";
-  }
-
   private setGuiState(state: LoginGuiState) {
     this.guiState = state;
 
@@ -369,7 +445,7 @@ export class LoginScene extends Phaser.Scene {
 
     this.formActionButton.setText(isRegister ? "[ Register ]" : "[ Login ]");
     this.statusText.setText(
-      isRegister ? "Create your account" : "Login with username or email",
+      isRegister ? "Create your account" : "Login with username or email"
     );
 
     this.focusEmailInput();
@@ -426,13 +502,13 @@ export class LoginScene extends Phaser.Scene {
     if (this.isEmailFocused) {
       this.emailDisplay.setStyle({
         color: "#ffffff",
-        backgroundColor: "#555555",
+        backgroundColor: "#555555"
       });
       this.emailDisplay.setText(this.emailValue + "_");
     } else {
       this.emailDisplay.setStyle({
         color: this.emailValue ? "#ffffff" : "#666666",
-        backgroundColor: "#333333",
+        backgroundColor: "#333333"
       });
       this.emailDisplay.setText(this.emailValue || emailPlaceholder);
     }
@@ -441,18 +517,18 @@ export class LoginScene extends Phaser.Scene {
     if (this.isPasswordFocused) {
       this.passwordDisplay.setStyle({
         color: "#ffffff",
-        backgroundColor: "#555555",
+        backgroundColor: "#555555"
       });
       const maskedPassword = "*".repeat(this.passwordValue.length);
       this.passwordDisplay.setText(maskedPassword + "_");
     } else {
       this.passwordDisplay.setStyle({
         color: this.passwordValue ? "#ffffff" : "#666666",
-        backgroundColor: "#333333",
+        backgroundColor: "#333333"
       });
       const maskedPassword = "*".repeat(this.passwordValue.length);
       this.passwordDisplay.setText(
-        maskedPassword || "Click to enter password...",
+        maskedPassword || "Click to enter password..."
       );
     }
 
@@ -460,16 +536,16 @@ export class LoginScene extends Phaser.Scene {
     if (this.isUsernameFocused) {
       this.usernameDisplay.setStyle({
         color: "#ffffff",
-        backgroundColor: "#555555",
+        backgroundColor: "#555555"
       });
       this.usernameDisplay.setText(this.usernameValue + "_");
     } else {
       this.usernameDisplay.setStyle({
         color: this.usernameValue ? "#ffffff" : "#666666",
-        backgroundColor: "#333333",
+        backgroundColor: "#333333"
       });
       this.usernameDisplay.setText(
-        this.usernameValue || "Click to enter username...",
+        this.usernameValue || "Click to enter username..."
       );
     }
   }
@@ -567,7 +643,7 @@ export class LoginScene extends Phaser.Scene {
       const initialized = await FacebookService.initialize();
       if (!initialized) {
         this.statusText.setText(
-          "Facebook SDK not available. Please check your internet connection.",
+          "Facebook SDK not available. Please check your internet connection."
         );
         return;
       }
@@ -586,13 +662,13 @@ export class LoginScene extends Phaser.Scene {
       // Authenticate with Nakama using Facebook token
       const session = await this.client.authenticateFacebook(
         authResponse.accessToken,
-        true,
+        true
       );
       this.proceedToGame(session);
     } catch (error) {
       console.error("Facebook login error:", error);
       this.statusText.setText(
-        "Facebook login failed. Please try again or use email login.",
+        "Facebook login failed. Please try again or use email login."
       );
     }
   }
@@ -604,7 +680,7 @@ export class LoginScene extends Phaser.Scene {
       const { googleClientId } = getEnv();
       if (!googleClientId) {
         this.statusText.setText(
-          "Google login is not configured. Please use another login method.",
+          "Google login is not configured. Please use another login method."
         );
         return;
       }
@@ -612,7 +688,7 @@ export class LoginScene extends Phaser.Scene {
       const initialized = await GoogleService.initialize(googleClientId);
       if (!initialized) {
         this.statusText.setText(
-          "Google login is unavailable. Please check your internet connection.",
+          "Google login is unavailable. Please check your internet connection."
         );
         return;
       }
@@ -627,13 +703,13 @@ export class LoginScene extends Phaser.Scene {
       this.statusText.setText("Authenticating with game server...");
       const session = await this.client.authenticateGoogle(
         authResponse.idToken,
-        true,
+        true
       );
       this.proceedToGame(session);
     } catch (error) {
       console.error("Google login error:", error);
       this.statusText.setText(
-        "Google login failed. Please try again or use another login method.",
+        "Google login failed. Please try again or use another login method."
       );
     }
   }
@@ -658,13 +734,13 @@ export class LoginScene extends Phaser.Scene {
         email,
         password,
         false,
-        username,
+        username
       );
       this.proceedToGame(session);
     } catch (error) {
       console.error("Email login error:", error);
       this.statusText.setText(
-        "Login failed. Please check your username/email and password.",
+        "Login failed. Please check your username/email and password."
       );
     }
   }
@@ -696,14 +772,14 @@ export class LoginScene extends Phaser.Scene {
         email,
         password,
         true,
-        username,
+        username
       );
       this.statusText.setText("Account created successfully!");
       this.proceedToGame(session);
     } catch (error) {
       console.error("Registration error:", error);
       this.statusText.setText(
-        "Registration failed. Email may already be in use.",
+        "Registration failed. Email may already be in use."
       );
     }
   }
@@ -741,7 +817,7 @@ export class LoginScene extends Phaser.Scene {
     // Pass session data to MainScene
     this.scene.start("MainScene", {
       client: this.client,
-      session: session,
+      session: session
     });
   }
 }
