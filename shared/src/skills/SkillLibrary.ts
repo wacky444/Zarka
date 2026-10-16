@@ -110,10 +110,10 @@ export const SkillLibrary: SkillLibraryDefinition = {
     id: "dexterity3",
     name: "Destreza 3",
     description:
-      "Permite fabricar gratuitamente (sin gasto de acción) un arma química, medicamento, veneno o antídoto (elegido por el propio jugador) en el turno 1- 8 - 15 - 22 - 29. Debe ser especificado en el turno exacto o se perderá",
+      "Permite fabricar gratuitamente un arma química, medicamento, veneno o antídoto elegido por el jugador. Se activa cuando se especifica el producto y está disponible, con un cooldown de 7 turnos; no se pierde si no se especifica.",
     cost: 10,
     max: 1,
-    implemented: false,
+    implemented: true,
     category: "utility"
   },
   dexterity4: {

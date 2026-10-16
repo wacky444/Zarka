@@ -237,6 +237,8 @@ test("all players see spawn positions on initial turn only", () => {
   const viewer = createCharacter("viewer", 0);
   viewer.stats.baseViewRange = 0;
   const distant = createCharacter("distant", 3);
+  distant.dexterity3SelectedItemId = "medicine";
+  viewer.dexterity3SelectedItemId = "poison";
   const coward = createCharacter("coward", 4);
   coward.abilities.push("coward");
   const match = createMatch([viewer, distant, coward], 5);
@@ -248,6 +250,8 @@ test("all players see spawn positions on initial turn only", () => {
     0
   );
   assert.ok(initialView?.distant);
+  assert.equal(initialView?.distant.dexterity3SelectedItemId, undefined);
+  assert.equal(initialView?.viewer.dexterity3SelectedItemId, "poison");
   assert.ok(initialView?.coward);
 
   const laterView = tailorPlayerCharactersForViewer(

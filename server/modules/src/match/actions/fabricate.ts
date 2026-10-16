@@ -2,7 +2,8 @@ import {
   ActionLibrary,
   LocalizationType,
   getSkillRank,
-  isCraftableItemId
+  isCraftableItemId,
+  isDexterity3ProductId
 } from "@shared";
 import type {
   FabricateReplayMetadata,
@@ -13,6 +14,8 @@ import { BaseAction } from "./classes/BaseAction";
 import type { PlannedActionParticipant } from "./utils";
 import { createFailedActionEvent } from "./utils";
 import { applyInventoryTransform } from "./itemTransform";
+import { isCharacterIncapacitated } from "../../utils/playerCharacter";
+import { awardExperience } from "../progression";
 
 function isAtWorkshop(
   match: MatchRecord,
@@ -104,4 +107,63 @@ export function executeFabricateAction(
   match: MatchRecord
 ): ReplayPlayerEvent[] {
   return fabricateAction.execute(participants, match);
+}
+
+export function executeDexterity3Fabrication(
+  match: MatchRecord,
+  resolvedTurn: number
+): ReplayPlayerEvent[] {
+  const events: ReplayPlayerEvent[] = [];
+  for (const [playerId, character] of Object.entries(match.playerCharacters ?? {})) {
+    const itemId = character.dexterity3SelectedItemId;
+    const availableOnTurn = character.dexterity3AvailableOnTurn ?? 0;
+    if (
+      !itemId ||
+      isCharacterIncapacitated(character) ||
+      getSkillRank(character, "dexterity3") === 0 ||
+      resolvedTurn < availableOnTurn
+    ) {
+      continue;
+    }
+    const failure = isDexterity3ProductId(itemId)
+      ? applyInventoryTransform(character, [], [{ itemId, quantity: 1 }])
+      : "invalid_selection";
+    if (failure) {
+      events.push({
+        kind: "player",
+        actorId: playerId,
+        action: {
+          actionId: ActionLibrary.fabricate.id,
+          metadata: {
+            attemptedActionId: ActionLibrary.fabricate.id,
+            craftedItemId: itemId,
+            outcome: "failure",
+            reason: failure === "inventory_capacity" ? "inventory_capacity" : "invalid_selection",
+            dexterity3: true,
+          },
+        },
+      });
+      continue;
+    }
+    character.dexterity3SelectedItemId = undefined;
+    character.dexterity3AvailableOnTurn = resolvedTurn + 7;
+    const awarded = awardExperience(character, ActionLibrary.fabricate.experience?.base ?? 0);
+    const coord = character.position?.coord;
+    events.push({
+      kind: "player",
+      actorId: playerId,
+      action: {
+        actionId: ActionLibrary.fabricate.id,
+        ...(coord ? { originLocation: { ...coord }, targetLocation: { ...coord } } : {}),
+        metadata: {
+          craftedItemId: itemId,
+          outcome: "success",
+          dexterity3: true,
+          experienceGained: awarded.experienceGained,
+          levelsGained: awarded.levelsGained,
+        },
+      },
+    });
+  }
+  return events;
 }

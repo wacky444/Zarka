@@ -661,7 +661,8 @@ export class CharacterPanelLogView {
           continue;
         }
         if (actionId === "fabricate") {
-          const line = formatCraftingReplayLine(actor, event.action.metadata);
+          const line = formatCraftingReplayLine(actor, event.action.metadata) ??
+            formatCraftingFailureLine(actor, event.action.metadata);
           if (line) {
             lines.push(line);
           }

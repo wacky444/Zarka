@@ -16,6 +16,7 @@ import { recordMatchReportProgress } from "./matchReport";
 import { recordRankedTeamEliminations } from "./rankedPlacements";
 import { updateCooldownsForTurn } from "./actions/cooldowns";
 import { executeAction, type TileLookup } from "./actionExecutor";
+import { executeDexterity3Fabrication } from "./actions/fabricate";
 import { applyVirusInfection } from "./actions/virusInfection";
 import {
   applyPendingZarkanPayout,
@@ -331,6 +332,9 @@ export function advanceTurn(
     revealCowardActors(match, action, events, playerIds, resolvedTurn);
     if (events.length) {
       replayEvents.push(...events);
+    }
+    if (action.id === ActionLibrary.fabricate.id) {
+      replayEvents.push(...executeDexterity3Fabrication(match, resolvedTurn));
     }
   }
   replayEvents.push(...dropOverweightItems(match));

@@ -2,7 +2,7 @@ import type { Axial } from "./hexTile";
 import type { ActionCondition } from "./Action";
 import type { SkillId } from "./skills/Skill";
 import type { ItemId } from "./Item";
-import type { ManipulateOperationSelection } from "./RecipesLibrary";
+import type { Dexterity3ProductId, ManipulateOperationSelection } from "./RecipesLibrary";
 
 export interface PlayerCharacter {
   id: string;
@@ -39,6 +39,8 @@ export interface PlayerCharacter {
   cowardRevealedTurn?: number;
   /** Safe and completed lockpicking turns; reset when character changes location. */
   lockpickProgress?: { tileId: string; safeItemId: string; turnsCompleted: number };
+  dexterity3SelectedItemId?: Dexterity3ProductId;
+  dexterity3AvailableOnTurn?: number;
 }
 
 export interface PlayerRemoteView {

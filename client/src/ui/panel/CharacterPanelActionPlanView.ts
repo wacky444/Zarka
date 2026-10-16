@@ -11,6 +11,7 @@ import {
   type Axial,
   type HexTileSnapshot,
   type ItemId,
+  type Dexterity3ProductId,
   type ManipulateOperationSelection,
   type MatchRecord,
   type PlayerCharacter,
@@ -26,6 +27,7 @@ import { getProjectedManipulateWeightGain } from "../manipulateSelectorItems";
 import { LocationSelector } from "../LocationSelector";
 import { ExtraExecutionSelector } from "../ExtraExecutionSelector";
 import { THEME } from "../ColorPalette";
+import { buildDexterity3ProductItems, parseDexterity3Product } from "../dexterity3SelectorItems";
 import { PlayerSelector, type PlayerOption } from "../PlayerSelector";
 import {
   ItemPrioritySelector,
@@ -318,6 +320,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   private scrollTop = 0;
   private margin = 16;
 
+  private readonly dexterity3Box: Phaser.GameObjects.Rectangle;
+  private readonly dexterity3Label: Phaser.GameObjects.Text;
+  private readonly dexterity3Selector: GridSelect;
+  private dexterity3Selection: Dexterity3ProductId | null = null;
+
   private readonly mainActionBox: Phaser.GameObjects.Rectangle;
   private readonly mainActionLabel: Phaser.GameObjects.Text;
   private readonly actionOrderHelpButton: Phaser.GameObjects.Rectangle;
@@ -489,6 +496,38 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     parent.add(this.scrollPanel);
 
     const boxWidth = config.width;
+    this.dexterity3Box = scene.add.rectangle(0, 0, boxWidth, 100, 0x1b2440).setOrigin(0, 0);
+    this.dexterity3Label = scene.add.text(0, 0, t("Dexterity 3"), {
+      fontSize: "16px",
+      color: "#ffffff",
+    }).setOrigin(0, 0);
+    this.dexterity3Selector = new GridSelect(scene, 0, 0, {
+      width: boxWidth - 24,
+      title: t("Dexterity 3 product"),
+      placeholder: t("Choose item"),
+      emptyLabel: "Unknown",
+      columns: 3,
+      desktopMinCellWidth: 170,
+      cellHeight: 180,
+      mobileCellIcons: true,
+      includeEmptyOption: true,
+      emptyOptionLabel: t("No product selected"),
+      emptyOptionDescription: t("Keep Dexterity 3 available for a later turn."),
+    });
+    this.dexterity3Selector.setItems(buildDexterity3ProductItems());
+    this.dexterity3Selector.on("change", (value: string | null) => {
+      this.dexterity3Selection = parseDexterity3Product(value);
+      this.emit("ready-refresh-request");
+      this.emit("dexterity3-selection-change", this.dexterity3Selection);
+    });
+    this.dexterity3Selector.on("modal-open", this.handleModalOpen);
+    this.dexterity3Selector.on("modal-close", this.handleModalClose);
+    this.scrollContent.add([this.dexterity3Box, this.dexterity3Label, this.dexterity3Selector]);
+    this.dexterity3Box.setVisible(false);
+    this.dexterity3Label.setVisible(false);
+    this.dexterity3Selector.setVisible(false);
+    this.dexterity3Selector.setActive(false);
+
     this.mainActionBox = scene.add
       .rectangle(0, 0, boxWidth, BOX_HEIGHT, 0x1b2440)
       .setOrigin(0, 0);
@@ -1103,6 +1142,12 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       this.applyMainActions([], null, null);
       this.applySecondaryActions([], null, null);
       this.applyExtraSecondaryActions([], null, null);
+      this.dexterity3Selection = null;
+      this.dexterity3Selector.setValue(null, false);
+      this.dexterity3Box.setVisible(false);
+      this.dexterity3Label.setVisible(false);
+      this.dexterity3Selector.setVisible(false);
+      this.dexterity3Selector.setActive(false);
       this.refreshActionSpecificSelectors(
         null,
         undefined,
@@ -1124,6 +1169,13 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     }
 
     const character = context.character;
+    const hasDexterity3 = character.abilities?.includes("dexterity3") === true;
+    this.dexterity3Selection = character.dexterity3SelectedItemId ?? null;
+    this.dexterity3Selector.setValue(this.dexterity3Selection, false);
+    this.dexterity3Box.setVisible(hasDexterity3);
+    this.dexterity3Label.setVisible(hasDexterity3);
+    this.dexterity3Selector.setVisible(hasDexterity3);
+    this.dexterity3Selector.setActive(hasDexterity3);
     const actions = collectMainActions(character);
     const mainActionId = character.actionPlan?.main?.actionId ?? null;
     const mainExtraExecutions = character.actionPlan?.main?.extraExecutions ?? 0;
@@ -1752,6 +1804,10 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.actionOrderHelpButton.off(Phaser.Input.Events.POINTER_UP);
     this.actionOrderHelpLabel.off(Phaser.Input.Events.POINTER_UP);
     this.actionOrderHelpModal.destroy();
+    this.dexterity3Selector.off("change");
+    this.dexterity3Selector.off("modal-open", this.handleModalOpen);
+    this.dexterity3Selector.off("modal-close", this.handleModalClose);
+    this.dexterity3Selector.destroy();
     this.mainActionDropdown.off("change", this.handleMainActionSelection);
     this.mainActionDropdown.off("modal-open", this.handleModalOpen);
     this.mainActionDropdown.off("modal-close", this.handleModalClose);
@@ -3295,6 +3351,12 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       width: boxWidth,
       scrollContent: this.scrollContent,
       scrollPanel: this.scrollPanel,
+      dexterity3: {
+        box: this.dexterity3Box,
+        label: this.dexterity3Label,
+        selector: this.dexterity3Selector,
+        visible: this.currentCharacter?.abilities?.includes("dexterity3") === true,
+      },
       main: {
         box: this.mainActionBox,
         label: this.mainActionLabel,
@@ -4061,6 +4123,12 @@ export interface ActionPlanBlockLayout {
 
 export function layoutActionPlan(options: {
   width: number;
+  dexterity3?: {
+    box: Phaser.GameObjects.Rectangle;
+    label: Phaser.GameObjects.Text;
+    selector: GridSelect;
+    visible: boolean;
+  };
   scrollContent: Phaser.GameObjects.Container;
   scrollPanel: { layout?: () => void } | null;
   main: ActionPlanBlockLayout;
@@ -4073,6 +4141,23 @@ export function layoutActionPlan(options: {
   }
   const padding = 12;
   let cursorY = 0;
+  if (options.dexterity3) {
+    const { box, label, selector, visible } = options.dexterity3;
+    box.setVisible(visible);
+    label.setVisible(visible);
+    selector.setVisible(visible);
+    selector.setActive(visible);
+    if (visible) {
+      box.setPosition(0, cursorY);
+      label.setPosition(padding, cursorY + 12);
+      selector.setDisplayWidth(options.width - padding * 2);
+      selector.setPosition(padding, cursorY + 42);
+      const blockHeight = Math.max(100, selector.height + 54);
+      box.setSize(options.width, blockHeight);
+      box.setDisplaySize(options.width, blockHeight);
+      cursorY += blockHeight + 16;
+    }
+  }
   const layoutBlock = (block: ActionPlanBlockLayout): void => {
     const {
       box,

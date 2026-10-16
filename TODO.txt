@@ -48,11 +48,10 @@
 	- No visible safe produces a failure log; movement interrupts lockpicking with a log.
 	- Opened safe contents become visible to opener and searchable by others.
 	
-- feature, dexterity3
-	- instead of fixed turns, it has a cooldown of 7 turns, change the description
-	- is not lost if not specified, change the description
-	- a new container above Accion principal container, it's a select grid, similar to select action, is sent to server when changed
-	- when ready, the server runs the action similar to the fabricate action, following the order and with a character log
+- [x] feature, dexterity3
+	- Seven-turn cooldown starts only after successful free fabrication; unselected ability remains available.
+	- Product selector appears above Main Action and persists selection through server RPC.
+	- At cooldown readiness, server fabricates selected product at fabricate action order and logs success/failure.
 	
 - feature, poison
 	- use antidote action

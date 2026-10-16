@@ -355,6 +355,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       worldTransform: { tx: matrix.tx, ty: matrix.ty }
     });
 
+    this.actionPlanView.on("dexterity3-selection-change", (itemId: string | null) => {
+      this.emit("dexterity3-selection-change", itemId);
+    });
     this.actionPlanView.on("main-action-change", (payload: MainActionSelection) => {
       this.emit("main-action-change", payload);
     });

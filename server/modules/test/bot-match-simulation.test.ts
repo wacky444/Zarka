@@ -157,16 +157,17 @@ function run12BotSimulation(seedNumber: number): SimulationResult {
 
 test("12-bot full match runs deterministically to completion", () => {
   const expectedDeadBotsOrder = [
-    "bot10",
-    "bot4",
-    "bot9",
     "bot2",
-    "bot3",
-    "bot11",
-    "bot8",
+    "bot6",
     "bot5",
-    "bot7",
-    "bot1"
+    "bot8",
+    "bot12",
+    "bot4",
+    "bot10",
+    "bot1",
+    "bot11",
+    "bot9",
+    "bot7"
   ];
 
   const runA = run12BotSimulation(42);

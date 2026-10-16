@@ -57,7 +57,8 @@ import {
   type BuyShopItemPayload,
   type DonateZarkansPayload,
   type ZarkansDonatedMessagePayload,
-  type ShopId
+  type ShopId,
+  type Dexterity3ProductId
 } from "@shared";
 import { buildBoardIconUrl, deriveBoardIconKey } from "../ui/actionIcons";
 import {
@@ -645,6 +646,11 @@ export class GameScene extends Phaser.Scene {
       updateCharacterPanel: (match) => this.updateCharacterPanel(match),
     });
     this.cam.ignore(this.characterPanel);
+    this.characterPanel.on(
+      "dexterity3-selection-change",
+      this.handleDexterity3SelectionChange,
+      this,
+    );
     this.characterPanel.on(
       "main-action-change",
       this.scheduleMainActionSelection,
@@ -2614,6 +2620,25 @@ export class GameScene extends Phaser.Scene {
       this.chatHistoryRefreshRunning = false;
     }
   }
+
+  private handleDexterity3SelectionChange = async (
+    itemId: Dexterity3ProductId | null,
+  ): Promise<void> => {
+    if (this.replayView || !this.turnService || !this.currentUserId) return;
+    const matchId = this.registry.get("currentMatchId") as string | null;
+    if (!matchId) return;
+    try {
+      const response = await this.turnService.updateDexterity3Selection(matchId, itemId);
+      const payload = this.parseRpcPayload<{ ok?: boolean; item_id?: Dexterity3ProductId | null; error?: string }>(response);
+      if (payload.error || payload.ok !== true) throw new Error(payload.error ?? "Dexterity 3 selection failed");
+      const character = this.currentMatch?.playerCharacters?.[this.currentUserId];
+      if (character) character.dexterity3SelectedItemId = payload.item_id ?? undefined;
+    } catch (error) {
+      console.error("Dexterity 3 selection update failed", error);
+      const match = await this.fetchMatchFromServer();
+      if (match) this.applyAuthoritativeMatchState(match);
+    }
+  };
 
   private scheduleMainActionSelection = (
     selection: MainActionSelection | null | undefined,

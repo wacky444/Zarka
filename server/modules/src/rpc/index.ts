@@ -13,6 +13,7 @@ export { removeMatchRpc } from "./removeMatch";
 export { updateMainActionRpc } from "./updateMainAction";
 export { updateReadyStateRpc } from "./updateReadyState";
 export { updateSecondaryActionRpc } from "./updateSecondaryAction";
+export { updateDexterity3SelectionRpc } from "./updateDexterity3Selection";
 export { getReplayRpc } from "./getReplay";
 export { saveChatMessageRpc } from "./saveChatMessage";
 export { getChatHistoryRpc } from "./getChatHistory";

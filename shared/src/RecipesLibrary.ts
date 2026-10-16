@@ -11,6 +11,19 @@ export interface ManipulateRecipe {
   readonly outputs: readonly RecipeComponent[];
 }
 
+export const DEXTERITY3_PRODUCTS = [
+  "chemical_weapon",
+  "medicine",
+  "poison",
+  "antidote"
+] as const satisfies readonly ItemId[];
+
+export type Dexterity3ProductId = (typeof DEXTERITY3_PRODUCTS)[number];
+
+export function isDexterity3ProductId(value: unknown): value is Dexterity3ProductId {
+  return typeof value === "string" && DEXTERITY3_PRODUCTS.includes(value as Dexterity3ProductId);
+}
+
 export const CRAFTABLE_ITEMS = [
   "pistol",
   "bullet",

@@ -249,6 +249,7 @@ export function tailorPlayerCharactersForViewer(
       delete sanitized.revealedItemTypesByPlayerId;
       delete sanitized.revealedTeamIdsByPlayerId;
       delete sanitized.actionPlan;
+      delete sanitized.dexterity3SelectedItemId;
       delete sanitized.remoteView;
       delete sanitized.cameraView;
       delete sanitized.trackerViews;

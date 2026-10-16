@@ -49,8 +49,15 @@ export function formatCraftingReplayLine(
     metadata && typeof metadata === "object"
       ? (metadata as { craftedItemId?: unknown }).craftedItemId
       : undefined;
+  const record = readRecord(metadata);
   const itemName = resolveItemName(craftedItemId);
-  return itemName ? `${actor} ${t("crafted")} ${itemName}` : null;
+  if (!itemName) return null;
+  if (record?.dexterity3 === true) {
+    return `${actor} ${t("used Dexterity 3 to craft")} ${itemName}`;
+  }
+  return record?.outcome === "failure"
+    ? null
+    : `${actor} ${t("crafted")} ${itemName}`;
 }
 
 export function formatCraftingFailureLine(

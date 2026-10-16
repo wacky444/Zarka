@@ -15,6 +15,7 @@ import {
   submitTurnRpc,
   updateMainActionRpc,
   updateSecondaryActionRpc,
+  updateDexterity3SelectionRpc,
   updateReadyStateRpc,
   updateSettingsRpc,
   getReplayRpc,
@@ -226,6 +227,14 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register update_secondary_action: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("update_dexterity3_selection", updateDexterity3SelectionRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register update_dexterity3_selection: %s",
       (error && (error as Error).message) || String(error)
     );
   }

@@ -272,6 +272,16 @@ export class TurnService {
     return res;
   }
 
+  async updateDexterity3Selection(
+    match_id: string,
+    item_id: import("@shared").Dexterity3ProductId | null
+  ) {
+    return this.client.rpc(this.session, "update_dexterity3_selection", {
+      match_id,
+      item_id,
+    });
+  }
+
   async updateSecondaryAction(
     match_id: string,
     submission: ActionSubmission | null,
