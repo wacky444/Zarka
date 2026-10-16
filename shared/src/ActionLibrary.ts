@@ -796,7 +796,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     texture: "Board Game Icons",
     frame: "chainsaw.png",
     actionOrder: 11,
-    actionSubOrder: 4,
+    actionSubOrder: 3,
     tags: ["Attack", "SingleTarget"]
   },
   start_chainsaw: {
@@ -822,7 +822,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     texture: "Board Game Icons",
     frame: "start_chainsaw.png",
     actionOrder: 11,
-    actionSubOrder: 3,
+    actionSubOrder: 4,
     tags: ["Logistics"]
   },
   shoot_pistol: {
