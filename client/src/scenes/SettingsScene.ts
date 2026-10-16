@@ -11,12 +11,18 @@ import {
 import type { AccountService } from "../services/AccountService";
 import { TurnService } from "../services/turnService";
 import {
+  bindExistingPushSubscription,
   disablePushNotifications,
   enablePushNotifications,
   getPushNotificationState,
   type PushNotificationState
 } from "../services/pushNotifications";
 import { GridSelect, type GridSelectItem } from "../ui/GridSelect";
+import {
+  createLanguageSelector,
+  preloadLanguageFlags,
+  type LanguageSelector
+} from "../ui/LanguageSelector";
 import { assetPath } from "../utils/assetPath";
 import type {
   GetUserAccountPayload,
@@ -90,13 +96,19 @@ type SliderInstance = Phaser.GameObjects.GameObject & {
   setVisible: (visible: boolean) => SliderInstance;
 };
 
-type SettingsTab = "account" | "appearance" | "audio" | "notifications";
+type SettingsTab =
+  | "account"
+  | "appearance"
+  | "audio"
+  | "notifications"
+  | "language";
 
 const SETTINGS_TABS: ReadonlyArray<{ id: SettingsTab; label: string }> = [
   { id: "account", label: "Account" },
   { id: "appearance", label: "Appearance" },
   { id: "audio", label: "Audio" },
-  { id: "notifications", label: "Notifications" }
+  { id: "notifications", label: "Notifications" },
+  { id: "language", label: "Language" }
 ];
 
 const ACCOUNT_LAYOUT = {
@@ -127,6 +139,8 @@ export class SettingsScene extends Phaser.Scene {
   private volumeSlider!: SliderInstance;
   private musicToggleButton!: UIButton;
   private musicEnabled = true;
+  private languageTitle!: Phaser.GameObjects.Text;
+  private languageSelector!: LanguageSelector;
   private linkFacebookButton!: UIButton;
   private unlinkFacebookButton!: UIButton;
   private backButton!: UIButton;
@@ -207,6 +221,7 @@ export class SettingsScene extends Phaser.Scene {
       );
     }
     preloadReplaySounds(this);
+    preloadLanguageFlags(this);
   }
 
   async create(data?: { client?: Client; session?: Session }) {
@@ -574,6 +589,29 @@ export class SettingsScene extends Phaser.Scene {
     ).setOrigin(0.5, 0);
     this.accountRoot.add(this.musicToggleButton);
 
+    this.languageTitle = this.add
+      .text(0, 0, t("Select language"), {
+        color: "#ffffff",
+        fontSize: "18px"
+      })
+      .setOrigin(0.5, 0);
+    this.accountRoot.add(this.languageTitle);
+
+    this.languageSelector = createLanguageSelector(this, 0, 0, () => {
+      this.titleText.setText(t("Settings"));
+      this.languageTitle.setText(t("Select language"));
+      this.updateSettingsTabButtons();
+      if (this.turnService) {
+        void bindExistingPushSubscription(this.turnService).catch(
+          (error: unknown) => {
+            console.warn("Failed to update push notification language:", error);
+          }
+        );
+      }
+      this.layoutAccount();
+    });
+    this.accountRoot.add(this.languageSelector);
+
     this.backButton = makeButton(this, 0, 0, "Back to Game", () => {
       this.scene.start("MainScene", {
         client: this.client,
@@ -669,6 +707,7 @@ export class SettingsScene extends Phaser.Scene {
     const showAppearance = this.activeSettingsTab === "appearance";
     const showAudio = this.activeSettingsTab === "audio";
     const showNotifications = this.activeSettingsTab === "notifications";
+    const showLanguage = this.activeSettingsTab === "language";
 
     this.userInfoText.setVisible(showAccount);
     this.displayNameText.setVisible(showAccount);
@@ -710,6 +749,12 @@ export class SettingsScene extends Phaser.Scene {
     this.pushDescription.setVisible(showNotifications);
     this.pushStatusText.setVisible(showNotifications);
     this.pushButton.setVisible(showNotifications);
+
+    this.languageTitle.setVisible(showLanguage);
+    this.languageSelector.setVisible(showLanguage);
+    if (showLanguage) {
+      this.languageSelector.updateSelection();
+    }
   }
 
   private layoutAccount(): void {
@@ -733,7 +778,8 @@ export class SettingsScene extends Phaser.Scene {
     this.statusText.setPosition(centerX, cursorY);
     cursorY += this.statusText.height + 10;
 
-    const tabColumns = contentWidth >= 600 ? SETTINGS_TABS.length : 2;
+    const tabColumns =
+      contentWidth >= 680 ? SETTINGS_TABS.length : contentWidth >= 440 ? 3 : 2;
     const tabGapX = 8;
     const tabGapY = 6;
     const tabCellWidth =
@@ -926,7 +972,7 @@ export class SettingsScene extends Phaser.Scene {
       cursorY += this.pushStatusText.height + 8;
       this.pushButton.setPosition(centerX, cursorY);
       cursorY += this.pushButton.height + ACCOUNT_LAYOUT.sectionGap;
-    } else {
+    } else if (this.activeSettingsTab === "audio") {
       this.audioTitle.setPosition(centerX, cursorY);
       cursorY += this.audioTitle.height + 6;
       this.volumeLabel.setPosition(centerX, cursorY);
@@ -935,6 +981,11 @@ export class SettingsScene extends Phaser.Scene {
       cursorY += 34 + 12;
       this.musicToggleButton.setPosition(centerX, cursorY);
       cursorY += this.musicToggleButton.height + ACCOUNT_LAYOUT.sectionGap;
+    } else {
+      this.languageTitle.setPosition(centerX, cursorY);
+      cursorY += this.languageTitle.height + 24;
+      this.languageSelector.setPosition(centerX, cursorY + 30);
+      cursorY += 60 + ACCOUNT_LAYOUT.sectionGap;
     }
 
     this.backButton.setPosition(centerX, cursorY);

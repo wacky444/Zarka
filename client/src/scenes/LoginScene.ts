@@ -5,9 +5,12 @@ import { getEnv, healthProbe } from "../services/nakama";
 import { SessionManager } from "../services/sessionManager";
 import { FacebookService } from "../services/facebookService";
 import { GoogleService } from "../services/googleService";
-import { getLocale, setLocale, type Locale } from "../services/i18n";
 import { hideStartupLoadingScreen } from "../ui/StartupLoadingScreen";
-import { assetPath } from "../utils/assetPath";
+import {
+  createLanguageSelector,
+  preloadLanguageFlags,
+  type LanguageSelector
+} from "../ui/LanguageSelector";
 
 enum LoginGuiState {
   Entry = "entry",
@@ -57,9 +60,7 @@ export class LoginScene extends Phaser.Scene {
   private usernameDisplay!: Phaser.GameObjects.Text;
   private formActionButton!: UIButton;
   private formBackButton!: UIButton;
-  private languageSelector!: Phaser.GameObjects.Container;
-  private languageFrames!: Record<Locale, Phaser.GameObjects.Rectangle>;
-  private languageFlags!: Record<Locale, Phaser.GameObjects.Image>;
+  private languageSelector!: LanguageSelector;
 
   private entryObjects: VisibleGameObject[] = [];
   private entryButtons: UIButton[] = [];
@@ -75,8 +76,7 @@ export class LoginScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image("login-flag-es", assetPath("assets/images/flags/ES.png"));
-    this.load.image("login-flag-en", assetPath("assets/images/flags/GB.png"));
+    preloadLanguageFlags(this);
   }
 
   async create() {
@@ -127,7 +127,11 @@ export class LoginScene extends Phaser.Scene {
 
     this.createEntryButtons();
     this.createAuthForm();
-    this.createLanguageSelector();
+    this.languageSelector = createLanguageSelector(this, 0, 0, () => {
+      this.updateDisplays();
+      this.layoutLogin();
+    });
+    this.loginRoot.add(this.languageSelector);
     this.setGuiState(LoginGuiState.Entry);
     this.layoutLogin();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutLogin, this);
@@ -140,87 +144,6 @@ export class LoginScene extends Phaser.Scene {
     });
     hideStartupLoadingScreen();
   }
-
-  private createLanguageSelector(): void {
-    this.languageSelector = this.add.container(0, 0);
-    this.languageFrames = {
-      en: this.add.rectangle(-34, 0, 60, 60),
-      es: this.add.rectangle(34, 0, 60, 60)
-    };
-    this.languageFlags = {
-      en: this.add.image(-34, 0, "login-flag-en").setDisplaySize(48, 48),
-      es: this.add.image(34, 0, "login-flag-es").setDisplaySize(48, 48)
-    };
-
-    const flags: Array<{ locale: Locale }> = [
-      { locale: "en" },
-      { locale: "es" }
-    ];
-
-    for (const { locale } of flags) {
-      const frame = this.languageFrames[locale];
-      const flag = this.languageFlags[locale];
-
-      frame.setInteractive({ useHandCursor: true });
-      flag.setInteractive({ useHandCursor: true });
-
-      const onSelect = () => {
-        this.selectLocale(locale);
-      };
-
-      const onHover = () => {
-        if (getLocale() !== locale) {
-          frame.setStrokeStyle(2, 0xffffff, 0.9);
-          flag.setAlpha(0.9);
-        }
-      };
-
-      const onOut = () => {
-        if (getLocale() !== locale) {
-          frame.setStrokeStyle(1, 0x666666, 0.8);
-          flag.setAlpha(0.65);
-        }
-      };
-
-      frame.on("pointerdown", onSelect);
-      flag.on("pointerdown", onSelect);
-      frame.on("pointerover", onHover);
-      flag.on("pointerover", onHover);
-      frame.on("pointerout", onOut);
-      flag.on("pointerout", onOut);
-
-      this.languageSelector.add([frame, flag]);
-    }
-
-    this.loginRoot.add(this.languageSelector);
-    this.updateLanguageSelector();
-  }
-
-  private selectLocale(locale: Locale): void {
-    if (getLocale() === locale) {
-      return;
-    }
-    setLocale(locale);
-    this.updateLanguageSelector();
-    this.updateDisplays();
-    this.layoutLogin();
-  }
-
-  private updateLanguageSelector(): void {
-    const currentLocale = getLocale();
-    for (const locale of ["en", "es"] as const) {
-      const selected = currentLocale === locale;
-      this.languageFrames[locale]
-        .setFillStyle(selected ? 0xffcc00 : 0x000000, selected ? 0.2 : 0.25)
-        .setStrokeStyle(
-          selected ? 3 : 1,
-          selected ? 0xffcc00 : 0x666666,
-          selected ? 1 : 0.8
-        );
-      this.languageFlags[locale].setAlpha(selected ? 1 : 0.65);
-    }
-  }
-
   private createEntryButtons() {
     const facebookButton = makeButton(
       this,

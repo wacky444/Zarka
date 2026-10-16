@@ -677,7 +677,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requiredItems: ["detonator"],
     requirements: [
       {
-        description: "Requiere portar un detonador y tener una carga de C4 propia colocada.",
+        description:
+          "Requiere portar un detonador y tener una carga de C4 propia colocada.",
         consumesResource: true
       }
     ],
@@ -772,6 +773,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   chainsaw_attack: {
     id: "chainsaw_attack",
+    hearingRadious: 1,
     revealsHidden: true,
     name: "Atacar con motosierra",
     category: ActionCategory.Primary,
@@ -799,6 +801,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   start_chainsaw: {
     id: "start_chainsaw",
+    hearingRadious: 1,
     name: "Arrancar motosierra",
     category: ActionCategory.Secondary,
     energyCost: 1,
@@ -980,7 +983,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
       }
     ],
     developed: true,
-    notes: ["Destreza 1 reduce el proceso a 3 turnos y evita que se consuma la ganzúa. Debe ver una caja fuerte."],
+    notes: [
+      "Destreza 1 reduce el proceso a 3 turnos y evita que se consuma la ganzúa. Debe ver una caja fuerte."
+    ],
     texture: "Board Game Icons",
     frame: "lock_open.png",
     actionOrder: 12,

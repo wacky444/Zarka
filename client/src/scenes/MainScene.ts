@@ -22,7 +22,7 @@ import {
   stopMenuMusic
 } from "../animation/soundPlayer";
 import { MenuAshEffect } from "../animation/MenuAshEffect";
-import { getLocale, t, toggleLocale } from "../services/i18n";
+import { t } from "../services/i18n";
 import {
   TUTORIAL_MATCH_METADATA_KEY,
   type MatchCardStatus,
@@ -1101,24 +1101,6 @@ export class MainScene extends Phaser.Scene {
       ["main"]
     ).setOrigin(0.5);
 
-    const languageButton = makeButton(
-      this,
-      0,
-      0,
-      this.getLanguageToggleLabel(),
-      () => {
-        toggleLocale();
-        accountSettingsButton.setText(`[ ${t("Settings")} ]`);
-        languageButton.setText(`[ ${this.getLanguageToggleLabel()} ]`);
-        if (this.turnService) {
-          void bindExistingPushSubscription(this.turnService).catch((error: unknown) => {
-            console.warn("Failed to update push notification language:", error);
-          });
-        }
-      },
-      ["main"]
-    ).setOrigin(0.5);
-
     const logoutButton = makeButton(
       this,
       0,
@@ -1141,7 +1123,6 @@ export class MainScene extends Phaser.Scene {
       listMatchesButton,
       myMatchesButton,
       accountSettingsButton,
-      languageButton,
       logoutButton
     ];
     this.mainRoot.add(this.mainButtons);
@@ -1178,9 +1159,6 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  private getLanguageToggleLabel(): string {
-    return getLocale() === "en" ? "Español" : "English";
-  }
 
   private logout(message?: string) {
     stopMenuMusic(this);

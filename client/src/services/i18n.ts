@@ -67,6 +67,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Appearance: "Apariencia",
   Audio: "Audio",
   Notifications: "Notificaciones",
+  Language: "Idioma",
+  "Select language": "Seleccionar idioma",
   Donate: "Donar",
   "Donate zarkans": "Donar zarkans",
   Recipient: "Destinatario",
