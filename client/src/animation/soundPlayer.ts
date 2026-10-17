@@ -63,7 +63,7 @@ export const SOUND_ASSET_FILES: Record<string, string[]> = {
   horror_sting: ["horror_sting.ogg", "horror_sting.mp3"],
   ghost: ["ghost.ogg", "ghost.mp3"],
   ghost_long: ["ghost_long.ogg", "ghost_long.mp3"],
-  sci_fi_hover: ["sci_fi_hover.ogg", "sci_fi_hover.mp3"],
+  sci_fi_hover: ["sci_fi_hover.ogg", "sci_fi_hover.mp3", "sci_fi_hover.wav"],
   sci_fi_select: ["sci_fi_select.ogg", "sci_fi_select.mp3"],
   pop_1: ["pop_1.ogg", "pop_1.mp3"],
   squelching_1: ["squelching_1.ogg", "squelching_1.mp3"],

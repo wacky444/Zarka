@@ -96,20 +96,51 @@ test("tutorial UI policy exposes only the actions and items for the current less
   assert.equal(search.highlightedCharacterSubtab, "status");
   assert.equal(search.autoSelectCharacterSubtab, false);
   assert.equal(search.autoSelectSecondaryAction, false);
+  assert.equal(search.extraPowerEnabled, false);
+
+  const pickup = getTutorialUiPolicy("pickup_items");
+  assert.equal(pickup.autoSelectPrimaryAction, false);
+  assert.equal(pickup.autoSelectSecondaryAction, true);
+  assert.deepEqual(pickup.primaryActionIds, ["pick_up"]);
+
+  const axePlan = getTutorialUiPolicy("plan_axe_attack");
+  assert.equal(axePlan.autoSelectPrimaryAction, false);
+  assert.equal(axePlan.extraPowerEnabled, false);
+  assert.deepEqual(axePlan.primaryActionIds, ["axe_attack"]);
+
+  const feedBot = getTutorialUiPolicy("feed_bot");
+  assert.equal(feedBot.autoSelectSecondaryAction, false);
+  assert.equal(feedBot.extraPowerEnabled, false);
+  assert.deepEqual(feedBot.secondaryActionIds, ["feed"]);
 
   const detective = getTutorialUiPolicy("buy_detective");
   assert.deepEqual(detective.shopIds, ["detective"]);
   assert.equal(detective.highlightedTab, "shop");
+  assert.equal(detective.autoSelectTab, false);
+
+  const botChat = getTutorialUiPolicy("bot_chat");
+  assert.equal(botChat.highlightedTab, "chat");
+  assert.equal(botChat.autoSelectTab, false);
+
+  const openChat = getTutorialUiPolicy("open_chat");
+  assert.equal(openChat.highlightedTab, "chat");
+  assert.equal(openChat.autoSelectTab, false);
+
+  const detectiveResult = getTutorialUiPolicy("read_detective_result");
+  assert.equal(detectiveResult.highlightedTab, "log");
+  assert.equal(detectiveResult.autoSelectTab, false);
 
   const finalScare = getTutorialUiPolicy("scare_bot_to_doomed_cell");
   assert.deepEqual(finalScare.primaryActionIds, ["scare"]);
   assert.equal(finalScare.readyEnabled, true);
+  assert.equal(finalScare.extraPowerEnabled, true);
   assert.ok(finalScare.highlightedControls.includes("extra_execution"));
   assert.ok(finalScare.highlightedControls.includes("location_target"));
 
   const resolveScare = getTutorialUiPolicy("resolve_bot_scare");
   assert.equal(resolveScare.actionEditingEnabled, false);
   assert.equal(resolveScare.readyEnabled, true);
+  assert.equal(resolveScare.extraPowerEnabled, false);
 
   const returnToBot = getTutorialUiPolicy("return_to_bot");
   assert.equal(returnToBot.readyEnabled, true);
@@ -204,6 +235,44 @@ test("tutorial UI policy exposes only the actions and items for the current less
   );
 
   assert.equal(
+    isTutorialReadyActionAllowed("pickup_items", {
+      mainActionId: "pick_up"
+    }),
+    true
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("pickup_items", {
+      mainActionId: null
+    }),
+    false
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("pickup_items", {
+      mainActionId: "axe_attack"
+    }),
+    false
+  );
+
+  assert.equal(
+    isTutorialReadyActionAllowed("feed_bot", {
+      secondaryActionId: "feed"
+    }),
+    true
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("feed_bot", {
+      secondaryActionId: null
+    }),
+    false
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("feed_bot", {
+      secondaryActionId: "search"
+    }),
+    false
+  );
+
+  assert.equal(
     isTutorialReadyActionAllowed("plan_axe_attack", {
       mainActionId: "axe_attack",
       targetPlayerId: "bot1"
@@ -220,6 +289,13 @@ test("tutorial UI policy exposes only the actions and items for the current less
   assert.equal(
     isTutorialReadyActionAllowed("plan_axe_attack", {
       mainActionId: "punch",
+      targetPlayerId: "bot1"
+    }),
+    false
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("plan_axe_attack", {
+      mainActionId: null,
       targetPlayerId: "bot1"
     }),
     false

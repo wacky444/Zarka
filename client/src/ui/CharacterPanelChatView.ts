@@ -4,6 +4,7 @@ import { isMobile } from "../utils/isMobile";
 import { groupChatMessages, type ChatMessageGroupItem } from "./chatMessageGrouping";
 import { THEME } from "./ColorPalette";
 import { makeButton, type UIButton } from "./button";
+import { playRandomSound } from "../animation/soundPlayer";
 
 export type ChatConnectionState = "idle" | "connecting" | "ready" | "error";
 
@@ -94,29 +95,42 @@ export class CharacterPanelChatView {
     this.titleText = this.scene.add
       .text(0, 0, "Match Chat", {
         fontSize: "16px",
+        fontFamily: "Arial, sans-serif",
+        fontStyle: "bold",
         color: THEME.colors.textPrimary
       })
       .setVisible(false);
     this.statusText = this.scene.add
       .text(0, 0, "", {
         fontSize: "14px",
+        fontFamily: "Arial, sans-serif",
         color: THEME.colors.loadingPercent
       })
       .setVisible(false);
     this.messagesBox = this.scene.add
       .rectangle(0, 0, 100, 100, THEME.colors.cardBackground)
+      .setStrokeStyle(1, THEME.colors.collapsedBorder, 1)
       .setOrigin(0, 0)
       .setVisible(false);
-    this.messagesText = this.scene.add
-      .text(0, 0, "", {
-        fontSize: "15px",
-        color: THEME.colors.modalText,
-        wordWrap: { width: 280, useAdvancedWrap: true },
-      })
-      .setVisible(false);
+    this.messagesText = (
+      this.scene.rexUI
+        ? this.scene.rexUI.add.BBCodeText(0, 0, "", {
+            fontSize: "14px",
+            fontFamily: "Arial, sans-serif",
+            color: THEME.colors.modalText,
+            wrap: { mode: "word", width: 280 }
+          })
+        : this.scene.add.text(0, 0, "", {
+            fontSize: "14px",
+            fontFamily: "Arial, sans-serif",
+            color: THEME.colors.modalText,
+            wordWrap: { width: 280, useAdvancedWrap: true }
+          })
+    ) as Phaser.GameObjects.Text;
     this.overlayText = this.scene.add
       .text(0, 0, "No messages yet.", {
         fontSize: "15px",
+        fontFamily: "Arial, sans-serif",
         color: THEME.colors.textMuted,
       })
       .setVisible(false);
@@ -421,6 +435,12 @@ export class CharacterPanelChatView {
   appendMessage(message: ChatMessageViewModel) {
     this.messages = [...this.messages, message].slice(-MAX_MESSAGES);
     this.refreshMessages();
+    if (!message.isSelf) {
+      playRandomSound(this.scene, "sci_fi_hover", {
+        pitchRange: 0,
+        rateRange: 0,
+      });
+    }
   }
 
   setConnectionState(state: ChatConnectionState, message?: string) {
@@ -511,10 +531,12 @@ export class CharacterPanelChatView {
       this.updateOverlayVisibility();
       return;
     }
+    const hasBBCode = Boolean(this.scene.rexUI);
     const groups = groupChatMessages(this.messages);
     let startIndex = 0;
     while (startIndex < groups.length) {
-      const lines = groups.slice(startIndex).map(({ first: entry, content }) => {
+      const formattedGroups = groups.slice(startIndex).map((group) => {
+        const entry = group.first;
         const time = formatTime(entry.timestamp);
         const name = entry.senderLabel.trim();
         const label = entry.isSystem
@@ -526,9 +548,37 @@ export class CharacterPanelChatView {
               : `${name} (You)`
             : "You"
           : name || "Unknown";
-        return `${time} ${label}: ${content}`;
+
+        const senderColor = entry.isSystem
+          ? THEME.colors.zarkanGold
+          : entry.isSelf
+          ? THEME.colors.loadingPercent
+          : THEME.colors.textPrimary;
+
+        const timeTag = hasBBCode
+          ? `[color=${THEME.colors.textMuted}]${time}[/color]`
+          : time;
+        const senderTag = hasBBCode
+          ? `[color=${senderColor}][b]${label}[/b][/color]`
+          : label;
+
+        const groupMessages =
+          group.messages && group.messages.length > 0
+            ? group.messages
+            : [group.first];
+
+        const lines = groupMessages.map((msg, idx) => {
+          const text = msg.content.trim();
+          if (idx === 0) {
+            return `${timeTag} ${senderTag}: ${text}`;
+          }
+          return text;
+        });
+
+        return lines.join("\n");
       });
-      this.messagesText.setText(lines.join("\n"));
+
+      this.messagesText.setText(formattedGroups.join("\n\n"));
       if (
         this.messagesText.height <= this.messageAreaHeight ||
         startIndex === groups.length - 1

@@ -594,6 +594,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       },
       onTabChange: (key, previous) => {
         this.tabLayout.reveal(key);
+        this.updateTabHighlight();
         this.emit("tab-change", key, previous);
       },
       onLogTabOpened: () => {
@@ -677,6 +678,20 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     );
   }
 
+  private updateTabHighlight(): void {
+    if (!this.tabsController) {
+      return;
+    }
+    const policy = this.tutorialStepId ? getTutorialUiPolicy(this.tutorialStepId) : null;
+    const shouldHighlightTab =
+      this.tutorialActive &&
+      policy?.highlightedTab != null &&
+      this.tabsController.getActiveTab() !== policy.highlightedTab;
+    this.tabsController.setHighlightedTab(
+      shouldHighlightTab ? policy!.highlightedTab : null
+    );
+  }
+
   private showStatusElements(): void {
     for (const obj of this.statusElements) {
       const target = obj as Phaser.GameObjects.GameObject & {
@@ -724,6 +739,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.skillsView.setTutorialSkillPolicy(null, false);
       this.shopView.setTutorialShopPolicy(null, null);
       this.characterSubtabs.setHighlightedKey(null);
+      this.tabsController?.setHighlightedTab(null);
       this.updateFromMatch(this.currentMatch, this.currentUserId, this.lastUserMap);
       return;
     }
@@ -746,9 +762,18 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     );
     this.actionPlanView?.setTutorialHighlight(stepId, active);
     if (active && policy.highlightedTab) {
-      this.tabsController.setActiveTab(policy.highlightedTab);
+      if (policy.autoSelectTab) {
+        this.tabsController.setActiveTab(policy.highlightedTab);
+      }
       this.tabLayout.reveal(policy.highlightedTab);
     }
+    const shouldHighlightTab =
+      active &&
+      policy.highlightedTab !== null &&
+      this.tabsController.getActiveTab() !== policy.highlightedTab;
+    this.tabsController.setHighlightedTab(
+      shouldHighlightTab ? policy.highlightedTab : null
+    );
     if (
       active &&
       policy.highlightedCharacterSubtab &&
@@ -776,6 +801,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.currentMatch
       );
     }
+    this.actionPlanView?.setTutorialHighlight(stepId, active);
     this.setReadyEnabled(this.readyEnabled);
   }
 

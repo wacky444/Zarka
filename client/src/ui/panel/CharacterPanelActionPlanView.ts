@@ -1385,6 +1385,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   setTutorialHighlight(stepId: TutorialStepId | null, active: boolean): void {
     this.tutorialStepId = stepId;
     this.tutorialActive = active;
+    this.refreshExtraExecutionSelectorState(this.mainExtraExecutions);
+    this.refreshSecondaryExtraExecutionSelectorState(this.secondaryExtraExecutions);
+    this.refreshExtraSecondaryExecutionSelectorState(this.extraSecondaryExtraExecutions);
     if (!stepId || !active) {
       this.mainActionDropdown.setTutorialHighlight(false);
       this.secondaryActionDropdown.setTutorialHighlight(false);
@@ -1396,11 +1399,16 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     const policy = getTutorialUiPolicy(stepId);
     const isHighlighted = (control: string) =>
       policy.highlightedControls.includes(control as Parameters<typeof policy.highlightedControls.includes>[0]);
-    this.mainActionDropdown.setTutorialHighlight(isHighlighted("main_action"));
+    const shouldHighlightMain =
+      isHighlighted("main_action") &&
+      (stepId !== "pickup_items" || this.mainActionSelection !== "pick_up") &&
+      (stepId !== "plan_axe_attack" || this.mainActionSelection !== "axe_attack");
+    this.mainActionDropdown.setTutorialHighlight(shouldHighlightMain);
 
     const shouldHighlightSecondary =
       isHighlighted("secondary_action") &&
-      (stepId !== "search" || this.secondaryActionSelection !== "search");
+      (stepId !== "search" || this.secondaryActionSelection !== "search") &&
+      (stepId !== "feed_bot" || this.secondaryActionSelection !== "feed");
     this.secondaryActionDropdown.setTutorialHighlight(shouldHighlightSecondary);
 
     this.extraExecutionSelector.setTutorialHighlight(isHighlighted("extra_execution"));
@@ -1413,7 +1421,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     currentUserId: string | null,
     match: MatchRecord | null
   ): void {
-    if (policy.primaryActionIds.length === 1 && currentUserId) {
+    if (
+      policy.autoSelectPrimaryAction &&
+      policy.primaryActionIds.length === 1 &&
+      currentUserId
+    ) {
       const actionId = policy.primaryActionIds[0] ?? null;
       const serverActionId =
         match?.playerCharacters?.[currentUserId]?.actionPlan?.main?.actionId ?? null;
@@ -1952,6 +1964,10 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.refreshItemSelectorState();
     this.refreshSecondStealItemSelectorState();
     this.refreshSecondaryDropdownItems();
+    this.refreshMainDropdownItems();
+    if (this.tutorialActive && this.tutorialStepId) {
+      this.setTutorialHighlight(this.tutorialStepId, this.tutorialActive);
+    }
     this.emit("ready-refresh-request");
     this.emitMainActionChange();
   };
@@ -2497,7 +2513,19 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       this.tutorialStepId === "search" &&
       this.secondaryActionSelection !== "search"
         ? ("search" as ActionId)
-        : null;
+        : this.tutorialActive &&
+            this.tutorialStepId === "pickup_items" &&
+            this.mainActionSelection !== "pick_up"
+          ? ("pick_up" as ActionId)
+          : this.tutorialActive &&
+              this.tutorialStepId === "feed_bot" &&
+              this.secondaryActionSelection !== "feed"
+            ? ("feed" as ActionId)
+            : this.tutorialActive &&
+                this.tutorialStepId === "plan_axe_attack" &&
+                this.mainActionSelection !== "axe_attack"
+              ? ("axe_attack" as ActionId)
+              : null;
 
     return {
       character,
@@ -2817,6 +2845,15 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     return this.currentCharacter?.stats?.energy?.current ?? 0;
   }
 
+  private isTutorialExtraPowerAllowed(): boolean {
+    if (!this.tutorialActive) {
+      return true;
+    }
+    return this.tutorialStepId
+      ? getTutorialUiPolicy(this.tutorialStepId).extraPowerEnabled === true
+      : false;
+  }
+
   private refreshExtraExecutionSelectorState(initialReps = 0): void {
     const actionId = this.mainActionSelection;
     const definition = actionId
@@ -2824,7 +2861,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       : null;
     const extraExecution = definition?.extraExecution ?? null;
     const character = this.currentCharacter;
-    const supports = Boolean(extraExecution && character);
+    const supports = Boolean(
+      extraExecution && character && this.isTutorialExtraPowerAllowed()
+    );
     this.extraExecutionSelector.setVisible(supports);
     this.extraExecutionSelector.setActive(supports);
     if (!supports || !extraExecution || !character) {
@@ -2862,7 +2901,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       : null;
     const extraExecution = definition?.extraExecution ?? null;
     const character = this.currentCharacter;
-    const supports = Boolean(extraExecution && character);
+    const supports = Boolean(
+      extraExecution && character && !this.tutorialActive
+    );
     this.secondaryExtraExecutionSelector.setVisible(supports);
     this.secondaryExtraExecutionSelector.setActive(supports);
     if (!supports || !extraExecution || !character) {
@@ -2903,7 +2944,10 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     const extraExecution = definition?.extraExecution ?? null;
     const character = this.currentCharacter;
     const supports = Boolean(
-      extraExecution && character && this.hasExtraSecondaryAction()
+      extraExecution &&
+        character &&
+        this.hasExtraSecondaryAction() &&
+        !this.tutorialActive
     );
     this.extraSecondaryExtraExecutionSelector.setVisible(supports);
     this.extraSecondaryExtraExecutionSelector.setActive(supports);
@@ -4060,15 +4104,24 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   }
 
   private selectedExtraSecondaryActionSupportsExtraExecution(): boolean {
-    return actionSupportsExtraExecution(this.extraSecondaryActionSelection);
+    return (
+      !this.tutorialActive &&
+      actionSupportsExtraExecution(this.extraSecondaryActionSelection)
+    );
   }
 
   private selectedActionSupportsExtraExecution(): boolean {
-    return actionSupportsExtraExecution(this.mainActionSelection);
+    return (
+      this.isTutorialExtraPowerAllowed() &&
+      actionSupportsExtraExecution(this.mainActionSelection)
+    );
   }
 
   private selectedSecondaryActionSupportsExtraExecution(): boolean {
-    return actionSupportsExtraExecution(this.secondaryActionSelection);
+    return (
+      !this.tutorialActive &&
+      actionSupportsExtraExecution(this.secondaryActionSelection)
+    );
   }
 
   private emitMainActionChange(): void {

@@ -39,8 +39,7 @@ export const TUTORIAL_INSTRUCTIONS: Record<
     hint: "Pick Up is the only available main action. The visible objects are on your cell."
   },
   feed_bot: {
-    instruction:
-      "Use Feed on yourself. It restores energy, and your planned turn will bring the bot to your cell.",
+    instruction: "Use Feed on yourself. It restores energy.",
     hint: "Feed is the only available secondary action. Submit the turn with Ready."
   },
   bot_chat: {

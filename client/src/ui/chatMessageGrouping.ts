@@ -10,6 +10,7 @@ export interface ChatMessageGroupItem {
 export interface GroupedChatMessage {
   first: ChatMessageGroupItem;
   content: string;
+  messages: ChatMessageGroupItem[];
   lastTimestamp: number;
 }
 
@@ -34,12 +35,14 @@ export function groupChatMessages(
       const previousContent = previous.content.trimEnd().replace(/[,:;]+$/u, "");
       const separator = /[.!?…]$/u.test(previousContent) ? " " : ". ";
       previous.content = `${previousContent}${separator}${message.content.trimStart()}`;
+      previous.messages.push(message);
       previous.lastTimestamp = message.timestamp;
       continue;
     }
     groups.push({
       first: message,
       content: message.content,
+      messages: [message],
       lastTimestamp: message.timestamp
     });
   }

@@ -26,13 +26,16 @@ export interface TutorialUiPolicy {
   skillIds: readonly SkillId[];
   shopIds: readonly ShopId[];
   highlightedTab: TabKey | null;
+  autoSelectTab: boolean;
   highlightedCharacterSubtab: "status" | "skills" | null;
   autoSelectCharacterSubtab: boolean;
+  autoSelectPrimaryAction: boolean;
   autoSelectSecondaryAction: boolean;
   highlightedControls: readonly TutorialControlHighlight[];
   mapRequired: boolean;
   actionEditingEnabled: boolean;
   readyEnabled: boolean;
+  extraPowerEnabled: boolean;
 }
 
 const NO_ACTIONS: readonly ActionId[] = [];
@@ -49,13 +52,16 @@ function policy(
     skillIds: NO_SKILLS,
     shopIds: NO_SHOP_ITEMS,
     highlightedTab: null,
+    autoSelectTab: true,
     highlightedCharacterSubtab: null,
     autoSelectCharacterSubtab: false,
+    autoSelectPrimaryAction: true,
     autoSelectSecondaryAction: true,
     highlightedControls: NO_HIGHLIGHTS,
     mapRequired: false,
     actionEditingEnabled: false,
     readyEnabled: false,
+    extraPowerEnabled: false,
     ...options
   };
 }
@@ -87,6 +93,7 @@ const STEP_POLICIES: Record<TutorialStepId, TutorialUiPolicy> = {
   }),
   pickup_items: policy({
     ...STATUS_PANEL,
+    autoSelectPrimaryAction: false,
     highlightedControls: ["main_action"],
     primaryActionIds: ["pick_up"],
     actionEditingEnabled: true,
@@ -94,28 +101,34 @@ const STEP_POLICIES: Record<TutorialStepId, TutorialUiPolicy> = {
   }),
   feed_bot: policy({
     ...STATUS_PANEL,
+    autoSelectSecondaryAction: false,
     highlightedControls: ["secondary_action"],
     secondaryActionIds: ["feed"],
     actionEditingEnabled: true,
     readyEnabled: true
   }),
   bot_chat: policy({
-    highlightedTab: "chat"
+    highlightedTab: "chat",
+    autoSelectTab: false
   }),
   open_chat: policy({
-    highlightedTab: "chat"
+    highlightedTab: "chat",
+    autoSelectTab: false
   }),
   buy_detective: policy({
     highlightedTab: "shop",
+    autoSelectTab: false,
     highlightedControls: ["detective"],
     shopIds: ["detective"]
   }),
   read_detective_result: policy({
-    highlightedTab: "log"
+    highlightedTab: "log",
+    autoSelectTab: false
   }),
   plan_axe_attack: policy({
     ...STATUS_PANEL,
-    highlightedControls: ["main_action", "player_target"],
+    autoSelectPrimaryAction: false,
+    highlightedControls: ["main_action"],
     primaryActionIds: ["axe_attack"],
     actionEditingEnabled: true,
     readyEnabled: true
@@ -144,13 +157,15 @@ const STEP_POLICIES: Record<TutorialStepId, TutorialUiPolicy> = {
     ],
     primaryActionIds: ["scare"],
     actionEditingEnabled: true,
-    readyEnabled: true
+    readyEnabled: true,
+    extraPowerEnabled: true
   }),
   resolve_destruction: policy({
     ...STATUS_PANEL,
     highlightedControls: ["ready"],
     primaryActionIds: ["scare"],
-    readyEnabled: true
+    readyEnabled: true,
+    extraPowerEnabled: true
   }),
   victory_recap: policy()
 };
@@ -180,6 +195,12 @@ export function isTutorialReadyActionAllowed(
   }
   if (stepId === "search") {
     return options.secondaryActionId === "search";
+  }
+  if (stepId === "pickup_items") {
+    return options.mainActionId === "pick_up";
+  }
+  if (stepId === "feed_bot") {
+    return options.secondaryActionId === "feed";
   }
   if (stepId === "plan_axe_attack") {
     const isAxe = options.mainActionId === "axe_attack";

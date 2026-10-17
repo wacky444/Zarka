@@ -705,6 +705,7 @@ export class GameScene extends Phaser.Scene {
     );
     this.characterPanel.on("chat-send", this.handleChatSend, this);
     this.characterPanel.on("chat-tab-opened", this.handleChatTabOpened, this);
+    this.characterPanel.on("chat-tab-closed", this.handleChatTabClosed, this);
     this.characterPanel.on("apply-skills", this.handleApplySkills, this);
     this.characterPanel.on(
       "testament-change",
@@ -960,6 +961,11 @@ export class GameScene extends Phaser.Scene {
       this.characterPanel?.off(
         "chat-tab-opened",
         this.handleChatTabOpened,
+        this
+      );
+      this.characterPanel?.off(
+        "chat-tab-closed",
+        this.handleChatTabClosed,
         this
       );
       this.characterPanel?.off("shop-purchase", this.handleShopPurchase, this);
@@ -2602,6 +2608,10 @@ export class GameScene extends Phaser.Scene {
     if (matchId) {
       await this.initMatchChat(matchId);
     }
+  }
+
+  private handleChatTabClosed() {
+    this.chatTabActive = false;
   }
 
   private async refreshChatHistory() {

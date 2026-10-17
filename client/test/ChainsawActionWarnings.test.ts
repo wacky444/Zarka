@@ -147,3 +147,18 @@ test("chainsaw warning warns if start is in secondary and attack is in primary",
     setLocale(previousLocale);
   }
 });
+
+test("continue to report translates correctly in Spanish and English", () => {
+  const previousLocale = getLocale();
+  try {
+    setLocale("es");
+    assert.equal(t("Continue to Report"), "Continuar al informe");
+    assert.equal(t("continue to report"), "continuar al informe");
+    setLocale("en");
+    assert.equal(t("Continue to Report"), "Continue to Report");
+    assert.equal(t("Continuar al informe"), "Continue to Report");
+  } finally {
+    setLocale(previousLocale);
+  }
+});
+

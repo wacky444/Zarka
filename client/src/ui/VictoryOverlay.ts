@@ -100,7 +100,7 @@ export class VictoryOverlay {
     this.container.add(this.statsText);
 
     this.menuButton = scene.add
-      .text(width / 2, height / 2 + 150, "  Return to Main Menu  ", {
+      .text(width / 2, height / 2 + 150, t("Continue to Report"), {
         fontSize: "20px",
         fontStyle: "bold",
         fontFamily: "Arial, sans-serif",
@@ -139,6 +139,27 @@ export class VictoryOverlay {
         this.subtitleText.setWordWrapWidth(Math.max(240, width - 40), true);
         this.statsText.setStyle({ align: "center" });
         this.statsText.setWordWrapWidth(Math.max(240, width - 40), true);
+        this.rewardBadge.setText(`✓ ${t("Tutorial complete")}`);
+        this.rewardBadge.setStyle({
+          fontSize: "26px",
+          fontStyle: "bold",
+          color: "#4ade80",
+          backgroundColor: "",
+          padding: { x: 0, y: 0 }
+        });
+      } else {
+        this.subtitleText.setStyle({ fontSize: "22px", align: "center" });
+        this.subtitleText.setWordWrapWidth(0);
+        this.statsText.setStyle({ align: "center" });
+        this.statsText.setWordWrapWidth(0);
+        this.rewardBadge.setText("🏆 +1 WIN!");
+        this.rewardBadge.setStyle({
+          fontSize: "32px",
+          fontStyle: "bold",
+          color: "#fef08a",
+          backgroundColor: "#854d0e",
+          padding: { x: 20, y: 10 }
+        });
       }
       this.titleText.setText("VICTORY!");
       this.titleText.setStyle({
@@ -150,13 +171,6 @@ export class VictoryOverlay {
           ? t("You won by combining information, preparation, positioning, and timing.")
           : "You are the last character standing!"
       );
-      this.rewardBadge.setText(
-        data.tutorial ? t("Tutorial complete") : "🏆 +1 WIN!"
-      );
-      this.rewardBadge.setStyle({
-        color: "#fef08a",
-        backgroundColor: "#854d0e"
-      });
       this.rewardBadge.setVisible(true);
     } else if (data.result === "loss") {
       this.titleText.setText("DEFEAT");
@@ -213,7 +227,7 @@ export class VictoryOverlay {
     }
 
     this.reportTransitionStarted = false;
-    this.menuButton.setText("Continue to Report");
+    this.menuButton.setText(t("Continue to Report"));
     this.menuButton.setInteractive({ useHandCursor: true });
     this.menuButton.setScale(0.8);
     this.menuButton.setAlpha(0);

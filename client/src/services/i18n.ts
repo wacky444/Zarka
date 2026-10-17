@@ -8,6 +8,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "End Game Report": "Informe final",
   "View replay": "Ver repetición",
   "Back to Report": "Volver al informe",
+  "Continue to Report": "Continuar al informe",
+  "continue to report": "continuar al informe",
   "Loading end-game report...": "Cargando informe final...",
   "Loading game...": "Cargando partida...",
   "Report unavailable": "Informe no disponible",
@@ -490,8 +492,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
     "Recoge la venda, el hacha y la comida visibles para usarlos más tarde.",
   "Pick Up is the only available main action. The visible objects are on your cell.":
     "Coger es la única acción principal disponible. Los objetos visibles están en tu casilla.",
-  "Use Feed on yourself. It restores energy, and your planned turn will bring the bot to your cell.":
-    "Usa Alimentar contigo. Recuperarás energía y el bot llegará a tu casilla durante el turno.",
+  "Use Feed on yourself. It restores energy.":
+    "Usa Alimentar contigo. Recuperarás energía.",
   "Feed is the only available secondary action. Submit the turn with Ready.":
     "Alimentar es la única acción secundaria disponible. Envía el turno con Listo.",
   "The bot has entered your cell and sent a message. Open Chat to read it.":
@@ -865,6 +867,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
 };
 
 const ENGLISH_GAME_NAMES: Record<string, string> = {
+  "Continuar al informe": "Continue to Report",
+  "continuar al informe": "continue to report",
   "Detecta incendios a cualquier distancia e identifica a los jugadores en la misma localización o hasta 1 localización de distancia":
     "Detects fires at any distance and identifies players in the same or an adjacent location",
   "Crear un incendio": "Start a fire",

@@ -108,6 +108,30 @@ test("groups at the two-minute boundary without duplicate punctuation", () => {
   );
 });
 
+test("preserves individual messages within a grouped chat entry", () => {
+  const grouped = groupChatMessages([
+    {
+      senderId: "bot",
+      senderLabel: "Tutorial Bot",
+      content: "First message",
+      timestamp: 1_000,
+      isSelf: false
+    },
+    {
+      senderId: "bot",
+      senderLabel: "Tutorial Bot",
+      content: "Second message",
+      timestamp: 50_000,
+      isSelf: false
+    }
+  ]);
+
+  assert.equal(grouped.length, 1);
+  assert.equal(grouped[0].messages.length, 2);
+  assert.equal(grouped[0].messages[0].content, "First message");
+  assert.equal(grouped[0].messages[1].content, "Second message");
+});
+
 test("chat reconnects and rejoins after socket disconnect before sending", async () => {
   const sockets: FakeSocket[] = [];
   const client = {
