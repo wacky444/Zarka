@@ -432,6 +432,11 @@ export class CharacterPanelSkillsView {
     return this.confirmBtnHighlighted;
   }
 
+  isSkillUpgradeHighlighted(skillId: SkillId): boolean {
+    const item = this.cardItems.find((card) => card.skill.id === skillId);
+    return item?.upgradeBtnBg.isStroked ?? false;
+  }
+
   setTutorialSkillPolicy(
     skillIds: readonly SkillId[] | null,
     isTutorialChooseSkills: boolean
@@ -611,6 +616,16 @@ export class CharacterPanelSkillsView {
       this.confirmBtnBg.setStrokeStyle(3, THEME.colors.tutorialHighlight, 1);
     } else {
       this.confirmBtnBg.setStrokeStyle(1, THEME.colors.buttonConfirmBorder, 0.8);
+    }
+
+    for (const item of this.cardItems) {
+      const isHighlighted =
+        item.skill.id === "strength2" && highlights.highlightStrength2Upgrade;
+      if (isHighlighted) {
+        item.upgradeBtnBg.setStrokeStyle(3, THEME.colors.tutorialHighlight, 1);
+      } else {
+        item.upgradeBtnBg.setStrokeStyle();
+      }
     }
   }
 

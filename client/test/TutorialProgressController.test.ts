@@ -316,50 +316,70 @@ test("tutorial steps are grouped into 5 display steps while preserving all progr
   );
 });
 
-test("tutorial skills highlights guide player to defense tab and confirm button", () => {
+test("tutorial skills highlights guide player to defense tab, strength2 upgrade button, and confirm button", () => {
   // Inactive tutorial mode
   assert.deepEqual(
     getTutorialSkillHighlights({
       isTutorialChooseSkills: false,
       pendingUpgrades: []
     }),
-    { highlightedCategory: null, confirmHighlighted: false }
+    {
+      highlightedCategory: null,
+      confirmHighlighted: false,
+      highlightStrength2Upgrade: false
+    }
   );
 
-  // Active tutorial mode, neither selected -> Defense subtab highlighted
+  // Active tutorial mode, neither selected -> Defense subtab and Strength 2 upgrade button highlighted
   assert.deepEqual(
     getTutorialSkillHighlights({
       isTutorialChooseSkills: true,
       pendingUpgrades: []
     }),
-    { highlightedCategory: "defense", confirmHighlighted: false }
+    {
+      highlightedCategory: "defense",
+      confirmHighlighted: false,
+      highlightStrength2Upgrade: true
+    }
   );
 
-  // Only strength2 selected -> Defense subtab highlighted
+  // Only strength2 selected -> Defense subtab highlighted, strength2 upgrade button NOT highlighted
   assert.deepEqual(
     getTutorialSkillHighlights({
       isTutorialChooseSkills: true,
       pendingUpgrades: ["strength2"]
     }),
-    { highlightedCategory: "defense", confirmHighlighted: false }
+    {
+      highlightedCategory: "defense",
+      confirmHighlighted: false,
+      highlightStrength2Upgrade: false
+    }
   );
 
-  // Only vitality selected -> Offensive subtab highlighted
+  // Only vitality selected -> Offensive subtab highlighted, strength2 upgrade button highlighted
   assert.deepEqual(
     getTutorialSkillHighlights({
       isTutorialChooseSkills: true,
       pendingUpgrades: ["vitality"]
     }),
-    { highlightedCategory: "offensive", confirmHighlighted: false }
+    {
+      highlightedCategory: "offensive",
+      confirmHighlighted: false,
+      highlightStrength2Upgrade: true
+    }
   );
 
-  // Both skills selected -> No subtab highlighted, confirm button highlighted
+  // Both skills selected -> No subtab highlighted, confirm button highlighted, strength2 upgrade button NOT highlighted
   assert.deepEqual(
     getTutorialSkillHighlights({
       isTutorialChooseSkills: true,
       pendingUpgrades: ["vitality", "strength2"]
     }),
-    { highlightedCategory: null, confirmHighlighted: true }
+    {
+      highlightedCategory: null,
+      confirmHighlighted: true,
+      highlightStrength2Upgrade: false
+    }
   );
 
   assert.deepEqual(
@@ -367,7 +387,11 @@ test("tutorial skills highlights guide player to defense tab and confirm button"
       isTutorialChooseSkills: true,
       pendingUpgrades: ["strength2", "vitality"]
     }),
-    { highlightedCategory: null, confirmHighlighted: true }
+    {
+      highlightedCategory: null,
+      confirmHighlighted: true,
+      highlightStrength2Upgrade: false
+    }
   );
 
   // With committed abilities
@@ -377,7 +401,24 @@ test("tutorial skills highlights guide player to defense tab and confirm button"
       pendingUpgrades: ["strength2"],
       abilities: ["vitality"]
     }),
-    { highlightedCategory: null, confirmHighlighted: true }
+    {
+      highlightedCategory: null,
+      confirmHighlighted: true,
+      highlightStrength2Upgrade: false
+    }
+  );
+
+  assert.deepEqual(
+    getTutorialSkillHighlights({
+      isTutorialChooseSkills: true,
+      pendingUpgrades: [],
+      abilities: ["strength2"]
+    }),
+    {
+      highlightedCategory: "defense",
+      confirmHighlighted: false,
+      highlightStrength2Upgrade: false
+    }
   );
 });
 

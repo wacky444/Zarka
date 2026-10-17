@@ -206,6 +206,7 @@ export function isTutorialReadyActionAllowed(
 export interface TutorialSkillHighlightState {
   highlightedCategory: SkillCategory | null;
   confirmHighlighted: boolean;
+  highlightStrength2Upgrade: boolean;
 }
 
 export function getTutorialSkillHighlights(options: {
@@ -216,7 +217,8 @@ export function getTutorialSkillHighlights(options: {
   if (!options.isTutorialChooseSkills) {
     return {
       highlightedCategory: null,
-      confirmHighlighted: false
+      confirmHighlighted: false,
+      highlightStrength2Upgrade: false
     };
   }
 
@@ -233,7 +235,8 @@ export function getTutorialSkillHighlights(options: {
   if (bothSelected) {
     return {
       highlightedCategory: null,
-      confirmHighlighted: true
+      confirmHighlighted: true,
+      highlightStrength2Upgrade: false
     };
   }
 
@@ -243,6 +246,7 @@ export function getTutorialSkillHighlights(options: {
       : !hasStrength
         ? "offensive"
         : null,
-    confirmHighlighted: false
+    confirmHighlighted: false,
+    highlightStrength2Upgrade: !hasStrength
   };
 }
