@@ -207,6 +207,7 @@ export interface TutorialSkillHighlightState {
   highlightedCategory: SkillCategory | null;
   confirmHighlighted: boolean;
   highlightStrength2Upgrade: boolean;
+  highlightVitalityUpgrade: boolean;
 }
 
 export function getTutorialSkillHighlights(options: {
@@ -218,7 +219,8 @@ export function getTutorialSkillHighlights(options: {
     return {
       highlightedCategory: null,
       confirmHighlighted: false,
-      highlightStrength2Upgrade: false
+      highlightStrength2Upgrade: false,
+      highlightVitalityUpgrade: false
     };
   }
 
@@ -236,7 +238,8 @@ export function getTutorialSkillHighlights(options: {
     return {
       highlightedCategory: null,
       confirmHighlighted: true,
-      highlightStrength2Upgrade: false
+      highlightStrength2Upgrade: false,
+      highlightVitalityUpgrade: false
     };
   }
 
@@ -247,6 +250,7 @@ export function getTutorialSkillHighlights(options: {
         ? "offensive"
         : null,
     confirmHighlighted: false,
-    highlightStrength2Upgrade: !hasStrength
+    highlightStrength2Upgrade: !hasStrength,
+    highlightVitalityUpgrade: !hasVitality
   };
 }

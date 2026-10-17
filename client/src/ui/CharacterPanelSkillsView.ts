@@ -619,9 +619,11 @@ export class CharacterPanelSkillsView {
     }
 
     for (const item of this.cardItems) {
-      const isHighlighted =
+      const isStrength2Highlighted =
         item.skill.id === "strength2" && highlights.highlightStrength2Upgrade;
-      if (isHighlighted) {
+      const isVitalityHighlighted =
+        item.skill.id === "vitality" && highlights.highlightVitalityUpgrade;
+      if (isStrength2Highlighted || isVitalityHighlighted) {
         item.upgradeBtnBg.setStrokeStyle(3, THEME.colors.tutorialHighlight, 1);
       } else {
         item.upgradeBtnBg.setStrokeStyle();

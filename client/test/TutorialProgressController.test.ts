@@ -316,7 +316,7 @@ test("tutorial steps are grouped into 5 display steps while preserving all progr
   );
 });
 
-test("tutorial skills highlights guide player to defense tab, strength2 upgrade button, and confirm button", () => {
+test("tutorial skills highlights guide player to defense tab, strength2 upgrade button, vitality upgrade button, and confirm button", () => {
   // Inactive tutorial mode
   assert.deepEqual(
     getTutorialSkillHighlights({
@@ -326,11 +326,12 @@ test("tutorial skills highlights guide player to defense tab, strength2 upgrade 
     {
       highlightedCategory: null,
       confirmHighlighted: false,
-      highlightStrength2Upgrade: false
+      highlightStrength2Upgrade: false,
+      highlightVitalityUpgrade: false
     }
   );
 
-  // Active tutorial mode, neither selected -> Defense subtab and Strength 2 upgrade button highlighted
+  // Active tutorial mode, neither selected -> Defense subtab, Strength 2 upgrade button, and Vitality upgrade button highlighted
   assert.deepEqual(
     getTutorialSkillHighlights({
       isTutorialChooseSkills: true,
@@ -339,11 +340,12 @@ test("tutorial skills highlights guide player to defense tab, strength2 upgrade 
     {
       highlightedCategory: "defense",
       confirmHighlighted: false,
-      highlightStrength2Upgrade: true
+      highlightStrength2Upgrade: true,
+      highlightVitalityUpgrade: true
     }
   );
 
-  // Only strength2 selected -> Defense subtab highlighted, strength2 upgrade button NOT highlighted
+  // Only strength2 selected -> Defense subtab and Vitality upgrade button highlighted, strength2 upgrade button NOT highlighted
   assert.deepEqual(
     getTutorialSkillHighlights({
       isTutorialChooseSkills: true,
@@ -352,11 +354,12 @@ test("tutorial skills highlights guide player to defense tab, strength2 upgrade 
     {
       highlightedCategory: "defense",
       confirmHighlighted: false,
-      highlightStrength2Upgrade: false
+      highlightStrength2Upgrade: false,
+      highlightVitalityUpgrade: true
     }
   );
 
-  // Only vitality selected -> Offensive subtab highlighted, strength2 upgrade button highlighted
+  // Only vitality selected -> Offensive subtab and Strength 2 upgrade button highlighted, vitality upgrade button NOT highlighted
   assert.deepEqual(
     getTutorialSkillHighlights({
       isTutorialChooseSkills: true,
@@ -365,11 +368,12 @@ test("tutorial skills highlights guide player to defense tab, strength2 upgrade 
     {
       highlightedCategory: "offensive",
       confirmHighlighted: false,
-      highlightStrength2Upgrade: true
+      highlightStrength2Upgrade: true,
+      highlightVitalityUpgrade: false
     }
   );
 
-  // Both skills selected -> No subtab highlighted, confirm button highlighted, strength2 upgrade button NOT highlighted
+  // Both skills selected -> No subtab highlighted, confirm button highlighted, both upgrade buttons NOT highlighted
   assert.deepEqual(
     getTutorialSkillHighlights({
       isTutorialChooseSkills: true,
@@ -378,7 +382,8 @@ test("tutorial skills highlights guide player to defense tab, strength2 upgrade 
     {
       highlightedCategory: null,
       confirmHighlighted: true,
-      highlightStrength2Upgrade: false
+      highlightStrength2Upgrade: false,
+      highlightVitalityUpgrade: false
     }
   );
 
@@ -390,7 +395,8 @@ test("tutorial skills highlights guide player to defense tab, strength2 upgrade 
     {
       highlightedCategory: null,
       confirmHighlighted: true,
-      highlightStrength2Upgrade: false
+      highlightStrength2Upgrade: false,
+      highlightVitalityUpgrade: false
     }
   );
 
@@ -404,7 +410,8 @@ test("tutorial skills highlights guide player to defense tab, strength2 upgrade 
     {
       highlightedCategory: null,
       confirmHighlighted: true,
-      highlightStrength2Upgrade: false
+      highlightStrength2Upgrade: false,
+      highlightVitalityUpgrade: false
     }
   );
 
@@ -417,7 +424,8 @@ test("tutorial skills highlights guide player to defense tab, strength2 upgrade 
     {
       highlightedCategory: "defense",
       confirmHighlighted: false,
-      highlightStrength2Upgrade: false
+      highlightStrength2Upgrade: false,
+      highlightVitalityUpgrade: true
     }
   );
 });
