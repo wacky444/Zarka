@@ -359,9 +359,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.emit("dexterity3-selection-change", itemId);
     });
     this.actionPlanView.on("main-action-change", (payload: MainActionSelection) => {
+      this.setReadyEnabled(this.readyEnabled);
       this.emit("main-action-change", payload);
     });
     this.actionPlanView.on("secondary-action-change", (payload: SecondaryActionSelection) => {
+      this.setReadyEnabled(this.readyEnabled);
       this.emit("secondary-action-change", payload);
     });
     this.actionPlanView.on("extra-secondary-action-change", (payload: SecondaryActionSelection) => {

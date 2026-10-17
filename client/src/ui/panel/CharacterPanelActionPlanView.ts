@@ -1490,7 +1490,12 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   }
 
   getSecondaryActionSelectionId(): string | null {
-    return this.secondaryActionSelection;
+    return (
+      this.secondaryActionSelection ??
+      this.secondaryActionDropdown?.getValue() ??
+      this.currentCharacter?.actionPlan?.secondary?.actionId ??
+      null
+    );
   }
 
   getExtraSecondaryActionSelectionId(): string | null {

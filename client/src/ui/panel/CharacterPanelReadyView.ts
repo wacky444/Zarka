@@ -235,13 +235,15 @@ export class CharacterPanelReadyView {
     this.lastRefreshOptions = options;
     const hasUnspentSkillPoints = options.unspentSkillPoints > 0;
     const mustSpendSkillPoints =
-      options.currentTurn === 0 && hasUnspentSkillPoints;
+      !options.tutorialActive &&
+      options.currentTurn === 0 &&
+      hasUnspentSkillPoints;
     this.readyEnabled = options.enabled && !mustSpendSkillPoints;
 
     const showReady =
-      this.readyEnabled &&
-      (!options.tutorialActive ||
-        (options.tutorialReadyEnabled && options.tutorialReadyAllowed)) &&
+      (options.tutorialActive
+        ? options.tutorialReadyEnabled && options.tutorialReadyAllowed
+        : this.readyEnabled) &&
       options.isCharacterActive &&
       options.isStatusActive;
 
