@@ -2,6 +2,7 @@ import {
   type ActionId,
   type Axial,
   type ShopId,
+  type SkillCategory,
   type SkillId,
   type TutorialStepId,
   TUTORIAL_CELL_COORDS
@@ -190,4 +191,48 @@ export function isTutorialReadyActionAllowed(
     return isScare && hasExtraPower && isDoomedCell;
   }
   return true;
+}
+
+export interface TutorialSkillHighlightState {
+  highlightedCategory: SkillCategory | null;
+  confirmHighlighted: boolean;
+}
+
+export function getTutorialSkillHighlights(options: {
+  isTutorialChooseSkills: boolean;
+  pendingUpgrades: readonly SkillId[];
+  abilities?: readonly SkillId[];
+}): TutorialSkillHighlightState {
+  if (!options.isTutorialChooseSkills) {
+    return {
+      highlightedCategory: null,
+      confirmHighlighted: false
+    };
+  }
+
+  const abilities = options.abilities ?? [];
+  const hasVitality =
+    options.pendingUpgrades.indexOf("vitality") !== -1 ||
+    abilities.indexOf("vitality") !== -1;
+  const hasStrength =
+    options.pendingUpgrades.indexOf("strength2") !== -1 ||
+    abilities.indexOf("strength2") !== -1;
+
+  const bothSelected = hasVitality && hasStrength;
+
+  if (bothSelected) {
+    return {
+      highlightedCategory: null,
+      confirmHighlighted: true
+    };
+  }
+
+  return {
+    highlightedCategory: !hasVitality
+      ? "defense"
+      : !hasStrength
+        ? "offensive"
+        : null,
+    confirmHighlighted: false
+  };
 }

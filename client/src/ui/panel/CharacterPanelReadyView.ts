@@ -4,6 +4,7 @@ import { ItemTooltipManager } from "../ItemTooltip";
 import { ReadyWarning } from "./ReadyWarning";
 import { getTutorialUiPolicy } from "../../tutorial/TutorialUiPolicy";
 import { t } from "../../services/i18n";
+import { THEME } from "../ColorPalette";
 
 export interface CharacterPanelReadyViewConfig {
   scene: Phaser.Scene;
@@ -278,9 +279,13 @@ export class CharacterPanelReadyView {
                 options.tutorialStepId
               ).highlightedControls.includes("ready")
             : false;
-      this.readyToggle.setColor(isReadyHighlighted ? "#fbbf24" : "#ffffff");
+      this.readyToggle.setColor(
+        isReadyHighlighted
+          ? THEME.colors.tutorialHighlightText
+          : THEME.colors.textPrimary
+      );
     } else {
-      this.readyToggle.setColor("#ffffff");
+      this.readyToggle.setColor(THEME.colors.textPrimary);
     }
     this.syncReadyPulse();
   }

@@ -1734,7 +1734,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
 
   private updateCollapsedBorder(): void {
     const color = this.tutorialHighlighted
-      ? 0xfbbf24
+      ? THEME.colors.tutorialHighlight
       : THEME.colors.collapsedBorder;
     this.background.setStrokeStyle?.(
       this.tutorialHighlighted ? 3 : 2,

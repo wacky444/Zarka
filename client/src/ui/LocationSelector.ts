@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import type { Axial } from "@shared";
 import { makeButton, type UIButton } from "./button";
+import { THEME } from "./ColorPalette";
 
 const SELECT_LABEL = "[ Select target ]";
 const SELECT_PENDING_LABEL = "[ Selecting... ]";
@@ -71,8 +72,13 @@ export class LocationSelector extends Phaser.GameObjects.Container {
     if (this.disposed) {
       return;
     }
-    this.label.setColor(highlighted ? "#fbbf24" : "#ffffff");
-    this.label.setStroke(highlighted ? "#fbbf24" : "#000000", highlighted ? 1 : 0);
+    this.label.setColor(
+      highlighted ? THEME.colors.tutorialHighlightText : THEME.colors.textPrimary
+    );
+    this.label.setStroke(
+      highlighted ? THEME.colors.tutorialHighlightText : "#000000",
+      highlighted ? 1 : 0
+    );
   }
 
   setValue(value: Axial | null): void {

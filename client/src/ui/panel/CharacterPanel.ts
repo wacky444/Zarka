@@ -711,7 +711,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.tutorialActionEditingEnabled = true;
       this.tutorialReadyEnabled = true;
       this.actionPlanView?.setTutorialHighlight(null, false);
-      this.skillsView.setAllowedSkillIds(null);
+      this.skillsView.setTutorialSkillPolicy(null, false);
       this.shopView.setTutorialShopPolicy(null, null);
       this.updateFromMatch(this.currentMatch, this.currentUserId, this.lastUserMap);
       return;
@@ -725,7 +725,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.tutorialActionEditingEnabled = !active || policy.actionEditingEnabled;
     this.tutorialReadyEnabled = !active || policy.readyEnabled;
 
-    this.skillsView.setAllowedSkillIds(active ? policy.skillIds : null);
+    this.skillsView.setTutorialSkillPolicy(
+      active ? policy.skillIds : null,
+      active && stepId === "choose_skills"
+    );
     this.shopView.setTutorialShopPolicy(
       active ? policy.shopIds : null,
       policy.highlightedControls.includes("detective") ? "detective" : null

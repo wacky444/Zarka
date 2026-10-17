@@ -6,6 +6,7 @@ import {
 import { t } from "../services/i18n";
 import { makeButton, type UIButton } from "./button";
 import { TUTORIAL_INSTRUCTIONS } from "../tutorial/TutorialInstructions";
+import { THEME } from "./ColorPalette";
 
 export class TutorialInstructionView {
   private readonly container: Phaser.GameObjects.Container;
@@ -26,19 +27,19 @@ export class TutorialInstructionView {
     this.background = scene.add
       .rectangle(0, 0, 400, 124, 0x111827, 0.96)
       .setOrigin(0, 0)
-      .setStrokeStyle(2, 0xfbbf24, 1)
+      .setStrokeStyle(2, THEME.colors.tutorialHighlight, 1)
       .setInteractive({ useHandCursor: false });
     this.titleText = scene.add
       .text(14, 10, "", {
         fontSize: "15px",
         fontStyle: "bold",
-        color: "#fbbf24"
+        color: THEME.colors.tutorialHighlightText
       })
       .setOrigin(0, 0);
     this.instructionText = scene.add
       .text(14, 36, "", {
         fontSize: "16px",
-        color: "#ffffff",
+        color: THEME.colors.textPrimary,
         lineSpacing: 3,
         wordWrap: { width: 372, useAdvancedWrap: true }
       })
@@ -46,7 +47,7 @@ export class TutorialInstructionView {
     this.hintText = scene.add
       .text(14, 122, "", {
         fontSize: "13px",
-        color: "#cbd5f5",
+        color: THEME.colors.modalText,
         lineSpacing: 2,
         wordWrap: { width: 240, useAdvancedWrap: true }
       })

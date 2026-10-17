@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { TutorialProgressController } from "../src/tutorial/TutorialProgressController.ts";
 import {
+  getTutorialSkillHighlights,
   getTutorialUiPolicy,
   isTutorialReadyActionAllowed
 } from "../src/tutorial/TutorialUiPolicy.ts";
@@ -290,6 +291,71 @@ test("tutorial steps are grouped into 5 display steps while preserving all progr
   assert.equal(
     formatTutorialHeader("victory_recap", mockTranslate),
     "Tutorial · Paso 5/5"
+  );
+});
+
+test("tutorial skills highlights guide player to defense tab and confirm button", () => {
+  // Inactive tutorial mode
+  assert.deepEqual(
+    getTutorialSkillHighlights({
+      isTutorialChooseSkills: false,
+      pendingUpgrades: []
+    }),
+    { highlightedCategory: null, confirmHighlighted: false }
+  );
+
+  // Active tutorial mode, neither selected -> Defense subtab highlighted
+  assert.deepEqual(
+    getTutorialSkillHighlights({
+      isTutorialChooseSkills: true,
+      pendingUpgrades: []
+    }),
+    { highlightedCategory: "defense", confirmHighlighted: false }
+  );
+
+  // Only strength2 selected -> Defense subtab highlighted
+  assert.deepEqual(
+    getTutorialSkillHighlights({
+      isTutorialChooseSkills: true,
+      pendingUpgrades: ["strength2"]
+    }),
+    { highlightedCategory: "defense", confirmHighlighted: false }
+  );
+
+  // Only vitality selected -> Offensive subtab highlighted
+  assert.deepEqual(
+    getTutorialSkillHighlights({
+      isTutorialChooseSkills: true,
+      pendingUpgrades: ["vitality"]
+    }),
+    { highlightedCategory: "offensive", confirmHighlighted: false }
+  );
+
+  // Both skills selected -> No subtab highlighted, confirm button highlighted
+  assert.deepEqual(
+    getTutorialSkillHighlights({
+      isTutorialChooseSkills: true,
+      pendingUpgrades: ["vitality", "strength2"]
+    }),
+    { highlightedCategory: null, confirmHighlighted: true }
+  );
+
+  assert.deepEqual(
+    getTutorialSkillHighlights({
+      isTutorialChooseSkills: true,
+      pendingUpgrades: ["strength2", "vitality"]
+    }),
+    { highlightedCategory: null, confirmHighlighted: true }
+  );
+
+  // With committed abilities
+  assert.deepEqual(
+    getTutorialSkillHighlights({
+      isTutorialChooseSkills: true,
+      pendingUpgrades: ["strength2"],
+      abilities: ["vitality"]
+    }),
+    { highlightedCategory: null, confirmHighlighted: true }
   );
 });
 

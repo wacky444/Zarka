@@ -9,6 +9,7 @@ import {
 } from "@shared";
 import { Subtabs } from "./Subtabs";
 import { THEME } from "./ColorPalette";
+import { getTutorialSkillHighlights } from "../tutorial/TutorialUiPolicy";
 
 export interface CharacterPanelSkillsViewLayout {
   margin: number;
@@ -75,6 +76,8 @@ export class CharacterPanelSkillsView {
   private currentCharacter: PlayerCharacter | null = null;
   private pendingUpgrades: SkillId[] = [];
   private allowedSkillIds: ReadonlySet<SkillId> | null = null;
+  private tutorialChooseSkillsMode = false;
+  private confirmBtnHighlighted = false;
   private onConfirmSkills?: (skillIds: SkillId[]) => void;
 
   constructor(
@@ -87,10 +90,10 @@ export class CharacterPanelSkillsView {
     const height = Math.max(180, layout.panelHeight - startY - layout.margin);
 
     this.background = scene.add
-      .rectangle(layout.margin, startY, width, height, 0x1b2440)
+      .rectangle(layout.margin, startY, width, height, THEME.colors.panelBackground)
       .setOrigin(0, 0)
       .setVisible(false);
-    this.background.setStrokeStyle?.(1, 0x253055, 0.8);
+    this.background.setStrokeStyle?.(1, THEME.colors.panelBorder, 0.8);
     parent.add(this.background);
 
     const headerY = startY + 8;
@@ -101,12 +104,12 @@ export class CharacterPanelSkillsView {
         headerY,
         headerWidth,
         HEADER_HEIGHT,
-        0x141c33,
+        THEME.colors.headerBackground,
         0.95
       )
       .setOrigin(0, 0)
       .setVisible(false);
-    this.headerBox.setStrokeStyle?.(1, 0x2d3a60, 0.9);
+    this.headerBox.setStrokeStyle?.(1, THEME.colors.headerBorder, 0.9);
     parent.add(this.headerBox);
 
     this.unspentPointsLabel = scene.add
@@ -116,7 +119,7 @@ export class CharacterPanelSkillsView {
         "Available Skill: 0",
         {
           fontSize: "15px",
-          color: "#facc15"
+          color: THEME.colors.zarkanGold
         }
       )
       .setOrigin(0, 0.5)
@@ -127,7 +130,7 @@ export class CharacterPanelSkillsView {
       layout.margin + 12,
       headerY + 50,
       "Experience: 0 / 10 · Level 1",
-      { fontSize: "13px", color: "#cbd5e1" }
+      { fontSize: "13px", color: THEME.colors.experienceText }
     ).setOrigin(0, 0.5).setVisible(false);
     parent.add(this.experienceLabel);
 
@@ -146,12 +149,12 @@ export class CharacterPanelSkillsView {
         revertBtnY,
         revertBtnWidth,
         btnHeight,
-        0x334155,
+        THEME.colors.buttonDisabledBackground,
         0.5
       )
       .setOrigin(0, 0)
       .setVisible(false);
-    this.revertBtnBg.setStrokeStyle?.(1, 0x475569, 0.8);
+    this.revertBtnBg.setStrokeStyle?.(1, THEME.colors.buttonRevertBorder, 0.8);
     parent.add(this.revertBtnBg);
 
     this.revertBtnText = scene.add
@@ -161,7 +164,7 @@ export class CharacterPanelSkillsView {
         "Revert",
         {
           fontSize: "12px",
-          color: "#ffffff",
+          color: THEME.colors.textPrimary,
           fontStyle: "bold"
         }
       )
@@ -176,12 +179,12 @@ export class CharacterPanelSkillsView {
         confirmBtnY,
         confirmBtnWidth,
         btnHeight,
-        0x334155,
+        THEME.colors.buttonDisabledBackground,
         0.5
       )
       .setOrigin(0, 0)
       .setVisible(false);
-    this.confirmBtnBg.setStrokeStyle?.(1, 0x22c55e, 0.8);
+    this.confirmBtnBg.setStrokeStyle?.(1, THEME.colors.buttonConfirmBorder, 0.8);
     parent.add(this.confirmBtnBg);
 
     this.confirmBtnText = scene.add
@@ -191,7 +194,7 @@ export class CharacterPanelSkillsView {
         "Confirm",
         {
           fontSize: "12px",
-          color: "#ffffff",
+          color: THEME.colors.textPrimary,
           fontStyle: "bold"
         }
       )
@@ -202,12 +205,12 @@ export class CharacterPanelSkillsView {
 
     this.revertBtnBg.on(Phaser.Input.Events.POINTER_OVER, () => {
       if (this.revertBtnBg.input?.enabled) {
-        this.revertBtnBg.setFillStyle(0xef4444);
+        this.revertBtnBg.setFillStyle(THEME.colors.buttonRevertHover);
       }
     });
     this.revertBtnBg.on(Phaser.Input.Events.POINTER_OUT, () => {
       if (this.revertBtnBg.input?.enabled) {
-        this.revertBtnBg.setFillStyle(0x475569);
+        this.revertBtnBg.setFillStyle(THEME.colors.buttonRevertFill);
       }
     });
     this.revertBtnBg.on(
@@ -239,12 +242,12 @@ export class CharacterPanelSkillsView {
 
     this.confirmBtnBg.on(Phaser.Input.Events.POINTER_OVER, () => {
       if (this.confirmBtnBg.input?.enabled) {
-        this.confirmBtnBg.setFillStyle(0x22c55e);
+        this.confirmBtnBg.setFillStyle(THEME.colors.buttonConfirmHover);
       }
     });
     this.confirmBtnBg.on(Phaser.Input.Events.POINTER_OUT, () => {
       if (this.confirmBtnBg.input?.enabled) {
-        this.confirmBtnBg.setFillStyle(0x16a34a);
+        this.confirmBtnBg.setFillStyle(THEME.colors.buttonConfirmFill);
       }
     });
     this.confirmBtnBg.on(
@@ -327,8 +330,8 @@ export class CharacterPanelSkillsView {
         mask: false
       },
       slider: {
-        track: scene.rexUI.add.roundRectangle(0, 0, 4, 120, 2, 0x1f2a4a),
-        thumb: scene.rexUI.add.roundRectangle(0, 0, 6, 36, 3, 0x3b82f6)
+        track: scene.rexUI.add.roundRectangle(0, 0, 4, 120, 2, THEME.colors.loadingTrack),
+        thumb: scene.rexUI.add.roundRectangle(0, 0, 6, 36, 3, THEME.colors.loadingFill)
       },
       scroller: {
         threshold: 10,
@@ -407,6 +410,9 @@ export class CharacterPanelSkillsView {
     this.scrollPanel.setMouseWheelScrollerEnable?.(visible);
     this.scrollPanel.setScrollerEnable?.(visible);
     this.categoryTabs.bringToTop();
+    if (visible) {
+      this.refreshTutorialHighlights();
+    }
   }
 
   setScrollerEnable(enabled: boolean): void {
@@ -418,17 +424,38 @@ export class CharacterPanelSkillsView {
     this.onConfirmSkills = callback;
   }
 
-  setAllowedSkillIds(skillIds: readonly SkillId[] | null): void {
+  getHighlightedCategory(): SkillCategory | null {
+    return this.categoryTabs.getHighlightedKey();
+  }
+
+  isConfirmButtonHighlighted(): boolean {
+    return this.confirmBtnHighlighted;
+  }
+
+  setTutorialSkillPolicy(
+    skillIds: readonly SkillId[] | null,
+    isTutorialChooseSkills: boolean
+  ): void {
     const next = skillIds ? new Set(skillIds) : null;
-    if (
-      this.allowedSkillIds?.size === next?.size &&
-      (this.allowedSkillIds === null ||
-        [...this.allowedSkillIds].every((id) => next?.has(id)))
-    ) {
-      return;
-    }
+    const allowedChanged =
+      this.allowedSkillIds?.size !== next?.size ||
+      (this.allowedSkillIds !== null &&
+        ![...this.allowedSkillIds].every((id) => next?.has(id)));
+    const tutorialChanged =
+      this.tutorialChooseSkillsMode !== isTutorialChooseSkills;
+
     this.allowedSkillIds = next;
-    this.rebuildSkillList();
+    this.tutorialChooseSkillsMode = isTutorialChooseSkills;
+
+    if (allowedChanged) {
+      this.rebuildSkillList();
+    } else if (tutorialChanged) {
+      this.refreshTutorialHighlights();
+    }
+  }
+
+  setAllowedSkillIds(skillIds: readonly SkillId[] | null): void {
+    this.setTutorialSkillPolicy(skillIds, false);
   }
 
   setHighlightedCategory(category: SkillCategory | null): void {
@@ -454,19 +481,19 @@ export class CharacterPanelSkillsView {
 
   private setButtonsEnabled(enabled: boolean): void {
     if (enabled) {
-      this.revertBtnBg.setFillStyle(0x475569, 1);
+      this.revertBtnBg.setFillStyle(THEME.colors.buttonRevertFill, 1);
       this.revertBtnBg.setInteractive({ useHandCursor: true });
       this.revertBtnText.setAlpha(1);
 
-      this.confirmBtnBg.setFillStyle(0x16a34a, 1);
+      this.confirmBtnBg.setFillStyle(THEME.colors.buttonConfirmFill, 1);
       this.confirmBtnBg.setInteractive({ useHandCursor: true });
       this.confirmBtnText.setAlpha(1);
     } else {
-      this.revertBtnBg.setFillStyle(0x334155, 0.5);
+      this.revertBtnBg.setFillStyle(THEME.colors.buttonDisabledBackground, 0.5);
       this.revertBtnBg.disableInteractive();
       this.revertBtnText.setAlpha(0.4);
 
-      this.confirmBtnBg.setFillStyle(0x334155, 0.5);
+      this.confirmBtnBg.setFillStyle(THEME.colors.buttonDisabledBackground, 0.5);
       this.confirmBtnBg.disableInteractive();
       this.confirmBtnText.setAlpha(0.4);
     }
@@ -506,13 +533,13 @@ export class CharacterPanelSkillsView {
       const hasInvestedRank = committedRank > 0;
       item.cardBg.setStrokeStyle(
         hasInvestedRank ? 2 : 1,
-        hasInvestedRank ? THEME.colors.healthAccent : 0x2f3a5d,
+        hasInvestedRank ? THEME.colors.healthAccent : THEME.colors.skillCardBorder,
         hasInvestedRank ? 1 : 0.9
       );
 
       if (!item.skill.implemented) {
         item.statusBadge.setText(t("Not Implemented"));
-        item.statusBadge.setColor("#f87171");
+        item.statusBadge.setColor(THEME.colors.cooldown);
         item.statusBadge.setVisible(true);
         item.rankText.setVisible(false);
         item.upgradeBtnBg.setVisible(false);
@@ -546,7 +573,7 @@ export class CharacterPanelSkillsView {
 
       if (totalRank >= item.skill.max) {
         item.statusBadge.setText("MAX");
-        item.statusBadge.setColor("#facc15");
+        item.statusBadge.setColor(THEME.colors.zarkanGold);
         item.statusBadge.setVisible(true);
         item.upgradeBtnBg.setVisible(false);
         item.upgradeBtnBg.disableInteractive();
@@ -558,15 +585,32 @@ export class CharacterPanelSkillsView {
 
         const canAfford = effectivePoints >= item.skill.cost;
         if (canAfford) {
-          item.upgradeBtnBg.setFillStyle(0x16a34a, 1);
+          item.upgradeBtnBg.setFillStyle(THEME.colors.buttonConfirmFill, 1);
           item.upgradeBtnBg.setInteractive({ useHandCursor: true });
           item.upgradeBtnText.setAlpha(1);
         } else {
-          item.upgradeBtnBg.setFillStyle(0x334155, 0.6);
+          item.upgradeBtnBg.setFillStyle(THEME.colors.buttonDisabledBackground, 0.6);
           item.upgradeBtnBg.disableInteractive();
           item.upgradeBtnText.setAlpha(0.6);
         }
       }
+    }
+    this.refreshTutorialHighlights();
+  }
+
+  private refreshTutorialHighlights(): void {
+    const highlights = getTutorialSkillHighlights({
+      isTutorialChooseSkills: this.tutorialChooseSkillsMode,
+      pendingUpgrades: this.pendingUpgrades,
+      abilities: this.currentCharacter?.abilities
+    });
+
+    this.categoryTabs.setHighlightedKey(highlights.highlightedCategory);
+    this.confirmBtnHighlighted = highlights.confirmHighlighted;
+    if (this.confirmBtnHighlighted) {
+      this.confirmBtnBg.setStrokeStyle(3, THEME.colors.tutorialHighlight, 1);
+    } else {
+      this.confirmBtnBg.setStrokeStyle(1, THEME.colors.buttonConfirmBorder, 0.8);
     }
   }
 
@@ -587,7 +631,11 @@ export class CharacterPanelSkillsView {
 
     this.unspentPointsLabel.setPosition(
       options.margin + 12,
-      headerY + HEADER_HEIGHT / 2
+      headerY + 18
+    );
+    this.experienceLabel.setPosition(
+      options.margin + 12,
+      headerY + 50
     );
 
     const btnHeight = 26;
@@ -710,7 +758,7 @@ export class CharacterPanelSkillsView {
     const descText = this.scene.add
       .text(CARD_PADDING, startY + 54, skill.description, {
         fontSize: "13px",
-        color: "#cbd5f5",
+        color: THEME.colors.modalText,
         wordWrap: { width: textWidth, useAdvancedWrap: true },
         lineSpacing: 3
       })
@@ -719,15 +767,15 @@ export class CharacterPanelSkillsView {
     const cardHeight = Math.max(82, 54 + descText.height + CARD_PADDING);
 
     const cardBg = this.scene.add
-      .rectangle(0, startY, cardWidth, cardHeight, 0x202b4a, 0.95)
+      .rectangle(0, startY, cardWidth, cardHeight, THEME.colors.skillCardBackground, 0.95)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, 0x2f3a5d, 0.9)
+      .setStrokeStyle(1, THEME.colors.skillCardBorder, 0.9)
       .setInteractive({ useHandCursor: false });
 
     const nameText = this.scene.add
       .text(CARD_PADDING, startY + 8, skill.name, {
         fontSize: "15px",
-        color: "#ffffff",
+        color: THEME.colors.textPrimary,
         fontStyle: "bold"
       })
       .setOrigin(0, 0);
@@ -735,7 +783,7 @@ export class CharacterPanelSkillsView {
     const costText = this.scene.add
       .text(cardWidth - CARD_PADDING, startY + 8, `Cost: ${skill.cost} SP`, {
         fontSize: "12px",
-        color: "#facc15"
+        color: THEME.colors.zarkanGold
       })
       .setOrigin(1, 0);
 
@@ -745,14 +793,14 @@ export class CharacterPanelSkillsView {
     const btnY = startY + 26;
 
     const upgradeBtnBg = this.scene.add
-      .rectangle(btnX, btnY, btnWidth, btnHeight, 0x16a34a, 1)
+      .rectangle(btnX, btnY, btnWidth, btnHeight, THEME.colors.buttonConfirmFill, 1)
       .setOrigin(0, 0)
       .setVisible(skill.implemented);
 
     const upgradeBtnText = this.scene.add
       .text(btnX + btnWidth / 2, btnY + btnHeight / 2, "+ Upgrade", {
         fontSize: "11px",
-        color: "#ffffff",
+        color: THEME.colors.textPrimary,
         fontStyle: "bold"
       })
       .setOrigin(0.5, 0.5)
@@ -761,14 +809,14 @@ export class CharacterPanelSkillsView {
     const decBtnWidth = 22;
     const decBtnX = btnX - 6 - decBtnWidth;
     const decrementBtnBg = this.scene.add
-      .rectangle(decBtnX, btnY, decBtnWidth, btnHeight, 0xef4444, 0.8)
+      .rectangle(decBtnX, btnY, decBtnWidth, btnHeight, THEME.colors.buttonDangerFill, 0.8)
       .setOrigin(0, 0)
       .setVisible(false);
 
     const decrementBtnText = this.scene.add
       .text(decBtnX + decBtnWidth / 2, btnY + btnHeight / 2, "-", {
         fontSize: "13px",
-        color: "#ffffff",
+        color: THEME.colors.textPrimary,
         fontStyle: "bold"
       })
       .setOrigin(0.5, 0.5)
@@ -777,7 +825,7 @@ export class CharacterPanelSkillsView {
     const rankText = this.scene.add
       .text(decBtnX - 8, btnY + btnHeight / 2, `Rank: 0/${skill.max}`, {
         fontSize: "12px",
-        color: "#94a3b8"
+        color: THEME.colors.textMuted
       })
       .setOrigin(1, 0.5)
       .setVisible(skill.implemented);
@@ -789,7 +837,7 @@ export class CharacterPanelSkillsView {
         skill.implemented ? "" : t("Not Implemented"),
         {
           fontSize: "11px",
-          color: "#f87171"
+          color: THEME.colors.cooldown
         }
       )
       .setOrigin(1, 0.5)
@@ -810,12 +858,12 @@ export class CharacterPanelSkillsView {
     if (skill.implemented) {
       upgradeBtnBg.on(Phaser.Input.Events.POINTER_OVER, () => {
         if (upgradeBtnBg.input?.enabled) {
-          upgradeBtnBg.setFillStyle(0x22c55e);
+          upgradeBtnBg.setFillStyle(THEME.colors.buttonConfirmHover);
         }
       });
       upgradeBtnBg.on(Phaser.Input.Events.POINTER_OUT, () => {
         if (upgradeBtnBg.input?.enabled) {
-          upgradeBtnBg.setFillStyle(0x16a34a);
+          upgradeBtnBg.setFillStyle(THEME.colors.buttonConfirmFill);
         }
       });
       upgradeBtnBg.on(Phaser.Input.Events.POINTER_UP, () => {
@@ -839,12 +887,12 @@ export class CharacterPanelSkillsView {
 
       decrementBtnBg.on(Phaser.Input.Events.POINTER_OVER, () => {
         if (decrementBtnBg.input?.enabled) {
-          decrementBtnBg.setFillStyle(0xf87171);
+          decrementBtnBg.setFillStyle(THEME.colors.buttonDangerHover);
         }
       });
       decrementBtnBg.on(Phaser.Input.Events.POINTER_OUT, () => {
         if (decrementBtnBg.input?.enabled) {
-          decrementBtnBg.setFillStyle(0xef4444);
+          decrementBtnBg.setFillStyle(THEME.colors.buttonDangerFill);
         }
       });
       decrementBtnBg.on(Phaser.Input.Events.POINTER_UP, () => {

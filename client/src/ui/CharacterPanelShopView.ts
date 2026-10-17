@@ -750,7 +750,9 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.cards.push({ definition, background: card, statusBadge: status });
     card.setStrokeStyle(
       this.highlightedShopId === definition.id ? 3 : 1,
-      this.highlightedShopId === definition.id ? 0xfbbf24 : 0x2f3a5d,
+      this.highlightedShopId === definition.id
+        ? THEME.colors.tutorialHighlight
+        : THEME.colors.skillCardBorder,
       1
     );
     return cardHeight;
@@ -770,7 +772,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
       const highlighted = card.definition.id === this.highlightedShopId;
       card.background.setStrokeStyle(
         highlighted ? 3 : 1,
-        highlighted ? 0xfbbf24 : 0x2f3a5d,
+        highlighted ? THEME.colors.tutorialHighlight : THEME.colors.skillCardBorder,
         1
       );
     }

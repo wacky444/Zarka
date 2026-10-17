@@ -143,10 +143,13 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
     }
     this.tutorialHighlighted = highlighted;
     this.label.setStyle({
-      color: highlighted ? "#fbbf24" : "#ffffff",
+      color: highlighted ? THEME.colors.tutorialHighlightText : THEME.colors.textPrimary,
       fontStyle: highlighted ? "bold" : "normal"
     });
-    this.label.setStroke(highlighted ? "#fbbf24" : "#000000", highlighted ? 1 : 0);
+    this.label.setStroke(
+      highlighted ? THEME.colors.tutorialHighlightText : "#000000",
+      highlighted ? 1 : 0
+    );
   }
 
   setEnabled(enabled: boolean): void {

@@ -30,7 +30,35 @@ export const THEME = {
     loadingTrack: 0x1f2a4a,
     loadingFill: 0x3b82f6,
     loadingText: "#cbd5f5",
-    loadingPercent: "#93c5fd"
+    loadingPercent: "#93c5fd",
+
+    tutorialHighlight: 0xfbbf24,
+    tutorialHighlightText: "#fbbf24",
+
+    panelBackground: 0x1b2440,
+    panelBorder: 0x253055,
+    headerBackground: 0x141c33,
+    headerBorder: 0x2d3a60,
+    experienceText: "#cbd5e1",
+
+    skillCardBackground: 0x202b4a,
+    skillCardBorder: 0x2f3a5d,
+
+    buttonConfirmBorder: 0x22c55e,
+    buttonConfirmFill: 0x16a34a,
+    buttonConfirmHover: 0x22c55e,
+    buttonRevertBorder: 0x475569,
+    buttonRevertFill: 0x475569,
+    buttonRevertHover: 0xef4444,
+    buttonDangerFill: 0xef4444,
+    buttonDangerHover: 0xf87171,
+    buttonDisabledBackground: 0x334155,
+
+    subtabActiveFill: 0x253055,
+    subtabActiveStroke: 0x4d74b8,
+    subtabInactiveFill: 0x141c33,
+    subtabInactiveStroke: 0x253055,
+    subtabInactiveText: "#8ea4d2"
   },
 
   buttons: {

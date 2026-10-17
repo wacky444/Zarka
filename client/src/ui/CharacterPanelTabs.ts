@@ -1,4 +1,5 @@
 import type Phaser from "phaser";
+import { THEME } from "./ColorPalette";
 
 export type TabKey =
   | "character"
@@ -115,8 +116,12 @@ export class CharacterPanelTabs {
       const highlighted = tab.key === this.highlightedKey;
       const unread = !active && this.unreadTabs.has(tab.key);
       tab.rect
-        .setFillStyle(active ? 0x253055 : 0x1c233f)
-        .setStrokeStyle(highlighted ? 3 : 1, highlighted ? 0xfbbf24 : 0x253055, 1);
+        .setFillStyle(active ? THEME.colors.panelBorder : 0x1c233f)
+        .setStrokeStyle(
+          highlighted ? 3 : 1,
+          highlighted ? THEME.colors.tutorialHighlight : THEME.colors.panelBorder,
+          1
+        );
       tab.text.setAlpha(active || highlighted ? 1 : 0.7);
       if (tab.badge) {
         tab.badge.setVisible(unread);

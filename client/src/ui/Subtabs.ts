@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { THEME } from "./ColorPalette";
 
 export interface SubtabConfig<T extends string = string> {
   key: T;
@@ -37,16 +38,16 @@ interface SubtabEntry<T extends string> {
 
 const DEFAULT_HEIGHT = 28;
 const DEFAULT_GAP = 6;
-const DEFAULT_ACTIVE_FILL = 0x253055;
+const DEFAULT_ACTIVE_FILL = THEME.colors.subtabActiveFill;
 const DEFAULT_ACTIVE_FILL_ALPHA = 0.95;
-const DEFAULT_ACTIVE_STROKE = 0x4d74b8;
+const DEFAULT_ACTIVE_STROKE = THEME.colors.subtabActiveStroke;
 const DEFAULT_ACTIVE_STROKE_ALPHA = 0.8;
-const DEFAULT_ACTIVE_TEXT_COLOR = "#ffffff";
-const DEFAULT_INACTIVE_FILL = 0x141c33;
+const DEFAULT_ACTIVE_TEXT_COLOR = THEME.colors.textPrimary;
+const DEFAULT_INACTIVE_FILL = THEME.colors.subtabInactiveFill;
 const DEFAULT_INACTIVE_FILL_ALPHA = 0.95;
-const DEFAULT_INACTIVE_STROKE = 0x253055;
+const DEFAULT_INACTIVE_STROKE = THEME.colors.subtabInactiveStroke;
 const DEFAULT_INACTIVE_STROKE_ALPHA = 0.8;
-const DEFAULT_INACTIVE_TEXT_COLOR = "#8ea4d2";
+const DEFAULT_INACTIVE_TEXT_COLOR = THEME.colors.subtabInactiveText;
 const DEFAULT_FONT_SIZE = "14px";
 
 export class Subtabs<T extends string = string> {
@@ -87,6 +88,10 @@ export class Subtabs<T extends string = string> {
     }
     this.highlightedKey = key;
     this.updateStyles();
+  }
+
+  getHighlightedKey(): T | null {
+    return this.highlightedKey;
   }
 
   getElements(): Phaser.GameObjects.GameObject[] {
@@ -208,7 +213,11 @@ export class Subtabs<T extends string = string> {
       );
       entry.button.setStrokeStyle(
         isHighlighted ? 3 : 1,
-        isHighlighted ? 0xfbbf24 : isActive ? activeStroke : inactiveStroke,
+        isHighlighted
+          ? THEME.colors.tutorialHighlight
+          : isActive
+            ? activeStroke
+            : inactiveStroke,
         isHighlighted ? 1 : isActive ? activeStrokeAlpha : inactiveStrokeAlpha
       );
       entry.label.setColor(isActive ? activeTextColor : inactiveTextColor);
