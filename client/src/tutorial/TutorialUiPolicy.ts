@@ -5,6 +5,7 @@ import {
   type SkillCategory,
   type SkillId,
   type TutorialStepId,
+  TUTORIAL_BOT_ID,
   TUTORIAL_CELL_COORDS
 } from "@shared";
 import type { TabKey } from "../ui/CharacterPanelTabs";
@@ -162,6 +163,7 @@ export function isTutorialReadyActionAllowed(
     mainActionId?: string | null;
     targetLocation?: Axial | null;
     extraExecutions?: number;
+    targetPlayerId?: string | null;
   }
 ): boolean {
   if (!stepId) {
@@ -170,6 +172,14 @@ export function isTutorialReadyActionAllowed(
   const policy = getTutorialUiPolicy(stepId);
   if (!policy.readyEnabled) {
     return false;
+  }
+  if (stepId === "plan_axe_attack") {
+    const isAxe = options.mainActionId === "axe_attack";
+    const hasTarget =
+      options.targetPlayerId === undefined
+        ? true
+        : options.targetPlayerId === TUTORIAL_BOT_ID;
+    return isAxe && hasTarget;
   }
   if (stepId === "return_to_bot") {
     const isMove = options.mainActionId === "move";

@@ -33,6 +33,8 @@ export interface CharacterPanelReadyRefreshOptions {
 export class CharacterPanelReadyView {
   private readonly scene: Phaser.Scene;
   private readonly readyToggle: Phaser.GameObjects.Text;
+  private readonly checkMarkText: Phaser.GameObjects.Text;
+  private readonly readyHighlightBorder: Phaser.GameObjects.Rectangle;
   private readonly unspentSkillsWarning: ReadyWarning;
   private readonly energyWarning: ReadyWarning;
   private readonly overweightWarning: ReadyWarning;
@@ -52,13 +54,28 @@ export class CharacterPanelReadyView {
     this.scene = scene;
     this.onReadyChange = onReadyChange;
 
+    this.checkMarkText = scene.add
+      .text(x + 14, y + 8, "✓", {
+        fontSize: "15px",
+        color: "#ffffff",
+        fontStyle: "bold"
+      })
+      .setOrigin(0, 0)
+      .setStroke("#14532d", 2)
+      .setShadow(0, 2, "#000000", 0.45)
+      .setVisible(false);
+
+    const checkWidth = this.checkMarkText.width;
+    const checkGap = 6;
+    const leftPadding = 14 + checkWidth + checkGap;
+
     this.readyToggle = scene.add
       .text(x, y, t("Ready"), {
         fontSize: "15px",
         color: "#ffffff",
         fontStyle: "bold",
         backgroundColor: "#c2410c",
-        padding: { left: 14, right: 14, top: 8, bottom: 8 }
+        padding: { left: leftPadding, right: 14, top: 8, bottom: 8 }
       })
       .setOrigin(0, 0)
       .setStroke("#7c2d12", 2)
@@ -72,6 +89,22 @@ export class CharacterPanelReadyView {
     this.readyToggle.on(Phaser.Input.Events.POINTER_OUT, this.handlePointerOut);
     this.readyToggle.on(Phaser.Input.Events.POINTER_UP, this.handlePointerUp);
     parent.add(this.readyToggle);
+    parent.add(this.checkMarkText);
+
+    this.readyHighlightBorder = scene.add
+      .rectangle(
+        x,
+        y,
+        this.readyToggle.width,
+        this.readyToggle.height,
+        0x000000,
+        0
+      )
+      .setOrigin(0, 0)
+      .setStrokeStyle(3, THEME.colors.tutorialHighlight, 1)
+      .setVisible(false);
+    parent.add(this.readyHighlightBorder);
+    this.updateHighlightBorder();
 
     this.unspentSkillsWarning = new ReadyWarning({
       scene,
@@ -148,6 +181,8 @@ export class CharacterPanelReadyView {
   getElements(): Phaser.GameObjects.GameObject[] {
     return [
       this.readyToggle,
+      this.checkMarkText,
+      this.readyHighlightBorder,
       this.unspentSkillsWarning.gameObject,
       this.energyWarning.gameObject,
       this.overweightWarning.gameObject,
@@ -155,8 +190,14 @@ export class CharacterPanelReadyView {
     ];
   }
 
+  isHighlightActive(): boolean {
+    return this.readyHighlightBorder.visible;
+  }
+
   setPosition(x: number, y: number): void {
     this.readyToggle.setPosition(x, y);
+    this.checkMarkText.setPosition(x + 14, y + 8);
+    this.updateHighlightBorder();
     this.updateWarningPosition();
   }
 
@@ -165,11 +206,14 @@ export class CharacterPanelReadyView {
     const changed = this.readyState !== normalized;
     this.readyState = normalized;
 
-    this.readyToggle.setText(normalized ? `✓ ${t("Ready")}` : t("Ready"));
     this.readyToggle.setStyle({
       backgroundColor: normalized ? "#15803d" : "#c2410c"
     });
     this.readyToggle.setStroke(normalized ? "#14532d" : "#7c2d12", 2);
+    this.checkMarkText.setVisible(normalized);
+    this.checkMarkText.setStroke(normalized ? "#14532d" : "#7c2d12", 2);
+    this.updateHighlightBorder();
+    this.readyHighlightBorder.setVisible(this.isTutorialHighlightActive());
     this.syncReadyPulse();
     this.updateWarningPosition();
 
@@ -205,9 +249,11 @@ export class CharacterPanelReadyView {
     if (showReady) {
       this.readyToggle.setAlpha(1);
       this.readyToggle.setInteractive({ useHandCursor: true });
+      this.checkMarkText.setAlpha(1);
     } else {
       this.readyToggle.setAlpha(0.5);
       this.readyToggle.disableInteractive();
+      this.checkMarkText.setAlpha(0.5);
       if (
         options.tutorialActive &&
         !options.tutorialReadyAllowed &&
@@ -269,30 +315,18 @@ export class CharacterPanelReadyView {
     }
     this.updateWarningPosition();
 
-    if (options.tutorialActive) {
-      const isReadyHighlighted =
-        options.tutorialStepId === "return_to_bot" ||
-        options.tutorialStepId === "scare_bot_to_doomed_cell"
-          ? options.tutorialReadyAllowed
-          : options.tutorialStepId
-            ? getTutorialUiPolicy(
-                options.tutorialStepId
-              ).highlightedControls.includes("ready")
-            : false;
-      this.readyToggle.setColor(
-        isReadyHighlighted
-          ? THEME.colors.tutorialHighlightText
-          : THEME.colors.textPrimary
-      );
-    } else {
-      this.readyToggle.setColor(THEME.colors.textPrimary);
-    }
+    this.readyToggle.setColor(THEME.colors.textPrimary);
+    this.checkMarkText.setVisible(this.readyState);
+    this.updateHighlightBorder();
+    this.readyHighlightBorder.setVisible(this.isTutorialHighlightActive());
     this.syncReadyPulse();
   }
 
   disableInteractive(): void {
     this.readyCanToggle = false;
     this.readyToggle.disableInteractive();
+    this.checkMarkText.setAlpha(0.5);
+    this.readyHighlightBorder.setVisible(false);
     this.syncReadyPulse();
   }
 
@@ -316,10 +350,42 @@ export class CharacterPanelReadyView {
     this.readyPulse = null;
     this.warningTooltip.destroy();
     this.readyToggle.destroy();
+    this.checkMarkText.destroy();
+    this.readyHighlightBorder.destroy();
     this.unspentSkillsWarning.destroy();
     this.energyWarning.destroy();
     this.overweightWarning.destroy();
     this.chainsawOrderWarning.destroy();
+  }
+
+  private isTutorialHighlightActive(): boolean {
+    if (!this.lastRefreshOptions) {
+      return false;
+    }
+    const options = this.lastRefreshOptions;
+    return (
+      options.tutorialActive &&
+      options.tutorialReadyEnabled &&
+      options.tutorialReadyAllowed &&
+      !this.readyState &&
+      options.isCharacterActive &&
+      options.isStatusActive
+    );
+  }
+
+  private updateHighlightBorder(): void {
+    if (!this.readyHighlightBorder) {
+      return;
+    }
+    const offset = 2;
+    this.readyHighlightBorder.setPosition(
+      this.readyToggle.x - offset,
+      this.readyToggle.y - offset
+    );
+    this.readyHighlightBorder.setSize(
+      this.readyToggle.width + offset * 2,
+      this.readyToggle.height + offset * 2
+    );
   }
 
   private syncReadyPulse(): void {

@@ -182,6 +182,28 @@ test("tutorial UI policy exposes only the actions and items for the current less
     }),
     false
   );
+
+  assert.equal(
+    isTutorialReadyActionAllowed("plan_axe_attack", {
+      mainActionId: "axe_attack",
+      targetPlayerId: "bot1"
+    }),
+    true
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("plan_axe_attack", {
+      mainActionId: "axe_attack",
+      targetPlayerId: null
+    }),
+    false
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("plan_axe_attack", {
+      mainActionId: "punch",
+      targetPlayerId: "bot1"
+    }),
+    false
+  );
 });
 
 test("active tutorial match storage is user-scoped and survives scene reloads", () => {

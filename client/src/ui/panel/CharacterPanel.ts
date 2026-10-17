@@ -1054,10 +1054,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (!this.tutorialActive || !this.tutorialStepId) {
       return true;
     }
+    const mainSelection = this.actionPlanView.getMainActionSelection();
     return isTutorialReadyActionAllowed(this.tutorialStepId, {
       mainActionId: this.actionPlanView.getMainActionSelectionId(),
       targetLocation: this.actionPlanView.getMainActionTarget(),
-      extraExecutions: this.actionPlanView.getMainExtraExecutions()
+      extraExecutions: this.actionPlanView.getMainExtraExecutions(),
+      targetPlayerId: mainSelection.targetPlayerIds?.[0] ?? null
     });
   }
 
