@@ -76,17 +76,18 @@ export class StorageService {
   }
 
   writeMatch(match: MatchRecord, version?: string): void {
-    this.nk.storageWrite([
-      {
-        collection: MATCH_COLLECTION,
-        key: this.getMatchKey(match.match_id),
-        userId: SERVER_USER_ID,
-        value: match,
-        permissionRead: 0,
-        permissionWrite: 0,
-        version,
-      },
-    ]);
+    const write: nkruntime.StorageWriteRequest = {
+      collection: MATCH_COLLECTION,
+      key: this.getMatchKey(match.match_id),
+      userId: SERVER_USER_ID,
+      value: match,
+      permissionRead: 0,
+      permissionWrite: 0,
+    };
+    if (version !== undefined && version !== "") {
+      write.version = version;
+    }
+    this.nk.storageWrite([write]);
   }
 
   writeMatchWithReplayTurn0(match: MatchRecord, replay: ReplayRecord): void {
@@ -115,16 +116,19 @@ export class StorageService {
     outbox: PushNotificationOutbox,
     version?: string
   ): void {
+    const matchWrite: nkruntime.StorageWriteRequest = {
+      collection: MATCH_COLLECTION,
+      key: this.getMatchKey(match.match_id),
+      userId: SERVER_USER_ID,
+      value: match,
+      permissionRead: 0,
+      permissionWrite: 0,
+    };
+    if (version !== undefined && version !== "") {
+      matchWrite.version = version;
+    }
     this.nk.storageWrite([
-      {
-        collection: MATCH_COLLECTION,
-        key: this.getMatchKey(match.match_id),
-        userId: SERVER_USER_ID,
-        value: match,
-        permissionRead: 0,
-        permissionWrite: 0,
-        version,
-      },
+      matchWrite,
       {
         collection: PUSH_NOTIFICATION_OUTBOX_COLLECTION,
         key: outbox.id,
@@ -174,16 +178,19 @@ export class StorageService {
     turn: TurnRecord,
     version?: string
   ): void {
+    const matchWrite: nkruntime.StorageWriteRequest = {
+      collection: MATCH_COLLECTION,
+      key: this.getMatchKey(match.match_id),
+      userId: SERVER_USER_ID,
+      value: match,
+      permissionRead: 0,
+      permissionWrite: 0,
+    };
+    if (version !== undefined && version !== "") {
+      matchWrite.version = version;
+    }
     this.nk.storageWrite([
-      {
-        collection: MATCH_COLLECTION,
-        key: this.getMatchKey(match.match_id),
-        userId: SERVER_USER_ID,
-        value: match,
-        permissionRead: 0,
-        permissionWrite: 0,
-        version,
-      },
+      matchWrite,
       {
         collection: TURN_COLLECTION,
         key: this.getTurnKey(turn.match_id, turn.turn),
@@ -369,17 +376,18 @@ export class StorageService {
   }
 
   writeChatLog(log: MatchChatLog, version?: string): void {
-    this.nk.storageWrite([
-      {
-        collection: CHAT_COLLECTION,
-        key: this.getChatKey(log.matchId),
-        userId: SERVER_USER_ID,
-        value: log,
-        permissionRead: 2,
-        permissionWrite: 0,
-        version,
-      },
-    ]);
+    const write: nkruntime.StorageWriteRequest = {
+      collection: CHAT_COLLECTION,
+      key: this.getChatKey(log.matchId),
+      userId: SERVER_USER_ID,
+      value: log,
+      permissionRead: 2,
+      permissionWrite: 0,
+    };
+    if (version !== undefined && version !== "") {
+      write.version = version;
+    }
+    this.nk.storageWrite([write]);
   }
 
   appendChatMessage(

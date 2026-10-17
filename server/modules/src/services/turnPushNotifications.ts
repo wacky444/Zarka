@@ -293,7 +293,7 @@ export function checkAndSendTurnExpiringNotification(
 ): void {
   const outbox = createTurnExpiringOutbox(match, ctx, nk, logger);
   if (outbox) {
-    persistOutbox(nk, outbox, "");
+    persistOutbox(nk, outbox);
     dispatchTurnExpiringOutbox(match.match_id, match.current_turn, ctx, nk, logger);
   }
 }
@@ -371,19 +371,20 @@ function removeExpiredSubscription(
 function persistOutbox(
   nk: nkruntime.Nakama,
   outbox: PushNotificationOutbox,
-  version: string
+  version?: string
 ): void {
-  nk.storageWrite([
-    {
-      collection: PUSH_NOTIFICATION_OUTBOX_COLLECTION,
-      key: outbox.id,
-      userId: SERVER_USER_ID,
-      value: outbox,
-      permissionRead: 0,
-      permissionWrite: 0,
-      version
-    }
-  ]);
+  const write: nkruntime.StorageWriteRequest = {
+    collection: PUSH_NOTIFICATION_OUTBOX_COLLECTION,
+    key: outbox.id,
+    userId: SERVER_USER_ID,
+    value: outbox,
+    permissionRead: 0,
+    permissionWrite: 0
+  };
+  if (version !== undefined && version !== "") {
+    write.version = version;
+  }
+  nk.storageWrite([write]);
 }
 
 function retryOutbox(

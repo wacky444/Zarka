@@ -144,6 +144,43 @@ function joinMatchRpcLocked(
     shouldWrite = true;
   }
 
+  if (!storage.isMatchActive(getRuntimeMatchId(match))) {
+    const isRanked = Boolean(match.metadata?.[RANKED_MATCH_METADATA_KEY]);
+    const params: { [key: string]: string } = {
+      size: String(match.size),
+      creator: match.creator || "",
+      name: match.name || "",
+      cols: String(match.cols || 0),
+      rows: String(match.rows || 0),
+      roundTime: match.roundTime || "23:00",
+      autoSkip: String(match.autoSkip !== false),
+      botPlayers: String(match.botPlayers || 0),
+      current_turn: String(match.current_turn),
+      started: String(match.started),
+      lastAutoAdvanceAt: String(match.lastAutoAdvanceAt || 0),
+      game_id: match.match_id,
+      restore: "true",
+      ranked: String(isRanked),
+      players: JSON.stringify(match.players),
+    };
+    try {
+      const runtimeMatchId = nkWrapper.matchCreate("async_turn", params);
+      match.runtime_match_id = runtimeMatchId;
+      shouldWrite = true;
+      logger.info(
+        "join_match: restored missing runtime match %s for game %s",
+        runtimeMatchId,
+        match.match_id
+      );
+    } catch (createErr) {
+      logger.error(
+        "join_match: failed to recreate runtime match for %s: %s",
+        match.match_id,
+        (createErr as Error).message || String(createErr)
+      );
+    }
+  }
+
   if (shouldWrite) {
     storage.writeMatch(match, read.version);
     try {

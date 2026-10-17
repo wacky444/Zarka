@@ -2,7 +2,6 @@ import Phaser from "phaser";
 import type { TutorialStepId } from "@shared";
 import { ItemTooltipManager } from "../ItemTooltip";
 import { ReadyWarning } from "./ReadyWarning";
-import { getTutorialUiPolicy } from "../../tutorial/TutorialUiPolicy";
 import { t } from "../../services/i18n";
 import { THEME } from "../ColorPalette";
 
