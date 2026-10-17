@@ -665,6 +665,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.hideStatusElements();
       this.skillsView.setVisible(true);
     }
+    const policy = this.tutorialStepId ? getTutorialUiPolicy(this.tutorialStepId) : null;
+    const shouldHighlightCharacterSubtab =
+      this.tutorialActive &&
+      policy?.highlightedCharacterSubtab != null &&
+      this.characterSubtabs.getActiveKey() !== policy.highlightedCharacterSubtab;
+    this.characterSubtabs.setHighlightedKey(
+      shouldHighlightCharacterSubtab ? policy!.highlightedCharacterSubtab : null
+    );
   }
 
   private showStatusElements(): void {
@@ -713,6 +721,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.actionPlanView?.setTutorialHighlight(null, false);
       this.skillsView.setTutorialSkillPolicy(null, false);
       this.shopView.setTutorialShopPolicy(null, null);
+      this.characterSubtabs.setHighlightedKey(null);
       this.updateFromMatch(this.currentMatch, this.currentUserId, this.lastUserMap);
       return;
     }
@@ -741,6 +750,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (
       active &&
       policy.highlightedCharacterSubtab &&
+      policy.autoSelectCharacterSubtab &&
       this.characterSubtabs.getActiveKey() !== policy.highlightedCharacterSubtab
     ) {
       this.characterSubtabs.setActiveKey(
@@ -749,6 +759,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       );
       this.updateCharacterSubtabVisibility();
     }
+    const shouldHighlightCharacterSubtab =
+      active &&
+      policy.highlightedCharacterSubtab !== null &&
+      this.characterSubtabs.getActiveKey() !== policy.highlightedCharacterSubtab;
+    this.characterSubtabs.setHighlightedKey(
+      shouldHighlightCharacterSubtab ? policy.highlightedCharacterSubtab : null
+    );
     this.updateFromMatch(this.currentMatch, this.currentUserId, this.lastUserMap);
     if (active && policy.actionEditingEnabled) {
       this.actionPlanView?.syncTutorialActionSelection(

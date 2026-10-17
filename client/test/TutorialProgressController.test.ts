@@ -94,7 +94,8 @@ test("tutorial UI policy exposes only the actions and items for the current less
 
   const search = getTutorialUiPolicy("search");
   assert.equal(search.highlightedCharacterSubtab, "status");
-  assert.equal(search.autoSelectCharacterSubtab, true);
+  assert.equal(search.autoSelectCharacterSubtab, false);
+  assert.equal(search.autoSelectSecondaryAction, false);
 
   const detective = getTutorialUiPolicy("buy_detective");
   assert.deepEqual(detective.shopIds, ["detective"]);
@@ -179,6 +180,25 @@ test("tutorial UI policy exposes only the actions and items for the current less
       mainActionId: "axe_attack",
       extraExecutions: 1,
       targetLocation: { q: 0, r: 1 }
+    }),
+    false
+  );
+
+  assert.equal(
+    isTutorialReadyActionAllowed("search", {
+      secondaryActionId: "search"
+    }),
+    true
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("search", {
+      secondaryActionId: null
+    }),
+    false
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("search", {
+      secondaryActionId: "feed"
     }),
     false
   );

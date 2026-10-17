@@ -60,6 +60,7 @@ export interface CharacterPanelActionOptionsContext {
   selectedMainActionId?: string | null;
   selectedSecondaryActionId?: string | null;
   selectedExtraSecondaryActionId?: string | null;
+  highlightedActionId?: string | null;
 }
 
 export function collectMainActions(character: PlayerCharacter): ActionId[] {
@@ -261,7 +262,8 @@ function resolveActionMetadata(
             context.selectedExtraSecondaryActionId
           )
         : null,
-      disabled
+      disabled,
+      highlighted: context.highlightedActionId === actionId
     };
   }
   let description = "Description coming soon.";
@@ -275,6 +277,7 @@ function resolveActionMetadata(
     texture: "hex",
     frame: "grass_01.png",
     cooldownRemaining: normalizedRemaining,
-    disabled
+    disabled,
+    highlighted: context.highlightedActionId === actionId
   };
 }

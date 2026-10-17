@@ -1383,6 +1383,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   }
 
   setTutorialHighlight(stepId: TutorialStepId | null, active: boolean): void {
+    this.tutorialStepId = stepId;
+    this.tutorialActive = active;
     if (!stepId || !active) {
       this.mainActionDropdown.setTutorialHighlight(false);
       this.secondaryActionDropdown.setTutorialHighlight(false);
@@ -1392,9 +1394,15 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       return;
     }
     const policy = getTutorialUiPolicy(stepId);
-    const isHighlighted = (control: string) => policy.highlightedControls.includes(control as Parameters<typeof policy.highlightedControls.includes>[0]);
+    const isHighlighted = (control: string) =>
+      policy.highlightedControls.includes(control as Parameters<typeof policy.highlightedControls.includes>[0]);
     this.mainActionDropdown.setTutorialHighlight(isHighlighted("main_action"));
-    this.secondaryActionDropdown.setTutorialHighlight(isHighlighted("secondary_action"));
+
+    const shouldHighlightSecondary =
+      isHighlighted("secondary_action") &&
+      (stepId !== "search" || this.secondaryActionSelection !== "search");
+    this.secondaryActionDropdown.setTutorialHighlight(shouldHighlightSecondary);
+
     this.extraExecutionSelector.setTutorialHighlight(isHighlighted("extra_execution"));
     this.playerSelector.setTutorialHighlight(isHighlighted("player_target"));
     this.locationSelector.setTutorialHighlight(isHighlighted("location_target"));
@@ -1413,7 +1421,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
         this.mainActionDropdown.setValue(actionId, true);
       }
     }
-    if (policy.secondaryActionIds.length === 1 && currentUserId) {
+    if (
+      policy.autoSelectSecondaryAction &&
+      policy.secondaryActionIds.length === 1 &&
+      currentUserId
+    ) {
       const actionId = policy.secondaryActionIds[0] ?? null;
       const serverActionId =
         match?.playerCharacters?.[currentUserId]?.actionPlan?.secondary?.actionId ?? null;
@@ -2246,6 +2258,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     );
     this.refreshSecondaryDropdownItems();
     this.refreshMainDropdownItems();
+    if (this.tutorialActive && this.tutorialStepId) {
+      this.setTutorialHighlight(this.tutorialStepId, this.tutorialActive);
+    }
     this.emit("ready-refresh-request");
     this.updateScrollLayout();
     if (this.secondaryActionSelection === "fabricate") {
@@ -2472,6 +2487,13 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   private getActionOptionsContext(
     character: PlayerCharacter | null = this.currentCharacter
   ): CharacterPanelActionOptionsContext {
+    const highlightedActionId =
+      this.tutorialActive &&
+      this.tutorialStepId === "search" &&
+      this.secondaryActionSelection !== "search"
+        ? ("search" as ActionId)
+        : null;
+
     return {
       character,
       match: this.currentMatch,
@@ -2489,7 +2511,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       selectedExtraSecondaryActionId:
         this.extraSecondaryActionSelection ??
         character?.actionPlan?.extraSecondary?.actionId ??
-        null
+        null,
+      highlightedActionId
     };
   }
 

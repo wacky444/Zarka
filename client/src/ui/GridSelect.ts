@@ -1254,7 +1254,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
           this.getGridCellBackground(item)
         )
         .setOrigin(0, 0)
-        .setStrokeStyle(1, 0x2d3a60, 0.9);
+        .setStrokeStyle(
+          item.highlighted ? 3 : 1,
+          item.highlighted ? THEME.colors.tutorialHighlight : 0x2d3a60,
+          item.highlighted ? 1 : 0.9
+        );
       const hasActionIcon =
         shouldShowGridSelectImages(
           this.scene,
@@ -1587,11 +1591,16 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private refreshStaticGridCells(): void {
     for (const cell of this.staticGridCells) {
       cell.background.setFillStyle(this.getGridCellBackground(cell.item), 1);
+      cell.background.setStrokeStyle(
+        cell.item.highlighted ? 3 : 1,
+        cell.item.highlighted ? THEME.colors.tutorialHighlight : 0x2d3a60,
+        cell.item.highlighted ? 1 : 0.9
+      );
       cell.label.setColor(
         cell.item.disabled
           ? THEME.colors.textDisabled
           : cell.item.highlighted
-            ? THEME.colors.healthRecover
+            ? THEME.colors.tutorialHighlightText
             : (cell.item.labelColor ?? THEME.colors.textPrimary)
       );
       cell.icon?.setAlpha(cell.item.disabled ? 0.5 : 1);

@@ -28,6 +28,7 @@ export interface TutorialUiPolicy {
   highlightedTab: TabKey | null;
   highlightedCharacterSubtab: "status" | "skills" | null;
   autoSelectCharacterSubtab: boolean;
+  autoSelectSecondaryAction: boolean;
   highlightedControls: readonly TutorialControlHighlight[];
   mapRequired: boolean;
   actionEditingEnabled: boolean;
@@ -50,6 +51,7 @@ function policy(
     highlightedTab: null,
     highlightedCharacterSubtab: null,
     autoSelectCharacterSubtab: false,
+    autoSelectSecondaryAction: true,
     highlightedControls: NO_HIGHLIGHTS,
     mapRequired: false,
     actionEditingEnabled: false,
@@ -76,6 +78,8 @@ const STEP_POLICIES: Record<TutorialStepId, TutorialUiPolicy> = {
   }),
   search: policy({
     ...STATUS_PANEL,
+    autoSelectCharacterSubtab: false,
+    autoSelectSecondaryAction: false,
     highlightedControls: ["secondary_action"],
     secondaryActionIds: ["search"],
     actionEditingEnabled: true,
@@ -164,6 +168,7 @@ export function isTutorialReadyActionAllowed(
     targetLocation?: Axial | null;
     extraExecutions?: number;
     targetPlayerId?: string | null;
+    secondaryActionId?: string | null;
   }
 ): boolean {
   if (!stepId) {
@@ -172,6 +177,9 @@ export function isTutorialReadyActionAllowed(
   const policy = getTutorialUiPolicy(stepId);
   if (!policy.readyEnabled) {
     return false;
+  }
+  if (stepId === "search") {
+    return options.secondaryActionId === "search";
   }
   if (stepId === "plan_axe_attack") {
     const isAxe = options.mainActionId === "axe_attack";
