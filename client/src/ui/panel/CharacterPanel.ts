@@ -1078,7 +1078,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       mainActionId: this.actionPlanView.getMainActionSelectionId(),
       targetLocation: this.actionPlanView.getMainActionTarget(),
       extraExecutions: this.actionPlanView.getMainExtraExecutions(),
-      targetPlayerId: mainSelection.targetPlayerIds?.[0] ?? null
+      targetPlayerId: mainSelection.targetPlayerIds?.[0] ?? null,
+      secondaryActionId: this.actionPlanView.getSecondaryActionSelectionId()
     });
   }
 
