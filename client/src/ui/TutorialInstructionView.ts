@@ -4,7 +4,6 @@ import {
   type TutorialStepId
 } from "@shared";
 import { t } from "../services/i18n";
-import { makeButton, type UIButton } from "./button";
 import { TUTORIAL_INSTRUCTIONS } from "../tutorial/TutorialInstructions";
 import { THEME } from "./ColorPalette";
 
@@ -14,7 +13,8 @@ export class TutorialInstructionView {
   private readonly titleText: Phaser.GameObjects.Text;
   private readonly instructionText: Phaser.GameObjects.Text;
   private readonly hintText: Phaser.GameObjects.Text;
-  private readonly hintButton: UIButton;
+  private readonly hintButtonBg: Phaser.GameObjects.Rectangle;
+  private readonly hintButtonLabel: Phaser.GameObjects.Text;
   private currentStep: TutorialStepId | null = null;
   private hintVisible = false;
   private width = 0;
@@ -54,20 +54,41 @@ export class TutorialInstructionView {
       })
       .setOrigin(0, 0)
       .setVisible(false);
-    this.hintButton = makeButton(
-      scene,
-      0,
-      0,
-      "[ Hint ]",
-      () => this.toggleHint(),
-      []
-    );
+    this.hintButtonBg = scene.add
+      .rectangle(0, 0, 24, 24, THEME.colors.cardSelected)
+      .setOrigin(0.5, 0.5)
+      .setStrokeStyle(1, 0x93c5fd, 1)
+      .setInteractive({ useHandCursor: true });
+    this.hintButtonLabel = scene.add
+      .text(0, 0, "?", {
+        fontSize: "15px",
+        color: "#bfdbfe",
+        fontStyle: "bold"
+      })
+      .setOrigin(0.5, 0.5)
+      .setInteractive({ useHandCursor: true });
+
+    const toggle = () => this.toggleHint();
+    this.hintButtonBg.on(Phaser.Input.Events.POINTER_UP, toggle);
+    this.hintButtonLabel.on(Phaser.Input.Events.POINTER_UP, toggle);
+
+    const onHover = () => this.hintButtonBg.setFillStyle(0x3b82f6);
+    const onOut = () =>
+      this.hintButtonBg.setFillStyle(
+        this.hintVisible ? 0x3b82f6 : THEME.colors.cardSelected
+      );
+    this.hintButtonBg.on(Phaser.Input.Events.POINTER_OVER, onHover);
+    this.hintButtonBg.on(Phaser.Input.Events.POINTER_OUT, onOut);
+    this.hintButtonLabel.on(Phaser.Input.Events.POINTER_OVER, onHover);
+    this.hintButtonLabel.on(Phaser.Input.Events.POINTER_OUT, onOut);
+
     this.container.add([
       this.background,
       this.titleText,
       this.instructionText,
       this.hintText,
-      this.hintButton
+      this.hintButtonBg,
+      this.hintButtonLabel
     ]);
     this.container.setVisible(false);
   }
@@ -118,8 +139,14 @@ export class TutorialInstructionView {
     this.container.setPosition(12, y);
     this.background.setSize(this.width, this.height);
     this.hintText.setPosition(14, this.height - 54);
-    this.hintButton.setPosition(this.width - this.hintButton.width - 12, 6);
-    this.hintButton.setText(`[ ${t("Hint")} ]`);
+    const btnSize = 24;
+    const btnX = this.width - btnSize / 2 - 10;
+    const btnY = 10 + btnSize / 2;
+    this.hintButtonBg.setPosition(btnX, btnY);
+    this.hintButtonLabel.setPosition(btnX, btnY);
+    this.hintButtonBg.setFillStyle(
+      this.hintVisible ? 0x3b82f6 : THEME.colors.cardSelected
+    );
     this.hintText.setVisible(this.hintVisible);
   }
 
