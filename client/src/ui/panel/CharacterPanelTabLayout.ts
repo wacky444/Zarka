@@ -16,8 +16,14 @@ export class CharacterPanelTabLayout {
     private readonly nextButton: Phaser.GameObjects.Rectangle,
     private readonly nextText: Phaser.GameObjects.Text,
     private readonly getWidth: () => number,
-    private readonly isUnread: (key: TabKey) => boolean
+    private readonly isUnread: (key: TabKey) => boolean,
+    private readonly nextBadge?: Phaser.GameObjects.Rectangle,
+    private readonly previousBadge?: Phaser.GameObjects.Rectangle
   ) {}
+
+  refreshBadges(): void {
+    this.layout(this.getWidth());
+  }
 
   setMobileNavigation(enabled: boolean): void {
     const changed = this.mobileNavigation !== enabled;
@@ -120,6 +126,8 @@ export class CharacterPanelTabLayout {
       this.previousText.disableInteractive();
       this.nextButton.disableInteractive();
       this.nextText.disableInteractive();
+      this.nextBadge?.setVisible(false);
+      this.previousBadge?.setVisible(false);
       return;
     }
 
@@ -139,6 +147,21 @@ export class CharacterPanelTabLayout {
       .setAlpha(canMoveNext ? 1 : 0.35);
     setInteractive(this.previousButton, this.previousText, canMovePrevious);
     setInteractive(this.nextButton, this.nextText, canMoveNext);
+
+    const hasUnreadToRight = this.tabs.some(
+      (tab, index) =>
+        index >= this.startIndex + visibleCount && this.isUnread(tab.key)
+    );
+    const hasUnreadToLeft = this.tabs.some(
+      (tab, index) => index < this.startIndex && this.isUnread(tab.key)
+    );
+
+    this.nextBadge
+      ?.setPosition(width - 10, 6)
+      .setVisible(hasUnreadToRight);
+    this.previousBadge
+      ?.setPosition(TAB_ARROW_WIDTH - 10, 6)
+      .setVisible(hasUnreadToLeft);
   }
 
   private getVisibleTabCount(width: number): number {

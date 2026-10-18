@@ -41,6 +41,7 @@ interface CharacterPanelTabsOptions {
   onTabChange: (key: TabKey, previous: TabKey) => void;
   onLogTabOpened: () => void;
   onLogTabClosed: () => void;
+  onUnreadChange?: (key: TabKey, unread: boolean) => void;
 }
 
 export class CharacterPanelTabs {
@@ -79,6 +80,7 @@ export class CharacterPanelTabs {
       this.unreadTabs.delete(key);
     }
     this.updateStyles();
+    this.options.onUnreadChange?.(key, unread);
   }
 
   setActiveTab(key: TabKey): void {
@@ -93,8 +95,12 @@ export class CharacterPanelTabs {
     }
     const previous = this.activeKey;
     this.activeKey = key;
+    const hadUnread = this.unreadTabs.has(key);
     this.unreadTabs.delete(key);
     this.updateStyles();
+    if (hadUnread) {
+      this.options.onUnreadChange?.(key, false);
+    }
     this.updateVisibility(false);
     this.options.onTabChange(key, previous);
     if (key === "log") {

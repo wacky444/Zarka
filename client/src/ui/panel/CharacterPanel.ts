@@ -16,6 +16,7 @@ import {
   type CharacterPanelTabEntry,
   type TabKey
 } from "../CharacterPanelTabs";
+import { THEME } from "../ColorPalette";
 import { CharacterPanelLogView } from "../CharacterPanelLogView";
 import {
   CharacterPanelChatView,
@@ -93,8 +94,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private tabs: CharacterPanelTabEntry[] = [];
   private tabPreviousButton!: Phaser.GameObjects.Rectangle;
   private tabPreviousText!: Phaser.GameObjects.Text;
+  private tabPreviousBadge!: Phaser.GameObjects.Rectangle;
   private tabNextButton!: Phaser.GameObjects.Rectangle;
   private tabNextText!: Phaser.GameObjects.Text;
+  private tabNextBadge!: Phaser.GameObjects.Rectangle;
   private tabLayout!: CharacterPanelTabLayout;
   private characterElements: Phaser.GameObjects.GameObject[] = [];
   private characterSubtabs!: Subtabs<CharacterSubTabKey>;
@@ -233,7 +236,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         .setOrigin(0.5, 0.5)
         .setInteractive({ useHandCursor: true });
       const badge = scene.add
-        .rectangle(index * tabWidth + tabWidth - 10, 6, 8, 8, 0xff6600)
+        .rectangle(index * tabWidth + tabWidth - 10, 6, 8, 8, THEME.colors.unreadBadge)
         .setOrigin(0.5, 0)
         .setVisible(false);
       rect.on(Phaser.Input.Events.POINTER_UP, () => {
@@ -270,6 +273,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       })
       .setOrigin(0.5, 0.5)
       .setInteractive({ useHandCursor: true });
+    this.tabNextBadge = scene.add
+      .rectangle(0, 6, 8, 8, THEME.colors.unreadBadge)
+      .setOrigin(0.5, 0)
+      .setVisible(false);
+    this.tabPreviousBadge = scene.add
+      .rectangle(0, 6, 8, 8, THEME.colors.unreadBadge)
+      .setOrigin(0.5, 0)
+      .setVisible(false);
     this.tabLayout = new CharacterPanelTabLayout(
       this.tabs,
       this.tabPreviousButton,
@@ -277,7 +288,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.tabNextButton,
       this.tabNextText,
       () => this.panelWidth,
-      (key) => this.tabsController?.isTabUnread(key) ?? false
+      (key) => this.tabsController?.isTabUnread(key) ?? false,
+      this.tabNextBadge,
+      this.tabPreviousBadge
     );
     this.tabPreviousButton.on(Phaser.Input.Events.POINTER_UP, () => {
       this.tabLayout.move(-1);
@@ -293,8 +306,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     });
     this.add(this.tabPreviousButton);
     this.add(this.tabPreviousText);
+    this.add(this.tabPreviousBadge);
     this.add(this.tabNextButton);
     this.add(this.tabNextText);
+    this.add(this.tabNextBadge);
     this.tabLayout.layout(width);
 
     const contentTop = TAB_HEIGHT + MARGIN;
@@ -602,6 +617,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       },
       onLogTabClosed: () => {
         this.emit("log-tab-closed");
+      },
+      onUnreadChange: () => {
+        this.tabLayout.refreshBadges();
       }
     });
     this.tabsController.refresh();
@@ -622,8 +640,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     this.bringToTop(this.tabPreviousButton);
     this.bringToTop(this.tabPreviousText);
+    if (this.tabPreviousBadge) {
+      this.bringToTop(this.tabPreviousBadge);
+    }
     this.bringToTop(this.tabNextButton);
     this.bringToTop(this.tabNextText);
+    if (this.tabNextBadge) {
+      this.bringToTop(this.tabNextBadge);
+    }
     this.playersTabView.bringSubtabsToTop();
     for (const element of this.characterSubtabs.getElements()) {
       this.bringToTop(element);

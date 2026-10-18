@@ -58,7 +58,9 @@ export const THEME = {
     subtabActiveStroke: 0x4d74b8,
     subtabInactiveFill: 0x141c33,
     subtabInactiveStroke: 0x253055,
-    subtabInactiveText: "#8ea4d2"
+    subtabInactiveText: "#8ea4d2",
+
+    unreadBadge: 0xff6600
   },
 
   buttons: {
