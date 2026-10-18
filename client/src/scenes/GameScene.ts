@@ -211,6 +211,62 @@ export class GameScene extends Phaser.Scene {
   private pinchStartCenterY = 0;
   private mapTouchPointerIds = new Set<number>();
 
+  /**
+   * Android Chrome purges volatile GPU textures (WebGL context loss or memory
+   * eviction) while backgrounded. Rectangles and geometry survive because they
+   * are drawn as vertex buffers every frame, but Phaser.GameObjects.Text and
+   * BBCodeText rely on an offscreen HTML canvas uploaded as a WebGL texture.
+   * When returning to foreground, these textures become transparent or missing
+   * unless updateText() is called to re-upload the canvas buffer to the GPU.
+   */
+  private refreshTextTextures(root?: Phaser.GameObjects.GameObject): void {
+    const queue: Phaser.GameObjects.GameObject[] = root
+      ? [root]
+      : [...this.children.list];
+
+    while (queue.length > 0) {
+      const obj = queue.pop();
+      if (!obj) continue;
+
+      const textTarget = obj as {
+        dirty?: boolean;
+        updateText?: () => void;
+        updateTexture?: () => void;
+      };
+
+      if (typeof textTarget.updateText === "function") {
+        textTarget.dirty = true;
+        textTarget.updateText();
+      } else if (typeof textTarget.updateTexture === "function") {
+        textTarget.dirty = true;
+        textTarget.updateTexture();
+      }
+
+      const container = obj as Phaser.GameObjects.Container & {
+        children?: Phaser.GameObjects.GameObject[];
+      };
+      if (Array.isArray(container.list)) {
+        for (const child of container.list) {
+          queue.push(child);
+        }
+      } else if (Array.isArray(container.children)) {
+        for (const child of container.children) {
+          queue.push(child);
+        }
+      }
+    }
+  }
+
+  private readonly webglRestoredHandler = () => {
+    // WebGL context was restored by the browser/GPU.
+    // Immediately re-upload all canvas text textures and update layout.
+    this.refreshTextTextures();
+    this.scale.refresh();
+    this.layoutUI();
+    this.updateTutorialGuidance();
+    this.characterPanel?.bringElementsToTop();
+  };
+
   private readonly foregroundResumeHandler = () => {
     if (document.visibilityState !== "visible" || this.sceneShuttingDown) {
       return;
@@ -220,6 +276,19 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.lastForegroundSyncAt = now;
+
+    // Redraw text textures and re-sync viewport when restored from background:
+    // Android Chrome frequently purges volatile WebGL texture data or suspends
+    // canvas backing stores when backgrounded. Pure geometry (rectangles, strokes)
+    // is redrawn every frame via vertex shaders, but Phaser.GameObjects.Text relies
+    // on an offscreen HTML canvas uploaded as a WebGL texture. Without an explicit
+    // updateText() call, text objects become invisible transparent quads on resume.
+    this.refreshTextTextures();
+    this.scale.refresh();
+    this.layoutUI();
+    this.updateTutorialGuidance();
+    this.characterPanel?.bringElementsToTop();
+
     void this.turnService?.touchRankedPresence();
     void this.turnService?.refreshRankedQueueAndMatches().catch((error: unknown) => {
       console.warn("Failed to refresh ranked match status:", error);
@@ -871,6 +940,10 @@ export class GameScene extends Phaser.Scene {
     );
     window.addEventListener("pageshow", this.foregroundResumeHandler);
     window.addEventListener("online", this.foregroundResumeHandler);
+    this.game.canvas?.addEventListener(
+      "webglcontextrestored",
+      this.webglRestoredHandler
+    );
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.sceneShuttingDown = true;
       document.removeEventListener(
@@ -879,6 +952,10 @@ export class GameScene extends Phaser.Scene {
       );
       window.removeEventListener("pageshow", this.foregroundResumeHandler);
       window.removeEventListener("online", this.foregroundResumeHandler);
+      this.game.canvas?.removeEventListener(
+        "webglcontextrestored",
+        this.webglRestoredHandler
+      );
       this.replayPlaybackCancelled = true;
       this.resolveReplayResumeWaiters();
       this.actionPlanSynchronizer?.destroy();
