@@ -136,17 +136,23 @@ export async function animatePickLockEvent(
     });
   });
 
-  // Safe rattle/shake before bursting open
+  // Safe rattle/shake before bursting open (double duration + angle wiggle)
   await new Promise<void>((resolve) => {
     context.tweens.add({
       targets: safeObj,
-      x: safeX + 3,
+      x: safeX + 4,
+      angle: { from: -3.5, to: 3.5 },
       yoyo: true,
-      repeat: 5,
-      duration: 35,
+      repeat: 11,
+      duration: 38,
       ease: "Linear",
       onComplete: () => {
-        (safeObj as Phaser.GameObjects.Image).setPosition(safeX, safeY);
+        if ("setPosition" in safeObj) {
+          (safeObj as Phaser.GameObjects.Image).setPosition(safeX, safeY);
+        }
+        if ("setAngle" in safeObj) {
+          (safeObj as Phaser.GameObjects.Image).setAngle(0);
+        }
         resolve();
       },
     });
@@ -163,35 +169,41 @@ export async function animatePickLockEvent(
   playRandomSound(scene, "brass_chime_positive");
 
   // Golden glow explosion / burst ring
-  const glowCircle = scene.add.circle(safeX, safeY, 30, 0xfacc15, 0.7);
+  const glowCircle = scene.add.circle(safeX, safeY, 45, 0xfacc15, 0.85);
   glowCircle.setDepth(baseDepth);
   context.ignoreUI(glowCircle);
   cleanups.push(glowCircle);
 
   context.tweens.add({
     targets: glowCircle,
-    scale: 3.5,
+    scale: 4.5,
     alpha: 0,
-    duration: 650,
+    duration: 750,
     ease: "Cubic.easeOut",
     onComplete: () => glowCircle.destroy(),
   });
 
-  // Sparkle / star burst particles around the safe
-  for (let i = 0; i < 8; i += 1) {
-    const angle = (i / 8) * Math.PI * 2;
-    const dist = 40 + Math.random() * 25;
-    const star = scene.add.circle(safeX, safeY, 4, 0xfef08a, 1);
-    star.setDepth(baseDepth + 1);
+  // More sparkle stars and bigger (20 4-point stars with rotation and varied gold/white tones)
+  const starColors = [0xffffff, 0xfef08a, 0xfacc15, 0xfde047, 0xf59e0b];
+  const starCount = 20;
+  for (let i = 0; i < starCount; i += 1) {
+    const angle = (i / starCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.35;
+    const dist = 50 + Math.random() * 55;
+    const color = starColors[i % starColors.length];
+    const star = scene.add.star(safeX, safeY, 4, 5, 13, color);
+    star.setDepth(baseDepth + 2);
+    const startScale = Phaser.Math.FloatBetween(1.5, 2.3);
+    star.setScale(startScale);
     context.ignoreUI(star);
     cleanups.push(star);
     context.tweens.add({
       targets: star,
       x: safeX + Math.cos(angle) * dist,
       y: safeY + Math.sin(angle) * dist,
-      scale: { from: 1.2, to: 0.1 },
+      scale: { from: startScale, to: 0.15 },
       alpha: { from: 1, to: 0 },
-      duration: 500 + Math.random() * 200,
+      rotation: (Math.random() - 0.5) * Math.PI * 4,
+      duration: 550 + Math.random() * 250,
       ease: "Quad.easeOut",
       onComplete: () => star.destroy(),
     });
