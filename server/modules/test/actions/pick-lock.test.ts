@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { LocalizationType } from "@shared";
+import { ActionLibrary, LocalizationType } from "@shared";
 import type { MatchRecord } from "../../src/models/types";
 import { executePickLockAction } from "../../src/match/actions/pickLock";
+import { executeAction } from "../../src/match/actionExecutor";
 import type { PlannedActionParticipant } from "../../src/match/actions/utils";
 import { createDefaultCharacter } from "../../src/utils/playerCharacter";
 
@@ -68,4 +69,36 @@ test("Dexterity 1 opens safe in three turns without a lockpick", () => {
   executePickLockAction([participant], match);
   const [event] = executePickLockAction([participant], match);
   assert.equal(event.kind === "player" ? event.action.metadata?.outcome : undefined, "success");
+});
+
+test("ongoing lockpicking auto-continues without re-submitting action until safe is opened", () => {
+  const { match, participant } = setup();
+  const dummyLogger = {
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+  } as unknown as nkruntime.Logger;
+
+  // Turn 1 resolves
+  let events = executeAction(match, ActionLibrary.pick_lock, 1, {}, dummyLogger);
+  assert.equal(events.some(e => e.kind === "player" && e.action.metadata?.turnsCompleted === 1), true);
+  assert.equal(participant.character.actionPlan?.secondary, undefined);
+  assert.equal(participant.character.lockpickProgress?.turnsCompleted, 1);
+
+  // Turn 2: player plans nothing, but stays in place
+  events = executeAction(match, ActionLibrary.pick_lock, 2, {}, dummyLogger);
+  assert.equal(events.some(e => e.kind === "player" && e.action.metadata?.turnsCompleted === 2), true);
+  assert.equal(participant.character.lockpickProgress?.turnsCompleted, 2);
+
+  // Turn 3: player plans nothing
+  events = executeAction(match, ActionLibrary.pick_lock, 3, {}, dummyLogger);
+  assert.equal(events.some(e => e.kind === "player" && e.action.metadata?.turnsCompleted === 3), true);
+  assert.equal(participant.character.lockpickProgress?.turnsCompleted, 3);
+
+  // Turn 4: player plans nothing -> safe opens!
+  events = executeAction(match, ActionLibrary.pick_lock, 4, {}, dummyLogger);
+  assert.equal(events.some(e => e.kind === "player" && e.action.metadata?.outcome === "success"), true);
+  assert.equal(participant.character.lockpickProgress, undefined);
+  assert.equal(match.safeContainers?.[0].opened, true);
 });

@@ -83,6 +83,9 @@ export function collectSecondaryActions(
   if (plan?.extraSecondary?.actionId) {
     ids.add(plan.extraSecondary.actionId as ActionId);
   }
+  if (character.lockpickProgress) {
+    ids.add(ActionLibrary.pick_lock.id);
+  }
   return Array.from(ids);
 }
 

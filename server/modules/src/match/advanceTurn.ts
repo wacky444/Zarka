@@ -158,11 +158,20 @@ function getPlannedPlayerIds(
     if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, playerId)) {
       continue;
     }
-    const plan = match.playerCharacters[playerId]?.actionPlan;
+    const character = match.playerCharacters[playerId];
+    const plan = character?.actionPlan;
+    const isOngoingLockpick =
+      actionId === ActionLibrary.pick_lock.id &&
+      Boolean(
+        character?.lockpickProgress &&
+        character.position?.tileId === character.lockpickProgress.tileId &&
+        (!plan?.secondary?.actionId || plan.secondary.actionId === ActionLibrary.pick_lock.id)
+      );
     if (
       plan?.main?.actionId === actionId ||
       plan?.secondary?.actionId === actionId ||
-      plan?.extraSecondary?.actionId === actionId
+      plan?.extraSecondary?.actionId === actionId ||
+      isOngoingLockpick
     ) {
       playerIds.push(playerId);
     }
