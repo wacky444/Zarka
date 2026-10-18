@@ -214,35 +214,29 @@ export class GameScene extends Phaser.Scene {
   private pinchStartCenterY = 0;
   private mapTouchPointerIds = new Set<number>();
 
+  private foregroundRestoreTimer: number | null = null;
+  private lastRestoredWidth = 0;
+  private lastRestoredHeight = 0;
+
   /**
    * Redraw all canvas-backed text textures across the scene and texture manager.
-   * On Android Chrome, phone unlock or app switching frequently purges or zeroes
-   * offscreen HTML canvas backing stores and volatile WebGL textures.
+   * Only refreshes dynamic CanvasTextures (text) to avoid expensive atlas re-uploads.
    */
   private refreshTextTextures(root?: Phaser.GameObjects.GameObject): void {
-    // 1. Refresh all registered CanvasTextures in TextureManager directly
-    const textureManager = this.textures as unknown as {
-      list?: Record<
-        string,
-        { refresh?: () => void; _source?: { update?: () => void } }
-      >;
-    };
-    if (textureManager?.list) {
-      for (const key in textureManager.list) {
-        const tex = textureManager.list[key];
-        if (tex) {
-          if (typeof tex.refresh === "function") {
-            try {
-              tex.refresh();
-            } catch {
-              // ignore
-            }
-          } else if (typeof tex._source?.update === "function") {
-            try {
-              tex._source.update();
-            } catch {
-              // ignore
-            }
+    // 1. Refresh ONLY dynamic CanvasTextures in TextureManager (text canvases)
+    const list = (
+      this.textures as unknown as {
+        list?: Record<string, Phaser.Textures.Texture>;
+      }
+    )?.list;
+    if (list) {
+      for (const key in list) {
+        const tex = list[key];
+        if (tex instanceof Phaser.Textures.CanvasTexture) {
+          try {
+            tex.refresh();
+          } catch {
+            // ignore
           }
         }
       }
@@ -368,21 +362,34 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private triggerForegroundRestore(): void {
-    if (this.sceneShuttingDown) {
+  private scheduleForegroundRestore(): void {
+    if (this.foregroundRestoreTimer !== null || this.sceneShuttingDown) {
       return;
     }
-    this.refreshTextTextures();
-    this.scale.refresh();
-    this.layoutUI();
-    this.updateTutorialGuidance();
-    this.characterPanel?.bringElementsToTop();
+    this.foregroundRestoreTimer = window.setTimeout(() => {
+      this.foregroundRestoreTimer = null;
+      if (this.sceneShuttingDown || document.visibilityState !== "visible") {
+        return;
+      }
+      this.refreshTextTextures();
+      const width = this.scale.width;
+      const height = this.scale.height;
+      if (
+        this.lastRestoredWidth !== width ||
+        this.lastRestoredHeight !== height
+      ) {
+        this.lastRestoredWidth = width;
+        this.lastRestoredHeight = height;
+        this.scale.refresh();
+        this.layoutUI();
+      }
+      this.updateTutorialGuidance();
+      this.characterPanel?.bringElementsToTop();
+    }, 120);
   }
 
   private readonly webglRestoredHandler = () => {
-    this.triggerForegroundRestore();
-    window.setTimeout(() => this.triggerForegroundRestore(), 80);
-    window.setTimeout(() => this.triggerForegroundRestore(), 250);
+    this.scheduleForegroundRestore();
   };
 
   private readonly foregroundResumeHandler = () => {
@@ -390,14 +397,10 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Immediate and staged texture refresh on unlock/resume
-    this.triggerForegroundRestore();
-    window.setTimeout(() => this.triggerForegroundRestore(), 80);
-    window.setTimeout(() => this.triggerForegroundRestore(), 250);
-    window.setTimeout(() => this.triggerForegroundRestore(), 600);
+    this.scheduleForegroundRestore();
 
     const now = Date.now();
-    if (this.foregroundSyncRunning || now - this.lastForegroundSyncAt < 2000) {
+    if (this.foregroundSyncRunning || now - this.lastForegroundSyncAt < 3000) {
       return;
     }
     this.lastForegroundSyncAt = now;
@@ -1107,35 +1110,23 @@ export class GameScene extends Phaser.Scene {
       "visibilitychange",
       this.foregroundResumeHandler
     );
-    window.addEventListener("pageshow", this.foregroundResumeHandler);
-    window.addEventListener("focus", this.foregroundResumeHandler);
-    window.addEventListener("online", this.foregroundResumeHandler);
     this.game.canvas?.addEventListener(
       "webglcontextrestored",
       this.webglRestoredHandler
     );
-    this.game.events.on(Phaser.Core.Events.RESUME, this.foregroundResumeHandler);
-    this.game.events.on(Phaser.Core.Events.FOCUS, this.foregroundResumeHandler);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.sceneShuttingDown = true;
+      if (this.foregroundRestoreTimer !== null) {
+        window.clearTimeout(this.foregroundRestoreTimer);
+        this.foregroundRestoreTimer = null;
+      }
       document.removeEventListener(
         "visibilitychange",
         this.foregroundResumeHandler
       );
-      window.removeEventListener("pageshow", this.foregroundResumeHandler);
-      window.removeEventListener("focus", this.foregroundResumeHandler);
-      window.removeEventListener("online", this.foregroundResumeHandler);
       this.game.canvas?.removeEventListener(
         "webglcontextrestored",
         this.webglRestoredHandler
-      );
-      this.game.events.off(
-        Phaser.Core.Events.RESUME,
-        this.foregroundResumeHandler
-      );
-      this.game.events.off(
-        Phaser.Core.Events.FOCUS,
-        this.foregroundResumeHandler
       );
       this.replayPlaybackCancelled = true;
       this.resolveReplayResumeWaiters();
