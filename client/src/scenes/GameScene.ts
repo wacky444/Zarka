@@ -1846,12 +1846,15 @@ export class GameScene extends Phaser.Scene {
       this.menuButton?.height ?? 32
     );
     this.victoryOverlay?.layout(width, height);
+    const centerTutorialVertical =
+      isMobileView && this.chatTabActive && this.mobileViewMode === "sidebar";
     this.tutorialInstructionView?.layout(
       width,
       height,
       isMobileView,
       Math.max(this.menuButton?.height ?? 0, this.viewModeButton?.height ?? 0) +
-        18
+        18,
+      centerTutorialVertical
     );
   }
 
@@ -2599,6 +2602,9 @@ export class GameScene extends Phaser.Scene {
 
   private async handleChatTabOpened() {
     this.chatTabActive = true;
+    if (this.mobileLayout) {
+      this.layoutUI();
+    }
     this.recordTutorialPresentation("open_chat");
     if (this.chatService) {
       await this.refreshChatHistory();
@@ -2612,6 +2618,9 @@ export class GameScene extends Phaser.Scene {
 
   private handleChatTabClosed() {
     this.chatTabActive = false;
+    if (this.mobileLayout) {
+      this.layoutUI();
+    }
   }
 
   private async refreshChatHistory() {
@@ -3483,6 +3492,9 @@ export class GameScene extends Phaser.Scene {
   private handleTabChange(key: string) {
     this.chatTabActive = key === "chat";
     this.logTabActive = key === "log";
+    if (this.mobileLayout) {
+      this.layoutUI();
+    }
     this.completeVisibleTutorialSteps();
   }
 

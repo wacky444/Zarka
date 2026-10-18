@@ -21,6 +21,7 @@ export class TutorialInstructionView {
   private height = 0;
   private mobileLayout = false;
   private bottomControlsClearance = 0;
+  private centerVertical = false;
 
   constructor(private readonly scene: Phaser.Scene) {
     this.container = scene.add.container(0, 0).setDepth(1200).setScrollFactor(0);
@@ -99,16 +100,20 @@ export class TutorialInstructionView {
     width: number,
     height: number,
     mobileLayout = this.mobileLayout,
-    bottomControlsClearance = this.bottomControlsClearance
+    bottomControlsClearance = this.bottomControlsClearance,
+    centerVertical = this.centerVertical
   ): void {
     this.mobileLayout = mobileLayout;
     this.bottomControlsClearance = bottomControlsClearance;
+    this.centerVertical = centerVertical;
     this.width = Math.max(240, Math.min(420, width - 24));
     this.instructionText.setWordWrapWidth(this.width - 28);
     this.hintText.setWordWrapWidth(this.width - 28);
     this.height = this.hintVisible ? 186 : 122;
     const y = mobileLayout
-      ? Math.max(8, height - this.height - bottomControlsClearance)
+      ? centerVertical
+        ? Math.max(8, Math.round((height - this.height) / 2))
+        : Math.max(8, height - this.height - bottomControlsClearance)
       : 4;
     this.container.setPosition(12, y);
     this.background.setSize(this.width, this.height);
