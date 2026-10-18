@@ -459,18 +459,7 @@ export class CharacterPanelReadyView {
   };
 
   private canToggle(): boolean {
-    if (!this.readyEnabled) {
-      return false;
-    }
-    if (this.lastRefreshOptions) {
-      if (
-        this.lastRefreshOptions.tutorialActive &&
-        !this.lastRefreshOptions.tutorialReadyAllowed
-      ) {
-        return false;
-      }
-    }
-    return true;
+    return this.readyCanToggle;
   }
 
   private readonly handlePointerDown = (

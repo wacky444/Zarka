@@ -194,13 +194,16 @@ export function isTutorialReadyActionAllowed(
     return false;
   }
   if (stepId === "search") {
-    return options.secondaryActionId === "search";
+    const sec = options.secondaryActionId?.trim().toLowerCase();
+    return sec === "search";
   }
   if (stepId === "pickup_items") {
-    return options.mainActionId === "pick_up";
+    const main = options.mainActionId?.trim().toLowerCase();
+    return main === "pick_up";
   }
   if (stepId === "feed_bot") {
-    return options.secondaryActionId === "feed";
+    const sec = options.secondaryActionId?.trim().toLowerCase();
+    return sec === "feed";
   }
   if (stepId === "plan_axe_attack") {
     const isAxe = options.mainActionId === "axe_attack";
