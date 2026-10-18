@@ -102,3 +102,24 @@ test("ongoing lockpicking auto-continues without re-submitting action until safe
   assert.equal(participant.character.lockpickProgress, undefined);
   assert.equal(match.safeContainers?.[0].opened, true);
 });
+
+test("lockpicking continues even if player performs another secondary action (e.g. focus)", () => {
+  const { match, participant } = setup();
+  const dummyLogger = {
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+  } as unknown as nkruntime.Logger;
+
+  // Turn 1: start lockpick
+  executeAction(match, ActionLibrary.pick_lock, 1, {}, dummyLogger);
+  assert.equal(participant.character.lockpickProgress?.turnsCompleted, 1);
+
+  // Turn 2: player plans focus in secondary slot
+  participant.character.actionPlan = { secondary: { actionId: ActionLibrary.focus.id } };
+  executeAction(match, ActionLibrary.pick_lock, 2, {}, dummyLogger);
+  assert.equal(participant.character.lockpickProgress?.turnsCompleted, 2);
+  // Focus plan is preserved for focus action to execute
+  assert.equal(participant.character.actionPlan?.secondary?.actionId, ActionLibrary.focus.id);
+});

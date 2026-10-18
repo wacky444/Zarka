@@ -138,6 +138,17 @@ export class ScareAction extends BaseAction {
           continue;
         }
         const previous = target.position;
+        if (target.lockpickProgress) {
+          events.push({
+            kind: "player",
+            actorId: targetSelection.id,
+            action: {
+              actionId: ActionLibrary.pick_lock.id,
+              metadata: { outcome: "interrupted", reason: "scared" },
+            },
+          });
+          target.lockpickProgress = undefined;
+        }
         target.position = {
           tileId: destination.tileId,
           coord: destination.coord,

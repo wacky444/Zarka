@@ -63,6 +63,7 @@ import {
   clearPlanByKey,
   createFailedActionEvent,
   hasCarriedItem,
+  type PlannedActionKey,
   type PlannedActionParticipant,
 } from "./actions/utils";
 import { executeDetectAction } from "./actions/detect";
@@ -133,14 +134,13 @@ function collectParticipants(
     } else if (
       actionId === ActionLibrary.pick_lock.id &&
       character.lockpickProgress &&
-      character.position?.tileId === character.lockpickProgress.tileId &&
-      !secondary?.actionId
+      character.position?.tileId === character.lockpickProgress.tileId
     ) {
       list.push({
         playerId,
         character,
         plan: { actionId: ActionLibrary.pick_lock.id },
-        planKey: "secondary",
+        planKey: "lockpick_progress" as PlannedActionKey,
       });
     }
     if (extraSecondary && extraSecondary.actionId === actionId) {
@@ -197,31 +197,33 @@ export function executeAction(
   let handled = false;
 
   if (action.id === ActionLibrary.pick_lock.id) {
-    for (const playerId in match.playerCharacters ?? {}) {
-      const char = match.playerCharacters?.[playerId];
-      if (
-        char?.lockpickProgress &&
-        char.actionPlan?.secondary?.actionId &&
-        char.actionPlan.secondary.actionId !== ActionLibrary.pick_lock.id
-      ) {
-        char.lockpickProgress = undefined;
-        eventsForAction.push({
-          kind: "player",
-          actorId: playerId,
-          action: {
-            actionId: ActionLibrary.pick_lock.id,
-            metadata: { outcome: "interrupted", reason: "changed_action" },
-          },
-        });
-      }
-    }
     const participants = collectParticipants(match, action.id);
     if (participants.length > 0) {
-      const energyEvents = applyEnergyForParticipants(participants, action.energyCost, match, logger);
+      const energyParticipants = participants.filter(
+        (p) =>
+          p.planKey === "secondary" &&
+          p.plan.actionId === ActionLibrary.pick_lock.id
+      );
+      const energyEvents = applyEnergyForParticipants(
+        energyParticipants,
+        action.energyCost,
+        match,
+        logger
+      );
       const actionEvents = executePickLockAction(participants, match);
-      eventsForAction = [...eventsForAction, ...energyEvents, ...actionEvents];
+      eventsForAction = [...energyEvents, ...actionEvents];
       for (const participant of participants) {
-        applyActionCooldown(participant.character, action.id, action.cooldown, resolvedTurn);
+        if (
+          participant.planKey === "secondary" &&
+          participant.plan.actionId === ActionLibrary.pick_lock.id
+        ) {
+          applyActionCooldown(
+            participant.character,
+            action.id,
+            action.cooldown,
+            resolvedTurn
+          );
+        }
         match.playerCharacters![participant.playerId] = participant.character;
       }
       handled = true;

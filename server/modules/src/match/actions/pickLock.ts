@@ -69,7 +69,9 @@ export function executePickLockAction(
       if (!hasDexterity1) consumeCarriedItem(character, "lockpick");
       const contents = [...safe.contents];
       const revealedIds = openSafe(match, safe, character);
-      clearPlanByKey(character, participant.planKey);
+      if (participant.plan.actionId === ActionLibrary.pick_lock.id) {
+        clearPlanByKey(character, participant.planKey);
+      }
       events.push({ kind: "player", actorId: participant.playerId, action: {
         actionId: ActionLibrary.pick_lock.id,
         metadata: {
@@ -86,7 +88,9 @@ export function executePickLockAction(
     }
     if (turnsCompleted < required) {
       character.lockpickProgress = { tileId, safeItemId: safe.safeItemId, turnsCompleted };
-      clearPlanByKey(character, participant.planKey);
+      if (participant.plan.actionId === ActionLibrary.pick_lock.id) {
+        clearPlanByKey(character, participant.planKey);
+      }
       events.push({ kind: "player", actorId: participant.playerId, action: {
         actionId: ActionLibrary.pick_lock.id,
         metadata: { outcome: "progress", turnsCompleted, turnsRequired: required, safeItemId: safe.safeItemId, tileId },
@@ -96,7 +100,9 @@ export function executePickLockAction(
     character.lockpickProgress = undefined;
     const contents = [...safe.contents];
     const revealedIds = openSafe(match, safe, character);
-    clearPlanByKey(character, participant.planKey);
+    if (participant.plan.actionId === ActionLibrary.pick_lock.id) {
+      clearPlanByKey(character, participant.planKey);
+    }
     events.push({ kind: "player", actorId: participant.playerId, action: {
       actionId: ActionLibrary.pick_lock.id,
       metadata: {
