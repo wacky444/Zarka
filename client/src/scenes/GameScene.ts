@@ -124,6 +124,9 @@ export class GameScene extends Phaser.Scene {
   private characterPanelDesktopWidth = 0;
   private menuButton: UIButton | null = null;
   private viewModeButton: UIButton | null = null;
+  private viewModeButtonHighlight: Phaser.GameObjects.Rectangle | null = null;
+  private panelButtonHighlighted = false;
+  private panelButtonPulse: Phaser.Tweens.Tween | null = null;
   private replayControls: ReplayControls | null = null;
   private replayPaused = false;
   private replayModeActive = false;
@@ -856,6 +859,21 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(1101);
     this.cam.ignore(this.viewModeButton);
+    this.viewModeButton.on("pointerout", () => {
+      if (this.panelButtonHighlighted && this.mobileViewMode === "map") {
+        this.viewModeButton?.setStyle({
+          color: THEME.colors.tutorialHighlightText
+        });
+      }
+    });
+    this.viewModeButtonHighlight = this.add
+      .rectangle(0, 0, 0, 0)
+      .setOrigin(0, 0)
+      .setStrokeStyle(2, THEME.colors.tutorialHighlight, 1)
+      .setScrollFactor(0)
+      .setDepth(1102)
+      .setVisible(false);
+    this.cam.ignore(this.viewModeButtonHighlight);
     this.topBanner = new TopBanner(this, {
       camera: this.cam
     });
@@ -1129,6 +1147,12 @@ export class GameScene extends Phaser.Scene {
       this.autoAdvanceText = null;
       this.viewModeButton?.destroy();
       this.viewModeButton = null;
+      this.viewModeButtonHighlight?.destroy();
+      this.viewModeButtonHighlight = null;
+      if (this.panelButtonPulse) {
+        this.panelButtonPulse.stop();
+        this.panelButtonPulse = null;
+      }
       this.replayControls?.destroy();
       this.replayControls = null;
       this.resolveReplayResumeWaiters();
@@ -1954,6 +1978,34 @@ export class GameScene extends Phaser.Scene {
         );
       }
     }
+    const isPanelHighlighted =
+      isMobileView &&
+      this.panelButtonHighlighted &&
+      this.mobileViewMode === "map";
+    if (this.viewModeButtonHighlight) {
+      this.viewModeButtonHighlight.setVisible(isPanelHighlighted);
+      if (isPanelHighlighted && this.viewModeButton) {
+        const offset = 2;
+        this.viewModeButtonHighlight.setPosition(
+          this.viewModeButton.x - offset,
+          this.viewModeButton.y - offset
+        );
+        this.viewModeButtonHighlight.setSize(
+          this.viewModeButton.width + offset * 2,
+          this.viewModeButton.height + offset * 2
+        );
+      }
+    }
+    if (this.viewModeButton) {
+      if (isPanelHighlighted) {
+        this.viewModeButton.setStyle({
+          color: THEME.colors.tutorialHighlightText
+        });
+      } else {
+        this.viewModeButton.setStyle({ color: THEME.buttons.default.text });
+      }
+    }
+    this.syncPanelButtonPulse();
     if (this.autoAdvanceText) {
       this.autoAdvanceText.setPosition(10, 10);
     }
@@ -1990,6 +2042,7 @@ export class GameScene extends Phaser.Scene {
     if (this.mobileViewMode === "map") {
       this.cancelMainActionLocationPick();
       this.mobileViewMode = "sidebar";
+      this.panelButtonHighlighted = false;
     } else {
       this.mobileViewMode = "map";
     }
@@ -2001,7 +2054,31 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.mobileViewMode = "sidebar";
+    this.panelButtonHighlighted = false;
     this.layoutUI();
+  }
+
+  private syncPanelButtonPulse(): void {
+    const shouldPulse =
+      this.mobileLayout &&
+      this.panelButtonHighlighted &&
+      this.mobileViewMode === "map";
+    if (shouldPulse && !this.panelButtonPulse) {
+      this.panelButtonPulse = this.tweens.add({
+        targets: [this.viewModeButton, this.viewModeButtonHighlight].filter(
+          Boolean
+        ),
+        alpha: { from: 1, to: 0.5 },
+        duration: 750,
+        yoyo: true,
+        repeat: -1
+      });
+    } else if (!shouldPulse && this.panelButtonPulse) {
+      this.panelButtonPulse.stop();
+      this.panelButtonPulse = null;
+      this.viewModeButton?.setAlpha(1);
+      this.viewModeButtonHighlight?.setAlpha(1);
+    }
   }
 
   private showMobileMap(): void {
@@ -2058,13 +2135,14 @@ export class GameScene extends Phaser.Scene {
     const currentStep = this.tutorialController?.currentStep ?? null;
     if (isTutorial && this.mobileLayout) {
       const policy = getTutorialUiPolicy(currentStep);
-      const targetView = policy.mapRequired
-        ? "map"
-        : policy.highlightedTab
-          ? "sidebar"
-          : null;
-      if (targetView && this.mobileViewMode !== targetView) {
-        this.mobileViewMode = targetView;
+      if (policy.mapRequired) {
+        this.panelButtonHighlighted = false;
+        if (this.mobileViewMode !== "map") {
+          this.mobileViewMode = "map";
+          this.layoutUI();
+        }
+      } else if (this.mobileViewMode === "map" && policy.highlightedTab) {
+        this.panelButtonHighlighted = true;
         this.layoutUI();
       }
     }
@@ -2818,6 +2896,10 @@ export class GameScene extends Phaser.Scene {
       this.pendingReadyState = ready;
       return;
     }
+    if (ready && this.tutorialController && this.mobileLayout) {
+      this.panelButtonHighlighted = true;
+      this.showMobileMap();
+    }
     this.readyUpdateRunning = true;
     this.pendingReadyState = undefined;
     const previous =
@@ -2909,6 +2991,10 @@ export class GameScene extends Phaser.Scene {
       if (this.currentMatch) {
         this.currentMatch.readyStates = this.currentMatch.readyStates ?? {};
         this.currentMatch.readyStates[this.currentUserId] = previous;
+      }
+      if (this.tutorialController && this.mobileLayout && !previous) {
+        this.panelButtonHighlighted = false;
+        this.layoutUI();
       }
     } finally {
       this.readyUpdateRunning = false;
