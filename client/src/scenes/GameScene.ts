@@ -215,82 +215,192 @@ export class GameScene extends Phaser.Scene {
   private mapTouchPointerIds = new Set<number>();
 
   /**
-   * Android Chrome purges volatile GPU textures (WebGL context loss or memory
-   * eviction) while backgrounded. Rectangles and geometry survive because they
-   * are drawn as vertex buffers every frame, but Phaser.GameObjects.Text and
-   * BBCodeText rely on an offscreen HTML canvas uploaded as a WebGL texture.
-   * When returning to foreground, these textures become transparent or missing
-   * unless updateText() is called to re-upload the canvas buffer to the GPU.
+   * Redraw all canvas-backed text textures across the scene and texture manager.
+   * On Android Chrome, phone unlock or app switching frequently purges or zeroes
+   * offscreen HTML canvas backing stores and volatile WebGL textures.
    */
   private refreshTextTextures(root?: Phaser.GameObjects.GameObject): void {
+    // 1. Refresh all registered CanvasTextures in TextureManager directly
+    const textureManager = this.textures as unknown as {
+      list?: Record<
+        string,
+        { refresh?: () => void; _source?: { update?: () => void } }
+      >;
+    };
+    if (textureManager?.list) {
+      for (const key in textureManager.list) {
+        const tex = textureManager.list[key];
+        if (tex) {
+          if (typeof tex.refresh === "function") {
+            try {
+              tex.refresh();
+            } catch {
+              // ignore
+            }
+          } else if (typeof tex._source?.update === "function") {
+            try {
+              tex._source.update();
+            } catch {
+              // ignore
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Traverse scene display list and all nested containers/sizers
     const queue: Phaser.GameObjects.GameObject[] = root
       ? [root]
       : [...this.children.list];
+    const visited = new Set<Phaser.GameObjects.GameObject>();
 
     while (queue.length > 0) {
       const obj = queue.pop();
-      if (!obj) continue;
+      if (!obj || visited.has(obj)) continue;
+      visited.add(obj);
 
       const textTarget = obj as {
         dirty?: boolean;
-        updateText?: () => void;
+        updateText?: (runWrap?: boolean) => void;
         updateTexture?: () => void;
+        canvasText?: { updateText?: () => void };
       };
 
       if (typeof textTarget.updateText === "function") {
         textTarget.dirty = true;
-        textTarget.updateText();
+        try {
+          textTarget.updateText();
+        } catch {
+          // ignore
+        }
       } else if (typeof textTarget.updateTexture === "function") {
         textTarget.dirty = true;
-        textTarget.updateTexture();
+        try {
+          textTarget.updateTexture();
+        } catch {
+          // ignore
+        }
+      }
+      if (typeof textTarget.canvasText?.updateText === "function") {
+        try {
+          textTarget.canvasText.updateText();
+        } catch {
+          // ignore
+        }
       }
 
-      const container = obj as Phaser.GameObjects.Container & {
-        children?: Phaser.GameObjects.GameObject[];
-      };
+      // Check standard Phaser Container list
+      const container = obj as Phaser.GameObjects.Container;
       if (Array.isArray(container.list)) {
         for (const child of container.list) {
-          queue.push(child);
+          if (child && !visited.has(child)) {
+            queue.push(child);
+          }
         }
-      } else if (Array.isArray(container.children)) {
-        for (const child of container.children) {
-          queue.push(child);
+      }
+
+      // Check RexUI Sizer / ScrollablePanel / ContainerLite children
+      const rexObj = obj as {
+        getAllChildren?: (
+          out?: Phaser.GameObjects.GameObject[]
+        ) => Phaser.GameObjects.GameObject[];
+        childrenMap?: Record<
+          string,
+          Phaser.GameObjects.GameObject | Phaser.GameObjects.GameObject[]
+        >;
+        sizerChildren?:
+          | Record<string, Phaser.GameObjects.GameObject>
+          | Phaser.GameObjects.GameObject[];
+        children?: Phaser.GameObjects.GameObject[];
+      };
+
+      if (typeof rexObj.getAllChildren === "function") {
+        try {
+          const allKids = rexObj.getAllChildren();
+          if (Array.isArray(allKids)) {
+            for (const kid of allKids) {
+              if (kid && !visited.has(kid)) {
+                queue.push(kid);
+              }
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (rexObj.childrenMap && typeof rexObj.childrenMap === "object") {
+        for (const key in rexObj.childrenMap) {
+          const kid = rexObj.childrenMap[key];
+          if (Array.isArray(kid)) {
+            for (const item of kid) {
+              if (item && !visited.has(item)) queue.push(item);
+            }
+          } else if (kid && typeof kid === "object" && !visited.has(kid)) {
+            queue.push(kid);
+          }
+        }
+      }
+
+      if (Array.isArray(rexObj.sizerChildren)) {
+        for (const kid of rexObj.sizerChildren) {
+          if (kid && !visited.has(kid)) queue.push(kid);
+        }
+      } else if (
+        rexObj.sizerChildren &&
+        typeof rexObj.sizerChildren === "object"
+      ) {
+        for (const key in rexObj.sizerChildren) {
+          const kid = (
+            rexObj.sizerChildren as Record<string, Phaser.GameObjects.GameObject>
+          )[key];
+          if (kid && !visited.has(kid)) queue.push(kid);
+        }
+      }
+
+      if (Array.isArray(rexObj.children)) {
+        for (const child of rexObj.children) {
+          if (child && !visited.has(child)) {
+            queue.push(child);
+          }
         }
       }
     }
   }
 
-  private readonly webglRestoredHandler = () => {
-    // WebGL context was restored by the browser/GPU.
-    // Immediately re-upload all canvas text textures and update layout.
+  private triggerForegroundRestore(): void {
+    if (this.sceneShuttingDown) {
+      return;
+    }
     this.refreshTextTextures();
     this.scale.refresh();
     this.layoutUI();
     this.updateTutorialGuidance();
     this.characterPanel?.bringElementsToTop();
+  }
+
+  private readonly webglRestoredHandler = () => {
+    this.triggerForegroundRestore();
+    window.setTimeout(() => this.triggerForegroundRestore(), 80);
+    window.setTimeout(() => this.triggerForegroundRestore(), 250);
   };
 
   private readonly foregroundResumeHandler = () => {
     if (document.visibilityState !== "visible" || this.sceneShuttingDown) {
       return;
     }
+
+    // Immediate and staged texture refresh on unlock/resume
+    this.triggerForegroundRestore();
+    window.setTimeout(() => this.triggerForegroundRestore(), 80);
+    window.setTimeout(() => this.triggerForegroundRestore(), 250);
+    window.setTimeout(() => this.triggerForegroundRestore(), 600);
+
     const now = Date.now();
-    if (this.foregroundSyncRunning || now - this.lastForegroundSyncAt < 1000) {
+    if (this.foregroundSyncRunning || now - this.lastForegroundSyncAt < 2000) {
       return;
     }
     this.lastForegroundSyncAt = now;
-
-    // Redraw text textures and re-sync viewport when restored from background:
-    // Android Chrome frequently purges volatile WebGL texture data or suspends
-    // canvas backing stores when backgrounded. Pure geometry (rectangles, strokes)
-    // is redrawn every frame via vertex shaders, but Phaser.GameObjects.Text relies
-    // on an offscreen HTML canvas uploaded as a WebGL texture. Without an explicit
-    // updateText() call, text objects become invisible transparent quads on resume.
-    this.refreshTextTextures();
-    this.scale.refresh();
-    this.layoutUI();
-    this.updateTutorialGuidance();
-    this.characterPanel?.bringElementsToTop();
 
     void this.turnService?.touchRankedPresence();
     void this.turnService?.refreshRankedQueueAndMatches().catch((error: unknown) => {
@@ -998,11 +1108,14 @@ export class GameScene extends Phaser.Scene {
       this.foregroundResumeHandler
     );
     window.addEventListener("pageshow", this.foregroundResumeHandler);
+    window.addEventListener("focus", this.foregroundResumeHandler);
     window.addEventListener("online", this.foregroundResumeHandler);
     this.game.canvas?.addEventListener(
       "webglcontextrestored",
       this.webglRestoredHandler
     );
+    this.game.events.on(Phaser.Core.Events.RESUME, this.foregroundResumeHandler);
+    this.game.events.on(Phaser.Core.Events.FOCUS, this.foregroundResumeHandler);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.sceneShuttingDown = true;
       document.removeEventListener(
@@ -1010,10 +1123,19 @@ export class GameScene extends Phaser.Scene {
         this.foregroundResumeHandler
       );
       window.removeEventListener("pageshow", this.foregroundResumeHandler);
+      window.removeEventListener("focus", this.foregroundResumeHandler);
       window.removeEventListener("online", this.foregroundResumeHandler);
       this.game.canvas?.removeEventListener(
         "webglcontextrestored",
         this.webglRestoredHandler
+      );
+      this.game.events.off(
+        Phaser.Core.Events.RESUME,
+        this.foregroundResumeHandler
+      );
+      this.game.events.off(
+        Phaser.Core.Events.FOCUS,
+        this.foregroundResumeHandler
       );
       this.replayPlaybackCancelled = true;
       this.resolveReplayResumeWaiters();
