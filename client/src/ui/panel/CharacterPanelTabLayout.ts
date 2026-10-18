@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { CharacterPanelTabEntry, TabKey } from "../CharacterPanelTabs";
+import { THEME } from "../ColorPalette";
 
 const TAB_HEIGHT = 40;
 const TAB_ARROW_WIDTH = 36;
@@ -18,7 +19,8 @@ export class CharacterPanelTabLayout {
     private readonly getWidth: () => number,
     private readonly isUnread: (key: TabKey) => boolean,
     private readonly nextBadge?: Phaser.GameObjects.Rectangle,
-    private readonly previousBadge?: Phaser.GameObjects.Rectangle
+    private readonly previousBadge?: Phaser.GameObjects.Rectangle,
+    private readonly getHighlightedTab?: () => TabKey | null
   ) {}
 
   refreshBadges(): void {
@@ -148,6 +150,29 @@ export class CharacterPanelTabLayout {
     setInteractive(this.previousButton, this.previousText, canMovePrevious);
     setInteractive(this.nextButton, this.nextText, canMoveNext);
 
+    const highlightedTabKey = this.getHighlightedTab?.() ?? null;
+    const highlightedTabIndex = highlightedTabKey
+      ? this.tabs.findIndex((tab) => tab.key === highlightedTabKey)
+      : -1;
+
+    const hasHighlightToLeft =
+      highlightedTabIndex >= 0 && highlightedTabIndex < this.startIndex;
+    const hasHighlightToRight =
+      highlightedTabIndex >= 0 &&
+      highlightedTabIndex >= this.startIndex + visibleCount;
+
+    if (showArrows && hasHighlightToLeft) {
+      this.previousButton.setStrokeStyle(3, THEME.colors.tutorialHighlight, 1);
+    } else {
+      this.previousButton.setStrokeStyle();
+    }
+
+    if (showArrows && hasHighlightToRight) {
+      this.nextButton.setStrokeStyle(3, THEME.colors.tutorialHighlight, 1);
+    } else {
+      this.nextButton.setStrokeStyle();
+    }
+
     const hasUnreadToRight = this.tabs.some(
       (tab, index) =>
         index >= this.startIndex + visibleCount && this.isUnread(tab.key)
@@ -158,10 +183,10 @@ export class CharacterPanelTabLayout {
 
     this.nextBadge
       ?.setPosition(width - 10, 6)
-      .setVisible(hasUnreadToRight);
+      .setVisible(showArrows && (hasUnreadToRight || hasHighlightToRight));
     this.previousBadge
       ?.setPosition(TAB_ARROW_WIDTH - 10, 6)
-      .setVisible(hasUnreadToLeft);
+      .setVisible(showArrows && (hasUnreadToLeft || hasHighlightToLeft));
   }
 
   private getVisibleTabCount(width: number): number {

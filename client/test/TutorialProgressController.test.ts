@@ -105,6 +105,8 @@ test("tutorial UI policy exposes only the actions and items for the current less
   assert.deepEqual(pickup.primaryActionIds, ["pick_up"]);
 
   const axePlan = getTutorialUiPolicy("plan_axe_attack");
+  assert.equal(axePlan.autoSelectTab, false);
+  assert.equal(axePlan.autoSelectCharacterSubtab, false);
   assert.equal(axePlan.autoSelectPrimaryAction, false);
   assert.equal(axePlan.extraPowerEnabled, false);
   assert.deepEqual(axePlan.primaryActionIds, ["axe_attack"]);
@@ -275,29 +277,19 @@ test("tutorial UI policy exposes only the actions and items for the current less
 
   assert.equal(
     isTutorialReadyActionAllowed("plan_axe_attack", {
-      mainActionId: ActionLibrary.axe_attack.id,
-      targetPlayerId: "bot1"
+      mainActionId: ActionLibrary.axe_attack.id
     }),
     true
   );
   assert.equal(
     isTutorialReadyActionAllowed("plan_axe_attack", {
-      mainActionId: ActionLibrary.axe_attack.id,
-      targetPlayerId: null
+      mainActionId: null
     }),
     false
   );
   assert.equal(
     isTutorialReadyActionAllowed("plan_axe_attack", {
-      mainActionId: ActionLibrary.punch.id,
-      targetPlayerId: "bot1"
-    }),
-    false
-  );
-  assert.equal(
-    isTutorialReadyActionAllowed("plan_axe_attack", {
-      mainActionId: null,
-      targetPlayerId: "bot1"
+      mainActionId: ActionLibrary.punch.id
     }),
     false
   );

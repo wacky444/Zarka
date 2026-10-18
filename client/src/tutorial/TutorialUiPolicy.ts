@@ -128,6 +128,8 @@ const STEP_POLICIES: Record<TutorialStepId, TutorialUiPolicy> = {
   }),
   plan_axe_attack: policy({
     ...STATUS_PANEL,
+    autoSelectTab: false,
+    autoSelectCharacterSubtab: false,
     autoSelectPrimaryAction: false,
     highlightedControls: ["main_action"],
     primaryActionIds: [ActionLibrary.axe_attack.id],
@@ -208,11 +210,7 @@ export function isTutorialReadyActionAllowed(
   }
   if (stepId === "plan_axe_attack") {
     const isAxe = options.mainActionId === ActionLibrary.axe_attack.id;
-    const hasTarget =
-      options.targetPlayerId === undefined
-        ? true
-        : options.targetPlayerId === TUTORIAL_BOT_ID;
-    return isAxe && hasTarget;
+    return isAxe;
   }
   if (stepId === "return_to_bot") {
     const isMove = options.mainActionId === ActionLibrary.move.id;

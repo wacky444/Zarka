@@ -290,7 +290,20 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       () => this.panelWidth,
       (key) => this.tabsController?.isTabUnread(key) ?? false,
       this.tabNextBadge,
-      this.tabPreviousBadge
+      this.tabPreviousBadge,
+      () => {
+        if (!this.tutorialActive || !this.tutorialStepId) {
+          return null;
+        }
+        const policy = getTutorialUiPolicy(this.tutorialStepId);
+        if (
+          !policy.highlightedTab ||
+          this.tabsController?.getActiveTab() === policy.highlightedTab
+        ) {
+          return null;
+        }
+        return policy.highlightedTab;
+      }
     );
     this.tabPreviousButton.on(Phaser.Input.Events.POINTER_UP, () => {
       this.tabLayout.move(-1);
@@ -788,8 +801,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (active && policy.highlightedTab) {
       if (policy.autoSelectTab) {
         this.tabsController.setActiveTab(policy.highlightedTab);
+        this.tabLayout.reveal(policy.highlightedTab);
       }
-      this.tabLayout.reveal(policy.highlightedTab);
     }
     const shouldHighlightTab =
       active &&
