@@ -94,7 +94,7 @@ export function buildPlayerTargetOptionSets(options: {
         character?.statuses?.conditions?.includes("dead") === true ||
         (typeof character?.stats?.health?.current === "number" &&
           character.stats.health.current <= 0);
-      if (isDead && actionId !== "inspect") {
+      if (isDead && actionId !== "inspect" && actionId !== "steal") {
         return false;
       }
       return allowsSelf || option.id !== options.currentUserId;

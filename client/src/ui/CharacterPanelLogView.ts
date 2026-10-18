@@ -1429,6 +1429,14 @@ export class CharacterPanelLogView {
         "Missing"
       ).toLowerCase()} ${itemName})`;
     }
+    if (attemptedId === "steal") {
+      if (container.reason === "invalid_target") {
+        return `${actor} ${t("failed to use")} ${attemptedName} (${t("target out of range")})`;
+      }
+      if (container.reason === "missing_item") {
+        return `${actor} ${t("failed to use")} ${attemptedName} (${t("target had no items to steal")})`;
+      }
+    }
     return `${actor} ${t("failed to use")} ${attemptedName}`;
   }
 

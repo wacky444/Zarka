@@ -17,6 +17,7 @@ import {
 import { getUsableExtraExecutions } from "../../utils/energy";
 import { collectTargets, type TargetCandidate } from "./targeting";
 import {
+  createFailedActionEvent,
   isTargetProtected,
   type PlannedActionParticipant,
 } from "./utils";
@@ -308,6 +309,21 @@ export class StealAction extends BaseAction {
       syncBandolierLoadCapacity(participant.character);
       this.clearPlan(participant);
       match.playerCharacters![participant.playerId] = participant.character;
+
+      if (stolenItems.length === 0) {
+        const reason = !firstTargetCandidate
+          ? "invalid_target"
+          : blockedByProtection
+            ? "invalid_target"
+            : "missing_item";
+        events.push(
+          createFailedActionEvent(participant, actionId, {
+            reason,
+            ...(firstTargetCandidate ? { targetPlayerId: firstTargetCandidate.id } : {})
+          })
+        );
+        continue;
+      }
 
       const metadata: Record<string, unknown> = {
         targetPlayerId: firstTargetCandidate?.id,

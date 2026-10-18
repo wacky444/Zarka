@@ -715,6 +715,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "was destroyed": "fue destruida",
   "filled with gas": "se llenó de gas",
   "failed to use": "no pudo usar",
+  "target out of range": "objetivo fuera de rango",
+  "target had no items to steal": "el objetivo no tiene objetos que robar",
   "an action": "una acción",
   extra: "extra",
   "belongs to the team": "pertenece al equipo",
