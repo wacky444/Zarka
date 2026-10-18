@@ -37,8 +37,10 @@ test("lockpicking opens safe after four turns and reveals contents for opener an
     ["medicine"]
   );
   assert.equal(match.safeContainers?.[0].opened, true);
-  assert.equal(match.map?.tiles[0].itemIds.length, 2);
-  assert.equal(participant.character.discoveredItemIds?.length, 2);
+  assert.equal(match.map?.tiles[0].itemIds.length, 1);
+  assert.equal(participant.character.discoveredItemIds?.length, 1);
+  assert.equal(match.map?.tiles[0].itemIds.includes("safe"), false);
+  assert.equal(participant.character.discoveredItemIds?.includes("safe"), false);
 });
 
 test("lockpick opens instantly and is consumed without Dexterity 1", () => {

@@ -7,8 +7,21 @@ import { clearPlanByKey, consumeCarriedItem, hasCarriedItem } from "./utils";
 function openSafe(match: MatchRecord, safe: NonNullable<MatchRecord["safeContainers"]>[number], character: PlannedActionParticipant["character"]): string[] {
   safe.opened = true;
   const tile = match.map?.tiles.find((entry) => entry.id === safe.tileId);
-  if (tile) tile.itemIds ??= [];
+  if (tile) {
+    tile.itemIds = (tile.itemIds ?? []).filter((id) => id !== safe.safeItemId);
+  }
+  if (match.items) {
+    match.items = match.items.filter((item) => item.item_id !== safe.safeItemId);
+  }
+  for (const pc of Object.values(match.playerCharacters ?? {})) {
+    if (pc.discoveredItemIds) {
+      pc.discoveredItemIds = pc.discoveredItemIds.filter(
+        (id) => id !== safe.safeItemId
+      );
+    }
+  }
   const discovered = new Set(character.discoveredItemIds ?? []);
+  discovered.delete(safe.safeItemId);
   const revealedIds: string[] = [];
   for (let index = 0; index < safe.contents.length; index += 1) {
     const itemId = `${safe.safeItemId}_contents_${index}`;
