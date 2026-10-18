@@ -1,5 +1,5 @@
 import type { ReplayEvent } from "@shared";
-import { ActionLibrary } from "@shared";
+import { ActionLibrary, getSkillRank } from "@shared";
 import type { MatchRecord } from "../../models/types";
 import type { PlannedActionParticipant } from "./utils";
 import { clearPlanByKey, consumeCarriedItem, hasCarriedItem } from "./utils";
@@ -57,12 +57,13 @@ export function executePickLockAction(
       }});
       continue;
     }
-    const hasDexterity1 = character.abilities?.includes("dexterity1") === true;
+    const dexRank = getSkillRank(character, "dexterity1");
+    const hasDexterity1 = dexRank > 0;
     const hasLockpick = hasCarriedItem(character, "lockpick");
     const continuing = character.lockpickProgress?.tileId === tileId &&
       character.lockpickProgress.safeItemId === safe.safeItemId;
     const completed = continuing ? character.lockpickProgress!.turnsCompleted : 0;
-    const required = hasDexterity1 ? 3 : 4;
+    const required = Math.max(1, 4 - dexRank);
     const turnsCompleted = completed + 1;
     if (hasLockpick) {
       character.lockpickProgress = undefined;

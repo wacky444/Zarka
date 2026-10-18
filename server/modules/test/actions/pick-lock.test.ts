@@ -71,6 +71,16 @@ test("Dexterity 1 opens safe in three turns without a lockpick", () => {
   assert.equal(event.kind === "player" ? event.action.metadata?.outcome : undefined, "success");
 });
 
+test("Dexterity 1 rank 2 opens safe in two turns without a lockpick", () => {
+  const { match, participant } = setup();
+  participant.character.abilities = ["dexterity1", "dexterity1"];
+  const [event1] = executePickLockAction([participant], match);
+  assert.equal(event1.kind === "player" ? event1.action.metadata?.turnsCompleted : undefined, 1);
+  assert.equal(event1.kind === "player" ? event1.action.metadata?.turnsRequired : undefined, 2);
+  const [event2] = executePickLockAction([participant], match);
+  assert.equal(event2.kind === "player" ? event2.action.metadata?.outcome : undefined, "success");
+});
+
 test("ongoing lockpicking auto-continues without re-submitting action until safe is opened", () => {
   const { match, participant } = setup();
   const dummyLogger = {

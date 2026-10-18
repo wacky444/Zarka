@@ -989,7 +989,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     ],
     developed: true,
     notes: [
-      "Destreza 1 reduce el proceso a 3 turnos y evita que se consuma la ganzúa. Debe ver una caja fuerte."
+      "Cada nivel de Destreza 1 reduce en un turno el proceso y evita que se consuma la ganzúa. Debe ver una caja fuerte."
     ],
     texture: "Board Game Icons",
     frame: "lock_open.png",
