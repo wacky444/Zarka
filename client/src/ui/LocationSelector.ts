@@ -16,6 +16,7 @@ export class LocationSelector extends Phaser.GameObjects.Container {
   private enabled = true;
   private pending = false;
   private preferredWidth: number;
+  private tutorialHighlighted = false;
   private disposed = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, width: number) {
@@ -72,6 +73,7 @@ export class LocationSelector extends Phaser.GameObjects.Container {
     if (this.disposed) {
       return;
     }
+    this.tutorialHighlighted = highlighted;
     this.label.setColor(
       highlighted ? THEME.colors.tutorialHighlightText : THEME.colors.textPrimary
     );
@@ -79,6 +81,7 @@ export class LocationSelector extends Phaser.GameObjects.Container {
       highlighted ? THEME.colors.tutorialHighlightText : "#000000",
       highlighted ? 1 : 0
     );
+    this.updateButtons();
   }
 
   setValue(value: Axial | null): void {
@@ -138,6 +141,21 @@ export class LocationSelector extends Phaser.GameObjects.Container {
         this.pending ? SELECT_PENDING_LABEL : SELECT_LABEL
       );
       this.selectButton.disableInteractive();
+    }
+    if (this.tutorialHighlighted && selectEnabled) {
+      this.selectButton.setStyle({
+        color: THEME.colors.tutorialHighlightText,
+        backgroundColor: "#2a2200"
+      });
+      this.selectButton.setStroke(THEME.colors.tutorialHighlightText, 2);
+    } else {
+      this.selectButton.setStyle({
+        color: selectEnabled ? THEME.buttons.default.text : THEME.buttons.disabled.text,
+        backgroundColor: selectEnabled
+          ? THEME.buttons.default.background
+          : THEME.buttons.disabled.background
+      });
+      this.selectButton.setStroke("#000000", 0);
     }
 
     const clearEnabled = !!this.current && !this.pending;

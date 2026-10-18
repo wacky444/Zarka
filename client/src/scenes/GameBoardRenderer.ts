@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { THEME } from "../ui/ColorPalette";
 import {
   CellLibrary,
   DEFAULT_SKIN,
@@ -76,6 +77,7 @@ export interface GameBoardRendererCallbacks {
   onTilePick(tile: HexTile): void;
   onCellInfoOpened(coord: Axial): void;
   onPlayerCardClick(playerId: string): void;
+  getTutorialTargetCell?: () => Axial | null;
 }
 
 export class GameBoardRenderer {
@@ -125,6 +127,8 @@ export class GameBoardRenderer {
     pointer: Phaser.Input.Pointer;
   } | null = null;
   private locationSelectionHoverText: Phaser.GameObjects.Text | null = null;
+  private tutorialCellMarker: Phaser.GameObjects.Graphics | null = null;
+  private tutorialCellTween: Phaser.Tweens.Tween | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -1090,6 +1094,7 @@ export class GameBoardRenderer {
 
   refreshLocationSelectionVisuals(): void {
     const selection = this.callbacks.getLocationSelection();
+    const tutorialCell = this.callbacks.getTutorialTargetCell?.() ?? null;
     for (const entry of this.mapTileSprites) {
       const { tile, image } = entry;
       const isHovered = selection.hoveredTileId === tile.id;
@@ -1101,19 +1106,26 @@ export class GameBoardRenderer {
               selection.extraExecutions,
             )
           : false;
+      const isTutorialTarget =
+        tutorialCell !== null &&
+        tile.coord.q === tutorialCell.q &&
+        tile.coord.r === tutorialCell.r;
       this.updateTileTintState(image, tile, {
         isLocationSelectionActive: selection.active,
         isInActionRange: isInRange,
         isHovered,
+        isTutorialTarget
       });
     }
     this.updateLocationSelectionHoverText();
+    this.updateTutorialCellMarker(tutorialCell);
   }
 
   refreshAllTileTints(): void {
     this.playerCoordForTinting = this.getCurrentPlayerCoord();
     this.playerViewRange = this.getCurrentPlayerViewRange();
     const selection = this.callbacks.getLocationSelection();
+    const tutorialCell = this.callbacks.getTutorialTargetCell?.() ?? null;
 
     for (const entry of this.mapTileSprites) {
       const { tile, image } = entry;
@@ -1126,12 +1138,18 @@ export class GameBoardRenderer {
               selection.extraExecutions,
             )
           : false;
+      const isTutorialTarget =
+        tutorialCell !== null &&
+        tile.coord.q === tutorialCell.q &&
+        tile.coord.r === tutorialCell.r;
       this.updateTileTintState(image, tile, {
         isLocationSelectionActive: selection.active,
         isInActionRange: isInRange,
         isHovered,
+        isTutorialTarget
       });
     }
+    this.updateTutorialCellMarker(tutorialCell);
   }
 
   getPlayerSprite(playerId: string): SkinContainer | undefined {
@@ -1444,6 +1462,7 @@ export class GameBoardRenderer {
       isLocationSelectionActive?: boolean;
       isInActionRange?: boolean;
       isHovered?: boolean;
+      isTutorialTarget?: boolean;
     } = {},
   ): void {
     const currentTurn = this.getCurrentTurn();
@@ -1464,7 +1483,7 @@ export class GameBoardRenderer {
 
     const isOutOfRange = this.isOutOfViewRange(tile.coord);
     const dimTint = 0x666666;
-    const { isLocationSelectionActive, isInActionRange, isHovered } = options;
+    const { isLocationSelectionActive, isInActionRange, isHovered, isTutorialTarget } = options;
     if (isOutOfRange) {
       image.setTint(dimTint);
       image.setAlpha(1);
@@ -1480,6 +1499,10 @@ export class GameBoardRenderer {
         image.setAlpha(0.8);
       }
     }
+    if (isTutorialTarget) {
+      image.setTint(THEME.colors.tutorialHighlight);
+      image.setAlpha(1);
+    }
     if (isHovered) {
       const hoverTint = isInActionRange ? 0xfacc15 : 0xfb7185;
       image.setTint(hoverTint);
@@ -1490,8 +1513,50 @@ export class GameBoardRenderer {
     }
   }
 
+  private updateTutorialCellMarker(tutorialCell: Axial | null): void {
+    if (tutorialCell && !this.mapRenderingPaused) {
+      const world = this.axialToWorld(tutorialCell);
+      if (
+        !this.tutorialCellMarker ||
+        !this.tutorialCellMarker.active ||
+        this.tutorialCellMarker.scene !== this.scene
+      ) {
+        this.tutorialCellMarker = this.scene.add.graphics();
+        this.tutorialCellMarker.lineStyle(4, THEME.colors.tutorialHighlight, 1);
+        this.tutorialCellMarker.strokeCircle(0, 0, 32);
+        this.tutorialCellMarker.setDepth(15);
+        this.uiCamera.ignore(this.tutorialCellMarker);
+        this.tutorialCellTween = this.scene.tweens.add({
+          targets: this.tutorialCellMarker,
+          scaleX: 1.18,
+          scaleY: 1.18,
+          alpha: { from: 1, to: 0.5 },
+          duration: 650,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut"
+        });
+      }
+      this.tutorialCellMarker.setPosition(world.x, world.y);
+      this.tutorialCellMarker.setVisible(true);
+    } else {
+      if (this.tutorialCellMarker) {
+        this.tutorialCellTween?.remove();
+        this.tutorialCellTween = null;
+        this.tutorialCellMarker.destroy();
+        this.tutorialCellMarker = null;
+      }
+    }
+  }
+
   private clearMapTileSprites(): void {
     this.clearTrackerMarkers();
+    if (this.tutorialCellMarker) {
+      this.tutorialCellTween?.remove();
+      this.tutorialCellTween = null;
+      this.tutorialCellMarker.destroy();
+      this.tutorialCellMarker = null;
+    }
     for (const entry of this.mapTileSprites) {
       if (entry.cellInfoLongPressTimer) {
         this.scene.time.removeEvent(entry.cellInfoLongPressTimer);

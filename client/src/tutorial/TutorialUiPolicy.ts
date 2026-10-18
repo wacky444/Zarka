@@ -144,6 +144,7 @@ const STEP_POLICIES: Record<TutorialStepId, TutorialUiPolicy> = {
   }),
   return_to_bot: policy({
     ...STATUS_PANEL,
+    autoSelectPrimaryAction: false,
     highlightedControls: ["main_action", "location_target"],
     primaryActionIds: [ActionLibrary.move.id],
     actionEditingEnabled: true,

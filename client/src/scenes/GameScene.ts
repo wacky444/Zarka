@@ -697,6 +697,27 @@ export class GameScene extends Phaser.Scene {
         onTilePick: (tile) => this.completeMainActionLocationPick(tile),
         onCellInfoOpened: (coord) => this.handleTutorialCellInfoOpened(coord),
         onPlayerCardClick: (playerId) => this.openPlayerCard(playerId),
+        getTutorialTargetCell: () => {
+          if (
+            !this.tutorialController ||
+            this.tutorialController.currentStep !== "return_to_bot"
+          ) {
+            return null;
+          }
+          const mainAction = this.characterPanel?.getMainActionSelection();
+          if (mainAction?.actionId !== ActionLibrary.move.id) {
+            return null;
+          }
+          const target = mainAction.targetLocation;
+          if (
+            target &&
+            target.q === TUTORIAL_CELL_COORDS.playerStart.q &&
+            target.r === TUTORIAL_CELL_COORDS.playerStart.r
+          ) {
+            return null;
+          }
+          return TUTORIAL_CELL_COORDS.playerStart;
+        },
       },
     );
 

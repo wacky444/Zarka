@@ -147,7 +147,9 @@ test("tutorial UI policy exposes only the actions and items for the current less
 
   const returnToBot = getTutorialUiPolicy("return_to_bot");
   assert.equal(returnToBot.readyEnabled, true);
+  assert.equal(returnToBot.autoSelectPrimaryAction, false);
   assert.ok(returnToBot.highlightedControls.includes("location_target"));
+  assert.ok(returnToBot.highlightedControls.includes("main_action"));
 
   assert.equal(
     isTutorialReadyActionAllowed("return_to_bot", {

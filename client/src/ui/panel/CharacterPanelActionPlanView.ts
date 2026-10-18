@@ -16,6 +16,7 @@ import {
   type MatchRecord,
   type PlayerCharacter,
   type TutorialStepId,
+  TUTORIAL_CELL_COORDS,
   getActionEnergyDiscount,
   getSkillEffectTotal
 } from "@shared";
@@ -1402,7 +1403,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     const shouldHighlightMain =
       isHighlighted("main_action") &&
       (stepId !== "pickup_items" || this.mainActionSelection !== ActionLibrary.pick_up.id) &&
-      (stepId !== "plan_axe_attack" || this.mainActionSelection !== ActionLibrary.axe_attack.id);
+      (stepId !== "plan_axe_attack" || this.mainActionSelection !== ActionLibrary.axe_attack.id) &&
+      (stepId !== "return_to_bot" || this.mainActionSelection !== ActionLibrary.move.id);
     this.mainActionDropdown.setTutorialHighlight(shouldHighlightMain);
 
     const shouldHighlightSecondary =
@@ -1413,7 +1415,15 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
 
     this.extraExecutionSelector.setTutorialHighlight(isHighlighted("extra_execution"));
     this.playerSelector.setTutorialHighlight(isHighlighted("player_target"));
-    this.locationSelector.setTutorialHighlight(isHighlighted("location_target"));
+
+    const shouldHighlightLocation =
+      isHighlighted("location_target") &&
+      (stepId !== "return_to_bot" ||
+        (this.mainActionSelection === ActionLibrary.move.id &&
+          (!this.mainActionTarget ||
+            this.mainActionTarget.q !== TUTORIAL_CELL_COORDS.playerStart.q ||
+            this.mainActionTarget.r !== TUTORIAL_CELL_COORDS.playerStart.r)));
+    this.locationSelector.setTutorialHighlight(shouldHighlightLocation);
   }
 
   syncTutorialActionSelection(
@@ -2525,7 +2535,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
                 this.tutorialStepId === "plan_axe_attack" &&
                 this.mainActionSelection !== ActionLibrary.axe_attack.id
               ? ActionLibrary.axe_attack.id
-              : null;
+              : this.tutorialActive &&
+                  this.tutorialStepId === "return_to_bot" &&
+                  this.mainActionSelection !== ActionLibrary.move.id
+                ? ActionLibrary.move.id
+                : null;
 
     return {
       character,
