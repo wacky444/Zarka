@@ -1223,10 +1223,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
 
     const secondaryActions = collectSecondaryActions(character);
     const hasExtraSecondary = this.hasExtraSecondaryAction();
-    let secondaryId = character.actionPlan?.secondary?.actionId ?? null;
-    if (!secondaryId && character.lockpickProgress) {
-      secondaryId = ActionLibrary.pick_lock.id;
-    }
+    const secondaryId = character.actionPlan?.secondary?.actionId ?? null;
     let extraSecondaryId = character.actionPlan?.extraSecondary?.actionId ?? null;
     if (hasExtraSecondary && secondaryId && extraSecondaryId === secondaryId) {
       extraSecondaryId = null;
