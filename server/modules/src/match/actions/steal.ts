@@ -311,15 +311,18 @@ export class StealAction extends BaseAction {
       match.playerCharacters![participant.playerId] = participant.character;
 
       if (stolenItems.length === 0) {
-        const reason = !firstTargetCandidate
-          ? "invalid_target"
-          : blockedByProtection
+        const targetId = firstTargetCandidate?.id ?? requestedTargetPlayerId;
+        const targetChar = targetId ? match.playerCharacters?.[targetId] : undefined;
+        const isProtected = blockedByProtection || (targetChar && isTargetProtected(targetChar));
+        const reason = isProtected
+          ? "target_protected"
+          : !firstTargetCandidate
             ? "invalid_target"
             : "missing_item";
         events.push(
           createFailedActionEvent(participant, actionId, {
             reason,
-            ...(firstTargetCandidate ? { targetPlayerId: firstTargetCandidate.id } : {})
+            ...(targetId ? { targetPlayerId: targetId } : {})
           })
         );
         continue;

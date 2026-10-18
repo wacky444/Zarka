@@ -10,6 +10,7 @@ import type {
 } from "@shared";
 import { ActionLibrary, axialDistance, getSkillEffectTotal } from "@shared";
 import {
+  createFailedActionEvent,
   isTargetProtected,
   type PlannedActionParticipant,
 } from "./utils";
@@ -105,6 +106,23 @@ export class ScareAction extends BaseAction {
           : undefined;
       this.clearPlan(participant);
       if (!origin || selection.length === 0) {
+        const firstRequested = requestedTargets[0];
+        const requestedChar = firstRequested
+          ? match.playerCharacters?.[firstRequested]
+          : undefined;
+        const isProtected = requestedChar && isTargetProtected(requestedChar);
+        if (firstRequested) {
+          events.push(
+            createFailedActionEvent(participant, actionId, {
+              reason: isProtected ? "target_protected" : "invalid_target",
+              targetPlayerId: firstRequested,
+            })
+          );
+          if (match.playerCharacters) {
+            match.playerCharacters[participant.playerId] =
+              participant.character;
+          }
+        }
         continue;
       }
 

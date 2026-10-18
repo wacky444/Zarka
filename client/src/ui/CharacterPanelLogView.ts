@@ -1395,6 +1395,7 @@ export class CharacterPanelLogView {
     }
     const container = metadata as {
       attemptedActionId?: unknown;
+      targetPlayerId?: unknown;
       missingItemId?: unknown;
       reason?: unknown;
       mode?: unknown;
@@ -1428,6 +1429,15 @@ export class CharacterPanelLogView {
       return `${actor} ${t("failed to use")} ${attemptedName} (${t(
         "Missing"
       ).toLowerCase()} ${itemName})`;
+    }
+    if (container.reason === "target_protected") {
+      const targetName =
+        typeof container.targetPlayerId === "string"
+          ? this.resolvePlayerName(container.targetPlayerId)
+          : null;
+      return targetName
+        ? `${actor} ${t("failed to use")} ${attemptedName} (${targetName} ${t("is protected")})`
+        : `${actor} ${t("failed to use")} ${attemptedName} (${t("target is protected")})`;
     }
     if (attemptedId === "steal") {
       if (container.reason === "invalid_target") {

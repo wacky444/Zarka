@@ -84,6 +84,7 @@ export function buildGuardedEffectMask(
 export type FailedActionReason =
   | "missing_item"
   | "invalid_target"
+  | "target_protected"
   | "location_skill_requirement"
   | "inventory_capacity"
   | "invalid_selection"
@@ -92,6 +93,7 @@ export type FailedActionReason =
 
 export interface FailedActionDetails {
   reason: FailedActionReason;
+  targetPlayerId?: string;
   missingItemId?: string;
   craftedItemId?: string;
   mode?: "combine" | "separate";
