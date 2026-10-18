@@ -137,6 +137,7 @@ test("tutorial UI policy exposes only the actions and items for the current less
   assert.deepEqual(finalScare.primaryActionIds, ["scare"]);
   assert.equal(finalScare.readyEnabled, true);
   assert.equal(finalScare.extraPowerEnabled, true);
+  assert.equal(finalScare.autoSelectPrimaryAction, false);
   assert.ok(finalScare.highlightedControls.includes("extra_execution"));
   assert.ok(finalScare.highlightedControls.includes("location_target"));
 
@@ -181,41 +182,55 @@ test("tutorial UI policy exposes only the actions and items for the current less
   );
   assert.equal(
     isTutorialReadyActionAllowed("scare_bot_to_doomed_cell", {
-      mainActionId: "scare",
+      mainActionId: ActionLibrary.scare.id,
       extraExecutions: 1,
-      targetLocation: { q: 0, r: 1 }
+      targetLocation: { q: 0, r: 1 },
+      targetPlayerId: "bot1"
     }),
     true
   );
   assert.equal(
     isTutorialReadyActionAllowed("scare_bot_to_doomed_cell", {
-      mainActionId: "scare",
+      mainActionId: ActionLibrary.scare.id,
+      extraExecutions: 1,
+      targetLocation: { q: 0, r: 1 },
+      targetPlayerId: null
+    }),
+    false
+  );
+  assert.equal(
+    isTutorialReadyActionAllowed("scare_bot_to_doomed_cell", {
+      mainActionId: ActionLibrary.scare.id,
       extraExecutions: 0,
-      targetLocation: { q: 0, r: 1 }
+      targetLocation: { q: 0, r: 1 },
+      targetPlayerId: "bot1"
     }),
     false
   );
   assert.equal(
     isTutorialReadyActionAllowed("scare_bot_to_doomed_cell", {
-      mainActionId: "scare",
+      mainActionId: ActionLibrary.scare.id,
       extraExecutions: 1,
-      targetLocation: { q: 0, r: 0 }
+      targetLocation: { q: 0, r: 0 },
+      targetPlayerId: "bot1"
     }),
     false
   );
   assert.equal(
     isTutorialReadyActionAllowed("scare_bot_to_doomed_cell", {
-      mainActionId: "scare",
+      mainActionId: ActionLibrary.scare.id,
       extraExecutions: 1,
-      targetLocation: null
+      targetLocation: null,
+      targetPlayerId: "bot1"
     }),
     false
   );
   assert.equal(
     isTutorialReadyActionAllowed("scare_bot_to_doomed_cell", {
-      mainActionId: "axe_attack",
+      mainActionId: ActionLibrary.axe_attack.id,
       extraExecutions: 1,
-      targetLocation: { q: 0, r: 1 }
+      targetLocation: { q: 0, r: 1 },
+      targetPlayerId: "bot1"
     }),
     false
   );

@@ -16,6 +16,7 @@ import {
   type MatchRecord,
   type PlayerCharacter,
   type TutorialStepId,
+  TUTORIAL_BOT_ID,
   TUTORIAL_CELL_COORDS,
   getActionEnergyDiscount,
   getSkillEffectTotal
@@ -1400,11 +1401,22 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     const policy = getTutorialUiPolicy(stepId);
     const isHighlighted = (control: string) =>
       policy.highlightedControls.includes(control as Parameters<typeof policy.highlightedControls.includes>[0]);
+    const isScareStep = stepId === "scare_bot_to_doomed_cell";
+    const scareHasMain = this.mainActionSelection === ActionLibrary.scare.id;
+    const scareHasExtra = this.mainExtraExecutions >= 1;
+    const scareHasLocation =
+      this.mainActionTarget !== null &&
+      this.mainActionTarget.q === TUTORIAL_CELL_COORDS.doomed.q &&
+      this.mainActionTarget.r === TUTORIAL_CELL_COORDS.doomed.r;
+    const scareHasPlayer =
+      this.mainActionTargetPlayerId === TUTORIAL_BOT_ID;
+
     const shouldHighlightMain =
       isHighlighted("main_action") &&
       (stepId !== "pickup_items" || this.mainActionSelection !== ActionLibrary.pick_up.id) &&
       (stepId !== "plan_axe_attack" || this.mainActionSelection !== ActionLibrary.axe_attack.id) &&
-      (stepId !== "return_to_bot" || this.mainActionSelection !== ActionLibrary.move.id);
+      (stepId !== "return_to_bot" || this.mainActionSelection !== ActionLibrary.move.id) &&
+      (!isScareStep || !scareHasMain);
     this.mainActionDropdown.setTutorialHighlight(shouldHighlightMain);
 
     const shouldHighlightSecondary =
@@ -1413,17 +1425,29 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       (stepId !== "feed_bot" || this.secondaryActionSelection !== ActionLibrary.feed.id);
     this.secondaryActionDropdown.setTutorialHighlight(shouldHighlightSecondary);
 
-    this.extraExecutionSelector.setTutorialHighlight(isHighlighted("extra_execution"));
-    this.playerSelector.setTutorialHighlight(isHighlighted("player_target"));
+    const shouldHighlightExtra =
+      isHighlighted("extra_execution") &&
+      (!isScareStep || (scareHasMain && !scareHasExtra));
+    this.extraExecutionSelector.setTutorialHighlight(shouldHighlightExtra);
 
     const shouldHighlightLocation =
       isHighlighted("location_target") &&
-      (stepId !== "return_to_bot" ||
-        (this.mainActionSelection === ActionLibrary.move.id &&
+      (stepId === "return_to_bot"
+        ? this.mainActionSelection === ActionLibrary.move.id &&
           (!this.mainActionTarget ||
             this.mainActionTarget.q !== TUTORIAL_CELL_COORDS.playerStart.q ||
-            this.mainActionTarget.r !== TUTORIAL_CELL_COORDS.playerStart.r)));
+            this.mainActionTarget.r !== TUTORIAL_CELL_COORDS.playerStart.r)
+        : isScareStep
+          ? scareHasMain && scareHasExtra && !scareHasLocation
+          : true);
     this.locationSelector.setTutorialHighlight(shouldHighlightLocation);
+
+    const shouldHighlightPlayer =
+      isHighlighted("player_target") &&
+      (isScareStep
+        ? scareHasMain && scareHasExtra && scareHasLocation && !scareHasPlayer
+        : true);
+    this.playerSelector.setTutorialHighlight(shouldHighlightPlayer);
   }
 
   syncTutorialActionSelection(
@@ -1712,6 +1736,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     if (!normalized) {
       this.locationSelector.setPending(false);
     }
+    if (this.tutorialActive && this.tutorialStepId) {
+      this.setTutorialHighlight(this.tutorialStepId, this.tutorialActive);
+    }
     this.emit("ready-refresh-request");
     if (emit) {
       this.emitMainActionChange();
@@ -1927,6 +1954,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.refreshLocationSelectorState();
     this.refreshScareSecondPlayerSelectorState();
     this.refreshSecondStealItemSelectorState();
+    if (this.tutorialActive && this.tutorialStepId) {
+      this.setTutorialHighlight(this.tutorialStepId, this.tutorialActive);
+    }
     this.emit("ready-refresh-request");
     this.emitMainActionChange();
   };
@@ -2539,7 +2569,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
                   this.tutorialStepId === "return_to_bot" &&
                   this.mainActionSelection !== ActionLibrary.move.id
                 ? ActionLibrary.move.id
-                : null;
+                : this.tutorialActive &&
+                    this.tutorialStepId === "scare_bot_to_doomed_cell" &&
+                    this.mainActionSelection !== ActionLibrary.scare.id
+                  ? ActionLibrary.scare.id
+                  : null;
 
     return {
       character,
@@ -3579,6 +3613,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       this.setScareSecondTargetPlayer(null, false);
     }
     this.refreshScareSecondPlayerSelectorState();
+    if (this.tutorialActive && this.tutorialStepId) {
+      this.setTutorialHighlight(this.tutorialStepId, this.tutorialActive);
+    }
     if (emit) {
       this.emit("ready-refresh-request");
       this.emitMainActionChange();
@@ -3783,7 +3820,21 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       this.extraSecondaryActionTargetPlayerId = null;
     }
 
-    this.playerSelector.setOptions(mainOptions);
+    const shouldHighlightBot =
+      this.tutorialActive &&
+      this.tutorialStepId === "scare_bot_to_doomed_cell" &&
+      this.mainActionSelection === ActionLibrary.scare.id &&
+      this.mainExtraExecutions >= 1 &&
+      this.mainActionTarget !== null &&
+      this.mainActionTarget.q === TUTORIAL_CELL_COORDS.doomed.q &&
+      this.mainActionTarget.r === TUTORIAL_CELL_COORDS.doomed.r &&
+      this.mainActionTargetPlayerId !== TUTORIAL_BOT_ID;
+
+    const normalizedMainOptions = mainOptions.map((opt) => ({
+      ...opt,
+      highlighted: shouldHighlightBot && opt.id === TUTORIAL_BOT_ID
+    }));
+    this.playerSelector.setOptions(normalizedMainOptions);
     this.scareSecondPlayerSelector.setOptions(secondTargetOptions);
     this.secondaryPlayerSelector.setOptions(secondaryOptions);
     this.secondaryInspectSecondPlayerSelector.setOptions(

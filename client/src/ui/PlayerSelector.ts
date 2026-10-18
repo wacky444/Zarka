@@ -12,6 +12,7 @@ export type PlayerOption = {
   frame?: string;
   iconScale?: number;
   disabled?: boolean;
+  highlighted?: boolean;
 };
 
 const SELECT_LABEL = "[ Select player ]";
@@ -236,6 +237,7 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
       frame: option.frame,
       iconScale: option.iconScale,
       disabled: option.disabled,
+      highlighted: option.highlighted,
     }));
   }
 

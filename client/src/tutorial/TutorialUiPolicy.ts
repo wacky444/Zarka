@@ -153,6 +153,7 @@ const STEP_POLICIES: Record<TutorialStepId, TutorialUiPolicy> = {
   observe_destruction_warning: policy({ mapRequired: true }),
   scare_bot_to_doomed_cell: policy({
     ...STATUS_PANEL,
+    autoSelectPrimaryAction: false,
     highlightedControls: [
       "main_action",
       "extra_execution",
@@ -230,7 +231,11 @@ export function isTutorialReadyActionAllowed(
       options.targetLocation !== undefined &&
       options.targetLocation.q === TUTORIAL_CELL_COORDS.doomed.q &&
       options.targetLocation.r === TUTORIAL_CELL_COORDS.doomed.r;
-    return isScare && hasExtraPower && isDoomedCell;
+    const hasBot =
+      options.targetPlayerId === undefined
+        ? true
+        : options.targetPlayerId === TUTORIAL_BOT_ID;
+    return isScare && hasExtraPower && isDoomedCell && hasBot;
   }
   return true;
 }

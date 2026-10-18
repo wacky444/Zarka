@@ -698,25 +698,45 @@ export class GameScene extends Phaser.Scene {
         onCellInfoOpened: (coord) => this.handleTutorialCellInfoOpened(coord),
         onPlayerCardClick: (playerId) => this.openPlayerCard(playerId),
         getTutorialTargetCell: () => {
-          if (
-            !this.tutorialController ||
-            this.tutorialController.currentStep !== "return_to_bot"
-          ) {
+          if (!this.tutorialController) {
             return null;
           }
-          const mainAction = this.characterPanel?.getMainActionSelection();
-          if (mainAction?.actionId !== ActionLibrary.move.id) {
-            return null;
+          const step = this.tutorialController.currentStep;
+          if (step === "return_to_bot") {
+            const mainAction = this.characterPanel?.getMainActionSelection();
+            if (mainAction?.actionId !== ActionLibrary.move.id) {
+              return null;
+            }
+            const target = mainAction.targetLocation;
+            if (
+              target &&
+              target.q === TUTORIAL_CELL_COORDS.playerStart.q &&
+              target.r === TUTORIAL_CELL_COORDS.playerStart.r
+            ) {
+              return null;
+            }
+            return TUTORIAL_CELL_COORDS.playerStart;
           }
-          const target = mainAction.targetLocation;
-          if (
-            target &&
-            target.q === TUTORIAL_CELL_COORDS.playerStart.q &&
-            target.r === TUTORIAL_CELL_COORDS.playerStart.r
-          ) {
-            return null;
+          if (step === "scare_bot_to_doomed_cell") {
+            const mainAction = this.characterPanel?.getMainActionSelection();
+            if (mainAction?.actionId !== ActionLibrary.scare.id) {
+              return null;
+            }
+            const extraPower = mainAction.extraExecutions ?? 0;
+            if (extraPower < 1) {
+              return null;
+            }
+            const target = mainAction.targetLocation;
+            if (
+              target &&
+              target.q === TUTORIAL_CELL_COORDS.doomed.q &&
+              target.r === TUTORIAL_CELL_COORDS.doomed.r
+            ) {
+              return null;
+            }
+            return TUTORIAL_CELL_COORDS.doomed;
           }
-          return TUTORIAL_CELL_COORDS.playerStart;
+          return null;
         },
       },
     );
