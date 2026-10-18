@@ -2267,7 +2267,10 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       return 0;
     }
 
-    const extraCost = Math.max(0, definition.extraExecution?.cost ?? 0);
+    const usesHealthForExtra = definition.id === ActionLibrary.focus.id;
+    const extraCost = usesHealthForExtra
+      ? 0
+      : Math.max(0, definition.extraExecution?.cost ?? 0);
     const requestedExtras = Math.max(0, Math.floor(extraExecutions));
     const discount = getActionEnergyDiscount(character, definition.id);
     return Math.max(
@@ -2929,8 +2932,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       description: extraExecution.description,
       energy: this.getCurrentEnergy(),
       discount,
+      costType: actionId === ActionLibrary.focus.id ? "health" : "energy",
       accentColor:
-        actionId === "focus"
+        actionId === ActionLibrary.focus.id
           ? THEME.colors.healthDamageAccent
           : THEME.colors.energyAccent
     });
@@ -2969,8 +2973,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       description: extraExecution.description,
       energy: this.getCurrentEnergy(),
       discount,
+      costType: actionId === ActionLibrary.focus.id ? "health" : "energy",
       accentColor:
-        actionId === "focus"
+        actionId === ActionLibrary.focus.id
           ? THEME.colors.healthDamageAccent
           : THEME.colors.energyAccent
     });
@@ -3014,8 +3019,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       description: extraExecution.description,
       energy: this.getCurrentEnergy(),
       discount,
+      costType: actionId === ActionLibrary.focus.id ? "health" : "energy",
       accentColor:
-        actionId === "focus"
+        actionId === ActionLibrary.focus.id
           ? THEME.colors.healthDamageAccent
           : THEME.colors.energyAccent
     });

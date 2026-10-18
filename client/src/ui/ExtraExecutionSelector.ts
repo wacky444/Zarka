@@ -21,6 +21,7 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
   private maxTotalCost = 0;
   private currentEnergy = 0;
   private discount = 0;
+  private costType: "energy" | "health" = "energy";
   private enabled = false;
   private preferredWidth: number;
   private disposed = false;
@@ -112,11 +113,15 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
     description: string;
     energy: number;
     discount?: number;
+    costType?: "energy" | "health";
     accentColor?: number;
   }): void {
     if (this.disposed) {
       return;
     }
+    this.costType =
+      opts.costType ??
+      (opts.accentColor === THEME.colors.healthDamageAccent ? "health" : "energy");
     this.currentEnergy = opts.energy;
     this.baseCost = opts.baseCost;
     this.extraCostPerRep = opts.extraCostPerRep;
@@ -207,8 +212,9 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
     const rawTotal = this.baseCost + this.currentReps * this.extraCostPerRep;
     const total = Math.max(0, rawTotal - this.discount);
     this.countText.setText(`${this.currentReps}`);
+    const costLabel = this.costType === "health" ? t("Health") : t("Energy");
     this.totalCostText.setText(
-      `${t("Energy")}: ${total} / ${this.maxTotalCost}`
+      `${costLabel}: ${total} / ${this.maxTotalCost}`
     );
 
     const barWidth = this.totalCostBar.width;
