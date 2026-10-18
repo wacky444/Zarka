@@ -1,4 +1,5 @@
 import {
+  ActionLibrary,
   type ActionId,
   type Axial,
   type ShopId,
@@ -87,7 +88,7 @@ const STEP_POLICIES: Record<TutorialStepId, TutorialUiPolicy> = {
     autoSelectCharacterSubtab: false,
     autoSelectSecondaryAction: false,
     highlightedControls: ["secondary_action"],
-    secondaryActionIds: ["search"],
+    secondaryActionIds: [ActionLibrary.search.id],
     actionEditingEnabled: true,
     readyEnabled: true
   }),
@@ -95,7 +96,7 @@ const STEP_POLICIES: Record<TutorialStepId, TutorialUiPolicy> = {
     ...STATUS_PANEL,
     autoSelectPrimaryAction: false,
     highlightedControls: ["main_action"],
-    primaryActionIds: ["pick_up"],
+    primaryActionIds: [ActionLibrary.pick_up.id],
     actionEditingEnabled: true,
     readyEnabled: true
   }),
@@ -103,7 +104,7 @@ const STEP_POLICIES: Record<TutorialStepId, TutorialUiPolicy> = {
     ...STATUS_PANEL,
     autoSelectSecondaryAction: false,
     highlightedControls: ["secondary_action"],
-    secondaryActionIds: ["feed"],
+    secondaryActionIds: [ActionLibrary.feed.id],
     actionEditingEnabled: true,
     readyEnabled: true
   }),
@@ -129,20 +130,20 @@ const STEP_POLICIES: Record<TutorialStepId, TutorialUiPolicy> = {
     ...STATUS_PANEL,
     autoSelectPrimaryAction: false,
     highlightedControls: ["main_action"],
-    primaryActionIds: ["axe_attack"],
+    primaryActionIds: [ActionLibrary.axe_attack.id],
     actionEditingEnabled: true,
     readyEnabled: true
   }),
   resolve_bot_scare: policy({
     ...STATUS_PANEL,
     highlightedControls: ["ready"],
-    primaryActionIds: ["axe_attack"],
+    primaryActionIds: [ActionLibrary.axe_attack.id],
     readyEnabled: true
   }),
   return_to_bot: policy({
     ...STATUS_PANEL,
     highlightedControls: ["main_action", "location_target"],
-    primaryActionIds: ["move"],
+    primaryActionIds: [ActionLibrary.move.id],
     actionEditingEnabled: true,
     readyEnabled: true
   }),
@@ -155,7 +156,7 @@ const STEP_POLICIES: Record<TutorialStepId, TutorialUiPolicy> = {
       "player_target",
       "location_target"
     ],
-    primaryActionIds: ["scare"],
+    primaryActionIds: [ActionLibrary.scare.id],
     actionEditingEnabled: true,
     readyEnabled: true,
     extraPowerEnabled: true
@@ -163,7 +164,7 @@ const STEP_POLICIES: Record<TutorialStepId, TutorialUiPolicy> = {
   resolve_destruction: policy({
     ...STATUS_PANEL,
     highlightedControls: ["ready"],
-    primaryActionIds: ["scare"],
+    primaryActionIds: [ActionLibrary.scare.id],
     readyEnabled: true,
     extraPowerEnabled: true
   }),
@@ -195,18 +196,18 @@ export function isTutorialReadyActionAllowed(
   }
   if (stepId === "search") {
     const sec = options.secondaryActionId?.trim().toLowerCase();
-    return sec === "search";
+    return sec === ActionLibrary.search.id;
   }
   if (stepId === "pickup_items") {
     const main = options.mainActionId?.trim().toLowerCase();
-    return main === "pick_up";
+    return main === ActionLibrary.pick_up.id;
   }
   if (stepId === "feed_bot") {
     const sec = options.secondaryActionId?.trim().toLowerCase();
-    return sec === "feed";
+    return sec === ActionLibrary.feed.id;
   }
   if (stepId === "plan_axe_attack") {
-    const isAxe = options.mainActionId === "axe_attack";
+    const isAxe = options.mainActionId === ActionLibrary.axe_attack.id;
     const hasTarget =
       options.targetPlayerId === undefined
         ? true
@@ -214,7 +215,7 @@ export function isTutorialReadyActionAllowed(
     return isAxe && hasTarget;
   }
   if (stepId === "return_to_bot") {
-    const isMove = options.mainActionId === "move";
+    const isMove = options.mainActionId === ActionLibrary.move.id;
     const isStartCell =
       options.targetLocation !== null &&
       options.targetLocation !== undefined &&
@@ -223,7 +224,7 @@ export function isTutorialReadyActionAllowed(
     return isMove && isStartCell;
   }
   if (stepId === "scare_bot_to_doomed_cell" || stepId === "resolve_destruction") {
-    const isScare = options.mainActionId === "scare";
+    const isScare = options.mainActionId === ActionLibrary.scare.id;
     const hasExtraPower = (options.extraExecutions ?? 0) >= 1;
     const isDoomedCell =
       options.targetLocation !== null &&

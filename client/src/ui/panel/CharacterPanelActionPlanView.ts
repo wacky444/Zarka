@@ -1401,14 +1401,14 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       policy.highlightedControls.includes(control as Parameters<typeof policy.highlightedControls.includes>[0]);
     const shouldHighlightMain =
       isHighlighted("main_action") &&
-      (stepId !== "pickup_items" || this.mainActionSelection !== "pick_up") &&
-      (stepId !== "plan_axe_attack" || this.mainActionSelection !== "axe_attack");
+      (stepId !== "pickup_items" || this.mainActionSelection !== ActionLibrary.pick_up.id) &&
+      (stepId !== "plan_axe_attack" || this.mainActionSelection !== ActionLibrary.axe_attack.id);
     this.mainActionDropdown.setTutorialHighlight(shouldHighlightMain);
 
     const shouldHighlightSecondary =
       isHighlighted("secondary_action") &&
-      (stepId !== "search" || this.secondaryActionSelection !== "search") &&
-      (stepId !== "feed_bot" || this.secondaryActionSelection !== "feed");
+      (stepId !== "search" || this.secondaryActionSelection !== ActionLibrary.search.id) &&
+      (stepId !== "feed_bot" || this.secondaryActionSelection !== ActionLibrary.feed.id);
     this.secondaryActionDropdown.setTutorialHighlight(shouldHighlightSecondary);
 
     this.extraExecutionSelector.setTutorialHighlight(isHighlighted("extra_execution"));
@@ -2511,20 +2511,20 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     const highlightedActionId =
       this.tutorialActive &&
       this.tutorialStepId === "search" &&
-      this.secondaryActionSelection !== "search"
-        ? ("search" as ActionId)
+      this.secondaryActionSelection !== ActionLibrary.search.id
+        ? ActionLibrary.search.id
         : this.tutorialActive &&
             this.tutorialStepId === "pickup_items" &&
-            this.mainActionSelection !== "pick_up"
-          ? ("pick_up" as ActionId)
+            this.mainActionSelection !== ActionLibrary.pick_up.id
+          ? ActionLibrary.pick_up.id
           : this.tutorialActive &&
               this.tutorialStepId === "feed_bot" &&
-              this.secondaryActionSelection !== "feed"
-            ? ("feed" as ActionId)
+              this.secondaryActionSelection !== ActionLibrary.feed.id
+            ? ActionLibrary.feed.id
             : this.tutorialActive &&
                 this.tutorialStepId === "plan_axe_attack" &&
-                this.mainActionSelection !== "axe_attack"
-              ? ("axe_attack" as ActionId)
+                this.mainActionSelection !== ActionLibrary.axe_attack.id
+              ? ActionLibrary.axe_attack.id
               : null;
 
     return {

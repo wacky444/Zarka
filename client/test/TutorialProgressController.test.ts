@@ -17,6 +17,7 @@ import {
   type TutorialMatchStorage
 } from "../src/tutorial/ActiveTutorialMatch.ts";
 import {
+  ActionLibrary,
   TUTORIAL_STEP_IDS,
   TUTORIAL_STEP_GROUPS,
   getTutorialStepDisplay,
@@ -217,7 +218,7 @@ test("tutorial UI policy exposes only the actions and items for the current less
 
   assert.equal(
     isTutorialReadyActionAllowed("search", {
-      secondaryActionId: "search"
+      secondaryActionId: ActionLibrary.search.id
     }),
     true
   );
@@ -229,14 +230,14 @@ test("tutorial UI policy exposes only the actions and items for the current less
   );
   assert.equal(
     isTutorialReadyActionAllowed("search", {
-      secondaryActionId: "feed"
+      secondaryActionId: ActionLibrary.feed.id
     }),
     false
   );
 
   assert.equal(
     isTutorialReadyActionAllowed("pickup_items", {
-      mainActionId: "pick_up"
+      mainActionId: ActionLibrary.pick_up.id
     }),
     true
   );
@@ -248,14 +249,14 @@ test("tutorial UI policy exposes only the actions and items for the current less
   );
   assert.equal(
     isTutorialReadyActionAllowed("pickup_items", {
-      mainActionId: "axe_attack"
+      mainActionId: ActionLibrary.axe_attack.id
     }),
     false
   );
 
   assert.equal(
     isTutorialReadyActionAllowed("feed_bot", {
-      secondaryActionId: "feed"
+      secondaryActionId: ActionLibrary.feed.id
     }),
     true
   );
@@ -267,28 +268,28 @@ test("tutorial UI policy exposes only the actions and items for the current less
   );
   assert.equal(
     isTutorialReadyActionAllowed("feed_bot", {
-      secondaryActionId: "search"
+      secondaryActionId: ActionLibrary.search.id
     }),
     false
   );
 
   assert.equal(
     isTutorialReadyActionAllowed("plan_axe_attack", {
-      mainActionId: "axe_attack",
+      mainActionId: ActionLibrary.axe_attack.id,
       targetPlayerId: "bot1"
     }),
     true
   );
   assert.equal(
     isTutorialReadyActionAllowed("plan_axe_attack", {
-      mainActionId: "axe_attack",
+      mainActionId: ActionLibrary.axe_attack.id,
       targetPlayerId: null
     }),
     false
   );
   assert.equal(
     isTutorialReadyActionAllowed("plan_axe_attack", {
-      mainActionId: "punch",
+      mainActionId: ActionLibrary.punch.id,
       targetPlayerId: "bot1"
     }),
     false
