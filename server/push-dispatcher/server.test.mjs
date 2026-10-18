@@ -126,8 +126,9 @@ test("push dispatcher handles turn_expiring payload with matchName", async () =>
     sentPayload = payload;
   });
   const job = createJob({
-    idempotencyKey: "turn_expiring_match-1_2",
+    idempotencyKey: "turn_expiring_match-1.nakama1_2",
     event: "turn_expiring",
+    matchId: "match-1.nakama1",
     turn: 2,
     matchName: "Test Match"
   });
@@ -146,7 +147,7 @@ test("push dispatcher handles turn_expiring payload with matchName", async () =>
     assert.equal(sendCount, 1);
     assert.deepEqual(JSON.parse(sentPayload), {
       event: "turn_expiring",
-      matchId: "match-1",
+      matchId: "match-1.nakama1",
       turn: 2,
       matchName: "Test Match",
       locale: "es"

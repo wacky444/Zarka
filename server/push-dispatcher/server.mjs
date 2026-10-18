@@ -64,9 +64,9 @@ function parseJob(value) {
   const event = value.event ?? "turn_advanced";
   if (
     typeof value.idempotencyKey !== "string" ||
-    !/^[A-Za-z0-9:_-]{1,180}$/.test(value.idempotencyKey) ||
+    !/^[A-Za-z0-9:._-]{1,180}$/.test(value.idempotencyKey) ||
     typeof value.matchId !== "string" ||
-    !/^[A-Za-z0-9_-]{1,128}$/.test(value.matchId) ||
+    !/^[A-Za-z0-9._-]{1,128}$/.test(value.matchId) ||
     (event !== "turn_advanced" && event !== "ranked_match_started" && event !== "turn_expiring") ||
     ((event === "turn_advanced" || event === "turn_expiring") &&
       (!Number.isSafeInteger(value.turn) || value.turn < 0)) ||
