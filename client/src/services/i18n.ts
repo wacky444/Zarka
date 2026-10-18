@@ -639,6 +639,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "is lockpicking": "está forzando la cerradura",
   of: "de",
   "opened the safe": "abrió la caja fuerte",
+  "opened the safe, it contains:": "abrió la caja fuerte, contiene:",
   "lockpicking was interrupted": "interrumpió el forzado de cerradura",
   "cannot see a safe": "no ve una caja fuerte",
   "looked through the window at": "miró por la ventana en",

@@ -32,6 +32,10 @@ test("lockpicking opens safe after four turns and reveals contents for opener an
   }
   const [event] = executePickLockAction([participant], match);
   assert.equal(event.kind === "player" ? event.action.metadata?.outcome : undefined, "success");
+  assert.deepEqual(
+    event.kind === "player" ? event.action.metadata?.contents : undefined,
+    ["medicine"]
+  );
   assert.equal(match.safeContainers?.[0].opened, true);
   assert.equal(match.map?.tiles[0].itemIds.length, 2);
   assert.equal(participant.character.discoveredItemIds?.length, 2);
@@ -41,6 +45,10 @@ test("lockpick opens instantly and is consumed without Dexterity 1", () => {
   const { match, participant } = setup(false, true);
   const [event] = executePickLockAction([participant], match);
   assert.equal(event.kind === "player" ? event.action.metadata?.openedInstantly : undefined, true);
+  assert.deepEqual(
+    event.kind === "player" ? event.action.metadata?.contents : undefined,
+    ["medicine"]
+  );
   assert.equal(participant.character.inventory.carriedItems.some((item) => item.itemId === "lockpick"), false);
   assert.equal(match.safeContainers?.[0].opened, true);
 });

@@ -688,11 +688,32 @@ export class CharacterPanelLogView {
           continue;
         }
         if (actionId === "pick_lock") {
-          const metadata = event.action.metadata as { outcome?: unknown; turnsCompleted?: unknown; turnsRequired?: unknown } | undefined;
+          const metadata = event.action.metadata as
+            | {
+                outcome?: unknown;
+                turnsCompleted?: unknown;
+                turnsRequired?: unknown;
+                contents?: unknown;
+              }
+            | undefined;
           if (metadata?.outcome === "progress") {
-            lines.push(`${actor} ${t("is lockpicking")} ${String(metadata.turnsCompleted)} ${t("of")} ${String(metadata.turnsRequired)}`);
+            lines.push(
+              `${actor} ${t("is lockpicking")} ${String(metadata.turnsCompleted)} ${t("of")} ${String(metadata.turnsRequired)}`
+            );
           } else if (metadata?.outcome === "success") {
-            lines.push(`${actor} ${t("opened the safe")}`);
+            const rawContents = Array.isArray(metadata.contents)
+              ? (metadata.contents as string[])
+              : [];
+            if (rawContents.length > 0) {
+              const itemNames = rawContents.map((id) =>
+                this.resolveItemName(id)
+              );
+              lines.push(
+                `${actor} ${t("opened the safe, it contains:")} ${itemNames.join(", ")}`
+              );
+            } else {
+              lines.push(`${actor} ${t("opened the safe")}`);
+            }
           } else if (metadata?.outcome === "interrupted") {
             lines.push(`${actor} ${t("lockpicking was interrupted")}`);
           } else {

@@ -54,11 +54,20 @@ export function executePickLockAction(
     if (hasLockpick) {
       character.lockpickProgress = undefined;
       if (!hasDexterity1) consumeCarriedItem(character, "lockpick");
-      openSafe(match, safe, character);
+      const contents = [...safe.contents];
+      const revealedIds = openSafe(match, safe, character);
       clearPlanByKey(character, participant.planKey);
       events.push({ kind: "player", actorId: participant.playerId, action: {
         actionId: ActionLibrary.pick_lock.id,
-        metadata: { outcome: "success", openedInstantly: true, lockpickConsumed: !hasDexterity1 },
+        metadata: {
+          outcome: "success",
+          openedInstantly: true,
+          lockpickConsumed: !hasDexterity1,
+          contents,
+          revealedItemIds: revealedIds,
+          safeItemId: safe.safeItemId,
+          tileId,
+        },
       }});
       continue;
     }
@@ -67,16 +76,23 @@ export function executePickLockAction(
       clearPlanByKey(character, participant.planKey);
       events.push({ kind: "player", actorId: participant.playerId, action: {
         actionId: ActionLibrary.pick_lock.id,
-        metadata: { outcome: "progress", turnsCompleted, turnsRequired: required },
+        metadata: { outcome: "progress", turnsCompleted, turnsRequired: required, safeItemId: safe.safeItemId, tileId },
       }});
       continue;
     }
     character.lockpickProgress = undefined;
+    const contents = [...safe.contents];
     const revealedIds = openSafe(match, safe, character);
     clearPlanByKey(character, participant.planKey);
     events.push({ kind: "player", actorId: participant.playerId, action: {
       actionId: ActionLibrary.pick_lock.id,
-      metadata: { outcome: "success", revealedItemIds: revealedIds },
+      metadata: {
+        outcome: "success",
+        contents,
+        revealedItemIds: revealedIds,
+        safeItemId: safe.safeItemId,
+        tileId,
+      },
     }});
   }
   return events;

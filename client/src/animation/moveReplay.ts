@@ -40,6 +40,7 @@ import { animateShootHarpoonEvent } from "./replayActions/ShootHarpoonAnimation"
 import { animateRocketLauncherEvent } from "./replayActions/RocketLauncherAnimation";
 import { animateFireDamageEvent } from "./replayActions/FireDamageAnimation";
 import { animateBomberEvent } from "./replayActions/BomberAnimation";
+import { animatePickLockEvent } from "./replayActions/PickLockAnimation";
 import { playRandomSound } from "./soundPlayer";
 import { animateLevelUpEvent } from "./replayActions/LevelUpAnimation";
 
@@ -133,6 +134,8 @@ export async function playReplayEvents(
       await animateDropEvent(context, event);
     } else if (actionId === ActionLibrary.search.id) {
       await animateSearchEvent(context, event);
+    } else if (actionId === ActionLibrary.pick_lock.id) {
+      await animatePickLockEvent(context, event);
     } else if (actionId === ActionLibrary.status_dead.id) {
       await animateDeathEvent(context, event);
     } else if (actionId === ActionLibrary.status_unconscious.id) {

@@ -87,6 +87,9 @@ export const SOUND_ASSET_FILES: Record<string, string[]> = {
   air_pump: ["air_pump.ogg", "air_pump.mp3"],
   gurgling: ["gurgling.ogg", "gurgling.mp3"],
   drill_whizz: ["drill_whizz.ogg", "drill_whizz.mp3", "drill_whizz.wav"],
+  lock_unlock: ["lock_unlock.wav"],
+  industrial_door_open: ["industrial_door_open.wav"],
+  brass_chime_positive: ["brass_chime_positive.wav"],
   "8_bit_chime_positive": [
     "8_bit_chime_positive.ogg",
     "8_bit_chime_positive.mp3",
@@ -116,6 +119,7 @@ export const ACTION_SOUNDS: Record<string, string[]> = {
     "foley_footstep_concrete_4",
   ],
   pick_up: ["weapon_pick_up", "item_equip", "wood_small_pickup"],
+  pick_lock: ["lock_unlock", "brass_chime_positive"],
   refuel: ["air_pump", "gurgling"],
   drop: ["weapon_drop", "wood_small_drop", "cardboard_drop"],
   search: ["page_turn", "paper_move", "paper_scrunch"],
