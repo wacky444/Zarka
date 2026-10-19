@@ -20,6 +20,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     actionOrder: 0,
     actionSubOrder: 0,
     developed: true,
+    experience: {
+      base: 3
+    },
     requiredItems: ["fuel"],
     requirements: [
       {
@@ -47,6 +50,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 1,
     cooldown: 3,
     developed: true,
+    experience: {
+      base: 1
+    },
     texture: "Board Game Icons",
     frame: "suit_hearts.png",
     actionOrder: 1,
@@ -67,6 +73,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 1,
     cooldown: 3,
     developed: true,
+    experience: {
+      base: 1
+    },
     texture: "Board Game Icons",
     frame: "resource_apple.png",
     actionOrder: 1,
@@ -105,6 +114,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 1,
     cooldown: 3,
     developed: true,
+    experience: {
+      base: 1
+    },
     texture: "Board Game Icons",
     frame: "breakfast.png",
     actionOrder: 1,
@@ -125,6 +137,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 2,
     cooldown: 3,
     developed: true,
+    experience: {
+      base: 1
+    },
     texture: "Board Game Icons",
     frame: "bandage.png",
     actionOrder: 1,
@@ -156,6 +171,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 1,
     cooldown: 3,
     developed: true,
+    experience: {
+      base: 1
+    },
     texture: "Board Game Icons",
     frame: "flask_full.png",
     actionOrder: 1,
@@ -205,6 +223,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 1,
     cooldown: 3,
     developed: true,
+    experience: {
+      base: 3
+    },
     range: [0, 1],
     requiredItems: ["tracker"],
     requirements: [
@@ -242,6 +263,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 2,
     developed: true,
     cooldown: 3,
+    experience: {
+      base: 3
+    },
     requiredItems: ["c4"],
     requirements: [
       {
@@ -271,6 +295,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Primary,
     energyCost: 2,
     cooldown: 3,
+    experience: {
+      base: 3
+    },
     requiredItems: ["trap"],
     developed: true,
     range: [1],
@@ -389,6 +416,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     range: [1],
     developed: true,
+    experience: {
+      base: 1
+    },
     effects: [{ description: "Se mueve a una localización adyacente." }],
     extraExecution: {
       cost: 3,
@@ -410,6 +440,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 2,
     cooldown: 3,
     developed: true,
+    experience: {
+      base: 1
+    },
     requirements: [{ description: "Debe ejecutarse en la gasolinera." }],
     effects: [{ description: "Obtiene 3 unidades de combustible." }],
     texture: "Board Game Icons",
@@ -425,6 +458,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 2,
     cooldown: 3,
     developed: true,
+    experience: {
+      base: 1
+    },
     requirements: [{ description: "Debe ver los objetos a recoger." }],
     effects: [{ description: "Permite recoger hasta 3 objetos visibles." }],
     extraExecution: {
@@ -446,6 +482,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 3,
     cooldown: 2,
     developed: true,
+    experience: {
+      base: 1
+    },
     effects: [{ description: "Revela 5 objetos ocultos en la localización." }],
     extraExecution: {
       cost: 1,
@@ -466,6 +505,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 1,
     cooldown: 3,
     developed: true,
+    experience: {
+      base: 1
+    },
     requirements: [
       {
         description:
@@ -496,6 +538,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 1,
     cooldown: 3,
     developed: true,
+    experience: {
+      base: 1
+    },
     requirements: [{ description: "Debe tener el objeto a entregar." }],
     effects: [{ description: "Transfiere un objeto a otro personaje." }],
     extraExecution: {
@@ -555,6 +600,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 1,
     cooldown: 3,
     developed: true,
+    experience: {
+      base: 1
+    },
     requirements: [{ description: "Debe poseer el objeto a dejar." }],
     effects: [
       {
@@ -647,6 +695,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     range: [1],
     developed: true,
+    experience: {
+      base: 2
+    },
     effects: [
       {
         description:
@@ -674,6 +725,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     developed: true,
     range: [0],
+    experience: {
+      base: 2
+    },
     requiredItems: ["detonator"],
     requirements: [
       {
@@ -1061,6 +1115,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 1,
     cooldown: 3,
     developed: true,
+    experience: {
+      base: 1
+    },
     requirements: [{ description: "Debe realizarse en el mercado negro." }],
     effects: [
       {
@@ -1086,6 +1143,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 2,
     developed: true,
     cooldown: 3,
+    experience: {
+      base: 2
+    },
     effects: [
       {
         description:
@@ -1110,6 +1170,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 0,
     cooldown: 3,
     developed: true,
+    experience: {
+      base: 1
+    },
     effects: [
       {
         description:
@@ -1138,6 +1201,12 @@ export const ActionLibrary: ActionLibraryDefinition = {
     developed: true,
     energyCost: 3,
     cooldown: 3,
+    experience: {
+      base: 5,
+      conditional: [
+        { value: 3, condition: "Con esfuerzo extra." }
+      ]
+    },
     effects: [{ description: "Gana 5 puntos de experiencia." }],
     extraExecution: {
       cost: 3,
@@ -1157,6 +1226,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 1,
     cooldown: 1,
     developed: true,
+    experience: {
+      base: 1
+    },
     requirements: [{ description: "Debe estar en la sala de seguridad." }],
     effects: [
       {
@@ -1178,6 +1250,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 1,
     developed: true,
     range: [1],
+    experience: {
+      base: 1
+    },
     requirements: [{ description: "Debe encontrarse en una casa o farmacia." }],
     effects: [
       {
@@ -1199,6 +1274,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     developed: true,
     range: [1, 2],
+    experience: {
+      base: 2
+    },
     requiredItems: ["binoculars"],
     requirements: [{ description: "Requiere tener prismáticos." }],
     effects: [
@@ -1227,6 +1305,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     range: [0, 1, 2],
     rangeType: RangeType.Area,
+    experience: {
+      base: 1
+    },
     effects: [
       {
         description:
@@ -1251,6 +1332,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     category: ActionCategory.Secondary,
     energyCost: 1,
     cooldown: 3,
+    experience: {
+      base: 1
+    },
     requirements: [
       { description: "Requiere poseer un antídoto.", consumesResource: true }
     ],
@@ -1279,6 +1363,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 1,
     cooldown: 3,
     developed: true,
+    experience: {
+      base: 1
+    },
     requirements: [
       {
         description: "Requiere tener un vial de virus.",
@@ -1305,6 +1392,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     energyCost: 1,
     cooldown: 3,
     developed: true,
+    experience: {
+      base: 1
+    },
     requirements: [
       { description: "Requiere tener una vacuna.", consumesResource: true }
     ],

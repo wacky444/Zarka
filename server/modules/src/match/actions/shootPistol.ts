@@ -31,6 +31,7 @@ import { getUsableExtraExecutions } from "../../utils/energy";
 import { isCharacterDead } from "../../utils/playerCharacter";
 import { collectTargets } from "./targeting";
 import { maybeTriggerVengefulCounterAttack } from "./vengeful";
+import { awardExperience } from "../progression";
 import { BaseAction } from "./classes/BaseAction";
 
 function resolveDodge(target: PlayerCharacter): boolean {
@@ -125,6 +126,7 @@ export class ShootPistolAction extends BaseAction {
         }
 
         if (resolveDodge(target)) {
+          awardExperience(target, 5);
           match.playerCharacters[targetId] = target;
           targetEntries.push({
             targetId,

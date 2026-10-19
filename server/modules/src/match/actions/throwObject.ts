@@ -30,6 +30,7 @@ import {
   resolveGuardedDamage,
   type PlannedActionParticipant,
 } from "./utils";
+import { awardExperience } from "../progression";
 import { maybeTriggerVengefulCounterAttack } from "./vengeful";
 import { BaseAction } from "./classes/BaseAction";
 
@@ -241,6 +242,7 @@ export class ThrowObjectAction extends BaseAction {
       for (const candidate of targets) {
         const target = candidate.character;
         if (resolveDodge(target)) {
+          awardExperience(target, 5);
           match.playerCharacters![candidate.id] = target;
           for (const item of thrownItems) {
             addDiscoveredItem(target, item.itemId);

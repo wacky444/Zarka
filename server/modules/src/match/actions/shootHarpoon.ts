@@ -28,6 +28,7 @@ import {
 import { getUsableExtraExecutions } from "../../utils/energy";
 import { collectTargets } from "./targeting";
 import { maybeTriggerVengefulCounterAttack } from "./vengeful";
+import { awardExperience } from "../progression";
 import { BaseAction } from "./classes/BaseAction";
 
 function resolveDodge(target: PlayerCharacter): boolean {
@@ -91,6 +92,7 @@ export class ShootHarpoonAction extends BaseAction {
         }
 
         if (resolveDodge(target)) {
+          awardExperience(target, 5);
           match.playerCharacters[targetId] = target;
           targetEntries.push({
             targetId,

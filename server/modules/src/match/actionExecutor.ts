@@ -1808,26 +1808,122 @@ export function executeAction(
     }
   }
 
-  const baseExperience = action.experience?.base ?? 0;
-  if (baseExperience > 0) {
-    for (const event of eventsForAction) {
-      if (
-        event.kind !== "player" ||
-        event.action.actionId !== action.id ||
-        event.actorId === undefined
-      ) {
-        continue;
-      }
-      const character = match.playerCharacters?.[event.actorId];
-      if (!character) {
-        continue;
-      }
-      const awarded = awardExperience(character, baseExperience);
+function calculateActionExperience(
+  action: ActionDefinition,
+  event: ReplayPlayerEvent
+): number {
+  let exp = action.experience?.base ?? 0;
+
+  // 1. Attack actions
+  if (
+    action.id === ActionLibrary.knife_attack.id ||
+    action.id === ActionLibrary.axe_attack.id ||
+    action.id === ActionLibrary.bat_attack.id ||
+    action.id === ActionLibrary.chainsaw_attack.id ||
+    action.id === ActionLibrary.shoot_pistol.id ||
+    action.id === ActionLibrary.shoot_harpoon.id ||
+    action.id === ActionLibrary.fire_rocket_launcher.id ||
+    action.id === ActionLibrary.punch.id ||
+    action.id === ActionLibrary.throw_object.id ||
+    action.id === ActionLibrary.use_chemical_weapon.id
+  ) {
+    const targets = event.targets ?? [];
+    const damageDealt =
+      typeof event.action.damageDealt === "number"
+        ? event.action.damageDealt
+        : targets.reduce((sum, t) => sum + (t.damageTaken ?? 0), 0);
+
+    const anyEliminated = targets.some((t) => t.eliminated === true);
+    if (anyEliminated) {
+      exp += 5;
+    }
+
+    if (
+      action.id === ActionLibrary.bat_attack.id ||
+      action.id === ActionLibrary.use_chemical_weapon.id ||
+      action.id === ActionLibrary.fire_rocket_launcher.id
+    ) {
+      const affectedCount = targets.filter((t) => (t.damageTaken ?? 0) > 0).length;
+      exp += affectedCount * 1;
+    } else if (damageDealt > 0) {
+      exp += 2;
+    }
+    return exp;
+  }
+
+  // 2. Robar (steal): +4 per stolen item
+  if (action.id === ActionLibrary.steal.id) {
+    const metadata = event.action.metadata as { stolenCount?: number } | undefined;
+    const stolenCount = metadata?.stolenCount ?? 0;
+    return stolenCount * 4;
+  }
+
+  // 3. Forzar cerradura (pick_lock): +2 if safe opened
+  if (action.id === ActionLibrary.pick_lock.id) {
+    const metadata = event.action.metadata as { outcome?: string } | undefined;
+    if (metadata?.outcome === "success") {
+      return 2;
+    }
+    return 0;
+  }
+
+  // 4. Proteger (protect): +3 if successfully protected
+  if (action.id === ActionLibrary.protect.id) {
+    const targets = event.targets ?? [];
+    if (targets.length > 0) {
+      return 3;
+    }
+    return 0;
+  }
+
+  // 5. Dormir (sleep): +4 if with extra execution
+  if (action.id === ActionLibrary.sleep.id) {
+    const extra = (event.action.metadata as { extraExecutions?: number })?.extraExecutions ?? 0;
+    if (extra > 0) {
+      return 4;
+    }
+    return 0;
+  }
+
+  // 6. Envenenar alimento (poison_food): +3 per poisoned target
+  if (action.id === ActionLibrary.poison_food.id) {
+    const targets = event.targets ?? [];
+    return targets.length * 3;
+  }
+
+  return exp;
+}
+
+  for (const event of eventsForAction) {
+    if (
+      event.kind !== "player" ||
+      event.action.actionId !== action.id ||
+      event.actorId === undefined
+    ) {
+      continue;
+    }
+    if (
+      (event.action.metadata as { experienceGained?: unknown } | undefined)
+        ?.experienceGained !== undefined
+    ) {
+      continue;
+    }
+    if (event.action.actionId === "failedAction") {
+      continue;
+    }
+    const character = match.playerCharacters?.[event.actorId];
+    if (!character) {
+      continue;
+    }
+    const exp = calculateActionExperience(action, event);
+    if (exp > 0) {
+      const awarded = awardExperience(character, exp);
       event.action.metadata = {
         ...event.action.metadata,
         experienceGained: awarded.experienceGained,
         levelsGained: awarded.levelsGained,
       };
+      match.playerCharacters[event.actorId] = character;
     }
   }
 

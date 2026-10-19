@@ -20,6 +20,7 @@ import {
   type PlannedActionParticipant,
 } from "../utils";
 import { ActionLibrary, getDamageReduction, getDodgeSuccessChance } from "@shared";
+import { awardExperience } from "../../progression";
 import { getUsableExtraExecutions } from "../../../utils/energy";
 import { axialDistance } from "../../../utils/location";
 import { isCharacterDead } from "../../../utils/playerCharacter";
@@ -113,6 +114,7 @@ export abstract class BaseAttackAction extends BaseAction {
           continue;
         }
         if (resolveDodge(target)) {
+          awardExperience(target, 5);
           match.playerCharacters[targetId] = target;
           targetEntries.push({
             targetId,
