@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ActionLibrary, LocalizationType } from "@shared";
 import type { MatchRecord } from "../../src/models/types";
-import { executePickLockAction } from "../../src/match/actions/pickLock";
+import {
+  checkOngoingLockpickWithItem,
+  executePickLockAction
+} from "../../src/match/actions/pickLock";
 import { executeAction } from "../../src/match/actionExecutor";
 import type { PlannedActionParticipant } from "../../src/match/actions/utils";
 import { createDefaultCharacter } from "../../src/utils/playerCharacter";
@@ -132,4 +135,42 @@ test("lockpicking continues even if player performs another secondary action (e.
   assert.equal(participant.character.lockpickProgress?.turnsCompleted, 2);
   // Focus plan is preserved for focus action to execute
   assert.equal(participant.character.actionPlan?.secondary?.actionId, ActionLibrary.focus.id);
+});
+
+test("acquiring a lockpick while lockpicking in progress triggers instant unlock on next turn", () => {
+  const { match, participant } = setup(false, false);
+  const dummyLogger = {
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+  } as unknown as nkruntime.Logger;
+
+  // Turn 1: No lockpick
+  executeAction(match, ActionLibrary.pick_lock, 1, {}, dummyLogger);
+  assert.equal(participant.character.lockpickProgress?.turnsCompleted, 1);
+
+  // Turn 2: Player acquires lockpick
+  participant.character.inventory.carriedItems.push({ itemId: "lockpick", quantity: 1, weight: 1 });
+  const events = executeAction(match, ActionLibrary.pick_lock, 2, {}, dummyLogger);
+  assert.equal(events.some(e => e.kind === "player" && e.action.metadata?.openedInstantly === true), true);
+  assert.equal(participant.character.lockpickProgress, undefined);
+  assert.equal(match.safeContainers?.[0].opened, true);
+  // Lockpick consumed (without Dexterity 1)
+  assert.equal(participant.character.inventory.carriedItems.some(i => i.itemId === "lockpick"), false);
+});
+
+test("acquiring lockpick mid-turn immediately triggers instant unlock via checkOngoingLockpickWithItem", () => {
+  const { match, participant } = setup(false, false);
+  participant.character.lockpickProgress = { tileId: "tile", safeItemId: "safe", turnsCompleted: 2 };
+  participant.character.inventory.carriedItems.push({ itemId: "lockpick", quantity: 1, weight: 1 });
+
+  const events: import("@shared").ReplayEvent[] = [];
+  checkOngoingLockpickWithItem(match, events);
+
+  assert.equal(events.length, 1);
+  assert.equal(events[0].kind === "player" && events[0].action.metadata?.openedInstantly, true);
+  assert.equal(participant.character.lockpickProgress, undefined);
+  assert.equal(match.safeContainers?.[0].opened, true);
+  assert.equal(participant.character.inventory.carriedItems.some(i => i.itemId === "lockpick"), false);
 });

@@ -35,6 +35,80 @@ function openSafe(match: MatchRecord, safe: NonNullable<MatchRecord["safeContain
   return revealedIds;
 }
 
+export function instantUnlockWithLockpick(
+  match: MatchRecord,
+  safe: NonNullable<MatchRecord["safeContainers"]>[number],
+  character: PlannedActionParticipant["character"],
+  playerId: string,
+  hasDexterity1: boolean,
+  tileId: string
+): ReplayEvent {
+  character.lockpickProgress = undefined;
+  if (!hasDexterity1) consumeCarriedItem(character, "lockpick");
+  const contents = [...safe.contents];
+  const revealedIds = openSafe(match, safe, character);
+  if (character.actionPlan?.secondary?.actionId === ActionLibrary.pick_lock.id) {
+    clearPlanByKey(character, "secondary");
+  }
+  return {
+    kind: "player",
+    actorId: playerId,
+    action: {
+      actionId: ActionLibrary.pick_lock.id,
+      metadata: {
+        outcome: "success",
+        openedInstantly: true,
+        lockpickConsumed: !hasDexterity1,
+        contents,
+        revealedItemIds: revealedIds,
+        safeItemId: safe.safeItemId,
+        tileId,
+      },
+    },
+  };
+}
+
+export function checkOngoingLockpickWithItem(
+  match: MatchRecord,
+  events: ReplayEvent[]
+): void {
+  const safes = match.safeContainers ?? [];
+  for (const playerId in match.playerCharacters ?? {}) {
+    const character = match.playerCharacters?.[playerId];
+    if (!character || !character.lockpickProgress) {
+      continue;
+    }
+    const tileId = character.position?.tileId;
+    if (!tileId || tileId !== character.lockpickProgress.tileId) {
+      continue;
+    }
+    const hasLockpick = hasCarriedItem(character, "lockpick");
+    if (!hasLockpick) {
+      continue;
+    }
+    const safe = safes.find(
+      (entry) =>
+        entry.tileId === tileId &&
+        entry.safeItemId === character.lockpickProgress?.safeItemId &&
+        !entry.opened
+    );
+    if (!safe) {
+      continue;
+    }
+    const dexRank = getSkillRank(character, "dexterity1");
+    const hasDexterity1 = dexRank > 0;
+    const event = instantUnlockWithLockpick(
+      match,
+      safe,
+      character,
+      playerId,
+      hasDexterity1,
+      tileId
+    );
+    events.push(event);
+  }
+}
+
 export function executePickLockAction(
   participants: PlannedActionParticipant[],
   match: MatchRecord,
@@ -66,25 +140,16 @@ export function executePickLockAction(
     const required = Math.max(1, 4 - dexRank);
     const turnsCompleted = completed + 1;
     if (hasLockpick) {
-      character.lockpickProgress = undefined;
-      if (!hasDexterity1) consumeCarriedItem(character, "lockpick");
-      const contents = [...safe.contents];
-      const revealedIds = openSafe(match, safe, character);
-      if (participant.plan.actionId === ActionLibrary.pick_lock.id) {
-        clearPlanByKey(character, participant.planKey);
-      }
-      events.push({ kind: "player", actorId: participant.playerId, action: {
-        actionId: ActionLibrary.pick_lock.id,
-        metadata: {
-          outcome: "success",
-          openedInstantly: true,
-          lockpickConsumed: !hasDexterity1,
-          contents,
-          revealedItemIds: revealedIds,
-          safeItemId: safe.safeItemId,
-          tileId,
-        },
-      }});
+      events.push(
+        instantUnlockWithLockpick(
+          match,
+          safe,
+          character,
+          participant.playerId,
+          hasDexterity1,
+          tileId
+        )
+      );
       continue;
     }
     if (turnsCompleted < required) {

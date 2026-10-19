@@ -35,6 +35,7 @@ import { applyScheduledDestruction } from "./turnDestruction";
 import { refreshTrackerViews } from "./trackerState";
 import { createPerception4DetectionEvents } from "./perception4";
 import { dropOverweightItems } from "./dropOverweightItems";
+import { checkOngoingLockpickWithItem } from "./actions/pickLock";
 
 function sortedActions(): ActionDefinition[] {
   const keys = Object.keys(ActionLibrary) as Array<keyof typeof ActionLibrary>;
@@ -386,6 +387,7 @@ export function advanceTurn(
   );
   clearExpiredFires(match, resolvedTurn);
   decrementChainsawTurns(match);
+  checkOngoingLockpickWithItem(match, replayEvents);
   replayEvents.push(...createPerception4DetectionEvents(match));
   // removeProtectedState(match);
 
