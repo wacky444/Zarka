@@ -4,6 +4,7 @@ import { PlayerSelector, type PlayerOption } from "./PlayerSelector";
 import { resolveItemTexture } from "./itemIcons";
 import { THEME } from "./ColorPalette";
 import { t } from "../services/i18n";
+import { ModalCloseButton } from "./ModalCloseButton";
 
 export type ZarkanDonationSelection = {
   targetPlayerId: string;
@@ -13,6 +14,7 @@ export type ZarkanDonationSelection = {
 export class ZarkanDonationModal extends Phaser.GameObjects.Container {
   private readonly cover: Phaser.GameObjects.Rectangle;
   private readonly panel: Phaser.GameObjects.Rectangle;
+  private readonly closeButton: ModalCloseButton;
   private readonly title: Phaser.GameObjects.Text;
   private readonly targetSelector: PlayerSelector;
   private readonly amountLabel: Phaser.GameObjects.Text;
@@ -38,6 +40,12 @@ export class ZarkanDonationModal extends Phaser.GameObjects.Container {
   private draggingSlider = false;
   private coverPointerId: number | null = null;
   private visibleModal = false;
+
+  private readonly handleEscape = (event: KeyboardEvent) => {
+    if (event.key === "Escape" && this.visibleModal) {
+      this.close();
+    }
+  };
 
   private readonly pointerMoveHandler = (pointer: Phaser.Input.Pointer) => {
     if (this.draggingSlider) {
@@ -140,6 +148,12 @@ export class ZarkanDonationModal extends Phaser.GameObjects.Container {
       })
       .setOrigin(0.5);
     this.add(this.title);
+
+    this.closeButton = new ModalCloseButton(ownerScene, 0, 0, {
+      size: 34,
+      onClick: () => this.close()
+    });
+    this.add(this.closeButton);
 
     this.targetSelector = new PlayerSelector(ownerScene, 0, 0, 300);
     this.targetSelector.setLabel(t("Recipient"));
@@ -310,6 +324,7 @@ export class ZarkanDonationModal extends Phaser.GameObjects.Container {
     this.visibleModal = true;
     this.layout();
     this.setVisible(true).setActive(true);
+    this.ownerScene.input.keyboard?.on("keydown", this.handleEscape);
     this.updateAmountControls();
     this.updateSendButton();
     this.emit("modal-open");
@@ -332,6 +347,7 @@ export class ZarkanDonationModal extends Phaser.GameObjects.Container {
     if (!this.visibleModal) {
       return;
     }
+    this.ownerScene.input.keyboard?.off("keydown", this.handleEscape);
     this.targetSelector.hideDropdown();
     this.draggingSlider = false;
     this.visibleModal = false;
@@ -341,6 +357,7 @@ export class ZarkanDonationModal extends Phaser.GameObjects.Container {
 
   override destroy(fromScene?: boolean): void {
     this.close();
+    this.ownerScene.input.keyboard?.off("keydown", this.handleEscape);
     this.ownerScene.input.off(
       Phaser.Input.Events.POINTER_MOVE,
       this.pointerMoveHandler
@@ -369,6 +386,7 @@ export class ZarkanDonationModal extends Phaser.GameObjects.Container {
     this.panel.setSize(panelWidth, panelHeight);
     this.panel.setDisplaySize(panelWidth, panelHeight);
     this.title.setPosition(centerX, top + 32);
+    this.closeButton.setPosition(left + panelWidth - 24, top + 24);
 
     this.targetSelector.setPosition(left + 24, top + 62);
     this.targetSelector.setSelectorWidth(panelWidth - 48);

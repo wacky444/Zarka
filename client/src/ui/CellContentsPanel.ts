@@ -10,6 +10,7 @@ import { ItemTooltipManager } from "./ItemTooltip";
 import { createCellItemGrid, type CellItemGridEntry } from "./CellItemGrid";
 import { makeButton, type UIButton } from "./button";
 import { THEME } from "./ColorPalette";
+import { ModalCloseButton } from "./ModalCloseButton";
 
 type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
   layout?: () => void;
@@ -76,6 +77,11 @@ export class CellContentsPanel {
       this.openingPointerId = null;
     }
   };
+  private readonly handleEscape = (event: KeyboardEvent): void => {
+    if (event.key === "Escape" && this.isVisible) {
+      this.close();
+    }
+  };
 
   constructor(private readonly scene: Phaser.Scene) {
     this.itemTooltip = new ItemTooltipManager(scene, 12005);
@@ -89,6 +95,7 @@ export class CellContentsPanel {
       this.handlePointerUp,
       this
     );
+    this.scene.input.keyboard?.on("keydown", this.handleEscape);
     this.scene.scale.on(
       Phaser.Scale.Events.RESIZE,
       this.handleResize,
@@ -175,6 +182,7 @@ export class CellContentsPanel {
       this.handleResize,
       this
     );
+    this.scene.input.keyboard?.off("keydown", this.handleEscape);
     this.isVisible = false;
     this.openingPointerId = null;
     this.itemTooltip.destroy();
@@ -295,6 +303,17 @@ export class CellContentsPanel {
       )
       .setOrigin(0.5, 0);
     overlay.add(subtitle);
+
+    const topCloseButton = new ModalCloseButton(
+      this.scene,
+      modalX + modalWidth - 24,
+      modalY + 24,
+      {
+        size: 34,
+        onClick: () => this.close()
+      }
+    );
+    overlay.add(topCloseButton);
 
     const content = this.scene.add.container(0, 0);
     this.content = content;

@@ -3,6 +3,7 @@ import { t } from "../services/i18n";
 import { ItemTooltipManager } from "./ItemTooltip";
 import { THEME } from "./ColorPalette";
 import { isMobile } from "../utils/isMobile";
+import { ModalCloseButton } from "./ModalCloseButton";
 
 const ACTION_DESCRIPTION_TAG_PATTERN =
   /\[(health-damage|energy-damage|energy-recover|health-recover)\]([\s\S]*?)\[\/\1\]/g;
@@ -306,7 +307,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private selectedItem: GridSelectItem | null = null;
   private overlay: Phaser.GameObjects.Container | null = null;
   private modalCover: Phaser.GameObjects.Rectangle | null = null;
-  private modalCloseButton: Phaser.GameObjects.Container | null = null;
+  private modalCloseButton: ModalCloseButton | null = null;
   private staticGridPanel: RexScrollablePanel | null = null;
   private staticGridContent: Phaser.GameObjects.Container | null = null;
   private staticGridCells: StaticGridCell[] = [];
@@ -324,6 +325,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private modalViewportHeight = 0;
   private modalViewportIsMobile = false;
   private resizeTimer: Phaser.Time.TimerEvent | null = null;
+  private readonly handleEscape = (event: KeyboardEvent): void => {
+    if (event.key === "Escape" && this.modalVisible) {
+      this.closeModal();
+    }
+  };
   private readonly handleScaleResize = (): void => {
     if (!this.modalVisible) {
       return;
@@ -521,6 +527,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
       this.scene.time.removeEvent(this.resizeTimer);
       this.resizeTimer = null;
     }
+    this.scene.input.keyboard?.off("keydown", this.handleEscape);
     this.closeModal(true);
     this.tooltip?.destroy();
     this.tooltip = null;
@@ -769,12 +776,14 @@ export class GridSelect extends Phaser.GameObjects.Container {
     }
     if (!this.modalVisible) {
       this.modalVisible = true;
+      this.scene.input.keyboard?.on("keydown", this.handleEscape);
       this.emit("modal-open");
     }
     if (this.overlay) {
       this.overlay.setVisible(true);
       this.overlay.setActive(true);
       this.overlay.setDepth(10000);
+      this.scene.input.keyboard?.on("keydown", this.handleEscape);
       this.updateConfirmButton();
       this.modalCover?.setVisible(true);
       this.modalCover?.setInteractive();
@@ -996,13 +1005,18 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.gridViewportMask = this.gridViewportMaskShape.createGeometryMask();
     gridView.setMask?.(this.gridViewportMask);
 
-    if (mobile) {
-      this.modalCloseButton = this.createMobileCloseButton(
-        scene,
-        overlay,
-        width
-      );
-    }
+    const closeBtnX = mobile
+      ? width - 44
+      : width / 2 + this.modalWidth / 2 - 24;
+    const closeBtnY = mobile
+      ? 36
+      : height / 2 - this.modalHeight / 2 + 24;
+    this.modalCloseButton = new ModalCloseButton(scene, closeBtnX, closeBtnY, {
+      size: 34,
+      depth: 10002,
+      onClick: () => this.closeModal()
+    });
+    overlay.add(this.modalCloseButton);
 
     this.ensureTooltip();
     this.overlay = overlay;
@@ -1073,42 +1087,6 @@ export class GridSelect extends Phaser.GameObjects.Container {
     }
   }
 
-  private createMobileCloseButton(
-    scene: Phaser.Scene,
-    overlay: Phaser.GameObjects.Container,
-    width: number
-  ): Phaser.GameObjects.Container {
-    const button = scene.add.container(width - 52, 36);
-    const background = scene.add
-      .rectangle(0, 0, 40, 40, 0x334155, 0.95)
-      .setOrigin(0.5)
-      .setStrokeStyle(2, 0x94a3b8, 1)
-      .setInteractive();
-    const label = scene.add
-      .text(0, 0, "×", {
-        color: "#ffffff",
-        fontSize: "28px",
-        fontStyle: "bold"
-      })
-      .setOrigin(0.5);
-    background.on(
-      Phaser.Input.Events.POINTER_UP,
-      (
-        _pointer: Phaser.Input.Pointer,
-        _localX: number,
-        _localY: number,
-        event: Phaser.Types.Input.EventData
-      ) => {
-        event.stopPropagation();
-        this.closeModal();
-      }
-    );
-    button.add([background, label]);
-    button.setDepth(10002);
-    overlay.add(button);
-    return button;
-  }
-
   private clearLongPressTimers(): void {
     for (const timer of this.longPressTimers) {
       this.scene.time.removeEvent(timer);
@@ -1117,6 +1095,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
   }
 
   private closeModal(forceDestroy = false) {
+    this.scene.input.keyboard?.off("keydown", this.handleEscape);
     this.clearLongPressTimers();
     if (this.resizeTimer) {
       this.scene.time.removeEvent(this.resizeTimer);

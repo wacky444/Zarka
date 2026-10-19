@@ -64,23 +64,11 @@
 
 - feature, npc
 
-
-- improvement, tutorial feedback (Telegram)
-	- Explicar dónde está Vitalidad.
-	- Resaltar las pestañas con un recuadro amarillo.
-	- Restaurar el recuadro amarillo del botón Listo.
-	- En el paso de golpear con hacha, mostrar la acción; esperar al replay y quizá añadir paso para volver al panel.
-	- Ajustar tutorial para que quepa todo el texto.
-	- Explicar cuál casilla corresponde al bot.
-	- Resaltar con un recuadro amarillo “Elegir ubicación” para enseñar cómo elegir destino.
-	- Mostrar el mapa progresivamente para que se vea qué está pasando.
-
 - improvement, tutorial feedback 2
 	- introduccion, donde estoy, que tengo que hacer, tengo que tener miedo de otros?
-	- the tutorial didnt ask to open the chat
-		- and there wasnt a orange bubble for new message
-	- the tutorial didnt ask to see the log to see what the detective has said
-	- don't auto open tabs in the tutorial, make the player learn muscle memory
+
+	-Zarka es un juego de rol y estrategia que se desarrolla en un pueblo abandonado, Zarka, en el que varios
+equipos se enfrentarán matándose unos a otros hasta que solo queden vivos miembros de un equipo.
 
 - general gui
 	- sacar el chat de la pestaña, en modo pc

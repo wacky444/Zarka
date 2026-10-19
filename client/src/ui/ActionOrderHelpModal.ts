@@ -3,6 +3,7 @@ import { ActionLibrary, type ActionDefinition } from "@shared";
 import { t } from "../services/i18n";
 import { ItemTooltipManager } from "./ItemTooltip";
 import { THEME } from "./ColorPalette";
+import { ModalDialog } from "./ModalDialog";
 import { describeAction } from "./panel/CharacterPanelActionOptions";
 
 const LONG_PRESS_MS = 450;
@@ -21,19 +22,13 @@ type PressState = {
 };
 
 export class ActionOrderHelpModal {
-  private readonly root: Phaser.GameObjects.Container;
-  private readonly cover: Phaser.GameObjects.Rectangle;
-  private readonly panel: Phaser.GameObjects.Rectangle;
+  private readonly dialog: ModalDialog;
   private readonly content: Phaser.GameObjects.Container;
   private readonly tooltip: ItemTooltipManager;
-  private readonly titleText: Phaser.GameObjects.Text;
-  private readonly subtitleText: Phaser.GameObjects.Text;
-  private readonly closeButton: Phaser.GameObjects.Text;
   private maskShape: Phaser.GameObjects.Rectangle | null = null;
   private mask: Phaser.Display.Masks.GeometryMask | null = null;
   private press: PressState | null = null;
   private scrollVelocityY = 0;
-  private isOpen = false;
   private contentHeight = 0;
   private viewport = { x: 0, y: 0, width: 0, height: 0 };
   private selectedIds = new Set<string>();
@@ -75,7 +70,7 @@ export class ActionOrderHelpModal {
   };
 
   private readonly handleScrollMomentum = (_time: number, delta: number): void => {
-    if (!this.isOpen || Math.abs(this.scrollVelocityY) < 0.025) {
+    if (!this.dialog.isOpen() || Math.abs(this.scrollVelocityY) < 0.025) {
       this.scrollVelocityY = 0;
       return;
     }
@@ -90,40 +85,41 @@ export class ActionOrderHelpModal {
     this.scrollVelocityY *= Math.pow(0.92, delta / 16.67);
   };
 
-  private readonly handleEscape = (event: KeyboardEvent): void => {
-    if (event.key === "Escape" && this.isOpen) this.close();
-  };
-
   constructor(private readonly scene: Phaser.Scene) {
-    this.root = scene.add.container(0, 0).setDepth(MODAL_DEPTH).setScrollFactor(0);
-    this.cover = scene.add.rectangle(0, 0, 1, 1, 0x020617, 0.82)
-      .setOrigin(0, 0).setInteractive();
-    this.cover.on(Phaser.Input.Events.POINTER_UP, () => this.close());
-    this.panel = scene.add.rectangle(0, 0, 1, 1, THEME.colors.modalBackground, 1)
-      .setOrigin(0, 0).setStrokeStyle(2, 0x334155, 1).setInteractive();
-    this.panel.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
-      this.beginPress(pointer);
+    this.dialog = new ModalDialog(scene, {
+      title: t("Orden de sucesos"),
+      subtitle: t("Orden descendente, y dentro de la misma línea, de izquierda a derecha"),
+      minWidth: 280,
+      maxWidth: 920,
+      minHeight: 240,
+      maxHeight: 720,
+      depth: MODAL_DEPTH
     });
-    this.panel.on(Phaser.Input.Events.POINTER_UP, (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => event.stopPropagation());
-    this.titleText = scene.add.text(0, 0, t("Orden de sucesos"), {
-      fontSize: "20px", color: THEME.colors.modalHeader, fontStyle: "bold"
-    }).setOrigin(0, 0);
-    this.subtitleText = scene.add.text(0, 0, t("Orden descendente, y dentro de la misma línea, de izquierda a derecha"), {
-      fontSize: "13px", color: THEME.colors.modalText, wordWrap: { width: 400 }
-    }).setOrigin(0, 0);
-    this.closeButton = scene.add.text(0, 0, "×", {
-      fontSize: "30px", color: THEME.colors.modalText
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    this.closeButton.on(Phaser.Input.Events.POINTER_UP, () => this.close());
+
+    this.dialog.setCallbacks(
+      () => {
+        this.onOpen?.();
+      },
+      () => {
+        this.scrollVelocityY = 0;
+        this.cancelPress();
+        this.tooltip.hide();
+        this.onClose?.();
+      }
+    );
+
+    this.dialog.setOnLayout(() => {
+      if (this.dialog.isOpen()) {
+        this.build();
+      }
+    });
+
     this.content = scene.add.container(0, 0);
     this.tooltip = new ItemTooltipManager(scene, MODAL_DEPTH + 1);
-    this.root.add([this.cover, this.panel, this.content, this.titleText, this.subtitleText, this.closeButton]);
-    this.root.setVisible(false);
+
     scene.input.on(Phaser.Input.Events.POINTER_MOVE, this.handlePointerMove);
     scene.input.on(Phaser.Input.Events.POINTER_UP, this.handlePointerUp);
     scene.events.on(Phaser.Scenes.Events.UPDATE, this.handleScrollMomentum);
-    scene.input.keyboard?.on("keydown", this.handleEscape);
-    scene.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize);
   }
 
   setCallbacks(onOpen: () => void, onClose: () => void): void {
@@ -133,20 +129,12 @@ export class ActionOrderHelpModal {
 
   open(selectedIds: readonly (string | null)[]): void {
     this.selectedIds = new Set(selectedIds.filter((id): id is string => Boolean(id)));
+    this.dialog.open();
     this.build();
-    this.isOpen = true;
-    this.root.setVisible(true);
-    this.onOpen?.();
   }
 
   close(): void {
-    if (!this.isOpen) return;
-    this.isOpen = false;
-    this.scrollVelocityY = 0;
-    this.cancelPress();
-    this.tooltip.hide();
-    this.root.setVisible(false);
-    this.onClose?.();
+    this.dialog.close();
   }
 
   destroy(): void {
@@ -154,17 +142,12 @@ export class ActionOrderHelpModal {
     this.scene.input.off(Phaser.Input.Events.POINTER_MOVE, this.handlePointerMove);
     this.scene.input.off(Phaser.Input.Events.POINTER_UP, this.handlePointerUp);
     this.scene.events.off(Phaser.Scenes.Events.UPDATE, this.handleScrollMomentum);
-    this.scene.input.keyboard?.off("keydown", this.handleEscape);
-    this.scene.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize);
     this.mask?.destroy();
     this.maskShape?.destroy();
     this.tooltip.destroy();
-    this.root.destroy(true);
+    this.content.destroy(true);
+    this.dialog.destroy(true);
   }
-
-  private readonly handleResize = (): void => {
-    if (this.isOpen) this.build();
-  };
 
   private build(): void {
     this.scrollVelocityY = 0;
@@ -175,44 +158,48 @@ export class ActionOrderHelpModal {
     this.maskShape = null;
     this.content.removeAll(true);
 
-    const width = this.scene.scale.width;
-    const height = this.scene.scale.height;
-    this.cover.setSize(width, height).setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, width, height),
-      Phaser.Geom.Rectangle.Contains,
-    );
-    const panelWidth = Math.min(width - 24, 920);
-    const panelHeight = Math.min(height - 24, 720);
-    const panelX = (width - panelWidth) / 2;
-    const panelY = (height - panelHeight) / 2;
-    this.panel.setPosition(panelX, panelY).setSize(panelWidth, panelHeight).setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, panelWidth, panelHeight),
-      Phaser.Geom.Rectangle.Contains,
-    );
-    this.titleText.setPosition(panelX + 18, panelY + 14);
-    this.subtitleText.setWordWrapWidth(Math.max(120, panelWidth - 92));
-    this.subtitleText.setPosition(panelX + 18, panelY + 44);
-    this.closeButton.setPosition(panelX + panelWidth - 24, panelY + 23);
-
-    const inset = 14;
+    const bounds = this.dialog.getContentBounds();
     this.viewport = {
-      x: panelX + inset,
-      y: panelY + 82,
-      width: panelWidth - inset * 2,
-      height: panelHeight - 96,
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height
     };
-    this.maskShape = this.scene.add.rectangle(
-      this.viewport.x, this.viewport.y, this.viewport.width, this.viewport.height, 0xffffff, 0
-    ).setOrigin(0, 0).setScrollFactor(0);
+
+    const viewportBackground = this.scene.add
+      .rectangle(0, 0, this.viewport.width, this.viewport.height, 0x000000, 0.0001)
+      .setOrigin(0, 0)
+      .setInteractive();
+    viewportBackground.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
+      this.beginPress(pointer);
+    });
+    this.content.add(viewportBackground);
+
+    this.maskShape = this.scene.add
+      .rectangle(
+        this.viewport.x,
+        this.viewport.y,
+        this.viewport.width,
+        this.viewport.height,
+        0xffffff,
+        0
+      )
+      .setOrigin(0, 0)
+      .setScrollFactor(0);
     this.mask = this.maskShape.createGeometryMask();
     this.content.setPosition(this.viewport.x, this.viewport.y).setMask(this.mask);
-    this.root.add(this.maskShape);
-    this.root.bringToTop(this.maskShape);
-    this.root.bringToTop(this.content);
+
+    if (!this.dialog.contentContainer.exists(this.content)) {
+      this.dialog.contentContainer.add(this.content);
+    }
+    if (this.maskShape && !this.dialog.exists(this.maskShape)) {
+      this.dialog.add(this.maskShape);
+    }
+
     const leftInset = 8;
     this.contentHeight = this.drawActions(
       Math.max(0, this.viewport.width - leftInset),
-      leftInset,
+      leftInset
     );
     this.content.y = this.viewport.y;
   }
