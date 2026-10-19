@@ -127,6 +127,7 @@ export class GameBoardRenderer {
     pointer: Phaser.Input.Pointer;
   } | null = null;
   private locationSelectionHoverText: Phaser.GameObjects.Text | null = null;
+  private locationSelectionBorderGraphics: Phaser.GameObjects.Graphics | null = null;
   private tutorialCellMarker: Phaser.GameObjects.Graphics | null = null;
   private tutorialCellTween: Phaser.Tweens.Tween | null = null;
 
@@ -169,6 +170,10 @@ export class GameBoardRenderer {
     this.playerDizzyStars.clear();
     this.locationSelectionHoverText?.destroy();
     this.locationSelectionHoverText = null;
+    if (this.locationSelectionBorderGraphics) {
+      this.locationSelectionBorderGraphics.destroy();
+      this.locationSelectionBorderGraphics = null;
+    }
     this.tilePositions = {};
   }
 
@@ -1119,6 +1124,7 @@ export class GameBoardRenderer {
     }
     this.updateLocationSelectionHoverText();
     this.updateTutorialCellMarker(tutorialCell);
+    this.updateLocationSelectionBorder(selection);
   }
 
   refreshAllTileTints(): void {
@@ -1150,6 +1156,7 @@ export class GameBoardRenderer {
       });
     }
     this.updateTutorialCellMarker(tutorialCell);
+    this.updateLocationSelectionBorder(selection);
   }
 
   getPlayerSprite(playerId: string): SkinContainer | undefined {
@@ -1557,6 +1564,10 @@ export class GameBoardRenderer {
       this.tutorialCellMarker.destroy();
       this.tutorialCellMarker = null;
     }
+    if (this.locationSelectionBorderGraphics) {
+      this.locationSelectionBorderGraphics.destroy();
+      this.locationSelectionBorderGraphics = null;
+    }
     for (const entry of this.mapTileSprites) {
       if (entry.cellInfoLongPressTimer) {
         this.scene.time.removeEvent(entry.cellInfoLongPressTimer);
@@ -1773,5 +1784,188 @@ export class GameBoardRenderer {
       container.setVisible(visible);
     }
     this.locationSelectionHoverText?.setVisible(visible);
+    if (this.locationSelectionBorderGraphics) {
+      const selection = this.callbacks.getLocationSelection();
+      this.locationSelectionBorderGraphics.setVisible(
+        visible && selection.active && selection.actionId !== null,
+      );
+    }
+  }
+
+  private updateLocationSelectionBorder(selection: BoardLocationSelection): void {
+    if (!selection.active || !selection.actionId) {
+      if (this.locationSelectionBorderGraphics) {
+        this.locationSelectionBorderGraphics.clear();
+        this.locationSelectionBorderGraphics.setVisible(false);
+      }
+      return;
+    }
+
+    const selectableCoords = new Set<string>();
+    const selectableEntries: Array<{
+      q: number;
+      r: number;
+      x: number;
+      y: number;
+    }> = [];
+
+    for (const entry of this.mapTileSprites) {
+      const inRange = this.callbacks.isLocationInRange(
+        selection.actionId,
+        entry.tile.coord,
+        selection.extraExecutions,
+      );
+      if (inRange) {
+        selectableCoords.add(`${entry.tile.coord.q},${entry.tile.coord.r}`);
+        selectableEntries.push({
+          q: entry.tile.coord.q,
+          r: entry.tile.coord.r,
+          x: entry.image.x,
+          y: entry.image.y,
+        });
+      }
+    }
+
+    if (selectableEntries.length === 0) {
+      if (this.locationSelectionBorderGraphics) {
+        this.locationSelectionBorderGraphics.clear();
+        this.locationSelectionBorderGraphics.setVisible(false);
+      }
+      return;
+    }
+
+    if (
+      !this.locationSelectionBorderGraphics ||
+      !this.locationSelectionBorderGraphics.active ||
+      this.locationSelectionBorderGraphics.scene !== this.scene
+    ) {
+      this.locationSelectionBorderGraphics = this.scene.add.graphics();
+      this.locationSelectionBorderGraphics.setDepth(4.8);
+      this.uiCamera.ignore(this.locationSelectionBorderGraphics);
+    }
+
+    const w = TILE_WIDTH / 2;
+    const h1 = TILE_HEIGHT / 3;
+    const h2 = (TILE_HEIGHT * 2) / 3;
+
+    interface EdgePoint {
+      x: number;
+      y: number;
+    }
+
+    const boundaryEdges: Array<{ from: EdgePoint; to: EdgePoint }> = [];
+
+    for (const tile of selectableEntries) {
+      const { q, r, x, y } = tile;
+      const isOdd = (r & 1) !== 0;
+
+      const v0: EdgePoint = { x, y: y - h2 };
+      const v1: EdgePoint = { x: x + w, y: y - h1 };
+      const v2: EdgePoint = { x: x + w, y: y + h1 };
+      const v3: EdgePoint = { x, y: y + h2 };
+      const v4: EdgePoint = { x: x - w, y: y + h1 };
+      const v5: EdgePoint = { x: x - w, y: y - h1 };
+
+      const neighborEdges = [
+        { nq: q + 1, nr: r, from: v1, to: v2 },
+        { nq: isOdd ? q + 1 : q, nr: r + 1, from: v2, to: v3 },
+        { nq: isOdd ? q : q - 1, nr: r + 1, from: v3, to: v4 },
+        { nq: q - 1, nr: r, from: v4, to: v5 },
+        { nq: isOdd ? q : q - 1, nr: r - 1, from: v5, to: v0 },
+        { nq: isOdd ? q + 1 : q, nr: r - 1, from: v0, to: v1 },
+      ];
+
+      for (const edge of neighborEdges) {
+        if (!selectableCoords.has(`${edge.nq},${edge.nr}`)) {
+          boundaryEdges.push({ from: edge.from, to: edge.to });
+        }
+      }
+    }
+
+    if (boundaryEdges.length === 0) {
+      this.locationSelectionBorderGraphics.clear();
+      this.locationSelectionBorderGraphics.setVisible(false);
+      return;
+    }
+
+    const pointKey = (p: EdgePoint): string =>
+      `${Math.round(p.x * 100)},${Math.round(p.y * 100)}`;
+
+    const nextMap = new Map<
+      string,
+      Array<{ toKey: string; pt: EdgePoint; edgeIndex: number }>
+    >();
+
+    boundaryEdges.forEach((edge, index) => {
+      const fromKey = pointKey(edge.from);
+      const toKey = pointKey(edge.to);
+      let list = nextMap.get(fromKey);
+      if (!list) {
+        list = [];
+        nextMap.set(fromKey, list);
+      }
+      list.push({ toKey, pt: edge.to, edgeIndex: index });
+    });
+
+    const used = new Uint8Array(boundaryEdges.length);
+
+    this.locationSelectionBorderGraphics.clear();
+    this.locationSelectionBorderGraphics.lineStyle(
+      4,
+      THEME.colors.locationSelectionBorder,
+      1,
+    );
+    this.locationSelectionBorderGraphics.beginPath();
+
+    for (let i = 0; i < boundaryEdges.length; i += 1) {
+      if (used[i]) {
+        continue;
+      }
+      used[i] = 1;
+      const startEdge = boundaryEdges[i];
+      const startKey = pointKey(startEdge.from);
+      let currentKey = pointKey(startEdge.to);
+
+      this.locationSelectionBorderGraphics.moveTo(
+        startEdge.from.x,
+        startEdge.from.y,
+      );
+      this.locationSelectionBorderGraphics.lineTo(
+        startEdge.to.x,
+        startEdge.to.y,
+      );
+
+      const maxSteps = boundaryEdges.length + 1;
+      let steps = 1;
+      while (currentKey !== startKey && steps < maxSteps) {
+        const nextList = nextMap.get(currentKey);
+        let found = false;
+        if (nextList) {
+          for (const next of nextList) {
+            if (!used[next.edgeIndex]) {
+              used[next.edgeIndex] = 1;
+              this.locationSelectionBorderGraphics.lineTo(
+                next.pt.x,
+                next.pt.y,
+              );
+              currentKey = next.toKey;
+              found = true;
+              steps += 1;
+              break;
+            }
+          }
+        }
+        if (!found) {
+          break;
+        }
+      }
+
+      if (currentKey === startKey) {
+        this.locationSelectionBorderGraphics.closePath();
+      }
+    }
+
+    this.locationSelectionBorderGraphics.strokePath();
+    this.locationSelectionBorderGraphics.setVisible(!this.mapRenderingPaused);
   }
 }

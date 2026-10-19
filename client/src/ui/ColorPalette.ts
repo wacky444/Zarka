@@ -34,6 +34,7 @@ export const THEME = {
 
     tutorialHighlight: 0xfbbf24,
     tutorialHighlightText: "#fbbf24",
+    locationSelectionBorder: 0x22c55e,
 
     panelBackground: 0x1b2440,
     panelBorder: 0x253055,
