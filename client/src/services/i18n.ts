@@ -869,10 +869,26 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "No character": "Sin personaje",
   "Waiting...": "Esperando...",
   "Match removed": "Partida eliminada",
-  "Game over": "Fin de la partida"
+  "Game over": "Fin de la partida",
+  "Bienvenido a Zarka": "Bienvenido a Zarka",
+  "Welcome to Zarka": "Bienvenido a Zarka",
+  "Has llegado voluntariamente a un pueblo abandonado con un único objetivo: sobrevivir. En este juego de rol y estrategia por turnos, varios equipos se enfrentan a muerte, pero hay un problema: [b]aún no sabes quiénes son tus aliados.[/b]":
+    "Has llegado voluntariamente a un pueblo abandonado con un único objetivo: sobrevivir. En este juego de rol y estrategia por turnos, varios equipos se enfrentan a muerte, pero hay un problema: [b]aún no sabes quiénes son tus aliados.[/b]",
+  "Empiezas a solas, equipado únicamente con una mochila y una ración de comida. Cada día deberás elegir tus acciones, explorar el mapa, reunirte con tu equipo y eliminar a tus rivales.":
+    "Empiezas a solas, equipado únicamente con una mochila y una ración de comida. Cada día deberás elegir tus acciones, explorar el mapa, reunirte con tu equipo y eliminar a tus rivales.",
+  "Solo puede quedar un equipo en pie.": "Solo puede quedar un equipo en pie.",
+  Comenzar: "Comenzar"
 };
 
 const ENGLISH_GAME_NAMES: Record<string, string> = {
+  "Bienvenido a Zarka": "Welcome to Zarka",
+  "Has llegado voluntariamente a un pueblo abandonado con un único objetivo: sobrevivir. En este juego de rol y estrategia por turnos, varios equipos se enfrentan a muerte, pero hay un problema: [b]aún no sabes quiénes son tus aliados.[/b]":
+    "You have voluntarily arrived at an abandoned town with a single goal: to survive. In this turn-based role-playing and strategy game, several teams fight to the death, but there is a problem: [b]you still don't know who your allies are.[/b]",
+  "Empiezas a solas, equipado únicamente con una mochila y una ración de comida. Cada día deberás elegir tus acciones, explorar el mapa, reunirte con tu equipo y eliminar a tus rivales.":
+    "You start alone, equipped only with a backpack and a ration of food. Each day you must choose your actions, explore the map, regroup with your team, and eliminate your rivals.",
+  "Solo puede quedar un equipo en pie.":
+    "Only one team can be left standing.",
+  Comenzar: "Start",
   "Continuar al informe": "Continue to Report",
   "continuar al informe": "continue to report",
   "Detecta incendios a cualquier distancia e identifica a los jugadores en la misma localización o hasta 1 localización de distancia":

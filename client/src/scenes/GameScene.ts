@@ -80,6 +80,7 @@ import { AccountService } from "../services/AccountService";
 import { VictoryOverlay } from "../ui/VictoryOverlay";
 import { startVictoryDance } from "../animation/VictoryDance";
 import { TutorialInstructionView } from "../ui/TutorialInstructionView";
+import { TutorialWelcomeModal } from "../ui/TutorialWelcomeModal";
 import { isAdminViewEnabled } from "../services/adminView";
 import { t } from "../services/i18n";
 import { THEME } from "../ui/ColorPalette";
@@ -184,6 +185,8 @@ export class GameScene extends Phaser.Scene {
   private victoryOverlay: VictoryOverlay | null = null;
   private stopVictoryDance: (() => void) | null = null;
   private tutorialInstructionView: TutorialInstructionView | null = null;
+  private tutorialWelcomeModal: TutorialWelcomeModal | null = null;
+  private tutorialWelcomeActive = false;
   private reportTransitionStarted = false;
   private reportReplayMode = false;
   private reportReplayMatchId: string | null = null;
@@ -724,6 +727,12 @@ export class GameScene extends Phaser.Scene {
         this.load.image(key, buildBoardIconUrl(frame));
       }
     }
+    if (!this.textures.exists("zarka-welcome")) {
+      this.load.image(
+        "zarka-welcome",
+        assetPath("assets/images/zarka-icon-hexagon.png")
+      );
+    }
     preloadReplaySounds(this);
   }
 
@@ -1001,6 +1010,14 @@ export class GameScene extends Phaser.Scene {
     });
     this.tutorialInstructionView = new TutorialInstructionView(this);
     this.cam.ignore(this.tutorialInstructionView.getContainer());
+    this.tutorialWelcomeModal = new TutorialWelcomeModal(this);
+    this.tutorialWelcomeModal.setCallbacks(
+      () => {},
+      () => {
+        this.tutorialWelcomeActive = false;
+        this.updateTutorialGuidance();
+      }
+    );
     if (this.uiCam) {
       this.victoryOverlay.ignoreCamera(this.cam);
     }
@@ -1132,6 +1149,9 @@ export class GameScene extends Phaser.Scene {
       this.resolveReplayResumeWaiters();
       this.actionPlanSynchronizer?.destroy();
       this.actionPlanSynchronizer = null;
+      this.tutorialWelcomeModal?.destroy();
+      this.tutorialWelcomeModal = null;
+      this.tutorialWelcomeActive = false;
       this.tutorialController = null;
       this.tutorialVictoryDelayTimer?.remove(false);
       this.tutorialVictoryDelayTimer = null;
@@ -2237,15 +2257,27 @@ export class GameScene extends Phaser.Scene {
   }
 
   private initializeTutorialController(match: MatchRecord | null): void {
-    this.tutorialController = match?.metadata?.[TUTORIAL_MATCH_METADATA_KEY]
+    const isTutorial = Boolean(match?.metadata?.[TUTORIAL_MATCH_METADATA_KEY]);
+    this.tutorialController = isTutorial
       ? new TutorialProgressController(TUTORIAL_STEP_IDS)
       : null;
+    if (isTutorial && !this.reportReplayMode) {
+      this.tutorialWelcomeActive = true;
+      this.tutorialWelcomeModal?.open();
+    } else {
+      this.tutorialWelcomeActive = false;
+    }
     this.updateTutorialGuidance();
   }
 
   private updateTutorialGuidance(): void {
     const isTutorial = this.tutorialController !== null;
     const currentStep = this.tutorialController?.currentStep ?? null;
+    if (this.tutorialWelcomeActive) {
+      this.tutorialInstructionView?.setStep(null);
+      this.characterPanel?.setTutorialStep(null, false);
+      return;
+    }
     if (isTutorial && this.mobileLayout) {
       const policy = getTutorialUiPolicy(currentStep);
       if (policy.mapRequired) {
@@ -3774,6 +3806,7 @@ export class GameScene extends Phaser.Scene {
 
   private isPointOverUI(x: number, y: number): boolean {
     if (
+      this.tutorialWelcomeModal?.isOpen() ||
       this.tutorialInstructionView?.containsPoint(x, y) ||
       this.cellContentsPanel?.isOpen
     ) {
