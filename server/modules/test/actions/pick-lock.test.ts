@@ -9,6 +9,9 @@ import {
 import { executeAction } from "../../src/match/actionExecutor";
 import type { PlannedActionParticipant } from "../../src/match/actions/utils";
 import { createDefaultCharacter } from "../../src/utils/playerCharacter";
+import { updateReadyStateRpc } from "../../src/rpc/updateReadyState";
+import { createNakamaWrapper } from "../../src/services/nakamaWrapper";
+import { StorageService } from "../../src/services/storageService";
 
 function setup(hasDexterity = false, hasLockpick = false): { match: MatchRecord; participant: PlannedActionParticipant } {
   const character = createDefaultCharacter("player");
@@ -173,4 +176,60 @@ test("acquiring lockpick mid-turn immediately triggers instant unlock via checkO
   assert.equal(participant.character.lockpickProgress, undefined);
   assert.equal(match.safeContainers?.[0].opened, true);
   assert.equal(participant.character.inventory.carriedItems.some(i => i.itemId === "lockpick"), false);
+});
+
+test("opening safe in updateReadyStateRpc includes revealed items in returned map and items", () => {
+  const { match } = setup(true, false);
+  match.playerCharacters.player.lockpickProgress = { tileId: "tile", safeItemId: "safe", turnsCompleted: 2 };
+
+  const objects = new Map<string, { collection: string; key: string; userId: string; value: unknown; version: string }>();
+  let versionCounter = 0;
+  const objectKey = (collection: string, key: string, userId: string) => `${collection}:${key}:${userId}`;
+
+  const fakeNakama = {
+    storageRead: (requests: Array<{ collection: string; key: string; userId: string }>) =>
+      requests.flatMap((req) => {
+        const stored = objects.get(objectKey(req.collection, req.key, req.userId));
+        return stored ? [JSON.parse(JSON.stringify(stored))] : [];
+      }),
+    storageWrite: (requests: Array<{ collection: string; key: string; userId: string; value: unknown; version?: string }>) => {
+      for (const req of requests) {
+        const key = objectKey(req.collection, req.key, req.userId);
+        objects.set(key, {
+          collection: req.collection,
+          key: req.key,
+          userId: req.userId,
+          value: JSON.parse(JSON.stringify(req.value)),
+          version: String(++versionCounter),
+        });
+      }
+    },
+    storageList: () => ({ objects: [] }),
+    storageDelete: () => {},
+    matchCreate: () => "match-1",
+    matchList: () => ({ matches: [] }),
+    matchSignal: () => "",
+  };
+
+  const logger = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} } as unknown as nkruntime.Logger;
+  const nakama = fakeNakama as unknown as nkruntime.Nakama;
+  const storage = new StorageService(createNakamaWrapper(nakama));
+  storage.writeMatch(match);
+
+  const context = { userId: "player", username: "player" } as unknown as nkruntime.Context;
+  const resultJson = updateReadyStateRpc(
+    context,
+    logger,
+    nakama,
+    JSON.stringify({ match_id: match.match_id, ready: true }),
+  );
+
+  const result = JSON.parse(resultJson) as import("@shared").UpdateReadyStatePayload;
+  assert.equal(result.advanced, true);
+  assert.equal(result.items?.some((i) => i.item_id === "safe"), false);
+  assert.equal(result.map?.tiles[0]?.itemIds?.includes("safe"), false);
+  assert.equal(result.items?.some((i) => i.item_type === "medicine"), true);
+  const medicineId = result.items?.find((i) => i.item_type === "medicine")?.item_id;
+  assert.ok(medicineId);
+  assert.equal(result.map?.tiles[0]?.itemIds?.includes(medicineId), true);
 });

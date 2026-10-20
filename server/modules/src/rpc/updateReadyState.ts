@@ -394,6 +394,8 @@ export function updateReadyStateRpc(
       ),
     ),
   );
+  const currentViewerCharacter =
+    match.playerCharacters?.[ctx.userId] ?? null;
   const response: import("@shared").UpdateReadyStatePayload = {
     ok: true,
     match_id: matchId,
@@ -405,16 +407,18 @@ export function updateReadyStateRpc(
     advanced,
     lastAutoAdvanceAt: match.lastAutoAdvanceAt,
     playerCharacters: tailoredPlayerCharacters,
-    map: viewAll ? match.map : tailorMapForCharacter(match.map, viewerCharacter),
+    map: viewAll
+      ? match.map
+      : tailorMapForCharacter(match.map, currentViewerCharacter),
     items: viewAll
       ? match.items
-      : tailorMatchItemsForCharacter(match.items, viewerCharacter),
+      : tailorMatchItemsForCharacter(match.items, currentViewerCharacter),
     traps: tailorTrapsForViewer(match.traps, ctx.userId, viewAll),
     c4s: tailorC4sForViewer(
       match.c4s,
       ctx.userId,
       viewAll,
-      viewerCharacter?.discoveredC4Ids
+      currentViewerCharacter?.discoveredC4Ids
     ),
   };
 
