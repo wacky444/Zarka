@@ -27,7 +27,6 @@ import { assetPath } from "../utils/assetPath";
 import type {
   GetUserAccountPayload,
   SetRankedMatchSlotsPayload,
-  SetMaxCurrentMatchesPayload,
   UpdateSkinPayload,
   UserAccount,
   Skin,
@@ -175,19 +174,6 @@ export class SettingsScene extends Phaser.Scene {
   private rankedMatchSlotsRevision = 0;
   private rankedMatchSlotsSaving = false;
   private rankedMatchSlotsSaveError = false;
-  private maxCurrentMatchesTitle!: Phaser.GameObjects.Text;
-  private maxCurrentMatchesDescription!: Phaser.GameObjects.Text;
-  private maxCurrentMatchesValueText!: Phaser.GameObjects.Text;
-  private maxCurrentMatchesStateText!: Phaser.GameObjects.Text;
-  private maxCurrentMatchesDecreaseButton!: UIButton;
-  private maxCurrentMatchesIncreaseButton!: UIButton;
-  private maxCurrentMatches = 10;
-  private confirmedMaxCurrentMatches = 10;
-  private maxCurrentMatchesSaveTimer: ReturnType<typeof setTimeout> | null = null;
-  private maxCurrentMatchesPending: { value: number; revision: number } | null = null;
-  private maxCurrentMatchesRevision = 0;
-  private maxCurrentMatchesSaving = false;
-  private maxCurrentMatchesSaveError = false;
   private settingsSceneShuttingDown = false;
   public onRankedMatchSlotsChange: ((value: number) => void) | null = null;
   private facebookStatusText!: Phaser.GameObjects.Text;
@@ -428,15 +414,6 @@ export class SettingsScene extends Phaser.Scene {
     this.onRankedMatchSlotsChange = (value) =>
       this.scheduleRankedMatchSlotsSave(value);
 
-    this.maxCurrentMatchesTitle = this.add.text(0, 0, t("Maximum active matches"), { color: "#ffffff", fontSize: "18px", align: "center" }).setOrigin(0.5, 0);
-    this.maxCurrentMatchesDescription = this.add.text(0, 0, t("Choose how many active matches you can join. Existing matches remain if you lower this limit."), { color: "#cccccc", fontSize: "13px", align: "center" }).setOrigin(0.5, 0);
-    this.maxCurrentMatchesDecreaseButton = makeButton(this, 0, 0, "−", () => this.adjustMaxCurrentMatches(-1), ["account"]).setOrigin(0.5, 0);
-    this.maxCurrentMatchesValueText = this.add.text(0, 0, "10", { color: "#ffffff", fontSize: "22px", fontStyle: "bold", align: "center" }).setOrigin(0.5, 0);
-    this.maxCurrentMatchesIncreaseButton = makeButton(this, 0, 0, "+", () => this.adjustMaxCurrentMatches(1), ["account"]).setOrigin(0.5, 0);
-    this.maxCurrentMatchesStateText = this.add.text(0, 0, t("Saved"), { color: "#86efac", fontSize: "13px", align: "center" }).setOrigin(0.5, 0);
-    this.accountRoot.add([this.maxCurrentMatchesTitle, this.maxCurrentMatchesDescription, this.maxCurrentMatchesDecreaseButton, this.maxCurrentMatchesValueText, this.maxCurrentMatchesIncreaseButton, this.maxCurrentMatchesStateText]);
-    this.updateMaxCurrentMatchesControl();
-
     this.skinTitle = this.add
       .text(0, 0, "Skin Customization", {
         color: "#ffffff",
@@ -642,11 +619,6 @@ export class SettingsScene extends Phaser.Scene {
         this.rankedMatchSlotsSaveTimer = null;
         void this.flushRankedMatchSlotsSave();
       }
-      if (this.maxCurrentMatchesSaveTimer !== null) {
-        clearTimeout(this.maxCurrentMatchesSaveTimer);
-        this.maxCurrentMatchesSaveTimer = null;
-        void this.flushMaxCurrentMatchesSave();
-      }
     });
 
     if (typeof document !== "undefined") {
@@ -720,12 +692,6 @@ export class SettingsScene extends Phaser.Scene {
     this.rankedMatchSlotsDescription.setVisible(showAccount);
     this.rankedMatchSlotsValueText.setVisible(showAccount);
     this.rankedMatchSlotsStateText.setVisible(showAccount);
-    this.maxCurrentMatchesTitle.setVisible(showAccount);
-    this.maxCurrentMatchesDescription.setVisible(showAccount);
-    this.maxCurrentMatchesValueText.setVisible(showAccount);
-    this.maxCurrentMatchesStateText.setVisible(showAccount);
-    this.maxCurrentMatchesDecreaseButton.setVisible(showAccount);
-    this.maxCurrentMatchesIncreaseButton.setVisible(showAccount);
     this.rankedMatchSlotsDecreaseButton.setVisible(showAccount);
     this.rankedMatchSlotsIncreaseButton.setVisible(showAccount);
     this.facebookTitle.setVisible(showAccount);
@@ -865,24 +831,6 @@ export class SettingsScene extends Phaser.Scene {
         ) + 4;
       this.rankedMatchSlotsStateText.setPosition(centerX, cursorY);
       cursorY += this.rankedMatchSlotsStateText.height + ACCOUNT_LAYOUT.sectionGap;
-
-      this.maxCurrentMatchesTitle.setWordWrapWidth(contentWidth, true);
-      this.maxCurrentMatchesTitle.setPosition(centerX, cursorY);
-      cursorY += this.maxCurrentMatchesTitle.height + 4;
-      this.maxCurrentMatchesDescription.setWordWrapWidth(contentWidth, true);
-      this.maxCurrentMatchesDescription.setPosition(centerX, cursorY);
-      cursorY += this.maxCurrentMatchesDescription.height + 8;
-      const maxStepperGap = 12;
-      const maxStepperWidth = this.maxCurrentMatchesDecreaseButton.width + this.maxCurrentMatchesValueText.width + this.maxCurrentMatchesIncreaseButton.width + maxStepperGap * 2;
-      let maxStepperX = centerX - maxStepperWidth / 2;
-      this.maxCurrentMatchesDecreaseButton.setPosition(maxStepperX + this.maxCurrentMatchesDecreaseButton.width / 2, cursorY);
-      maxStepperX += this.maxCurrentMatchesDecreaseButton.width + maxStepperGap;
-      this.maxCurrentMatchesValueText.setPosition(maxStepperX + this.maxCurrentMatchesValueText.width / 2, cursorY + 2);
-      maxStepperX += this.maxCurrentMatchesValueText.width + maxStepperGap;
-      this.maxCurrentMatchesIncreaseButton.setPosition(maxStepperX + this.maxCurrentMatchesIncreaseButton.width / 2, cursorY);
-      cursorY += Math.max(this.maxCurrentMatchesDecreaseButton.height, this.maxCurrentMatchesValueText.height, this.maxCurrentMatchesIncreaseButton.height) + 4;
-      this.maxCurrentMatchesStateText.setPosition(centerX, cursorY);
-      cursorY += this.maxCurrentMatchesStateText.height + ACCOUNT_LAYOUT.sectionGap;
 
       this.facebookTitle.setPosition(centerX, cursorY);
       cursorY += this.facebookTitle.height + 6;
@@ -1118,63 +1066,6 @@ export class SettingsScene extends Phaser.Scene {
     }
   }
 
-  private setMaxCurrentMatches(value: number): void {
-    this.maxCurrentMatches = Math.max(1, Math.min(20, Math.floor(value)));
-    if (this.maxCurrentMatchesValueText && !this.settingsSceneShuttingDown) this.updateMaxCurrentMatchesControl();
-  }
-
-  private adjustMaxCurrentMatches(delta: number): void {
-    const next = Math.max(1, Math.min(20, this.maxCurrentMatches + delta));
-    if (next === this.maxCurrentMatches) return;
-    this.setMaxCurrentMatches(next);
-    const revision = ++this.maxCurrentMatchesRevision;
-    this.maxCurrentMatchesPending = { value: next, revision };
-    this.maxCurrentMatchesSaveError = false;
-    if (this.maxCurrentMatchesSaveTimer !== null) clearTimeout(this.maxCurrentMatchesSaveTimer);
-    this.updateMaxCurrentMatchesControl();
-    this.maxCurrentMatchesSaveTimer = setTimeout(() => {
-      this.maxCurrentMatchesSaveTimer = null;
-      void this.flushMaxCurrentMatchesSave();
-    }, 250);
-  }
-
-  private async flushMaxCurrentMatchesSave(): Promise<void> {
-    if (this.maxCurrentMatchesSaving || !this.maxCurrentMatchesPending) return;
-    const pending = this.maxCurrentMatchesPending;
-    this.maxCurrentMatchesPending = null;
-    this.maxCurrentMatchesSaving = true;
-    this.updateMaxCurrentMatchesControl();
-    try {
-      const rpc = await this.client.rpc(this.session, "set_max_current_matches", { max_current_matches: pending.value });
-      const raw = (rpc as unknown as { payload?: unknown }).payload;
-      const response = (typeof raw === "string" ? JSON.parse(raw) : raw) as SetMaxCurrentMatchesPayload | undefined;
-      if (response?.ok !== true || response.max_current_matches !== pending.value) throw new Error(response?.error ?? "invalid_response");
-      this.confirmedMaxCurrentMatches = pending.value;
-      this.maxCurrentMatchesSaveError = false;
-    } catch (error) {
-      console.warn("Failed to save maximum active matches:", error);
-      if (pending.revision === this.maxCurrentMatchesRevision && this.maxCurrentMatchesPending === null) {
-        this.maxCurrentMatchesSaveError = true;
-        this.setMaxCurrentMatches(this.confirmedMaxCurrentMatches);
-      }
-    } finally {
-      this.maxCurrentMatchesSaving = false;
-      this.updateMaxCurrentMatchesControl();
-      if (this.maxCurrentMatchesPending !== null) void this.flushMaxCurrentMatchesSave();
-    }
-  }
-
-  private updateMaxCurrentMatchesControl(): void {
-    if (this.settingsSceneShuttingDown) return;
-    this.maxCurrentMatchesValueText.setText(`${this.maxCurrentMatches}`);
-    this.maxCurrentMatchesStateText.setText(this.maxCurrentMatchesSaving || this.maxCurrentMatchesPending ? t("Saving...") : this.maxCurrentMatchesSaveError ? t("Could not save. Restored saved value.") : t("Saved"));
-    this.maxCurrentMatchesStateText.setColor(this.maxCurrentMatchesSaving || this.maxCurrentMatchesPending ? "#facc15" : this.maxCurrentMatchesSaveError ? "#f87171" : "#86efac");
-    if (this.maxCurrentMatches === 1) this.maxCurrentMatchesDecreaseButton.setAlpha(0.5).disableInteractive();
-    else this.maxCurrentMatchesDecreaseButton.setAlpha(1).setInteractive({ useHandCursor: true });
-    if (this.maxCurrentMatches === 20) this.maxCurrentMatchesIncreaseButton.setAlpha(0.5).disableInteractive();
-    else this.maxCurrentMatchesIncreaseButton.setAlpha(1).setInteractive({ useHandCursor: true });
-  }
-
   private getMusicToggleLabel(): string {
     return this.musicEnabled ? "Music: ON" : "Music: OFF";
   }
@@ -1374,10 +1265,6 @@ export class SettingsScene extends Phaser.Scene {
               ? savedSlots
               : 0;
           this.setRankedMatchSlots(this.confirmedRankedMatchSlots);
-        }
-        if (this.maxCurrentMatchesRevision === 0) {
-          this.confirmedMaxCurrentMatches = userAccount.maxCurrentMatches ?? 10;
-          this.setMaxCurrentMatches(this.confirmedMaxCurrentMatches);
         }
 
         const s = userAccount.stats;
