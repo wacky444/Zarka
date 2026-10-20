@@ -569,9 +569,9 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.mainActionDropdownWidth = boxWidth - 24;
     this.mainActionDropdown = new GridSelect(scene, 0, 0, {
       width: this.mainActionDropdownWidth,
-      title: "Select Main Action",
-      placeholder: "Choose action",
-      emptyLabel: "Unknown",
+      title: t("Select Main Action"),
+      placeholder: t("Choose action"),
+      emptyLabel: t("Unknown"),
       autoSelectFirst: false,
       columns: 3,
       desktopMinCellWidth: 210,
@@ -697,15 +697,15 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.secondaryActionDropdownWidth = boxWidth - 24;
     this.secondaryActionDropdown = new GridSelect(scene, 0, 0, {
       width: this.secondaryActionDropdownWidth,
-      title: "Select Secondary Action",
-      placeholder: "Choose action",
-      emptyLabel: "Unknown",
+      title: t("Select Secondary Action"),
+      placeholder: t("Choose action"),
+      emptyLabel: t("Unknown"),
       columns: 3,
       desktopMinCellWidth: 210,
       cellHeight: 260,
       includeEmptyOption: true,
-      emptyOptionLabel: "No secondary action",
-      emptyOptionDescription: "Removes the planned secondary action.",
+      emptyOptionLabel: t("No secondary action"),
+      emptyOptionDescription: t("Removes the planned secondary action."),
       mobileCellIcons: true
     });
     this.scrollContent.add(this.secondaryActionDropdown);
@@ -864,15 +864,15 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.extraSecondaryActionDropdownWidth = boxWidth - 24;
     this.extraSecondaryActionDropdown = new GridSelect(scene, 0, 0, {
       width: this.extraSecondaryActionDropdownWidth,
-      title: "Select Extra Secondary Action",
-      placeholder: "Choose action",
-      emptyLabel: "Unknown",
+      title: t("Select Extra Secondary Action"),
+      placeholder: t("Choose action"),
+      emptyLabel: t("Unknown"),
       columns: 3,
       desktopMinCellWidth: 210,
       cellHeight: 260,
       includeEmptyOption: true,
-      emptyOptionLabel: "No extra secondary action",
-      emptyOptionDescription: "Removes the extra secondary action.",
+      emptyOptionLabel: t("No extra secondary action"),
+      emptyOptionDescription: t("Removes the extra secondary action."),
       mobileCellIcons: true
     });
     this.extraSecondaryActionDropdown.setVisible(false);

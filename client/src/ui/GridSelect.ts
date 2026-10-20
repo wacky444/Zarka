@@ -379,10 +379,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
       config.desktopMinCellWidth > 0
         ? config.desktopMinCellWidth
         : null;
-    this.modalTitle = config.title ?? "Select";
-    this.modalSubtitle = config.subtitle ?? "Tap an action to select it";
-    this.placeholder = config.placeholder ?? "Select";
-    this.emptyLabel = config.emptyLabel ?? "Unknown";
+    this.modalTitle = config.title ? t(config.title) : t("Select");
+    this.modalSubtitle = config.subtitle ? t(config.subtitle) : t("Tap an action to select it");
+    this.placeholder = config.placeholder ? t(config.placeholder) : t("Select");
+    this.emptyLabel = config.emptyLabel ? t(config.emptyLabel) : t("Unknown");
     this.iconTextGap = config.iconTextGap ?? 16;
     this.defaultModalWidth = config.modalWidth ?? 600;
     this.defaultModalHeight = config.modalHeight ?? 480;

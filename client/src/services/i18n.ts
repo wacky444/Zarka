@@ -851,6 +851,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Your session has expired. Please log in again.":
     "Tu sesión ha caducado. Inicia sesión de nuevo.",
   "Unsupported payload type: ": "Tipo de respuesta no compatible: ",
+  "Select Main Action": "Seleccionar acción principal",
   "Select Secondary Action": "Seleccionar acción secundaria",
   "Select Extra Secondary Action": "Seleccionar acción secundaria adicional",
   "No extra secondary action": "Sin acción secundaria adicional",
