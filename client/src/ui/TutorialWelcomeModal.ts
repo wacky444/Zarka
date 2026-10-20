@@ -7,7 +7,8 @@ type PositionableText = Phaser.GameObjects.GameObject & {
   setPosition(x: number, y: number): void;
   height: number;
   setWrapWidth?(w: number): void;
-  setWordWrapWidth?(w: number): void;
+  setWordWrapWidth?(w: number, useAdvancedWrap?: boolean): void;
+  updateText?(runPenManager?: boolean): void;
 };
 
 export class TutorialWelcomeModal {
@@ -46,8 +47,9 @@ export class TutorialWelcomeModal {
   }
 
   open(): void {
-    this.build();
     this.dialog.open();
+    this.build(this.dialog.getContentBounds());
+    this.layoutContent(this.dialog.getContentBounds());
   }
 
   close(): void {
@@ -58,7 +60,7 @@ export class TutorialWelcomeModal {
     this.dialog.destroy(true);
   }
 
-  private build(): void {
+  private build(bounds: ModalContentBounds): void {
     this.dialog.contentContainer.removeAll(true);
     this.dialog.setTitle(t("Bienvenido a Zarka"));
 
@@ -85,13 +87,14 @@ export class TutorialWelcomeModal {
     const p3 = `[color=#f87171][b]${p3Text}[/b][/color]`;
 
     const fullText = `${p1}\n\n${p2}\n\n${p3}`;
+    const wrapWidth = Math.max(200, bounds.width - 24);
 
     const bbcode = this.scene.rexUI?.add?.BBCodeText?.(0, 0, fullText, {
       fontSize: "15px",
       color: "#e2e8f0",
       fontFamily: "Arial, sans-serif",
       lineSpacing: 4,
-      wrap: { mode: "word", width: 440 }
+      wrap: { mode: "word", width: wrapWidth }
     });
 
     if (bbcode) {
@@ -103,7 +106,7 @@ export class TutorialWelcomeModal {
         color: "#e2e8f0",
         fontFamily: "Arial, sans-serif",
         lineSpacing: 4,
-        wordWrap: { width: 440, useAdvancedWrap: true }
+        wordWrap: { width: wrapWidth, useAdvancedWrap: true }
       });
     }
     this.dialog.contentContainer.add(this.bodyText);
@@ -157,8 +160,9 @@ export class TutorialWelcomeModal {
     if (this.bodyText) {
       if (typeof this.bodyText.setWrapWidth === "function") {
         this.bodyText.setWrapWidth(wrapWidth);
+        this.bodyText.updateText?.(true);
       } else if (typeof this.bodyText.setWordWrapWidth === "function") {
-        this.bodyText.setWordWrapWidth(wrapWidth);
+        this.bodyText.setWordWrapWidth(wrapWidth, true);
       }
       this.bodyText.setPosition(12, cursorY);
       cursorY += this.bodyText.height + 16;
