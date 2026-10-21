@@ -77,3 +77,6 @@ equipos se enfrentarán matándose unos a otros hasta que solo queden vivos miem
 
 - autoplay en modo reproducir, al cambiar turno se reproduzca automaticamente
 
+- bug, dont allow in tutorial to rank 2 levels of skills
+
+- bug, when turn advances ready button is set to false programatically and it triggers update ready state

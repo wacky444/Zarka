@@ -738,6 +738,7 @@ export class GameScene extends Phaser.Scene {
 
   async create(data?: GameSceneStartData) {
     this.sceneShuttingDown = false;
+    this.reportTransitionStarted = false;
     this.foregroundSyncRunning = false;
     this.lastForegroundSyncAt = 0;
     this.reportReplayMode = data?.reportReplay === true && !!data.matchId;
