@@ -320,6 +320,7 @@ export class ModalDialog extends Phaser.GameObjects.Container {
 
     this.contentContainer.setPosition(this.contentBounds.x, this.contentBounds.y);
     this.onLayoutCallback?.(this.contentBounds);
+    this.bringToTop(this.closeButton);
   }
 
   override destroy(fromScene?: boolean): void {
