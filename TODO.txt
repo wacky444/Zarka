@@ -78,3 +78,5 @@ equipos se enfrentarán matándose unos a otros hasta que solo queden vivos miem
 - autoplay en modo reproducir, al cambiar turno se reproduzca automaticamente
 
 - bug, dont allow in tutorial to rank 2 levels of skills
+
+- bug, change posion to show items on ground or items in inventory of players registered, all in the same select
