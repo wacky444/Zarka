@@ -3038,6 +3038,12 @@ export class GameScene extends Phaser.Scene {
     if (!this.turnService || !this.currentUserId || !matchId) {
       return;
     }
+    const serverReady =
+      this.currentMatch?.readyStates?.[this.currentUserId] ?? false;
+    if (ready === serverReady) {
+      this.characterPanel?.setReadyState(ready, false);
+      return;
+    }
     if (this.readyUpdateRunning) {
       this.pendingReadyState = ready;
       return;
