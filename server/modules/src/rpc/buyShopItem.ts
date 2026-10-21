@@ -439,7 +439,9 @@ export function buyShopItemRpc(
   actor = match.playerCharacters[ctx.userId] ?? actor;
   match.playerCharacters[ctx.userId] = actor;
   const actionId =
-    resolvedShopId === "detective"
+    resolvedShopId.startsWith("trafficker_")
+      ? "buy_trafficker"
+      : resolvedShopId === "detective"
       ? "buy_detective"
       : resolvedShopId === "security_camera_app"
         ? "buy_security_camera_app"
@@ -455,7 +457,9 @@ export function buyShopItemRpc(
     actorId: ctx.userId,
     action: {
       actionId,
-      metadata,
+      metadata: traffickerItem
+        ? { ...metadata, itemId: traffickerItem, shopId: resolvedShopId }
+        : metadata,
       ...(resolvedShopId === "bomber" && targetLocation
         ? { targetLocation }
         : {}),

@@ -1643,6 +1643,21 @@ export const ActionLibrary: ActionLibraryDefinition = {
     actionSubOrder: 9,
     notes: ["Evento público al contratar un bombardero."],
     tags: ["Economy", "Attack", "Area"]
+  },
+  buy_trafficker: {
+    id: "buy_trafficker",
+    name: "Contratar traficante",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "delivery_box.png",
+    actionOrder: 99,
+    actionSubOrder: 10,
+    notes: ["Evento privado al contratar una entrega del traficante."],
+    tags: ["Economy", "Logistics"]
   }
 };
 

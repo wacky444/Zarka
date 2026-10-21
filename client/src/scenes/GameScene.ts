@@ -45,6 +45,7 @@ import {
   axialDistance,
   normalizeAxial,
   ItemLibrary,
+  ShopLibrary,
   TUTORIAL_BOT_ID,
   TUTORIAL_BOT_MESSAGES,
   TUTORIAL_CELL_COORDS,
@@ -3292,11 +3293,16 @@ export class GameScene extends Phaser.Scene {
     if (!matchId || !currentUserId) {
       return;
     }
+    const shopDefinition = ShopLibrary[payload.shopId];
+    const purchaseCost = shopDefinition.costLabel ?? `${shopDefinition.cost} Zarkans`;
     if (
-      payload.shopId === "pyromaniac" &&
-      !window.confirm(t("Confirm hiring Pyromaniac for 20 Zarkans?"))
+      !window.confirm(
+        `${t("Confirm this purchase?")}\n${shopDefinition.name} — ${purchaseCost}`
+      )
     ) {
-      this.characterPanel?.beginPyromaniacPurchase();
+      if (payload.shopId === "pyromaniac") {
+        this.characterPanel?.beginPyromaniacPurchase();
+      }
       return;
     }
     this.isBuyingShopItem = true;

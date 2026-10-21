@@ -410,6 +410,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Pyromaniac: "Pirómano",
   "Confirm hiring Pyromaniac for 20 Zarkans?":
     "¿Confirmas contratar al Pirómano por 20 zarkans?",
+  "Confirm this purchase?": "¿Confirmas esta compra?",
   Bomber: "Bombardero",
   Hitman: "Sicario",
   Cocoman: "Cocoman",
@@ -621,6 +622,9 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "placed a trap": "colocó una trampa",
   "triggered a trap set by": "activó una trampa colocada por",
   received: "recibió",
+  delivered: "entregó",
+  to: "a",
+  "contracted the trafficker to deliver": "contrató al traficante para entregar",
   "daily zarkans": "zarkans diarios",
   "hired a detective": "contrató un detective",
   "and discovered": "y descubrió",

@@ -227,6 +227,22 @@ test("picking up a three-zarkan coin credits the wallet instead of inventory", (
   assert.equal(match.map?.tiles[0].itemIds.includes(itemId), false);
 });
 
+test("picking up a zarkan credits one zarkan instead of inventory", () => {
+  const { character, itemId, match, participant } = createScenario("zarkans");
+  character.discoveredItemIds = [itemId];
+  const initialBalance = character.economy?.zarkans ?? 0;
+
+  executePickUpAction([participant], match);
+
+  assert.equal(character.economy?.zarkans, initialBalance + 1);
+  assert.equal(
+    character.inventory.carriedItems.some((stack) => stack.itemId === "zarkans"),
+    false
+  );
+  assert.equal(match.items?.some((item) => item.item_id === itemId), false);
+  assert.equal(match.map?.tiles[0].itemIds.includes(itemId), false);
+});
+
 test("safe items are discoverable but cannot be picked up", () => {
   const { character, itemId, match, participant } = createScenario("safe");
   character.discoveredItemIds = [itemId];

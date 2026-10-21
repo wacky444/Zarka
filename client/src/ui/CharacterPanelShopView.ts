@@ -44,6 +44,8 @@ type ShopCardItem = {
   definition: ShopDefinition;
   background: Phaser.GameObjects.Rectangle;
   statusBadge: Phaser.GameObjects.Text;
+  buyBackground: Phaser.GameObjects.Rectangle | null;
+  buyText: Phaser.GameObjects.Text | null;
 };
 
 const HEADER_HEIGHT = 44;
@@ -390,6 +392,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.updateDroneLocationOptions(match);
     const zarkans = this.currentCharacter?.economy?.zarkans ?? 0;
     this.balanceText.setText(`Zarkans: ${Math.max(0, Math.floor(zarkans))}`);
+    this.refreshShopAffordability();
     const donationTargets = options.filter(
       (option) => match?.players?.includes(option.id)
     );
@@ -747,7 +750,20 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
       this.scrollContent.add(buyText);
       this.scrollContent.bringToTop(buyText);
     }
-    this.cards.push({ definition, background: card, statusBadge: status });
+    this.cards.push({
+      definition,
+      background: card,
+      statusBadge: status,
+      buyBackground,
+      buyText
+    });
+    this.updateCardAffordability({
+      definition,
+      background: card,
+      statusBadge: status,
+      buyBackground,
+      buyText
+    });
     card.setStrokeStyle(
       this.highlightedShopId === definition.id ? 3 : 1,
       this.highlightedShopId === definition.id
@@ -765,6 +781,26 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.scrollContent.removeAll(false);
     this.cards.length = 0;
     this.buildShopList(this.shopCardWidth);
+  }
+
+  private refreshShopAffordability(): void {
+    for (const card of this.cards) {
+      this.updateCardAffordability(card);
+    }
+  }
+
+  private updateCardAffordability(card: ShopCardItem): void {
+    if (!card.buyBackground) return;
+    const balance = Math.max(0, Math.floor(this.currentCharacter?.economy?.zarkans ?? 0));
+    const affordable = balance >= card.definition.cost;
+    card.buyBackground.setAlpha(affordable ? 1 : 0.4);
+    card.buyBackground.setFillStyle(affordable ? 0x16a34a : 0x475569, 1);
+    if (affordable) {
+      card.buyBackground.setInteractive({ useHandCursor: true });
+    } else {
+      card.buyBackground.disableInteractive();
+    }
+    card.buyText?.setAlpha(affordable ? 1 : 0.55);
   }
 
   private refreshShopHighlights(): void {
@@ -787,7 +823,11 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
       this.beginPyromaniacPurchase();
     } else if (shopId === "bomber") {
       this.beginBomberPurchase();
-    } else if (shopId === "security_camera_app" || shopId === "tracking_app") {
+    } else if (
+      shopId.startsWith("trafficker_") ||
+      shopId === "security_camera_app" ||
+      shopId === "tracking_app"
+    ) {
       this.emit("shop-purchase", { shopId });
     }
   }

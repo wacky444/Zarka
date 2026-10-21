@@ -341,7 +341,7 @@ export class PickUpAction extends BaseAction {
               if (ItemLibrary[itemType]?.canBePickedUp === false) {
                 continue;
               }
-              if (itemType === "zarkan3") {
+              if (itemType === "zarkans" || itemType === "zarkan3") {
                 if (!participant.character.economy) {
                   participant.character.economy = {
                     zarkans: 0,
@@ -354,8 +354,9 @@ export class PickUpAction extends BaseAction {
                   isFinite(participant.character.economy.zarkans)
                     ? participant.character.economy.zarkans
                     : 0;
-                participant.character.economy.zarkans = balance + 3;
-                zarkansCollected += 3;
+                const amount = itemType === "zarkan3" ? 3 : 1;
+                participant.character.economy.zarkans = balance + amount;
+                zarkansCollected += amount;
               } else {
                 const weight = resolveItemWeight(itemType);
                 // TODO check for exceeding load capacity to reduce health

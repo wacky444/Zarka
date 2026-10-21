@@ -589,10 +589,25 @@ export class CharacterPanelLogView {
           lines.push(`${actor} ${t("hired a pyromaniac")}`);
           continue;
         }
+        if (actionId === "buy_trafficker") {
+          const itemId = (event.action.metadata as { itemId?: unknown } | undefined)?.itemId;
+          const itemName = typeof itemId === "string" ? this.resolveItemName(itemId) : t("item");
+          lines.push(`${actor} ${t("contracted the trafficker to deliver")} ${itemName}`);
+          continue;
+        }
         if (actionId === "buy_bomber") {
           const metadata = event.action.metadata as
-            | { targetLocation?: unknown; personalDamage?: unknown }
+            | { targetLocation?: unknown; personalDamage?: unknown; shopId?: unknown; itemId?: unknown }
             | undefined;
+          if (typeof metadata?.shopId === "string" && metadata.shopId.startsWith("trafficker_")) {
+            const itemId = typeof metadata.itemId === "string"
+              ? metadata.itemId
+              : ({
+                  trafficker_vest: "bulletproof_vest",
+                } as Record<string, string>)[metadata.shopId] ?? metadata.shopId.slice("trafficker_".length);
+            lines.push(`${actor} ${t("contracted the trafficker to deliver")} ${this.resolveItemName(itemId)}`);
+            continue;
+          }
           if (typeof metadata?.personalDamage === "number") {
             lines.push(
               `${actor} ${t("was hit by a bomber and lost")} ${metadata.personalDamage} ${t("health")}`
