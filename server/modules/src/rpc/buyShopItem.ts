@@ -87,6 +87,17 @@ export function buyShopItemRpc(
     "spy_drone",
     "pyromaniac",
     "bomber",
+    "trafficker_arrow",
+    "trafficker_antidote",
+    "trafficker_bullet",
+    "trafficker_food",
+    "trafficker_bandage",
+    "trafficker_harpoon",
+    "trafficker_trap",
+    "trafficker_pistol",
+    "trafficker_c4",
+    "trafficker_vest",
+    "trafficker_rocket_launcher",
   ];
   if (supportedShopIds.indexOf(shopId as ShopId) === -1) {
     throw makeNakamaError(
@@ -188,6 +199,24 @@ export function buyShopItemRpc(
 
   actor.economy.zarkans = balance - cost;
   const characters = match.playerCharacters ?? {};
+  const traffickerItemByShopId: Partial<Record<ShopId, import("@shared").ItemId>> = {
+    trafficker_arrow: "arrow",
+    trafficker_antidote: "antidote",
+    trafficker_bullet: "bullet",
+    trafficker_food: "food",
+    trafficker_bandage: "bandage",
+    trafficker_harpoon: "harpoon",
+    trafficker_trap: "trap",
+    trafficker_pistol: "pistol",
+    trafficker_c4: "c4",
+    trafficker_vest: "bulletproof_vest",
+    trafficker_rocket_launcher: "rocket_launcher",
+  };
+  const traffickerItem = traffickerItemByShopId[resolvedShopId];
+  if (traffickerItem) {
+    actor.pendingTraffickerDeliveries ??= [];
+    actor.pendingTraffickerDeliveries.push(traffickerItem);
+  }
   let observedPlayerIds: string[] = [];
   const postPurchaseEvents: ReplayPlayerEvent[] = [];
   let targetTeamId: string | undefined;

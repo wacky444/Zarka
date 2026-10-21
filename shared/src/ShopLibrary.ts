@@ -6,7 +6,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "Arrow",
     description: "The trafficker delivers an arrow at the end of the turn.",
     cost: 6,
-    implemented: false,
+    implemented: true,
     category: "Trafficker"
   },
   trafficker_antidote: {
@@ -14,7 +14,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "Antidote",
     description: "The trafficker delivers an antidote at the end of the turn.",
     cost: 10,
-    implemented: false,
+    implemented: true,
     category: "Trafficker"
   },
   trafficker_bullet: {
@@ -22,7 +22,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "Bullet",
     description: "The trafficker delivers a bullet at the end of the turn.",
     cost: 15,
-    implemented: false,
+    implemented: true,
     category: "Trafficker"
   },
   trafficker_food: {
@@ -30,7 +30,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "Food",
     description: "The trafficker delivers food at the end of the turn.",
     cost: 20,
-    implemented: false,
+    implemented: true,
     category: "Trafficker"
   },
   trafficker_bandage: {
@@ -38,7 +38,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "Bandage",
     description: "The trafficker delivers a bandage at the end of the turn.",
     cost: 20,
-    implemented: false,
+    implemented: true,
     category: "Trafficker"
   },
   trafficker_harpoon: {
@@ -46,7 +46,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "Harpoon",
     description: "The trafficker delivers a harpoon at the end of the turn.",
     cost: 20,
-    implemented: false,
+    implemented: true,
     category: "Trafficker"
   },
   trafficker_trap: {
@@ -54,7 +54,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "Trap",
     description: "The trafficker delivers a trap at the end of the turn.",
     cost: 20,
-    implemented: false,
+    implemented: true,
     category: "Trafficker"
   },
   trafficker_pistol: {
@@ -62,7 +62,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "Pistol",
     description: "The trafficker delivers a pistol at the end of the turn.",
     cost: 30,
-    implemented: false,
+    implemented: true,
     category: "Trafficker"
   },
   trafficker_c4: {
@@ -70,7 +70,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "C4 explosive",
     description: "The trafficker delivers a C4 explosive at the end of the turn.",
     cost: 30,
-    implemented: false,
+    implemented: true,
     category: "Trafficker"
   },
   trafficker_vest: {
@@ -78,7 +78,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "Bulletproof vest",
     description: "The trafficker delivers a bulletproof vest at the end of the turn.",
     cost: 40,
-    implemented: false,
+    implemented: true,
     category: "Trafficker"
   },
   trafficker_rocket_launcher: {
@@ -86,7 +86,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
     name: "Rocket launcher",
     description: "The trafficker delivers a rocket launcher at the end of the turn.",
     cost: 60,
-    implemented: false,
+    implemented: true,
     category: "Trafficker"
   },
   security_camera_app: {

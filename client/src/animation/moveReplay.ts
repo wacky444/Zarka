@@ -41,6 +41,7 @@ import { animateRocketLauncherEvent } from "./replayActions/RocketLauncherAnimat
 import { animateFireDamageEvent } from "./replayActions/FireDamageAnimation";
 import { animateBomberEvent } from "./replayActions/BomberAnimation";
 import { animatePickLockEvent } from "./replayActions/PickLockAnimation";
+import { animateTraffickerDeliveryEvent } from "./replayActions/TraffickerDeliveryAnimation";
 import { playRandomSound } from "./soundPlayer";
 import { animateLevelUpEvent } from "./replayActions/LevelUpAnimation";
 
@@ -89,7 +90,11 @@ export async function playReplayEvents(
     } else if (actionId === ActionLibrary.refuel.id) {
       await animatePickUpEvent(context, event);
     } else if (actionId === ActionLibrary.give.id) {
-      await animateGiveEvent(context, event);
+      if ((event.action.metadata as { traffickerDelivery?: unknown } | undefined)?.traffickerDelivery === true) {
+        await animateTraffickerDeliveryEvent(context, event);
+      } else {
+        await animateGiveEvent(context, event);
+      }
     } else if (actionId === ActionLibrary.inject_virus.id) {
       await animateInjectVirusEvent(context, event);
     } else if (actionId === ActionLibrary.inject_vaccine.id) {

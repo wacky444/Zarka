@@ -638,6 +638,18 @@ export class CharacterPanelLogView {
           lines.push(`${actor} ${t("activated the cameras")}`);
           continue;
         }
+        if (
+          actionId === "give" &&
+          (event.action.metadata as { traffickerDelivery?: unknown } | undefined)?.traffickerDelivery === true
+        ) {
+          const itemId = (event.action.metadata as { itemId?: unknown }).itemId;
+          const sourceId = (event.action.metadata as { fromPlayerId?: unknown }).fromPlayerId;
+          const itemName = typeof itemId === "string" ? this.resolveItemName(itemId) : t("item");
+          const recipient = this.resolvePlayerName(event.actorId);
+          const source = typeof sourceId === "string" ? this.resolvePlayerName(sourceId) : t("the trafficker");
+          lines.push(`${source} ${t("delivered")} ${itemName} ${t("to")} ${recipient}`);
+          continue;
+        }
         if (actionId === "detonate_c4") {
           const location = event.action.targetLocation;
           lines.push(

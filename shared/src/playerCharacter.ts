@@ -31,6 +31,7 @@ export interface PlayerCharacter {
   corpseRations?: number;
   testamentRecipientId?: string;
   testamentProcessed?: boolean;
+  pendingTraffickerDeliveries?: ItemId[];
   /** Cell observed remotely by a one-turn reconnaissance action. */
   remoteView?: PlayerRemoteView;
   /** Character positions revealed by activated cameras for one turn. */

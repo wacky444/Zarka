@@ -25,6 +25,7 @@ import { applyVirusInfection } from "./actions/virusInfection";
 import {
   applyPendingZarkanPayout,
   applyTestaments,
+  applyTraffickerDeliveries,
   applyZarkanIncome,
 } from "./turnEconomy";
 import {
@@ -380,6 +381,7 @@ export function advanceTurn(
     }
     decrementIntoxicationAfterAction(match, intoxicatedActorIds);
   }
+  applyTraffickerDeliveries(match, replayEvents);
   replayEvents.push(...dropOverweightItems(match));
   replayEvents.push(...applyVirusInfection(match, resolvedTurn, logger));
   replayEvents.push(

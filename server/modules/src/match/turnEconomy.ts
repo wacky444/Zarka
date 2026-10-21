@@ -1,6 +1,6 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import { getSkillEffectTotal } from "@shared";
+import { getSkillEffectTotal, ItemLibrary, type ItemId } from "@shared";
 import type { ActionId, ReplayEvent } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { isCharacterDead } from "../utils/playerCharacter";
@@ -94,6 +94,39 @@ export function applyPendingZarkanPayout(
           },
         },
         visibility: { scope: "limited", playerIds: [playerId] },
+      });
+    }
+  }
+}
+
+export function applyTraffickerDeliveries(
+  match: MatchRecord,
+  replayEvents: ReplayEvent[],
+): void {
+  const characters = match.playerCharacters;
+  if (!characters) return;
+  for (const playerId in characters) {
+    const deceased = characters[playerId];
+    const deliveries = deceased?.pendingTraffickerDeliveries;
+    if (!deceased || !Array.isArray(deliveries) || deliveries.length === 0) continue;
+    const recipient = isCharacterDead(deceased)
+      ? characters[deceased.testamentRecipientId ?? ""]
+      : deceased;
+    deceased.pendingTraffickerDeliveries = [];
+    if (!recipient || isCharacterDead(recipient)) continue;
+    recipient.inventory ??= { carriedItems: [] };
+    recipient.inventory.carriedItems ??= [];
+    for (const itemId of deliveries) {
+      const definition = ItemLibrary[itemId as ItemId];
+      if (!definition) continue;
+      const existing = recipient.inventory.carriedItems.find((stack) => stack.itemId === itemId);
+      if (existing) existing.quantity += 1;
+      else recipient.inventory.carriedItems.push({ itemId, quantity: 1, weight: definition.weight });
+      replayEvents.push({
+        kind: "player",
+        actorId: recipient.id,
+        action: { actionId: "give", metadata: { traffickerDelivery: true, itemId, fromPlayerId: playerId } },
+        visibility: { scope: "limited", playerIds: [recipient.id] },
       });
     }
   }
