@@ -2150,7 +2150,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
         return weight;
       }
       const definition = ItemLibrary[itemType];
-      if (!definition || definition.canBePickedUp === false) {
+      if (!definition || definition.disabled || definition.canBePickedUp === false) {
         return weight;
       }
       return weight + Math.max(0, definition.weight);
@@ -2187,7 +2187,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     const maximumUnknownItemWeight = Math.max(
       0,
       ...Object.values(ItemLibrary)
-        .filter((item) => item.canBeStolen !== false)
+        .filter((item) => !item.disabled && item.canBeStolen !== false)
         .map((item) => Math.max(0, item.weight))
     );
     let maximumWeight = 0;

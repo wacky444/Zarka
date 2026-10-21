@@ -22,7 +22,7 @@ export function createCellItemGrid(
   shouldIgnorePointerUp?: (pointer: Phaser.Input.Pointer) => boolean
 ): { container: Phaser.GameObjects.Container; height: number } {
   const validEntries = entries.filter(
-    (entry) => ItemLibrary[entry.itemId] && entry.quantity > 0
+    (entry) => ItemLibrary[entry.itemId] && !ItemLibrary[entry.itemId].disabled && entry.quantity > 0
   );
   const container = scene.add.container(x, y);
   const cellWidth = width / GRID_COLUMNS;

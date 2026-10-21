@@ -453,6 +453,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
   walkie_talkie: {
     id: "walkie_talkie",
     name: "Walkie talkie",
+    disabled: true,
     category: ItemCategory.Technology,
     sprite: "Board Game Icons/token_give.png",
     weapon: false,

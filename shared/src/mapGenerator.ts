@@ -9,6 +9,7 @@ import {
   type GameMap,
 } from "./hexTile";
 import type { ItemId } from "./Item";
+import { ItemLibrary } from "./ItemLibrary";
 import type { MatchItemRecord } from "./match";
 
 export const DEFAULT_MAP_COLS = 5;
@@ -50,12 +51,16 @@ function generateSafeContents(
   definition: CellSafeDefinition,
   rng: () => number
 ): ItemId[] {
-  const contents = definition.contents.slice();
+  const contents = definition.contents.filter(
+    (itemId) => !ItemLibrary[itemId]?.disabled
+  );
   const randomContents = definition.randomContents;
   if (!randomContents || randomContents.count <= 0) {
     return contents;
   }
-  const candidates = randomContents.candidates.slice();
+  const candidates = randomContents.candidates.filter(
+    (itemId) => !ItemLibrary[itemId]?.disabled
+  );
   shuffleInPlace(candidates, rng);
   const count = Math.min(
     candidates.length,
@@ -247,7 +252,7 @@ export function generateGameMap(
         ? base.startingItems
         : [];
       for (const stock of starting) {
-        if (!stock) {
+        if (!stock || ItemLibrary[stock.itemId]?.disabled) {
           continue;
         }
         const quantity = Math.max(0, Math.floor(stock.quantity ?? 0));

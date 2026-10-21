@@ -44,7 +44,7 @@ export function buildCharacterPanelItemOptions(
         }
         const itemType = itemRecords.get(itemId)?.item_type;
         const definition = itemType ? ItemLibrary[itemType] : undefined;
-        if (definition?.canBePickedUp === false) {
+        if (definition?.canBePickedUp === false || definition?.disabled) {
           continue;
         }
         const visual = definition
@@ -73,6 +73,9 @@ export function buildCharacterPanelItemOptions(
       }
       const itemId = stack.itemId as ItemId;
       const definition = ItemLibrary[itemId];
+      if (definition?.disabled) {
+        continue;
+      }
       const name = definition?.name ?? itemId;
       const visual = definition
         ? resolveItemTexture(definition)
@@ -89,6 +92,7 @@ export function buildCharacterPanelItemOptions(
   if (character?.abilities?.includes("dexterity2")) {
     for (const definition of Object.values(ItemLibrary)) {
       if (
+        definition.disabled ||
         definition.category === ItemCategory.Special ||
         definition.canBeStolen === false
       ) {

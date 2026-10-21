@@ -323,7 +323,7 @@ export class CellContentsPanel {
     );
     let contentHeight = 8;
     const actualEntries = this.entries.filter(
-      (entry) => ItemLibrary[entry.itemId] && entry.quantity > 0,
+      (entry) => ItemLibrary[entry.itemId] && !ItemLibrary[entry.itemId].disabled && entry.quantity > 0,
     );
     const destructionMessage = this.getDestructionMessage();
     if (destructionMessage) {
@@ -345,7 +345,7 @@ export class CellContentsPanel {
     const cellDefinition = CellLibrary[this.cellType];
     const possibleEntries: CellContentsEntry[] = (
       cellDefinition.startingItems ?? []
-    ).filter((entry) => ItemLibrary[entry.itemId] && entry.quantity > 0);
+    ).filter((entry) => ItemLibrary[entry.itemId] && !ItemLibrary[entry.itemId].disabled && entry.quantity > 0);
     const safeCount = cellDefinition.safes?.length ?? 0;
     if (safeCount > 0) {
       possibleEntries.push({ itemId: "safe", quantity: safeCount });

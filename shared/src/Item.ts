@@ -88,6 +88,7 @@ export interface ItemDefinition {
   consumable: boolean;
   canBeStolen?: boolean;
   canBePickedUp?: boolean;
+  disabled?: boolean;
   weight: number;
   description: string;
   sellValue?: number;
