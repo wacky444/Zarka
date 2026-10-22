@@ -602,7 +602,6 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Incoming Destruction": "Destrucción entrante",
   "Destroyed in": "Se destruirá en",
   turn: "turno",
-  turns: "turnos",
   "Defeated in battle": "Derrotado en combate",
   "erupted in flames": "ardió en llamas",
   Skills: "Habilidades",
