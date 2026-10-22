@@ -346,9 +346,14 @@ export class LoginScene extends Phaser.Scene {
       LOGIN_LAYOUT.minTop,
       (this.scale.height - (LOGIN_LAYOUT.controlsY + 3 * (LOGIN_LAYOUT.formLabelHeight + LOGIN_LAYOUT.formInputHeight) + 2 * LOGIN_LAYOUT.formFieldGap + LOGIN_LAYOUT.formActionsGap + 32)) / 2
     );
-    const ys = [LOGIN_LAYOUT.controlsY + LOGIN_LAYOUT.formLabelHeight,
-      LOGIN_LAYOUT.controlsY + 2 * (LOGIN_LAYOUT.formLabelHeight + LOGIN_LAYOUT.formInputHeight + LOGIN_LAYOUT.formFieldGap) + LOGIN_LAYOUT.formLabelHeight,
-      LOGIN_LAYOUT.controlsY + 4 * (LOGIN_LAYOUT.formLabelHeight + LOGIN_LAYOUT.formInputHeight + LOGIN_LAYOUT.formFieldGap) + LOGIN_LAYOUT.formLabelHeight];
+    const fieldBlockHeight =
+      LOGIN_LAYOUT.formLabelHeight + LOGIN_LAYOUT.formInputHeight;
+    const ys = [0, 1, 2].map(
+      (index) =>
+        LOGIN_LAYOUT.controlsY +
+        index * (fieldBlockHeight + LOGIN_LAYOUT.formFieldGap) +
+        LOGIN_LAYOUT.formLabelHeight
+    );
     this.nativeInputs.forEach((input, index) => {
       input.style.left = `${left}px`;
       input.style.top = `${bounds.top + (top + ys[index]) * bounds.height / this.scale.height}px`;
