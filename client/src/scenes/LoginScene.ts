@@ -66,6 +66,7 @@ export class LoginScene extends Phaser.Scene {
   private entryButtons: UIButton[] = [];
   private formObjects: VisibleGameObject[] = [];
   private initialMessage = "";
+  private nativeInputs: HTMLInputElement[] = [];
 
   constructor() {
     super("LoginScene"); // Required to show the scene on logout
@@ -127,6 +128,7 @@ export class LoginScene extends Phaser.Scene {
 
     this.createEntryButtons();
     this.createAuthForm();
+    this.createNativeInputs();
     this.languageSelector = createLanguageSelector(this, 0, 0, () => {
       this.updateDisplays();
       this.layoutLogin();
@@ -137,6 +139,8 @@ export class LoginScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutLogin, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutLogin, this);
+      this.nativeInputs.forEach((input) => input.remove());
+      this.nativeInputs = [];
     });
 
     this.input.keyboard!.on("keydown", (event: KeyboardEvent) => {
@@ -270,6 +274,91 @@ export class LoginScene extends Phaser.Scene {
     this.formObjects.push(...(formElements as VisibleGameObject[]));
   }
 
+  private createNativeInputs(): void {
+    const makeInput = (type: string, autocomplete: string): HTMLInputElement => {
+      const input = document.createElement("input");
+      input.type = type;
+      input.setAttribute("autocomplete", autocomplete);
+      input.setAttribute("aria-label", autocomplete);
+      Object.assign(input.style, {
+        position: "fixed",
+        zIndex: "10000",
+        boxSizing: "border-box",
+        padding: "4px 8px",
+        border: "0",
+        borderRadius: "2px",
+        background: "#333333",
+        color: "#ffffff",
+        font: "14px sans-serif",
+        outline: "none"
+      });
+      document.body.appendChild(input);
+      this.nativeInputs.push(input);
+      return input;
+    };
+
+    const email = makeInput("email", "email");
+    const username = makeInput("text", "username");
+    const password = makeInput("password", "current-password");
+    email.addEventListener("input", () => {
+      this.emailValue = email.value;
+      this.updateDisplays();
+    });
+    username.addEventListener("input", () => {
+      this.usernameValue = username.value;
+      this.updateDisplays();
+    });
+    password.addEventListener("input", () => {
+      this.passwordValue = password.value;
+      this.updateDisplays();
+    });
+    email.addEventListener("focus", () => this.setNativeInputFocus("email"));
+    username.addEventListener("focus", () => this.setNativeInputFocus("username"));
+    password.addEventListener("focus", () => this.setNativeInputFocus("password"));
+    [email, username, password].forEach((input) => {
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          this.handleEnterKey();
+        }
+      });
+    });
+  }
+
+  private setNativeInputFocus(field: "email" | "username" | "password"): void {
+    this.isEmailFocused = field === "email";
+    this.isUsernameFocused = field === "username";
+    this.isPasswordFocused = field === "password";
+    this.updateDisplays();
+  }
+
+  private positionNativeInputs(): void {
+    const canvas = this.game.canvas;
+    if (!canvas || this.nativeInputs.length !== 3) return;
+    const bounds = canvas.getBoundingClientRect();
+    const contentWidth = Math.min(
+      LOGIN_LAYOUT.contentWidth,
+      Math.max(240, this.scale.width - LOGIN_LAYOUT.horizontalPadding)
+    );
+    const width = bounds.width * contentWidth / this.scale.width;
+    const left = bounds.left + (bounds.width - width) / 2;
+    const top = Math.max(
+      LOGIN_LAYOUT.minTop,
+      (this.scale.height - (LOGIN_LAYOUT.controlsY + 3 * (LOGIN_LAYOUT.formLabelHeight + LOGIN_LAYOUT.formInputHeight) + 2 * LOGIN_LAYOUT.formFieldGap + LOGIN_LAYOUT.formActionsGap + 32)) / 2
+    );
+    const ys = [LOGIN_LAYOUT.controlsY + LOGIN_LAYOUT.formLabelHeight,
+      LOGIN_LAYOUT.controlsY + 2 * (LOGIN_LAYOUT.formLabelHeight + LOGIN_LAYOUT.formInputHeight + LOGIN_LAYOUT.formFieldGap) + LOGIN_LAYOUT.formLabelHeight,
+      LOGIN_LAYOUT.controlsY + 4 * (LOGIN_LAYOUT.formLabelHeight + LOGIN_LAYOUT.formInputHeight + LOGIN_LAYOUT.formFieldGap) + LOGIN_LAYOUT.formLabelHeight];
+    this.nativeInputs.forEach((input, index) => {
+      input.style.left = `${left}px`;
+      input.style.top = `${bounds.top + (top + ys[index]) * bounds.height / this.scale.height}px`;
+      input.style.width = `${width}px`;
+      input.style.height = `${LOGIN_LAYOUT.formInputHeight * bounds.height / this.scale.height}px`;
+      input.style.fontSize = `${Math.max(16, 14 * bounds.height / this.scale.height)}px`;
+      input.style.display = this.guiState === LoginGuiState.Entry || (index === 1 && this.guiState !== LoginGuiState.Register) ? "none" : "block";
+    });
+  }
+
   private layoutLogin(): void {
     const viewportWidth = this.scale.width;
     const viewportHeight = this.scale.height;
@@ -302,6 +391,7 @@ export class LoginScene extends Phaser.Scene {
     this.languageSelector?.setPosition(0, LOGIN_LAYOUT.languageSelectorY);
     this.titleText.setPosition(0, LOGIN_LAYOUT.titleY);
     this.statusText.setPosition(0, LOGIN_LAYOUT.statusY);
+    this.positionNativeInputs();
 
     if (this.guiState === LoginGuiState.Entry) {
       this.entryButtons.forEach((button, index) => {
@@ -383,12 +473,17 @@ export class LoginScene extends Phaser.Scene {
   }
 
   private clearFocus() {
+    const active = document.activeElement;
+    if (this.nativeInputs.includes(active as HTMLInputElement)) {
+      (active as HTMLInputElement).blur();
+    }
     this.isEmailFocused = false;
     this.isPasswordFocused = false;
     this.isUsernameFocused = false;
   }
 
   private focusEmailInput() {
+    this.nativeInputs[0]?.focus();
     this.isEmailFocused = true;
     this.isPasswordFocused = false;
     this.isUsernameFocused = false;
@@ -396,6 +491,7 @@ export class LoginScene extends Phaser.Scene {
   }
 
   private focusPasswordInput() {
+    this.nativeInputs[2]?.focus();
     this.isEmailFocused = false;
     this.isPasswordFocused = true;
     this.isUsernameFocused = false;
@@ -407,6 +503,7 @@ export class LoginScene extends Phaser.Scene {
       return;
     }
 
+    this.nativeInputs[1]?.focus();
     this.isEmailFocused = false;
     this.isPasswordFocused = false;
     this.isUsernameFocused = true;
@@ -414,6 +511,7 @@ export class LoginScene extends Phaser.Scene {
   }
 
   private updateDisplays() {
+    this.positionNativeInputs();
     const isLogin = this.guiState === LoginGuiState.Login;
     const emailPlaceholder = isLogin
       ? "Click to enter email or username..."
@@ -474,6 +572,9 @@ export class LoginScene extends Phaser.Scene {
   }
 
   private handleKeyboardInput(event: KeyboardEvent) {
+    if (this.nativeInputs.includes(document.activeElement as HTMLInputElement)) {
+      return;
+    }
     if (this.guiState === LoginGuiState.Entry) {
       return;
     }
