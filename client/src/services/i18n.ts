@@ -703,7 +703,6 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "stole nothing from": "no robó nada a",
   "picked up": "recogió",
   gave: "dio",
-  to: "a",
   sold: "vendió",
   "at the black market for": "en el mercado negro por",
   "sold nothing at the black market": "no vendió nada en el mercado negro",
