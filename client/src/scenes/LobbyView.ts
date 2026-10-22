@@ -69,7 +69,7 @@ export class LobbyView {
   private rows = 4;
   private roundTime = "23:00";
   private autoSkip = true;
-  private botPlayers = 0;
+  private botPlayers = 5;
   private turnsToBeAt1Tile = 30;
   private matchName = LobbyView.DEFAULT_MATCH_NAME;
   private maxPlayers = DEFAULT_NORMAL_MATCH_SIZE;
