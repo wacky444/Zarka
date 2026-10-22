@@ -734,6 +734,12 @@ export class GameScene extends Phaser.Scene {
         assetPath("assets/images/zarka-icon-hexagon.png")
       );
     }
+    for (const icon of ["previous", "pause", "forward", "next", "return"]) {
+      this.load.image(
+        `replay-${icon}`,
+        assetPath(`assets/images/replay-icons/${icon}.png`)
+      );
+    }
     preloadReplaySounds(this);
   }
 
@@ -2043,6 +2049,7 @@ export class GameScene extends Phaser.Scene {
         canPlayPause: false,
         canNext: false,
         canLive: false,
+        isPlaying: false,
       });
       return;
     }
@@ -2060,6 +2067,7 @@ export class GameScene extends Phaser.Scene {
           (cachedReplay !== undefined && cachedReplay.events.length > 0)),
       canNext: navigationEnabled && turn < maxTurn,
       canLive: !this.reportReplayMode,
+      isPlaying: this.manualReplayPlaying && !this.replayPaused,
     });
   }
 
