@@ -44,7 +44,7 @@ function isSameCoord(a: Axial | undefined, b: Axial | undefined): boolean {
 
 export function buyShopItemRpc(
   ctx: nkruntime.Context,
-  _logger: nkruntime.Logger,
+  logger: nkruntime.Logger,
   nk: nkruntime.Nakama,
   payload: string,
 ): string {
@@ -490,13 +490,24 @@ export function buyShopItemRpc(
     ...(existingReplay?.snapshot ? { snapshot: existingReplay.snapshot } : {}),
     created_at: existingReplay?.created_at ?? Math.floor(Date.now() / 1000),
   });
+  if (traffickerItem) {
+    logger.info(
+      "trafficker_purchase_queued match=%s user=%s turn=%d shop_id=%s item=%s pending_count=%d",
+      matchId,
+      ctx.userId,
+      turn,
+      resolvedShopId,
+      traffickerItem,
+      actor.pendingTraffickerDeliveries?.length ?? 0,
+    );
+  }
   if (
     match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] &&
     resolvedShopId === "detective" &&
     targetPlayerId === TUTORIAL_BOT_ID &&
     targetTeamId
   ) {
-    sendTutorialBotMessage(match, "detective_result", nk, _logger);
+    sendTutorialBotMessage(match, "detective_result", nk, logger);
   }
 
   const response: BuyShopItemPayload = {

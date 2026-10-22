@@ -193,6 +193,7 @@ export class GameScene extends Phaser.Scene {
   private reportReplayMatchId: string | null = null;
   private previousCurrentMatchId: string | null = null;
   private reportReplayAutoplayTurn: number | null = null;
+  private manualReplayCamera: { scrollX: number; scrollY: number; zoom: number } | null = null;
   private sceneShuttingDown = false;
   private foregroundSyncRunning = false;
   private lastForegroundSyncAt = 0;
@@ -3730,7 +3731,8 @@ export class GameScene extends Phaser.Scene {
       !selection?.actionId ||
       (target === "second" &&
         ((selection.actionId !== "shoot_pistol" &&
-          selection.actionId !== "place_trap") ||
+          selection.actionId !== "place_trap" &&
+          selection.actionId !== "detonate_c4") ||
           (selection.extraExecutions ?? 0) <= 0))
     ) {
       return;
@@ -4270,6 +4272,11 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.replayPlaybackCancelled = false;
+    this.manualReplayCamera = {
+      scrollX: this.cam.scrollX,
+      scrollY: this.cam.scrollY,
+      zoom: this.cam.zoom,
+    };
     this.enterReplayMode();
     this.applyReplaySnapshot(
       turn,
@@ -4291,6 +4298,14 @@ export class GameScene extends Phaser.Scene {
       }
       this.resolveReplayResumeWaiters();
       if (!this.sceneShuttingDown) {
+        if (this.manualReplayCamera) {
+          this.cam.setZoom(this.manualReplayCamera.zoom);
+          this.cam.setScroll(
+            this.manualReplayCamera.scrollX,
+            this.manualReplayCamera.scrollY
+          );
+          this.manualReplayCamera = null;
+        }
         if (this.replayView && replay.snapshot) {
           this.applyReplaySnapshot(turn, replay.snapshot);
         }

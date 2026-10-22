@@ -102,6 +102,7 @@ export function applyPendingZarkanPayout(
 export function applyTraffickerDeliveries(
   match: MatchRecord,
   replayEvents: ReplayEvent[],
+  logger: nkruntime.Logger,
 ): void {
   const characters = match.playerCharacters;
   if (!characters) return;
@@ -109,16 +110,42 @@ export function applyTraffickerDeliveries(
     const deceased = characters[playerId];
     const deliveries = deceased?.pendingTraffickerDeliveries;
     if (!deceased || !Array.isArray(deliveries) || deliveries.length === 0) continue;
+    logger.info(
+      "trafficker_delivery_pending match=%s turn=%d owner=%s items=%s",
+      match.match_id,
+      match.current_turn ?? 0,
+      playerId,
+      JSON.stringify(deliveries),
+    );
     const recipient = isCharacterDead(deceased)
       ? characters[deceased.testamentRecipientId ?? ""]
       : deceased;
     deceased.pendingTraffickerDeliveries = [];
-    if (!recipient || isCharacterDead(recipient)) continue;
+    if (!recipient || isCharacterDead(recipient)) {
+      logger.warn(
+        "trafficker_delivery_abandoned match=%s turn=%d owner=%s recipient=%s reason=%s",
+        match.match_id,
+        match.current_turn ?? 0,
+        playerId,
+        recipient?.id ?? deceased.testamentRecipientId ?? "none",
+        recipient ? "recipient_dead" : "recipient_missing",
+      );
+      continue;
+    }
     recipient.inventory ??= { carriedItems: [] };
     recipient.inventory.carriedItems ??= [];
     for (const itemId of deliveries) {
       const definition = ItemLibrary[itemId as ItemId];
-      if (!definition) continue;
+      if (!definition) {
+        logger.error(
+          "trafficker_delivery_unknown_item match=%s turn=%d owner=%s item=%s",
+          match.match_id,
+          match.current_turn ?? 0,
+          playerId,
+          itemId,
+        );
+        continue;
+      }
       const existing = recipient.inventory.carriedItems.find((stack) => stack.itemId === itemId);
       if (existing) existing.quantity += 1;
       else recipient.inventory.carriedItems.push({ itemId, quantity: 1, weight: definition.weight });
@@ -128,6 +155,15 @@ export function applyTraffickerDeliveries(
         action: { actionId: "give", metadata: { traffickerDelivery: true, itemId, fromPlayerId: playerId } },
         visibility: { scope: "limited", playerIds: [recipient.id] },
       });
+      logger.info(
+        "trafficker_delivery_complete match=%s turn=%d owner=%s recipient=%s item=%s quantity=%d",
+        match.match_id,
+        match.current_turn ?? 0,
+        playerId,
+        recipient.id,
+        itemId,
+        existing ? existing.quantity : 1,
+      );
     }
   }
 }

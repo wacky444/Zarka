@@ -381,7 +381,7 @@ export function advanceTurn(
     }
     decrementIntoxicationAfterAction(match, intoxicatedActorIds);
   }
-  applyTraffickerDeliveries(match, replayEvents);
+  applyTraffickerDeliveries(match, replayEvents, logger);
   replayEvents.push(...dropOverweightItems(match));
   replayEvents.push(...applyVirusInfection(match, resolvedTurn, logger));
   replayEvents.push(
