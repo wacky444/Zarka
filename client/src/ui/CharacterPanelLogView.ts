@@ -451,6 +451,21 @@ export class CharacterPanelLogView {
         if (typeof levelsGained === "number" && levelsGained > 0) {
           lines.push(`${actor} ${t("leveled up")} (+${levelsGained})`);
         }
+        if (actionId === "start_chainsaw") {
+          const metadata = event.action.metadata as
+            | { chainsawTurnsRemaining?: unknown; chainsawTurnedOff?: unknown }
+            | undefined;
+          if (metadata?.chainsawTurnedOff === true) {
+            lines.push(`${actor} ${t("chainsaw turned off")}`);
+          } else if (typeof metadata?.chainsawTurnsRemaining === "number") {
+            lines.push(
+              `${actor} ${t("chainsaw will shutdown in")} ${metadata.chainsawTurnsRemaining} ${t("turns")}`
+            );
+          }
+          if (metadata?.chainsawTurnedOff === true || typeof metadata?.chainsawTurnsRemaining === "number") {
+            continue;
+          }
+        }
         if (actionId === "team_assigned") {
           const meta = event.action.metadata as
             | { teamId?: string; coverTeamId?: string }

@@ -17,6 +17,9 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "with a punch": "con un puñetazo",
   "missed with a punch": "falló el puñetazo",
   "started the chainsaw": "arrancó la motosierra",
+  "chainsaw turned off": "apagó la motosierra",
+  "chainsaw will shutdown in": "la motosierra se apagará en",
+  turns: "turnos",
   "a chainsaw": "una motosierra",
   "Chainsaw is not running": "La motosierra no está arrancada",
   "The chainsaw attack order goes first, it won't be started, it requires two turns, first start then attack":

@@ -276,7 +276,7 @@ function appendHiddenStatusEvents(
   }
 }
 
-function decrementChainsawTurns(match: MatchRecord): void {
+function decrementChainsawTurns(match: MatchRecord, events: ReplayEvent[]): void {
   const characters = match.playerCharacters;
   if (!characters) {
     return;
@@ -290,8 +290,24 @@ function decrementChainsawTurns(match: MatchRecord): void {
       const nextRemaining = character.statuses.chainsaw.remainingTurns - 1;
       if (nextRemaining <= 0) {
         delete character.statuses.chainsaw;
+        events.push({
+          kind: "player",
+          actorId: playerId,
+          action: {
+            actionId: ActionLibrary.start_chainsaw.id,
+            metadata: { chainsawTurnedOff: true },
+          },
+        });
       } else {
         character.statuses.chainsaw.remainingTurns = nextRemaining;
+        events.push({
+          kind: "player",
+          actorId: playerId,
+          action: {
+            actionId: ActionLibrary.start_chainsaw.id,
+            metadata: { chainsawTurnsRemaining: nextRemaining },
+          },
+        });
       }
       characters[playerId] = character;
     }
@@ -388,7 +404,7 @@ export function advanceTurn(
     ...applyScheduledDestruction(match, resolvedTurn, logger),
   );
   clearExpiredFires(match, resolvedTurn);
-  decrementChainsawTurns(match);
+  decrementChainsawTurns(match, replayEvents);
   checkOngoingLockpickWithItem(match, replayEvents);
   replayEvents.push(...createPerception4DetectionEvents(match));
   // removeProtectedState(match);
