@@ -892,10 +892,16 @@ export class CharacterPanelSkillsView {
             (id) => id === skill.id
           ).length;
           const totalRank = committedRank + pendingRank;
+          const tutorialRankLimitReached =
+            this.tutorialChooseSkillsMode && totalRank >= 1;
           const committedPoints =
             this.currentCharacter?.progression?.availableSkillPoints ?? 0;
           const effectivePoints = committedPoints - this.calculatePendingCost();
-          if (effectivePoints >= skill.cost && totalRank < skill.max) {
+          if (
+            effectivePoints >= skill.cost &&
+            totalRank < skill.max &&
+            !tutorialRankLimitReached
+          ) {
             this.pendingUpgrades.push(skill.id);
             this.refreshView();
           }
