@@ -113,7 +113,8 @@ export function buildCharacterPanelItemOptions(
 
 export function buildInventoryGridItems(
   stacks: Array<{ itemId?: string; quantity?: number; weight?: number }>,
-  walletZarkans = 0
+  walletZarkans = 0,
+  poisonedFoodCount = 0
 ): InventoryGridItem[] {
   const aggregated = new Map<
     string,
@@ -171,7 +172,8 @@ export function buildInventoryGridItems(
       totalWeight: normalizeWeight(computedWeight),
       weightPerItem: normalizeWeight(perItemWeight),
       texture: visual.texture,
-      frame: visual.frame
+      frame: visual.frame,
+      poisoned: poisonedFoodCount > 0 && (itemId === "food" || itemId === "drink")
     });
   }
   return items.sort((a, b) => a.name.localeCompare(b.name));

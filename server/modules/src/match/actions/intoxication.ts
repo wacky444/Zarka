@@ -21,6 +21,18 @@ export function consumePoisonedServing(character: PlayerCharacter): PoisonedFood
     return { consumedPoison: false, intoxicationStarted: false };
   }
   character.poisonedFoodCount = poisonedFoodCount - 1;
+  const poisonOwners = Object.entries(character.poisonedFoodBy ?? {});
+  const consumedOwner = poisonOwners.find(([, count]) => count > 0)?.[0];
+  if (consumedOwner) {
+    const remaining = (character.poisonedFoodBy?.[consumedOwner] ?? 0) - 1;
+    if (remaining > 0) character.poisonedFoodBy = { ...character.poisonedFoodBy, [consumedOwner]: remaining };
+    else {
+      const remainingOwners = { ...character.poisonedFoodBy };
+      delete remainingOwners[consumedOwner];
+      character.poisonedFoodBy = remainingOwners;
+    }
+    if (Object.keys(character.poisonedFoodBy ?? {}).length === 0) delete character.poisonedFoodBy;
+  }
   if (!hasActiveIntoxication(character)) {
     const statuses = character.statuses ?? { conditions: [] };
     const conditions = [...(statuses.conditions ?? [])];

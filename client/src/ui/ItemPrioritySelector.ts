@@ -95,6 +95,10 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
     this.refreshSize();
   }
 
+  setSubtitle(subtitle: string): void {
+    if (!this.disposed) this.grid.setSubtitle(subtitle);
+  }
+
   setOptions(options: ItemPriorityOption[]): void {
     if (this.disposed) {
       return;

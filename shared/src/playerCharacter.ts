@@ -26,6 +26,8 @@ export interface PlayerCharacter {
   revealedItemTypesByPlayerId?: Record<string, string[]>;
   /** Poisoned food servings carried by this character; private until consumed. */
   poisonedFoodCount?: number;
+  /** Poisoned servings keyed by the player who applied the poison. */
+  poisonedFoodBy?: Record<string, number>;
   /** Team identities revealed to this character by Detective purchases. */
   revealedTeamIdsByPlayerId?: Record<string, string>;
   corpseRations?: number;

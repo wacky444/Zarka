@@ -121,6 +121,18 @@ export function tailorTrapsForViewer(
   return traps.filter((trap) => trap.ownerId === viewerId);
 }
 
+function redactPoisonAttribution(character: PlayerCharacter, viewerId: string | undefined | null, viewAll: boolean): PlayerCharacter {
+  const sanitized = { ...character };
+  if (viewAll) return sanitized;
+  const ownAttribution = viewerId ? sanitized.poisonedFoodBy?.[viewerId] : undefined;
+  if (typeof ownAttribution === "number" && ownAttribution > 0) {
+    sanitized.poisonedFoodBy = { [viewerId!]: ownAttribution };
+  } else {
+    delete sanitized.poisonedFoodBy;
+  }
+  return sanitized;
+}
+
 function redactVirusStatus(character: PlayerCharacter): PlayerCharacter {
   const sanitized = { ...character };
   if (sanitized.statuses) {
@@ -184,7 +196,7 @@ export function tailorPlayerCharactersForViewer(
     }
     const candidate = playerCharacters[id];
     if (id === viewerKey) {
-      const sanitizedViewer = redactVirusStatus(candidate);
+      const sanitizedViewer = redactPoisonAttribution(redactVirusStatus(candidate), viewerId, viewAll);
       delete sanitizedViewer.poisonedFoodCount;
       filtered[id] = sanitizedViewer;
       continue;
@@ -244,7 +256,7 @@ export function tailorPlayerCharactersForViewer(
       const isConfirmedTeammate =
         Array.isArray(viewer.relationships?.confirmedTeammates) &&
         viewer.relationships.confirmedTeammates.indexOf(id) !== -1;
-      const sanitized = redactVirusStatus(candidate);
+      const sanitized = redactPoisonAttribution(redactVirusStatus(candidate), viewerId, viewAll);
       delete sanitized.secretTeamId;
       delete sanitized.discoveredItemIds;
       delete sanitized.discoveredC4Ids;
@@ -325,9 +337,14 @@ export function tailorMatchForPlayer(
   const map = viewAll
     ? match.map
     : filterMapByDiscoveredLookup(match.map, discovered, character);
-  const items = viewAll
+  const visibleItems = viewAll
     ? match.items
     : filterItemsByDiscoveredLookup(match.items, discovered);
+  const items = visibleItems?.map((item) => {
+    if (!item.poisonedBy || viewAll || item.poisonedBy === playerId) return { ...item };
+    const { poisonedBy: _hiddenPoisonOwner, ...visibleItem } = item;
+    return visibleItem;
+  });
   const traps = tailorTrapsForViewer(match.traps, playerId, viewAll);
   const c4s = tailorC4sForViewer(
     match.c4s,

@@ -19,7 +19,8 @@ import {
   TUTORIAL_BOT_ID,
   TUTORIAL_CELL_COORDS,
   getActionEnergyDiscount,
-  getSkillEffectTotal
+  getSkillEffectTotal,
+  isCharacterHidden
 } from "@shared";
 import { GridSelect, type GridSelectItem } from "../GridSelect";
 import { ActionOrderHelpModal } from "../ActionOrderHelpModal";
@@ -29,6 +30,7 @@ import { getProjectedManipulateWeightGain } from "../manipulateSelectorItems";
 import { LocationSelector } from "../LocationSelector";
 import { ExtraExecutionSelector } from "../ExtraExecutionSelector";
 import { THEME } from "../ColorPalette";
+import { resolveItemTexture } from "../itemIcons";
 import { buildDexterity3ProductItems, parseDexterity3Product } from "../dexterity3SelectorItems";
 import { PlayerSelector, type PlayerOption } from "../PlayerSelector";
 import {
@@ -253,9 +255,11 @@ export function actionSupportsTargetItems(
   actionId: string | null,
   canSteal: boolean
 ): boolean {
-  return actionId === "steal"
-    ? canSteal
-    : (item?.tags?.includes("TargetItems") ?? false);
+  return actionId === "poison_food"
+    ? true
+    : actionId === "steal"
+      ? canSteal
+      : (item?.tags?.includes("TargetItems") ?? false);
 }
 
 export function actionSupportsExtraExecution(actionId: string | null): boolean {
@@ -3085,9 +3089,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     const isInventorySale =
       this.extraSecondaryActionSelection === "drop" ||
       this.extraSecondaryActionSelection === "black_market_trade";
-    const availableOptions = isInventorySale
-      ? this.inventoryItemOptions
-      : this.itemOptions;
+    const availableOptions = this.extraSecondaryActionSelection === "poison_food"
+      ? this.getPoisonFoodItemOptions()
+      : isInventorySale ? this.inventoryItemOptions : this.itemOptions;
+    this.extraSecondaryItemSelector.setLabel(this.extraSecondaryActionSelection === "poison_food" ? t("Food or drink to poison") : t("Priority Items"));
+    this.extraSecondaryItemSelector.setSubtitle(this.extraSecondaryActionSelection === "poison_food" ? t("Select a visible food or drink from the ground or an inventory.") : t("Tap an item to prioritize it"));
     const supports = this.selectedExtraSecondaryActionSupportsItemPriority();
     const shouldShow = supports && availableOptions.length > 0;
     if (!shouldShow) {
@@ -3322,7 +3328,14 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.itemSelector.setLabel(
       this.mainActionSelection === "throw_object"
         ? t("Item to throw")
-        : t("Priority Items")
+        : this.mainActionSelection === "poison_food"
+          ? t("Food or drink to poison")
+          : t("Priority Items")
+    );
+    this.itemSelector.setSubtitle(
+      this.mainActionSelection === "poison_food"
+        ? t("Select a visible food or drink from the ground or an inventory.")
+        : t("Tap an item to prioritize it")
     );
     const supports = this.selectedActionSupportsItemPriority();
     const availableOptions = this.getMainActionItemOptions();
@@ -3496,9 +3509,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     const isInventorySale =
       this.secondaryActionSelection === "drop" ||
       this.secondaryActionSelection === "black_market_trade";
-    const availableOptions = isInventorySale
-      ? this.inventoryItemOptions
-      : this.itemOptions;
+    const availableOptions = this.secondaryActionSelection === "poison_food"
+      ? this.getPoisonFoodItemOptions()
+      : isInventorySale ? this.inventoryItemOptions : this.itemOptions;
+    this.secondaryItemSelector.setLabel(this.secondaryActionSelection === "poison_food" ? t("Food or drink to poison") : t("Priority Items"));
+    this.secondaryItemSelector.setSubtitle(this.secondaryActionSelection === "poison_food" ? t("Select a visible food or drink from the ground or an inventory.") : t("Tap an item to prioritize it"));
     const supports = this.selectedSecondaryActionSupportsItemPriority();
     const shouldShow = supports && availableOptions.length > 0;
     if (!shouldShow) {
@@ -4088,7 +4103,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   }
 
   private selectedActionSupportsSingleTarget(): boolean {
-    return actionSupportsSingleTarget(this.lastMainActionItem);
+    return this.mainActionSelection !== "poison_food" && actionSupportsSingleTarget(this.lastMainActionItem);
   }
 
   private selectedActionSupportsItemPriority(): boolean {
@@ -4109,7 +4124,37 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       : undefined;
   }
 
+  private getPoisonFoodItemOptions(): ItemPriorityOption[] {
+    const character = this.currentCharacter;
+    const match = this.currentMatch;
+    const tile = character?.position?.tileId;
+    const groundIds = new Set(
+      (match?.map?.tiles ?? []).find((entry) => entry.id === tile)?.itemIds ?? []
+    );
+    const records = new Map((match?.items ?? []).map((item) => [item.item_id, item]));
+    const foodOptions = [...groundIds]
+      .map((id) => ({ id, item: records.get(id) }))
+      .filter((entry) => entry.item?.item_type === "food" || entry.item?.item_type === "drink")
+      .map(({ id, item }) => ({
+        id,
+        label: `${ItemLibrary[item!.item_type].name} (${id.slice(-5)})`,
+        description: ItemLibrary[item!.item_type].description,
+        ...resolveItemTexture(ItemLibrary[item!.item_type])
+      }));
+    const characterOptions = Object.entries(match?.playerCharacters ?? {})
+      .filter(([, target]) => target.position?.tileId === tile && target.stats.health.current > 0 && !isCharacterHidden(target, this.currentTurn))
+      .map(([id, target]) => ({
+        id: `character:${id}`,
+        label: `${this.playerOptions.find((option) => option.id === id)?.label ?? target.name} — ${t("inventory")}`,
+        description: t("Poison food or drink carried by this character."),
+        texture: "hex",
+        frame: "grass_01.png"
+      }));
+    return [...foodOptions, ...characterOptions];
+  }
+
   private getMainActionItemOptions(): ItemPriorityOption[] {
+    if (this.mainActionSelection === "poison_food") return this.getPoisonFoodItemOptions();
     if (this.mainActionSelection === "steal") {
       return this.stealItemOptions;
     }
@@ -4139,7 +4184,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   }
 
   private selectedSecondaryActionSupportsSingleTarget(): boolean {
-    return actionSupportsSingleTarget(this.lastSecondaryActionItem);
+    return this.secondaryActionSelection !== "poison_food" && actionSupportsSingleTarget(this.lastSecondaryActionItem);
   }
 
   private selectedSecondaryActionSupportsItemPriority(): boolean {
@@ -4163,7 +4208,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   }
 
   private selectedExtraSecondaryActionSupportsSingleTarget(): boolean {
-    return actionSupportsSingleTarget(this.lastExtraSecondaryActionItem);
+    return this.extraSecondaryActionSelection !== "poison_food" && actionSupportsSingleTarget(this.lastExtraSecondaryActionItem);
   }
 
   private selectedExtraSecondaryActionSupportsItemPriority(): boolean {

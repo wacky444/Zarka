@@ -30,6 +30,51 @@ export class PoisonFoodAction extends BaseAction {
     const events: ReplayPlayerEvent[] = [];
     for (const participant of roster) {
       const actionId = participant.plan.actionId as ActionId;
+      const selectedItemIds = (participant.plan.targetItemIds ?? []).filter((id) => typeof id === "string");
+      if (selectedItemIds.length > 0) {
+        let poisoned = 0;
+        const poisonCount = countCarriedItem(participant.character, "poison");
+        const selectedTargets: ReplayActionTarget[] = [];
+        const actorTileId = participant.character.position?.tileId;
+        const groundIds = new Set(
+          (match.map?.tiles ?? []).find((tile) => tile.id === actorTileId)?.itemIds ?? []
+        );
+        for (const targetId of selectedItemIds) {
+          if (poisoned >= poisonCount) break;
+          if (targetId.startsWith("character:")) {
+            const characterId = targetId.slice("character:".length);
+            const target = match.playerCharacters?.[characterId];
+            if (!target || target.position?.tileId !== actorTileId || availableFood(target) <= 0) continue;
+            let amount = 0;
+            while (amount < availableFood(target) && poisoned < poisonCount && consumeCarriedItem(participant.character, "poison", 1)) {
+              amount += 1;
+              poisoned += 1;
+            }
+            if (amount > 0) {
+              target.poisonedFoodCount = Math.max(0, target.poisonedFoodCount ?? 0) + amount;
+              target.poisonedFoodBy = { ...(target.poisonedFoodBy ?? {}), [participant.playerId]: (target.poisonedFoodBy?.[participant.playerId] ?? 0) + amount };
+              selectedTargets.push({ targetId: characterId, effects: ReplayActionEffect.Hit, metadata: { poisonedServings: amount } });
+            }
+            continue;
+          }
+          const item = (match.items ?? []).find((entry) => entry.item_id === targetId);
+          if (!item || !groundIds.has(targetId) || !["food", "drink"].includes(item.item_type) || item.poisonedBy) continue;
+          if (!consumeCarriedItem(participant.character, "poison", 1)) break;
+          item.poisonedBy = participant.playerId;
+          poisoned += 1;
+          selectedTargets.push({ targetId: targetId, effects: ReplayActionEffect.Hit });
+        }
+        this.clearPlan(participant);
+        match.playerCharacters![participant.playerId] = participant.character;
+        if (poisoned > 0) {
+          const action: ReplayActionDone = { actionId, effects: ReplayActionEffect.Hit, metadata: { consumedItemId: "poison", poisonedItems: poisoned } };
+          if (participant.character.position?.coord) action.originLocation = participant.character.position.coord;
+          events.push({ kind: "player", actorId: participant.playerId, action, targets: selectedTargets });
+        } else {
+          events.push(createFailedActionEvent(participant, actionId, { reason: poisonCount <= 0 ? "missing_item" : "invalid_target", ...(poisonCount <= 0 ? { missingItemId: "poison" } : {}) }));
+        }
+        continue;
+      }
       const targets = collectTargets(actionId, participant, match, {
         deadCharacterPolicy: "exclude",
         allowMultiple: true,
@@ -68,6 +113,7 @@ export class PoisonFoodAction extends BaseAction {
         }
         if (amount <= 0) break;
         target.character.poisonedFoodCount = Math.max(0, target.character.poisonedFoodCount ?? 0) + amount;
+        target.character.poisonedFoodBy = { ...(target.character.poisonedFoodBy ?? {}), [participant.playerId]: (target.character.poisonedFoodBy?.[participant.playerId] ?? 0) + amount };
         match.playerCharacters![target.id] = target.character;
         poisonedServings += amount;
         poisonedTargets.push({

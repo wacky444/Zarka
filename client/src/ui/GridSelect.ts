@@ -284,7 +284,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
   private readonly label: Phaser.GameObjects.Text;
   private readonly collapsedHeight: number;
   private readonly modalTitle: string;
-  private readonly modalSubtitle: string;
+  private modalSubtitle: string;
   private placeholder: string;
   private readonly emptyLabel: string;
   private readonly columns: number;
@@ -532,6 +532,10 @@ export class GridSelect extends Phaser.GameObjects.Container {
     this.tooltip?.destroy();
     this.tooltip = null;
     super.destroy(fromScene);
+  }
+
+  setSubtitle(subtitle: string): void {
+    this.modalSubtitle = t(subtitle);
   }
 
   setItems(items: GridSelectItem[]) {

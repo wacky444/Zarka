@@ -22,6 +22,8 @@ export interface MatchMetadata {
 export interface MatchItemRecord {
   item_id: string;
   item_type: ItemId;
+  /** Private poison ownership; exposed only to the poisoner and admins. */
+  poisonedBy?: string;
 }
 
 export interface TrapRecord {

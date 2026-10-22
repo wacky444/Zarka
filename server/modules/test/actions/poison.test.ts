@@ -25,8 +25,8 @@ function createMatch(characters: PlayerCharacter[]): MatchRecord {
   };
 }
 
-function participant(character: PlayerCharacter, actionId: "poison_food" | "feed" | "use_antidote", planKey: "main" | "secondary" = "secondary", targetPlayerIds?: string[]): PlannedActionParticipant {
-  const plan = { actionId, ...(targetPlayerIds ? { targetPlayerIds } : {}) };
+function participant(character: PlayerCharacter, actionId: "poison_food" | "feed" | "use_antidote", planKey: "main" | "secondary" = "secondary", targetPlayerIds?: string[], targetItemIds?: string[]): PlannedActionParticipant {
+  const plan = { actionId, ...(targetPlayerIds ? { targetPlayerIds } : {}), ...(targetItemIds ? { targetItemIds } : {}) };
   character.actionPlan = { ...character.actionPlan, [planKey]: plan };
   return { playerId: character.id, character, plan, planKey };
 }
@@ -42,6 +42,35 @@ test("poison_food consumes poison and marks target carried food for poisoning", 
   assert.equal(target.poisonedFoodCount, 1);
   assert.equal(attacker.inventory.carriedItems[0].quantity, 1);
   assert.equal(events[0].kind === "player" ? events[0].action.actionId : undefined, "poison_food");
+});
+
+test("poison_food can poison a selected visible ground food item", () => {
+  const attacker = createDefaultCharacter("attacker");
+  attacker.position = { tileId: "tile", coord: { q: 0, r: 0 } };
+  attacker.inventory.carriedItems = [stack("poison", 1)];
+  const match = createMatch([attacker]);
+  match.items = [{ item_id: "ground-food", item_type: "food" }];
+  match.map!.tiles[0].itemIds = ["ground-food"];
+  const events = executePoisonFoodAction([
+    participant(attacker, "poison_food", "secondary", undefined, ["ground-food"]),
+  ], match);
+  assert.equal(match.items[0].poisonedBy, attacker.id);
+  assert.equal(attacker.inventory.carriedItems.length, 0);
+  assert.equal(events[0].kind === "player" ? events[0].action.metadata?.poisonedItems : undefined, 1);
+});
+
+test("poison_food can target a character inventory through the unified item selector", () => {
+  const attacker = createDefaultCharacter("attacker");
+  const target = createDefaultCharacter("target");
+  attacker.position = target.position = { tileId: "tile", coord: { q: 0, r: 0 } };
+  attacker.inventory.carriedItems = [stack("poison", 1)];
+  target.inventory.carriedItems = [stack("drink", 1)];
+  const match = createMatch([attacker, target]);
+  executePoisonFoodAction([
+    participant(attacker, "poison_food", "secondary", undefined, [`character:${target.id}`]),
+  ], match);
+  assert.equal(target.poisonedFoodCount, 1);
+  assert.equal(target.poisonedFoodBy?.[attacker.id], 1);
 });
 
 test("feeding poisoned food starts five-action intoxication and consumes one poisoned serving", () => {

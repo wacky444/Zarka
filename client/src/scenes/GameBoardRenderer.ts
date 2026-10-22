@@ -646,6 +646,10 @@ export class GameBoardRenderer {
       replayView?.snapshot.items ?? this.callbacks.getCurrentMatch()?.items;
     const matchItems = Array.isArray(matchItemsRaw) ? matchItemsRaw : [];
     const itemTypeById = new Map<string, ItemId>();
+    const poisonedItemIds = new Set<string>();
+    const currentUserId = this.callbacks.getCurrentUserId();
+    const canSeePoison = (item: (typeof matchItems)[number]) =>
+      Boolean(item.poisonedBy && (item.poisonedBy === currentUserId || this.callbacks.isAdminViewEnabled()));
     for (const entry of matchItems) {
       if (!entry || typeof entry.item_id !== "string") {
         continue;
@@ -654,6 +658,7 @@ export class GameBoardRenderer {
         continue;
       }
       itemTypeById.set(entry.item_id, entry.item_type);
+      if (canSeePoison(entry)) poisonedItemIds.add(entry.item_id);
     }
 
     for (const snapshot of map.tiles) {
@@ -662,6 +667,7 @@ export class GameBoardRenderer {
         continue;
       }
       const aggregated = new Map<ItemId, number>();
+      const poisonedTypes = new Set<ItemId>();
       for (const id of itemIds) {
         if (typeof id !== "string") {
           continue;
@@ -672,6 +678,7 @@ export class GameBoardRenderer {
         }
         const previous = aggregated.get(type) ?? 0;
         aggregated.set(type, previous + 1);
+        if (poisonedItemIds.has(id)) poisonedTypes.add(type);
       }
       if (aggregated.size === 0) {
         continue;
@@ -806,6 +813,11 @@ export class GameBoardRenderer {
               tooltipBody,
             );
           };
+          if (poisonedTypes.has(itemType)) {
+            const poisonGlow = this.scene.add.circle(x, y, 13, 0x22c55e, 0.28)
+              .setStrokeStyle(2, 0x4ade80, 1);
+            container.add(poisonGlow);
+          }
           const sprite = this.scene.add.image(
             x,
             y,

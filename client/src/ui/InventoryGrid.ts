@@ -13,6 +13,7 @@ export interface InventoryGridItem {
   weightPerItem: number;
   texture: string;
   frame?: string;
+  poisoned?: boolean;
 }
 
 interface InventoryGridOptions {
@@ -161,11 +162,21 @@ export class InventoryGrid extends Phaser.GameObjects.Container {
     const bg = this.scene.add
       .rectangle(0, 0, cardWidth, cardHeight, BACKGROUND_COLOR, 0.95)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, BORDER_COLOR, 0.8);
+      .setStrokeStyle(item.poisoned ? 3 : 1, item.poisoned ? 0x4ade80 : BORDER_COLOR, 0.8);
     const icon = this.scene.add
       .image(4, iconSize / 2 + 4, item.texture, item.frame)
       .setOrigin(0, 0.5);
     this.updateIconSize(icon, iconSize);
+    if (item.poisoned) {
+      const glow = this.scene.add.circle(
+        icon.x + icon.displayWidth / 2,
+        icon.y,
+        iconSize * 0.55,
+        0x22c55e,
+        0.28
+      ).setStrokeStyle(2, 0x4ade80, 1);
+      card.add(glow);
+    }
     const textStartX = icon.x + icon.displayWidth + 4;
     const textMaxWidth = Math.max(170, cardWidth - textStartX - 16);
     const nameText = this.scene.add
@@ -204,6 +215,9 @@ export class InventoryGrid extends Phaser.GameObjects.Container {
     const truncated = this.truncateText(bodyText, description, textMaxWidth, 6);
     bodyText.setText(truncated.text);
     card.add(bg);
+    if (item.poisoned) {
+      card.sendToBack(bg);
+    }
     card.add(icon);
     card.add(nameText);
     card.add(metaText);
