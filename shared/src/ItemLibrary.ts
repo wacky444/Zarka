@@ -311,7 +311,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     id: "rocket_launcher",
     name: "Lanzacohetes",
     category: ItemCategory.Weapon,
-    sprite: "Board Game Icons/exploding.png",
+    sprite: "Items/rocket_launcher.png",
     weapon: true,
     consumable: true,
     weight: 10,
