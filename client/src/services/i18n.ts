@@ -666,7 +666,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Turn: "Turno",
   died: "murió",
   "fell unconscious": "quedó inconsciente",
-  "is invisible": "es invisible",
+  "is hidden": "está escondido",
   at: "en",
   "and hit": "y alcanzó a",
   "used a spy drone at": "usó un dron espía en",
