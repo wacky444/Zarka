@@ -200,6 +200,27 @@ test("buyShopItemRpc succeeds and reports 0 when no c4 or traps exist", () => {
   assert.equal(metadata.trapsLocation, 0);
 });
 
+test("rocket launcher trafficker purchase persists a pending delivery", () => {
+  const match = createMatchWithState({ actorZarkans: 100 });
+  const { fakeNakama, stored } = createNakama(match);
+
+  buyShopItemRpc(
+    createTestContext("buyer"),
+    createTestLogger(),
+    fakeNakama,
+    JSON.stringify({
+      match_id: "test-match",
+      shop_id: "trafficker_rocket_launcher"
+    })
+  );
+
+  assert.deepEqual(
+    stored.value.playerCharacters.buyer.pendingTraffickerDeliveries,
+    ["rocket_launcher"]
+  );
+  assert.equal(stored.value.playerCharacters.buyer.economy.zarkans, 40);
+});
+
 test("buyShopItemRpc accurately detects c4 at current cell, distance 1, and traps in location", () => {
   // Buyer is at (2, 3)
   const c4s: C4Record[] = [

@@ -213,10 +213,6 @@ export function buyShopItemRpc(
     trafficker_rocket_launcher: "rocket_launcher",
   };
   const traffickerItem = traffickerItemByShopId[resolvedShopId];
-  if (traffickerItem) {
-    actor.pendingTraffickerDeliveries ??= [];
-    actor.pendingTraffickerDeliveries.push(traffickerItem);
-  }
   let observedPlayerIds: string[] = [];
   const postPurchaseEvents: ReplayPlayerEvent[] = [];
   let targetTeamId: string | undefined;
@@ -438,6 +434,10 @@ export function buyShopItemRpc(
 
   actor = match.playerCharacters[ctx.userId] ?? actor;
   match.playerCharacters[ctx.userId] = actor;
+  if (traffickerItem) {
+    actor.pendingTraffickerDeliveries ??= [];
+    actor.pendingTraffickerDeliveries.push(traffickerItem);
+  }
   const actionId =
     resolvedShopId.startsWith("trafficker_")
       ? "buy_trafficker"
