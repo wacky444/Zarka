@@ -197,7 +197,6 @@ export function tailorPlayerCharactersForViewer(
     const candidate = playerCharacters[id];
     if (id === viewerKey) {
       const sanitizedViewer = redactPoisonAttribution(redactVirusStatus(candidate), viewerId, viewAll);
-      delete sanitizedViewer.poisonedFoodCount;
       filtered[id] = sanitizedViewer;
       continue;
     }

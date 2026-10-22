@@ -159,7 +159,7 @@ export class CharacterPanelInventoryView {
     const items = buildInventoryGridItems(
       stacks,
       character.economy?.zarkans ?? 0,
-      Object.values(character.poisonedFoodBy ?? {}).reduce((total, count) => total + count, 0)
+      character.poisonedFoodCount ?? 0
     );
     this.grid.setItems(items);
     this.grid.refreshLayout();

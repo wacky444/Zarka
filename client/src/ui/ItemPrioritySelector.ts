@@ -13,6 +13,7 @@ export type ItemPriorityOption = {
   frame?: string;
   iconScale?: number;
   disabled?: boolean;
+  poisoned?: boolean;
 };
 
 const SELECT_LABEL = "[ Add priority item ]";
@@ -304,8 +305,8 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
     const prioritizedItemCount = this.countPrioritizedItems();
     return this.options.map((option) => ({
       id: option.id,
-      name: option.label,
-      description: option.description,
+      name: option.poisoned ? `☠ ${option.label} — POISONED` : option.label,
+      description: option.poisoned ? `${option.description ?? ""} Poisoned.`.trim() : option.description,
       texture: option.texture ?? "hex",
       frame: option.frame,
       iconScale: option.iconScale,
@@ -398,7 +399,8 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
         optA.disabled !== optB.disabled ||
         optA.texture !== optB.texture ||
         optA.frame !== optB.frame ||
-        optA.iconScale !== optB.iconScale
+        optA.iconScale !== optB.iconScale ||
+        optA.poisoned !== optB.poisoned
       ) {
         return false;
       }

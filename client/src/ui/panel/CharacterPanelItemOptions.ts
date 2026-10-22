@@ -50,9 +50,11 @@ export function buildCharacterPanelItemOptions(
         const visual = definition
           ? resolveItemTexture(definition)
           : { texture: "hex", frame: "grass_01.png" };
+        const poisoned = Boolean(itemRecords.get(itemId)?.poisonedBy);
         groundItems.push({
           id: itemId,
-          label: definition?.name ?? itemId,
+          label: poisoned ? `☠ ${definition?.name ?? itemId} — POISONED` : definition?.name ?? itemId,
+          poisoned,
           description: definition?.description,
           texture: visual.texture,
           frame: visual.frame
@@ -80,9 +82,11 @@ export function buildCharacterPanelItemOptions(
       const visual = definition
         ? resolveItemTexture(definition)
         : { texture: "hex", frame: "grass_01.png" };
+      const poisoned = (itemId === "food" || itemId === "drink") && (character?.poisonedFoodCount ?? 0) > 0;
       inventoryItems.push({
         id: itemId,
-        label: stack.quantity > 1 ? `${name} (x${stack.quantity})` : name,
+        label: poisoned ? `☠ ${name} — POISONED` : stack.quantity > 1 ? `${name} (x${stack.quantity})` : name,
+        poisoned,
         description: definition?.description,
         texture: visual.texture,
         frame: visual.frame
