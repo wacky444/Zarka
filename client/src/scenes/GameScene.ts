@@ -186,6 +186,8 @@ export class GameScene extends Phaser.Scene {
   private victoryOverlay: VictoryOverlay | null = null;
   private stopVictoryDance: (() => void) | null = null;
   private tutorialInstructionView: TutorialInstructionView | null = null;
+  private tutorialArrow: Phaser.GameObjects.Image | null = null;
+  private tutorialArrowTween: Phaser.Tweens.Tween | null = null;
   private tutorialWelcomeModal: TutorialWelcomeModal | null = null;
   private tutorialWelcomeActive = false;
   private reportTransitionStarted = false;
@@ -729,6 +731,12 @@ export class GameScene extends Phaser.Scene {
         this.load.image(key, buildBoardIconUrl(frame));
       }
     }
+    if (!this.textures.exists("tutorial-forward-arrow")) {
+      this.load.image(
+        "tutorial-forward-arrow",
+        assetPath("assets/images/replay-icons/forward.png")
+      );
+    }
     if (!this.textures.exists("zarka-welcome")) {
       this.load.image(
         "zarka-welcome",
@@ -1018,6 +1026,19 @@ export class GameScene extends Phaser.Scene {
       onTransitionComplete: () => this.openEndGameReport(),
     });
     this.tutorialInstructionView = new TutorialInstructionView(this);
+    this.tutorialArrow = this.add
+      .image(0, 0, "tutorial-forward-arrow")
+      .setDisplaySize(36, 36)
+      .setDepth(2000)
+      .setVisible(false);
+    this.tutorialArrowTween = this.tweens.add({
+      targets: this.tutorialArrow,
+      x: "+=10",
+      duration: 550,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut"
+    });
     this.cam.ignore(this.tutorialInstructionView.getContainer());
     this.tutorialWelcomeModal = new TutorialWelcomeModal(this);
     this.tutorialWelcomeModal.setCallbacks(
@@ -2304,6 +2325,27 @@ export class GameScene extends Phaser.Scene {
     }
     this.tutorialInstructionView?.setStep(currentStep);
     this.characterPanel?.setTutorialStep(currentStep, isTutorial);
+    const policy = getTutorialUiPolicy(currentStep);
+    this.updateTutorialArrow(
+      isTutorial &&
+        !this.tutorialWelcomeActive &&
+        currentStep !== null &&
+        (policy.highlightedControls.length > 0 ||
+          policy.highlightedTab !== null ||
+          policy.highlightedCharacterSubtab !== null)
+    );
+  }
+
+  private updateTutorialArrow(visible: boolean): void {
+    const arrow = this.tutorialArrow;
+    const panel = this.characterPanel;
+    if (!arrow || !panel || !visible || (this.mobileLayout && this.mobileViewMode !== "sidebar")) {
+      arrow?.setVisible(false);
+      return;
+    }
+
+    const bounds = panel.getBounds();
+    arrow.setPosition(bounds.left - 28, bounds.centerY).setVisible(true);
   }
 
   private recordTutorialPresentation(stepId: TutorialStepId): void {
