@@ -275,14 +275,32 @@ export class LoginScene extends Phaser.Scene {
   }
 
   private createNativeInputs(): void {
-    const makeInput = (type: string, autocomplete: string): HTMLInputElement => {
+    const form = document.createElement("form");
+    form.autocomplete = "on";
+    form.noValidate = true;
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (this.guiState === LoginGuiState.Register) {
+        void this.registerWithEmail();
+      } else if (this.guiState === LoginGuiState.Login) {
+        void this.loginWithEmail();
+      }
+    });
+    Object.assign(form.style, { position: "fixed", inset: "0", pointerEvents: "none", zIndex: "10000" });
+    document.body.appendChild(form);
+
+    const makeInput = (type: string, name: string, autocomplete: string): HTMLInputElement => {
       const input = document.createElement("input");
       input.type = type;
+      input.name = name;
+      input.id = `zarka-${name}`;
       input.setAttribute("autocomplete", autocomplete);
-      input.setAttribute("aria-label", autocomplete);
+      input.setAttribute("aria-label", name);
+      input.setAttribute("enterkeyhint", name === "password" ? "go" : "next");
       Object.assign(input.style, {
         position: "fixed",
-        zIndex: "10000",
+        zIndex: "10001",
+        pointerEvents: "auto",
         boxSizing: "border-box",
         padding: "4px 8px",
         border: "0",
@@ -292,14 +310,14 @@ export class LoginScene extends Phaser.Scene {
         font: "14px sans-serif",
         outline: "none"
       });
-      document.body.appendChild(input);
+      form.appendChild(input);
       this.nativeInputs.push(input);
       return input;
     };
 
-    const email = makeInput("email", "email");
-    const username = makeInput("text", "username");
-    const password = makeInput("password", "current-password");
+    const email = makeInput("text", "username", "username");
+    const username = makeInput("text", "new-username", "username");
+    const password = makeInput("password", "password", "current-password");
     email.addEventListener("input", () => {
       this.emailValue = email.value;
       this.updateDisplays();
@@ -342,25 +360,38 @@ export class LoginScene extends Phaser.Scene {
     );
     const width = bounds.width * contentWidth / this.scale.width;
     const left = bounds.left + (bounds.width - width) / 2;
+    const fieldCount = this.guiState === LoginGuiState.Register ? 3 : 2;
+    const formHeight =
+      LOGIN_LAYOUT.controlsY +
+      fieldCount * (LOGIN_LAYOUT.formLabelHeight + LOGIN_LAYOUT.formInputHeight) +
+      (fieldCount - 1) * LOGIN_LAYOUT.formFieldGap +
+      LOGIN_LAYOUT.formActionsGap +
+      32;
     const top = Math.max(
       LOGIN_LAYOUT.minTop,
-      (this.scale.height - (LOGIN_LAYOUT.controlsY + 3 * (LOGIN_LAYOUT.formLabelHeight + LOGIN_LAYOUT.formInputHeight) + 2 * LOGIN_LAYOUT.formFieldGap + LOGIN_LAYOUT.formActionsGap + 32)) / 2
+      (this.scale.height - formHeight) / 2
     );
     const fieldBlockHeight =
       LOGIN_LAYOUT.formLabelHeight + LOGIN_LAYOUT.formInputHeight;
-    const ys = [0, 1, 2].map(
-      (index) =>
-        LOGIN_LAYOUT.controlsY +
-        index * (fieldBlockHeight + LOGIN_LAYOUT.formFieldGap) +
-        LOGIN_LAYOUT.formLabelHeight
-    );
+    const fieldIndices = this.guiState === LoginGuiState.Register ? [0, 1, 2] : [0, 0, 1];
     this.nativeInputs.forEach((input, index) => {
+      const fieldIndex = fieldIndices[index];
+      const y = LOGIN_LAYOUT.controlsY +
+        fieldIndex * (fieldBlockHeight + LOGIN_LAYOUT.formFieldGap) +
+        LOGIN_LAYOUT.formLabelHeight;
       input.style.left = `${left}px`;
-      input.style.top = `${bounds.top + (top + ys[index]) * bounds.height / this.scale.height}px`;
+      input.style.top = `${bounds.top + (top + y) * bounds.height / this.scale.height}px`;
       input.style.width = `${width}px`;
       input.style.height = `${LOGIN_LAYOUT.formInputHeight * bounds.height / this.scale.height}px`;
       input.style.fontSize = `${Math.max(16, 14 * bounds.height / this.scale.height)}px`;
       input.style.display = this.guiState === LoginGuiState.Entry || (index === 1 && this.guiState !== LoginGuiState.Register) ? "none" : "block";
+      if (index === 0) {
+        input.setAttribute("autocomplete", this.guiState === LoginGuiState.Register ? "email" : "username");
+        input.type = this.guiState === LoginGuiState.Register ? "email" : "text";
+      }
+      if (index === 2) {
+        input.setAttribute("autocomplete", this.guiState === LoginGuiState.Register ? "new-password" : "current-password");
+      }
     });
   }
 
