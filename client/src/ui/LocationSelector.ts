@@ -84,6 +84,17 @@ export class LocationSelector extends Phaser.GameObjects.Container {
     this.updateButtons();
   }
 
+  isTutorialHighlighted(): boolean {
+    return this.tutorialHighlighted;
+  }
+
+  getTutorialHighlightedTarget(): Phaser.GameObjects.GameObject | null {
+    if (this.tutorialHighlighted && this.selectButton.visible) {
+      return this.selectButton;
+    }
+    return null;
+  }
+
   setValue(value: Axial | null): void {
     if (this.disposed) {
       return;

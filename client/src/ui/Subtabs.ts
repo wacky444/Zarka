@@ -94,6 +94,14 @@ export class Subtabs<T extends string = string> {
     return this.highlightedKey;
   }
 
+  getHighlightedTarget(): Phaser.GameObjects.Rectangle | null {
+    if (!this.highlightedKey) {
+      return null;
+    }
+    const entry = this.entries.find((e) => e.key === this.highlightedKey);
+    return entry?.button && entry.button.visible ? entry.button : null;
+  }
+
   getElements(): Phaser.GameObjects.GameObject[] {
     return this.elements;
   }

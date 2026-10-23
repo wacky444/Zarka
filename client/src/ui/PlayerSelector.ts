@@ -87,6 +87,14 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
     this.grid.setTutorialHighlight(highlighted);
   }
 
+  isTutorialHighlighted(): boolean {
+    return this.grid.isTutorialHighlighted();
+  }
+
+  getTutorialHighlightedTarget(): Phaser.GameObjects.GameObject | null {
+    return this.grid.getTutorialHighlightedTarget();
+  }
+
   setOptions(options: PlayerOption[]): void {
     if (this.disposed) {
       return;

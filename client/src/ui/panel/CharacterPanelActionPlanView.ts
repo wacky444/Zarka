@@ -1454,6 +1454,43 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.playerSelector.setTutorialHighlight(shouldHighlightPlayer);
   }
 
+  getHighlightedTarget(): Phaser.GameObjects.GameObject | null {
+    if (this.mainActionDropdown.isModalOpen()) {
+      const target = this.mainActionDropdown.getTutorialHighlightedTarget();
+      if (target) {
+        return target;
+      }
+    }
+    if (this.secondaryActionDropdown.isModalOpen()) {
+      const target = this.secondaryActionDropdown.getTutorialHighlightedTarget();
+      if (target) {
+        return target;
+      }
+    }
+    if (this.playerSelector.isModalOpen()) {
+      const target = this.playerSelector.getTutorialHighlightedTarget();
+      if (target) {
+        return target;
+      }
+    }
+    if (this.mainActionDropdown.isTutorialHighlighted()) {
+      return this.mainActionDropdown.getTutorialHighlightedTarget();
+    }
+    if (this.secondaryActionDropdown.isTutorialHighlighted()) {
+      return this.secondaryActionDropdown.getTutorialHighlightedTarget();
+    }
+    if (this.extraExecutionSelector.isTutorialHighlighted()) {
+      return this.extraExecutionSelector.getTutorialHighlightedTarget();
+    }
+    if (this.locationSelector.isTutorialHighlighted()) {
+      return this.locationSelector.getTutorialHighlightedTarget();
+    }
+    if (this.playerSelector.isTutorialHighlighted()) {
+      return this.playerSelector.getTutorialHighlightedTarget();
+    }
+    return null;
+  }
+
   syncTutorialActionSelection(
     policy: ReturnType<typeof getTutorialUiPolicy>,
     currentUserId: string | null,

@@ -193,6 +193,13 @@ export class CharacterPanelReadyView {
     return this.readyHighlightBorder.visible;
   }
 
+  getHighlightedTarget(): Phaser.GameObjects.Rectangle | null {
+    if (this.isHighlightActive()) {
+      return this.readyHighlightBorder;
+    }
+    return null;
+  }
+
   setPosition(x: number, y: number): void {
     this.readyToggle.setPosition(x, y);
     this.checkMarkText.setPosition(x + 14, y + 8);

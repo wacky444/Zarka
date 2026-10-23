@@ -186,8 +186,8 @@ export class GameScene extends Phaser.Scene {
   private victoryOverlay: VictoryOverlay | null = null;
   private stopVictoryDance: (() => void) | null = null;
   private tutorialInstructionView: TutorialInstructionView | null = null;
+  private tutorialArrowContainer: Phaser.GameObjects.Container | null = null;
   private tutorialArrow: Phaser.GameObjects.Image | null = null;
-  private tutorialArrowTween: Phaser.Tweens.Tween | null = null;
   private tutorialWelcomeModal: TutorialWelcomeModal | null = null;
   private tutorialWelcomeActive = false;
   private reportTransitionStarted = false;
@@ -1026,19 +1026,32 @@ export class GameScene extends Phaser.Scene {
       onTransitionComplete: () => this.openEndGameReport(),
     });
     this.tutorialInstructionView = new TutorialInstructionView(this);
+    this.tutorialArrowContainer = this.add
+      .container(0, 0)
+      .setDepth(3000)
+      .setVisible(false);
+    this.cam.ignore(this.tutorialArrowContainer);
+
     this.tutorialArrow = this.add
       .image(0, 0, "tutorial-forward-arrow")
-      .setDisplaySize(36, 36)
-      .setDepth(2000)
-      .setVisible(false);
-    this.tutorialArrowTween = this.tweens.add({
+      .setDisplaySize(28, 28)
+      .setOrigin(1, 0.5);
+    this.tutorialArrowContainer.add(this.tutorialArrow);
+
+    this.tweens.add({
       targets: this.tutorialArrow,
-      x: "+=10",
-      duration: 550,
+      x: { from: -8, to: 0 },
+      duration: 450,
       yoyo: true,
       repeat: -1,
       ease: "Sine.easeInOut"
     });
+
+    this.events.on(
+      Phaser.Scenes.Events.POST_UPDATE,
+      this.updateTutorialArrowPosition,
+      this
+    );
     this.cam.ignore(this.tutorialInstructionView.getContainer());
     this.tutorialWelcomeModal = new TutorialWelcomeModal(this);
     this.tutorialWelcomeModal.setCallbacks(
@@ -1175,6 +1188,14 @@ export class GameScene extends Phaser.Scene {
         "webglcontextrestored",
         this.webglRestoredHandler
       );
+      this.events.off(
+        Phaser.Scenes.Events.POST_UPDATE,
+        this.updateTutorialArrowPosition,
+        this
+      );
+      this.tutorialArrowContainer?.destroy();
+      this.tutorialArrowContainer = null;
+      this.tutorialArrow = null;
       this.replayPlaybackCancelled = true;
       this.resolveReplayResumeWaiters();
       this.actionPlanSynchronizer?.destroy();
@@ -2325,27 +2346,62 @@ export class GameScene extends Phaser.Scene {
     }
     this.tutorialInstructionView?.setStep(currentStep);
     this.characterPanel?.setTutorialStep(currentStep, isTutorial);
-    const policy = getTutorialUiPolicy(currentStep);
-    this.updateTutorialArrow(
-      isTutorial &&
-        !this.tutorialWelcomeActive &&
-        currentStep !== null &&
-        (policy.highlightedControls.length > 0 ||
-          policy.highlightedTab !== null ||
-          policy.highlightedCharacterSubtab !== null)
-    );
+    this.updateTutorialArrowPosition();
   }
 
-  private updateTutorialArrow(visible: boolean): void {
-    const arrow = this.tutorialArrow;
-    const panel = this.characterPanel;
-    if (!arrow || !panel || !visible || (this.mobileLayout && this.mobileViewMode !== "sidebar")) {
-      arrow?.setVisible(false);
+  private updateTutorialArrowPosition(): void {
+    const container = this.tutorialArrowContainer;
+    if (
+      !container ||
+      !this.tutorialController ||
+      this.tutorialWelcomeActive ||
+      this.sceneShuttingDown
+    ) {
+      if (container?.visible) {
+        container.setVisible(false);
+      }
       return;
     }
 
-    const bounds = panel.getBounds();
-    arrow.setPosition(bounds.left - 28, bounds.centerY).setVisible(true);
+    let targetBounds: Phaser.Geom.Rectangle | null = null;
+
+    if (
+      this.mobileLayout &&
+      this.mobileViewMode === "map" &&
+      this.panelButtonHighlighted &&
+      this.viewModeButton?.visible
+    ) {
+      targetBounds = this.viewModeButton.getBounds();
+    } else if (!this.mobileLayout || this.mobileViewMode === "sidebar") {
+      targetBounds =
+        this.characterPanel?.getTutorialHighlightedBounds() ?? null;
+    }
+
+    if (!targetBounds || targetBounds.width <= 0 || targetBounds.height <= 0) {
+      if (container.visible) {
+        container.setVisible(false);
+      }
+      return;
+    }
+
+    if (targetBounds.bottom < 40 || targetBounds.top > this.scale.height - 20) {
+      if (container.visible) {
+        container.setVisible(false);
+      }
+      return;
+    }
+
+    if (targetBounds.left >= 36) {
+      container.setAngle(0);
+      container.setPosition(targetBounds.left - 6, targetBounds.centerY);
+    } else {
+      container.setAngle(90);
+      container.setPosition(targetBounds.centerX, targetBounds.top - 6);
+    }
+
+    if (!container.visible) {
+      container.setVisible(true);
+    }
   }
 
   private recordTutorialPresentation(stepId: TutorialStepId): void {

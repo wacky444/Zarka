@@ -357,6 +357,21 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     }
   }
 
+  getHighlightedTarget(): Phaser.GameObjects.GameObject | null {
+    if (!this.highlightedShopId) {
+      return null;
+    }
+    const card = this.cards.find(
+      (c) => c.definition.id === this.highlightedShopId
+    );
+    if (!card) {
+      return null;
+    }
+    return card.buyBackground && card.buyBackground.visible
+      ? card.buyBackground
+      : card.background;
+  }
+
   update(
     match: MatchRecord | null,
     currentUserId: string | null,

@@ -157,6 +157,17 @@ export class ExtraExecutionSelector extends Phaser.GameObjects.Container {
     );
   }
 
+  isTutorialHighlighted(): boolean {
+    return this.tutorialHighlighted;
+  }
+
+  getTutorialHighlightedTarget(): Phaser.GameObjects.GameObject | null {
+    if (this.tutorialHighlighted && this.incButton.visible) {
+      return this.incButton;
+    }
+    return null;
+  }
+
   setEnabled(enabled: boolean): void {
     if (this.disposed) {
       return;

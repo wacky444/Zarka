@@ -642,6 +642,28 @@ export class GridSelect extends Phaser.GameObjects.Container {
     return this;
   }
 
+  isTutorialHighlighted(): boolean {
+    return this.tutorialHighlighted;
+  }
+
+  getTutorialHighlightedTarget(): Phaser.GameObjects.GameObject | null {
+    if (this.modalVisible) {
+      const highlightedCell = this.staticGridCells.find(
+        (c) => c.item.highlighted
+      );
+      if (highlightedCell && highlightedCell.background.visible) {
+        return highlightedCell.background;
+      }
+      if (this.confirmButton?.visible) {
+        return this.confirmButton;
+      }
+    }
+    if (this.tutorialHighlighted) {
+      return this.background;
+    }
+    return null;
+  }
+
   setEnabled(enabled: boolean) {
     if (this.enabled === enabled) {
       return this;

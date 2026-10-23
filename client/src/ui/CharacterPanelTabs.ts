@@ -57,6 +57,10 @@ export class CharacterPanelTabs {
     return this.activeKey;
   }
 
+  getHighlightedTab(): TabKey | null {
+    return this.highlightedKey;
+  }
+
   isActive(key: TabKey): boolean {
     return this.activeKey === key;
   }

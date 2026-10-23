@@ -432,6 +432,24 @@ export class CharacterPanelSkillsView {
     return this.confirmBtnHighlighted;
   }
 
+  getHighlightedTarget(): Phaser.GameObjects.GameObject | null {
+    if (this.categoryTabs.getHighlightedKey()) {
+      const tabTarget = this.categoryTabs.getHighlightedTarget();
+      if (tabTarget && tabTarget.visible) {
+        return tabTarget;
+      }
+    }
+    if (this.confirmBtnHighlighted && this.confirmBtnBg.visible) {
+      return this.confirmBtnBg;
+    }
+    for (const item of this.cardItems) {
+      if (item.upgradeBtnBg.isStroked && item.upgradeBtnBg.visible) {
+        return item.upgradeBtnBg;
+      }
+    }
+    return null;
+  }
+
   isSkillUpgradeHighlighted(skillId: SkillId): boolean {
     const item = this.cardItems.find((card) => card.skill.id === skillId);
     return item?.upgradeBtnBg.isStroked ?? false;

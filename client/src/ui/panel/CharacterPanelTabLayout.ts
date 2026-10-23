@@ -55,6 +55,29 @@ export class CharacterPanelTabLayout {
     this.layout(this.getWidth());
   }
 
+  getHighlightedTabTarget(): Phaser.GameObjects.Rectangle | null {
+    const highlightedTabKey = this.getHighlightedTab?.() ?? null;
+    if (!highlightedTabKey) {
+      return null;
+    }
+    const highlightedTabIndex = this.tabs.findIndex(
+      (tab) => tab.key === highlightedTabKey
+    );
+    if (highlightedTabIndex < 0) {
+      return null;
+    }
+    const visibleCount = this.getVisibleTabCount(this.getWidth());
+    const showArrows =
+      this.mobileNavigation && this.tabs.length > visibleCount;
+    if (showArrows && highlightedTabIndex < this.startIndex) {
+      return this.previousButton;
+    }
+    if (showArrows && highlightedTabIndex >= this.startIndex + visibleCount) {
+      return this.nextButton;
+    }
+    return this.tabs[highlightedTabIndex]?.rect ?? null;
+  }
+
   move(delta: number): void {
     if (!this.mobileNavigation) {
       return;

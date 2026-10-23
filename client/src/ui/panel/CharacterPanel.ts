@@ -842,6 +842,56 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.setReadyEnabled(this.readyEnabled);
   }
 
+  getTutorialHighlightedBounds(): Phaser.Geom.Rectangle | null {
+    if (!this.tutorialActive || !this.visible) {
+      return null;
+    }
+
+    const tabTarget = this.tabLayout.getHighlightedTabTarget();
+    if (tabTarget && tabTarget.visible) {
+      return tabTarget.getBounds();
+    }
+
+    const activeTab = this.tabsController?.getActiveTab();
+
+    if (activeTab === "shop") {
+      const shopTarget = this.shopView.getHighlightedTarget();
+      if (shopTarget && (shopTarget as unknown as { visible?: boolean }).visible !== false) {
+        return (shopTarget as unknown as Phaser.GameObjects.Components.GetBounds).getBounds();
+      }
+    }
+
+    if (activeTab === "character") {
+      const subtabTarget = this.characterSubtabs.getHighlightedTarget();
+      if (subtabTarget && subtabTarget.visible) {
+        return subtabTarget.getBounds();
+      }
+
+      const activeSubtab = this.characterSubtabs.getActiveKey();
+
+      if (activeSubtab === "skills") {
+        const skillsTarget = this.skillsView.getHighlightedTarget();
+        if (skillsTarget && (skillsTarget as unknown as { visible?: boolean }).visible !== false) {
+          return (skillsTarget as unknown as Phaser.GameObjects.Components.GetBounds).getBounds();
+        }
+      }
+
+      if (activeSubtab === "status") {
+        const actionTarget = this.actionPlanView?.getHighlightedTarget();
+        if (actionTarget && (actionTarget as unknown as { visible?: boolean }).visible !== false) {
+          return (actionTarget as unknown as Phaser.GameObjects.Components.GetBounds).getBounds();
+        }
+
+        const readyTarget = this.readyView.getHighlightedTarget();
+        if (readyTarget && readyTarget.visible) {
+          return readyTarget.getBounds();
+        }
+      }
+    }
+
+    return null;
+  }
+
   setMobileTabNavigation(enabled: boolean): void {
     this.tabLayout.setMobileNavigation(enabled);
     const activeKey = enabled ? this.tabsController?.getActiveTab() : null;
