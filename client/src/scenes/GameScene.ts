@@ -1040,14 +1040,14 @@ export class GameScene extends Phaser.Scene {
 
     this.tutorialArrow = this.add
       .image(0, 0, "tutorial-forward-arrow")
-      .setDisplaySize(28, 28)
+      .setDisplaySize(56, 56)
       .setOrigin(1, 0.5)
       .setTint(THEME.colors.tutorialHighlight);
     this.tutorialArrowContainer.add(this.tutorialArrow);
 
     this.tweens.add({
       targets: this.tutorialArrow,
-      x: { from: -8, to: 0 },
+      x: { from: -12, to: 0 },
       duration: 450,
       yoyo: true,
       repeat: -1,
@@ -2399,12 +2399,12 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    if (targetBounds.left >= 36) {
+    if (targetBounds.left >= 64) {
       container.setAngle(0);
-      container.setPosition(targetBounds.left - 6, targetBounds.centerY);
+      container.setPosition(targetBounds.left - 8, targetBounds.centerY);
     } else {
       container.setAngle(90);
-      container.setPosition(targetBounds.centerX, targetBounds.top - 6);
+      container.setPosition(targetBounds.centerX, targetBounds.top - 8);
     }
 
     if (!container.visible) {
