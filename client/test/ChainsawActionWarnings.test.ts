@@ -162,3 +162,19 @@ test("continue to report translates correctly in Spanish and English", () => {
   }
 });
 
+test("tile destroyed translates correctly in Spanish and English", () => {
+  const previousLocale = getLocale();
+  try {
+    setLocale("es");
+    assert.equal(t("Tile destroyed at"), "Casilla destruida en");
+    assert.equal(t("Tile destroyed at (1, 2)"), "Casilla destruida en (1, 2)");
+    setLocale("en");
+    assert.equal(t("Tile destroyed at"), "Tile destroyed at");
+    assert.equal(t("Casilla destruida en"), "Tile destroyed at");
+    assert.equal(t("Casilla destruida en (1, 2)"), "Tile destroyed at (1, 2)");
+  } finally {
+    setLocale(previousLocale);
+  }
+});
+
+

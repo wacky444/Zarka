@@ -3990,7 +3990,7 @@ export class GameScene extends Phaser.Scene {
 
   showTileDestroyedBanner(cell: Axial): void {
     const bannerPayload: TopBannerPayload = {
-      text: `Tile destroyed at (${cell.q}, ${cell.r})`,
+      text: `${t("Tile destroyed at")} (${cell.q}, ${cell.r})`,
       texture: "board_icon_skull"
     };
     this.topBanner?.show(bannerPayload);

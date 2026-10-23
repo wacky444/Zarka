@@ -601,6 +601,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Action failed": "Acción fallida",
   "Incoming Destruction": "Destrucción entrante",
   "Destroyed in": "Se destruirá en",
+  "Tile destroyed at": "Casilla destruida en",
   turn: "turno",
   "Defeated in battle": "Derrotado en combate",
   "erupted in flames": "ardió en llamas",
@@ -900,6 +901,7 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   Comenzar: "Start",
   "Continuar al informe": "Continue to Report",
   "continuar al informe": "continue to report",
+  "Casilla destruida en": "Tile destroyed at",
   "Detecta incendios a cualquier distancia e identifica a los jugadores en la misma localización o hasta 1 localización de distancia":
     "Detects fires at any distance and identifies players in the same or an adjacent location",
   "Crear un incendio": "Start a fire",
@@ -1202,7 +1204,8 @@ const PREFIX_TRANSLATIONS: Array<[RegExp, string]> = [
   [/\bLosses:/g, "Derrotas:"],
   [/\bDraws:/g, "Empates:"],
   [/\bWin streak:/g, "Racha de victorias:"],
-  [/\bRank:/g, "Rango:"]
+  [/\bRank:/g, "Rango:"],
+  [/^Tile destroyed at\s*/, "Casilla destruida en "]
 ];
 
 let locale: Locale = readInitialLocale();
@@ -1276,6 +1279,12 @@ function translateValue(value: string): string {
     const numberedTeamName = value.match(/^Equipo (\d+)$/);
     if (numberedTeamName) {
       return `Team ${numberedTeamName[1]}`;
+    }
+    const tileDestroyed = value.match(/^Casilla destruida en(?:\s+(.*))?$/);
+    if (tileDestroyed) {
+      return tileDestroyed[1]
+        ? `Tile destroyed at ${tileDestroyed[1]}`
+        : "Tile destroyed at";
     }
     return ENGLISH_GAME_NAMES[value] ?? value;
   }
