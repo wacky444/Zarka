@@ -27,6 +27,7 @@ export interface CharacterPanelReadyRefreshOptions {
   tutorialReadyEnabled: boolean;
   tutorialReadyAllowed: boolean;
   hasChainsawOrderConflict?: boolean;
+  mobile?: boolean;
 }
 
 export class CharacterPanelReadyView {
@@ -47,6 +48,7 @@ export class CharacterPanelReadyView {
   private readyPulse: Phaser.Tweens.Tween | null = null;
   private lastRefreshOptions: CharacterPanelReadyRefreshOptions | null = null;
   private activeWarning: ReadyWarning | null = null;
+  private mobile = false;
 
   constructor(config: CharacterPanelReadyViewConfig) {
     const { scene, parent, x, y, onReadyChange } = config;
@@ -111,6 +113,10 @@ export class CharacterPanelReadyView {
       x: x + this.readyToggle.width + 12,
       y: y + 1,
       text: "",
+      color: THEME.colors.error,
+      tooltip: () => this.unspentSkillsWarning.getText(),
+      onTooltipRequested: (message, tooltipX, tooltipY) =>
+        this.showWarningTooltip(message, tooltipX, tooltipY)
     });
     this.energyWarning = new ReadyWarning({
       scene,
@@ -118,11 +124,14 @@ export class CharacterPanelReadyView {
       x: x + this.readyToggle.width + 12,
       y: y + 1,
       text: t("Insufficient energy"),
+      color: THEME.colors.warning,
       emphasized: true,
       tooltip: () =>
-        t("Without energy, actions hurt for 1 damage and actions with extra effort will fail."),
+        t(
+          "Insufficient energy, actions hurt for 1 damage and actions with extra effort will fail."
+        ),
       onTooltipRequested: (message, tooltipX, tooltipY) =>
-        this.showWarningTooltip(message, tooltipX, tooltipY),
+        this.showWarningTooltip(message, tooltipX, tooltipY)
     });
     this.overweightWarning = new ReadyWarning({
       scene,
@@ -130,10 +139,11 @@ export class CharacterPanelReadyView {
       x: x + this.readyToggle.width + 12,
       y: y + 1,
       text: t("Overweight"),
+      color: THEME.colors.warning,
       emphasized: true,
       tooltip: () => t("Your current actions may make you overweight"),
       onTooltipRequested: (message, tooltipX, tooltipY) =>
-        this.showWarningTooltip(message, tooltipX, tooltipY),
+        this.showWarningTooltip(message, tooltipX, tooltipY)
     });
     this.chainsawOrderWarning = new ReadyWarning({
       scene,
@@ -141,13 +151,14 @@ export class CharacterPanelReadyView {
       x: x + this.readyToggle.width + 12,
       y: y + 1,
       text: t("Chainsaw order"),
+      color: THEME.colors.warning,
       emphasized: true,
       tooltip: () =>
         t(
           "The chainsaw attack order goes first, it won't be started, it requires two turns, first start then attack"
         ),
       onTooltipRequested: (message, tooltipX, tooltipY) =>
-        this.showWarningTooltip(message, tooltipX, tooltipY),
+        this.showWarningTooltip(message, tooltipX, tooltipY)
     });
 
     this.warningTooltip = new ItemTooltipManager(scene);
@@ -182,10 +193,10 @@ export class CharacterPanelReadyView {
       this.readyToggle,
       this.checkMarkText,
       this.readyHighlightBorder,
-      this.unspentSkillsWarning.gameObject,
-      this.energyWarning.gameObject,
-      this.overweightWarning.gameObject,
-      this.chainsawOrderWarning.gameObject,
+      ...this.unspentSkillsWarning.getAllGameObjects(),
+      ...this.energyWarning.getAllGameObjects(),
+      ...this.overweightWarning.getAllGameObjects(),
+      ...this.chainsawOrderWarning.getAllGameObjects()
     ];
   }
 
@@ -237,7 +248,21 @@ export class CharacterPanelReadyView {
     return this.readyEnabled;
   }
 
+  setMobile(mobile: boolean): void {
+    if (this.mobile === mobile) {
+      return;
+    }
+    this.mobile = mobile;
+    this.unspentSkillsWarning.setMobile(mobile);
+    this.energyWarning.setMobile(mobile);
+    this.overweightWarning.setMobile(mobile);
+    this.chainsawOrderWarning.setMobile(mobile);
+  }
+
   refresh(options: CharacterPanelReadyRefreshOptions): void {
+    if (options.mobile !== undefined) {
+      this.setMobile(options.mobile);
+    }
     this.lastRefreshOptions = options;
     const hasUnspentSkillPoints = options.unspentSkillPoints > 0;
     const mustSpendSkillPoints =
@@ -343,7 +368,10 @@ export class CharacterPanelReadyView {
       Phaser.Input.Events.POINTER_DOWN,
       this.handlePointerDown
     );
-    this.readyToggle.off(Phaser.Input.Events.POINTER_OUT, this.handlePointerOut);
+    this.readyToggle.off(
+      Phaser.Input.Events.POINTER_OUT,
+      this.handlePointerOut
+    );
     this.readyToggle.off(Phaser.Input.Events.POINTER_UP, this.handlePointerUp);
     this.scene.input.off(
       Phaser.Input.Events.POINTER_DOWN,
@@ -419,17 +447,17 @@ export class CharacterPanelReadyView {
     this.energyWarning.setPosition(
       warningX,
       this.readyToggle.y +
-        (this.readyToggle.height - this.energyWarning.gameObject.height) / 2
+        (this.readyToggle.height - this.energyWarning.getHeight()) / 2
     );
     this.overweightWarning.setPosition(
       warningX,
       this.readyToggle.y +
-        (this.readyToggle.height - this.overweightWarning.gameObject.height) / 2
+        (this.readyToggle.height - this.overweightWarning.getHeight()) / 2
     );
     this.chainsawOrderWarning.setPosition(
       warningX,
       this.readyToggle.y +
-        (this.readyToggle.height - this.chainsawOrderWarning.gameObject.height) / 2
+        (this.readyToggle.height - this.chainsawOrderWarning.getHeight()) / 2
     );
   }
 

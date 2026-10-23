@@ -16,6 +16,7 @@ export const THEME = {
     textDisabled: "#94a3b8",
     cooldown: "#f87171",
     warning: "#fb923c",
+    error: "#ef4444",
     zarkanGold: "#facc15",
     energyCost: "#fafa15",
     energyAccent: 0xfafa15,

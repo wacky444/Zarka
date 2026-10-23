@@ -127,6 +127,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private panelHeight: number;
   private currentTurn = 0;
   private readyEnabled = false;
+  private mobileLayout = false;
   private playerOptions: PlayerOption[] = [];
   private playersTabView!: CharacterPanelPlayerListView;
   private itemOptions: ItemPriorityOption[] = [];
@@ -893,11 +894,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   setMobileTabNavigation(enabled: boolean): void {
+    this.mobileLayout = enabled;
     this.tabLayout.setMobileNavigation(enabled);
     const activeKey = enabled ? this.tabsController?.getActiveTab() : null;
     if (activeKey) {
       this.tabLayout.reveal(activeKey);
     }
+    this.readyView?.setMobile(enabled);
   }
 
   setPanelVisibility(visible: boolean): void {
@@ -1232,7 +1235,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       tutorialActive: this.tutorialActive,
       tutorialStepId: this.tutorialStepId,
       tutorialReadyEnabled: this.tutorialReadyEnabled,
-      tutorialReadyAllowed
+      tutorialReadyAllowed,
+      mobile: this.mobileLayout
     });
   }
 

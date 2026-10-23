@@ -644,8 +644,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Skills: "Habilidades",
   "Unspent points": "Puntos sin gastar",
   "Insufficient energy": "Energía insuficiente",
-  "Without energy, actions hurt for 1 damage and actions with extra effort will fail.":
-    "Sin energía, las acciones causan 1 punto de daño y las acciones con esfuerzo adicional fallarán.",
+  "Insufficient energy, actions hurt for 1 damage and actions with extra effort will fail.":
+    "Energía insuficiente, las acciones causan 1 punto de daño y las acciones con esfuerzo adicional fallarán.",
   Overweight: "Sobrecargado",
   "Your current actions may make you overweight":
     "Tus acciones actuales pueden sobrecargarte.",
