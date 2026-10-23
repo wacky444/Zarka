@@ -1,6 +1,6 @@
 import type { Client, Session } from "@heroiclabs/nakama-js";
 import { DEFAULT_SKIN } from "@shared";
-import type { UserAccount, GetUserAccountPayload } from "@shared";
+import type { UserAccount, GetUserAccountPayload, UserRankTier } from "@shared";
 
 type NakamaUserRaw = {
   id?: string;
@@ -14,9 +14,20 @@ function parseAccountFromRaw(raw: NakamaUserRaw): UserAccount | null {
   const userId = raw.user_id ?? raw.id;
   if (!userId) return null;
 
-  const metadata = raw.metadata as Record<string, unknown> | undefined;
-  const zarka = metadata?.zarka as Record<string, unknown> | undefined;
+  let metadataObj: Record<string, unknown> | undefined;
+  if (typeof raw.metadata === "string") {
+    try {
+      metadataObj = JSON.parse(raw.metadata);
+    } catch {
+      metadataObj = undefined;
+    }
+  } else if (raw.metadata && typeof raw.metadata === "object") {
+    metadataObj = raw.metadata as Record<string, unknown>;
+  }
+
+  const zarka = metadataObj?.zarka as Record<string, unknown> | undefined;
   const cosmetics = zarka?.cosmetics as Record<string, unknown> | undefined;
+  const statsObj = zarka?.stats as Record<string, unknown> | undefined;
   const skinRaw = cosmetics?.selectedSkinId as
     | Record<string, unknown>
     | undefined;
@@ -31,20 +42,39 @@ function parseAccountFromRaw(raw: NakamaUserRaw): UserAccount | null {
       }
     : DEFAULT_SKIN;
 
+  const elo =
+    typeof statsObj?.elo === "number" && isFinite(statsObj.elo)
+      ? statsObj.elo
+      : 1000;
+  const highestElo =
+    typeof statsObj?.highestElo === "number" && isFinite(statsObj.highestElo)
+      ? statsObj.highestElo
+      : Math.max(elo, 1000);
+
   return {
     userId,
     username: raw.username ?? userId,
     displayName: raw.display_name || undefined,
     tutorialCompleted: zarka?.tutorialCompleted === true,
     stats: {
-      matchesPlayed: 0,
-      wins: 0,
-      losses: 0,
-      draws: 0,
-      elo: 0,
-      highestElo: 0,
-      currentWinStreak: 0,
-      bestWinStreak: 0,
+      matchesPlayed:
+        typeof statsObj?.matchesPlayed === "number"
+          ? statsObj.matchesPlayed
+          : 0,
+      wins: typeof statsObj?.wins === "number" ? statsObj.wins : 0,
+      losses: typeof statsObj?.losses === "number" ? statsObj.losses : 0,
+      draws: typeof statsObj?.draws === "number" ? statsObj.draws : 0,
+      elo,
+      highestElo,
+      currentWinStreak:
+        typeof statsObj?.currentWinStreak === "number"
+          ? statsObj.currentWinStreak
+          : 0,
+      bestWinStreak:
+        typeof statsObj?.bestWinStreak === "number"
+          ? statsObj.bestWinStreak
+          : 0,
+      rankTier: (statsObj?.rankTier as UserRankTier) ?? "unranked",
     },
     cosmetics: { selectedSkinId: skin },
   };

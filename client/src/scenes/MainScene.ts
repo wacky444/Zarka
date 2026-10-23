@@ -24,11 +24,14 @@ import {
 import { MenuAshEffect } from "../animation/MenuAshEffect";
 import { t } from "../services/i18n";
 import {
+  DEFAULT_SKIN,
   TUTORIAL_MATCH_METADATA_KEY,
   type MatchCardStatus,
   type MatchCardSummary,
-  type ListMyMatchesPayload
+  type ListMyMatchesPayload,
+  type UserAccount
 } from "@shared";
+import type { LobbyPlayerData } from "../ui/LobbyPlayerCard";
 import { resolveMyMatchRoute } from "./MyMatchesListModel";
 import { openPublicMatchSelection } from "./PublicMatchesModel";
 import { assetPath } from "../utils/assetPath";
@@ -71,6 +74,7 @@ export class MainScene extends Phaser.Scene {
   private currentMatchId: string | null = null;
   private currentRuntimeMatchId: string | null = null;
   private currentMatchName: string | null = null;
+  private currentMatchCreator?: string;
   private moveCounter = 0;
   private matchesListView!: MatchesListView;
   private myMatchesListView!: MyMatchesListView;
@@ -100,6 +104,66 @@ export class MainScene extends Phaser.Scene {
 
   constructor() {
     super("MainScene");
+  }
+
+  private async updateLobbyPlayers(
+    playerIds: string[],
+    creatorId?: string
+  ): Promise<void> {
+    if (!this.lobbyView) return;
+    if (!playerIds || playerIds.length === 0) {
+      this.lobbyView.setPlayers([]);
+      return;
+    }
+
+    try {
+      const usernameMapPromise = this.turnService
+        ? this.turnService
+            .resolveUsernames(playerIds)
+            .catch(() => ({} as Record<string, string>))
+        : Promise.resolve({} as Record<string, string>);
+      const accountsMapPromise = this.accountService
+        ? this.accountService
+            .getAccounts(playerIds)
+            .catch(() => new Map<string, UserAccount>())
+        : Promise.resolve(new Map<string, UserAccount>());
+
+      const [usernameMap, accountsMap] = await Promise.all([
+        usernameMapPromise,
+        accountsMapPromise
+      ]);
+
+      const effectiveCreator = creatorId ?? this.currentMatchCreator;
+      const players: LobbyPlayerData[] = playerIds.map((id, index) => {
+        const account = accountsMap.get(id);
+        const resolvedName =
+          account?.displayName?.trim() ||
+          usernameMap[id] ||
+          account?.username ||
+          id;
+        return {
+          id,
+          name: resolvedName,
+          elo: account?.stats?.elo ?? 1000,
+          skin: account?.cosmetics?.selectedSkinId ?? DEFAULT_SKIN,
+          isHost: Boolean(effectiveCreator && id === effectiveCreator),
+          isSelf: Boolean(this.currentUserId && id === this.currentUserId),
+          index: index + 1
+        };
+      });
+
+      this.lobbyView.setPlayers(players);
+    } catch (e) {
+      console.warn("Failed to resolve lobby players", e);
+      this.lobbyView.setPlayers(
+        playerIds.map((id, index) => ({
+          id,
+          name: id,
+          elo: 1000,
+          index: index + 1
+        }))
+      );
+    }
   }
 
   private async joinMatch(matchId: string) {
@@ -150,18 +214,10 @@ export class MainScene extends Phaser.Scene {
           this.lobbyView.setMatchStarted(parsed.started);
         }
         if (Array.isArray(parsed.players) && parsed.players.length > 0) {
-          try {
-            const usernameMap = await this.turnService.resolveUsernames(
-              parsed.players
-            );
-            const playerNames = parsed.players.map(
-              (id) => usernameMap[id] ?? id
-            );
-            this.lobbyView.setPlayers(playerNames);
-          } catch (e) {
-            console.warn("Failed to resolve player usernames", e);
-            this.lobbyView.setPlayers(parsed.players);
-          }
+          await this.updateLobbyPlayers(
+            parsed.players,
+            this.currentMatchCreator
+          );
         } else {
           this.lobbyView.setPlayers([]);
         }
@@ -179,25 +235,17 @@ export class MainScene extends Phaser.Scene {
                 })
               : undefined;
           const creator: string | undefined = matchObj?.creator;
+          this.currentMatchCreator = creator;
           const isSelf =
             !!creator && !!this.currentUserId && creator === this.currentUserId;
+          let creatorDisplay: string | undefined;
+          if (creator) {
+            const single = await this.turnService.resolveUsernames([creator]);
+            creatorDisplay = single[creator];
+          }
+          this.lobbyView.setCreator(creator, isSelf, creatorDisplay);
           if (Array.isArray(matchObj?.players) && matchObj.players.length > 0) {
-            const usernameMap = await this.turnService.resolveUsernames(
-              matchObj.players
-            );
-            const playerNames = matchObj.players.map(
-              (id) => usernameMap[id] ?? id
-            );
-            this.lobbyView.setPlayers(playerNames);
-            const creatorDisplay = creator ? usernameMap[creator] : undefined;
-            this.lobbyView.setCreator(creator, isSelf, creatorDisplay);
-          } else {
-            let creatorDisplay: string | undefined;
-            if (creator) {
-              const single = await this.turnService.resolveUsernames([creator]);
-              creatorDisplay = single[creator];
-            }
-            this.lobbyView.setCreator(creator, isSelf, creatorDisplay);
+            await this.updateLobbyPlayers(matchObj.players, creator);
           }
           if (matchObj?.name) {
             this.lobbyView.setMatchName(matchObj.name);
@@ -239,6 +287,13 @@ export class MainScene extends Phaser.Scene {
       "zarka-main-title",
       assetPath("assets/images/zarka-icon-hexagon.png")
     );
+    if (!this.textures.exists("char")) {
+      this.load.atlasXML(
+        "char",
+        assetPath("assets/spritesheets/roguelikeChar_transparent.png"),
+        assetPath("assets/spritesheets/roguelikeChar_transparent.xml")
+      );
+    }
     preloadMenuMusic(this);
   }
 
@@ -352,19 +407,12 @@ export class MainScene extends Phaser.Scene {
           const players = [...p.players];
           if (players.length === 0) {
             view.setPlayers([]);
-          } else if (this.turnService) {
-            this.turnService
-              .resolveUsernames(players)
-              .then((map) => {
-                const names = players.map((id) => map[id] ?? id);
-                view.setPlayers(names);
-              })
-              .catch((e) => {
-                console.warn("Failed to resolve player usernames", e);
-                view.setPlayers(players);
-              });
           } else {
-            view.setPlayers(players);
+            this.updateLobbyPlayers(players, this.currentMatchCreator).catch(
+              (e) => {
+                console.warn("Failed to update lobby players from settings", e);
+              }
+            );
           }
         }
         if (p.started && this.activeView === "inMatch") {
@@ -407,6 +455,7 @@ export class MainScene extends Phaser.Scene {
         }
         this.setCurrentMatchId(null);
         this.currentMatchName = null;
+        this.currentMatchCreator = undefined;
         this.lobbyView.setPlayers([]);
         this.lobbyView.setCreator(undefined, false);
         this.lobbyView.setMatchInfo();
@@ -453,6 +502,7 @@ export class MainScene extends Phaser.Scene {
             // Clear the current match after leaving its realtime presence.
             this.setCurrentMatchId(null);
             this.currentMatchName = null;
+            this.currentMatchCreator = undefined;
             this.lobbyView.setPlayers([]);
             this.lobbyView.setCreator(undefined, false);
             this.lobbyView.setMatchInfo();
@@ -498,6 +548,7 @@ export class MainScene extends Phaser.Scene {
           );
           this.setCurrentMatchId(null);
           this.currentMatchName = null;
+          this.currentMatchCreator = undefined;
           this.lobbyView.setPlayers([]);
           this.lobbyView.setCreator(undefined, false);
           this.lobbyView.setMatchInfo();
@@ -586,6 +637,7 @@ export class MainScene extends Phaser.Scene {
             );
             this.setCurrentMatchId(null);
             this.currentMatchName = null;
+            this.currentMatchCreator = undefined;
             this.lobbyView.setPlayers([]);
             this.lobbyView.setCreator(undefined, false);
             this.lobbyView.setMatchInfo();

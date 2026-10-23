@@ -11,11 +11,16 @@ import {
 } from "../ui/button";
 import {
   DEFAULT_NORMAL_MATCH_SIZE,
+  DEFAULT_SKIN,
   MAX_BOT_PLAYERS,
   MAX_NORMAL_MATCH_SIZE,
   type InMatchSettings
 } from "@shared";
 import { t } from "../services/i18n";
+import {
+  LobbyPlayerCard,
+  type LobbyPlayerData
+} from "../ui/LobbyPlayerCard";
 
 type FixWidthSizerInstance = Phaser.GameObjects.GameObject & {
   width: number;
@@ -58,7 +63,7 @@ export class LobbyView {
   private matchNameText!: Phaser.GameObjects.Text;
   private creatorText!: Phaser.GameObjects.Text;
   private playerListTitle!: Phaser.GameObjects.Text;
-  private playerListText!: Phaser.GameObjects.Text;
+  private emptyPlayerListText!: Phaser.GameObjects.Text;
   private spawnWarningText!: Phaser.GameObjects.Text;
   private headerSizer!: FixWidthSizerInstance;
   private actionSizer!: FixWidthSizerInstance;
@@ -74,7 +79,12 @@ export class LobbyView {
   private matchName = LobbyView.DEFAULT_MATCH_NAME;
   private maxPlayers = DEFAULT_NORMAL_MATCH_SIZE;
   private isHost = false;
+  private creatorId?: string;
+  private creatorName?: string;
+  private lastContentWidth?: number;
   private playerNames: string[] = [];
+  private playersData: LobbyPlayerData[] = [];
+  private playerCards: LobbyPlayerCard[] = [];
   private playersStepper?: StepperHandle;
   private colsStepper?: StepperHandle;
   private rowsStepper?: StepperHandle;
@@ -433,10 +443,15 @@ export class LobbyView {
     });
     this.contentRoot.add(this.playerListTitle);
 
-    this.playerListText = scene.add.text(0, 0, "Waiting for players...", {
-      color: "#cccccc"
-    });
-    this.contentRoot.add(this.playerListText);
+    this.emptyPlayerListText = scene.add.text(
+      0,
+      0,
+      t("Waiting for players..."),
+      {
+        color: "#cccccc"
+      }
+    );
+    this.contentRoot.add(this.emptyPlayerListText);
 
     this.spawnWarningText = scene.add.text(0, 0, "", {
       color: "#ff7777",
@@ -481,6 +496,10 @@ export class LobbyView {
     this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scene.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
       this.scene.events.off(Phaser.Scenes.Events.WAKE, this.layout, this);
+      for (const card of this.playerCards) {
+        card.destroy();
+      }
+      this.playerCards = [];
     });
   }
 
@@ -525,19 +544,33 @@ export class LobbyView {
       this.spawnWarningText.setPosition(contentLeft, cursorY);
       cursorY += this.spawnWarningText.height + LobbyView.SECTION_GAP;
     }
+    this.lastContentWidth = contentWidth;
     layoutSizer(this.settingsSizer);
 
     this.playerListTitle.setPosition(contentLeft, cursorY);
-    cursorY += this.playerListTitle.height + 6;
-    this.playerListText.setWordWrapWidth(contentWidth, true);
-    this.playerListText.setPosition(contentLeft, cursorY);
+    cursorY += this.playerListTitle.height + 8;
+
+    if (this.playerCards.length === 0) {
+      this.emptyPlayerListText.setWordWrapWidth(contentWidth, true);
+      this.emptyPlayerListText.setPosition(contentLeft, cursorY);
+      this.emptyPlayerListText.setVisible(true);
+      cursorY += this.emptyPlayerListText.height + 16;
+    } else {
+      this.emptyPlayerListText.setVisible(false);
+      for (const card of this.playerCards) {
+        card.setPosition(contentLeft, cursorY);
+        card.updateWidth(contentWidth);
+        cursorY += card.cardHeight + 8;
+      }
+      cursorY += 8;
+    }
 
     const buttonHeight = Math.max(
       this.backToMenuButton?.height ?? 0,
       this.returnToGameButton?.height ?? 0,
       28
     );
-    const minBottomY = cursorY + this.playerListText.height + 24;
+    const minBottomY = cursorY + 16;
     const pinnedBottomY =
       viewportHeight - buttonHeight - LobbyView.HORIZONTAL_PADDING;
     const bottomY = Math.max(minBottomY, pinnedBottomY);
@@ -626,6 +659,8 @@ export class LobbyView {
   }
 
   setCreator(creatorId?: string, isSelf?: boolean, creatorName?: string) {
+    this.creatorId = creatorId;
+    this.creatorName = creatorName;
     const normalizedName =
       typeof creatorName === "string"
         ? creatorName.trim().replace(/\s+/g, " ")
@@ -648,6 +683,18 @@ export class LobbyView {
     this.setRenameEnabled(enabled);
     this.setRemoveMatchEnabled(enabled);
     this.updateStartButtonState();
+
+    if (this.playersData.length > 0) {
+      let hostChanged = false;
+      for (const player of this.playersData) {
+        const wasHost = player.isHost;
+        player.isHost = Boolean(creatorId && player.id === creatorId);
+        if (wasHost !== player.isHost) hostChanged = true;
+      }
+      if (hostChanged) {
+        this.refreshPlayerList();
+      }
+    }
   }
 
   applySettings(partial: {
@@ -822,29 +869,69 @@ export class LobbyView {
     this.layout();
   }
 
-  setPlayers(usernames: string[]) {
-    const sanitized = Array.isArray(usernames)
-      ? usernames
-          .map((name) =>
-            typeof name === "string" ? name.trim().replace(/\s+/g, " ") : ""
-          )
-          .filter((name) => name.length > 0)
+  setPlayers(players: (string | LobbyPlayerData)[]) {
+    const sanitized: LobbyPlayerData[] = Array.isArray(players)
+      ? players.map((item, idx) => {
+          if (typeof item === "string") {
+            const name = item.trim().replace(/\s+/g, " ");
+            const isHost = Boolean(
+              (this.creatorId && item === this.creatorId) ||
+              (this.creatorName && name === this.creatorName)
+            );
+            return {
+              id: item,
+              name: name || item,
+              elo: 1000,
+              skin: DEFAULT_SKIN,
+              isHost,
+              isSelf: this.isHost && isHost,
+              index: idx + 1
+            };
+          }
+          return {
+            ...item,
+            name: item.name ? item.name.trim().replace(/\s+/g, " ") : item.id,
+            index: item.index ?? idx + 1,
+            isHost:
+              item.isHost ??
+              Boolean(this.creatorId && item.id === this.creatorId)
+          };
+        })
       : [];
-    this.playerNames = sanitized;
+    this.playersData = sanitized;
+    this.playerNames = sanitized.map((p) => p.name);
     this.refreshPlayerList();
   }
 
   private refreshPlayerList() {
-    if (!this.playerListTitle || !this.playerListText) return;
+    if (!this.playerListTitle || !this.emptyPlayerListText) return;
     this.serverSpawnWarning = false;
-    const playerCount = this.playerNames.length;
+    const playerCount = this.playersData.length;
     const capacity = Math.max(this.maxPlayers, 1);
     this.playerListTitle.setText(`Players (${playerCount}/${capacity})`);
+
+    for (const card of this.playerCards) {
+      this.contentRoot.remove(card, true);
+    }
+    this.playerCards = [];
+
     if (playerCount === 0) {
-      this.playerListText.setText("Waiting for players...");
+      this.emptyPlayerListText.setVisible(true);
+      this.emptyPlayerListText.setText(t("Waiting for players..."));
     } else {
-      const lines = this.playerNames.map((name, idx) => `${idx + 1}. ${name}`);
-      this.playerListText.setText(lines.join("\n"));
+      this.emptyPlayerListText.setVisible(false);
+      const cardWidth = this.lastContentWidth ?? 300;
+      for (const player of this.playersData) {
+        const card = new LobbyPlayerCard(
+          this.scene,
+          0,
+          0,
+          cardWidth,
+          player
+        );
+        this.contentRoot.add(card);
+        this.playerCards.push(card);
+      }
     }
     this.updateSpawnWarning();
     this.updateStartButtonState();
@@ -852,7 +939,7 @@ export class LobbyView {
   }
 
   private hasEnoughSpawnTiles(): boolean {
-    return this.playerNames.length + this.botPlayers <= this.cols * this.rows;
+    return this.playersData.length + this.botPlayers <= this.cols * this.rows;
   }
 
   private updateSpawnWarning() {

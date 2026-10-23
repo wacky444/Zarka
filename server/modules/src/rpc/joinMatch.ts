@@ -58,6 +58,9 @@ function joinMatchRpcLocked(
   }
 
   const match: MatchRecord = read.match;
+  if (match.removed) {
+    throw makeNakamaError("not_found", nkruntime.Codes.NOT_FOUND);
+  }
   if (
     match.metadata?.[RANKED_MATCH_METADATA_KEY] &&
     (!Array.isArray(match.players) || match.players.indexOf(ctx.userId) === -1)

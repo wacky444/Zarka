@@ -60,7 +60,7 @@ export function removeMatchRpc(
   }
 
   try {
-    nk.matchSignal(
+    nkWrapper.matchSignal(
       getRuntimeMatchId(match),
       JSON.stringify({ type: "match_removed" })
     );

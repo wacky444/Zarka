@@ -86,6 +86,7 @@ import { isAdminViewEnabled } from "../services/adminView";
 import { t } from "../services/i18n";
 import { THEME } from "../ui/ColorPalette";
 import { ReplayControls } from "../ui/ReplayControls";
+import { getRandomLoadingTip } from "../ui/LoadingTips";
 
 type PlayerEliminationBannerEvent = {
   playerId: string;
@@ -195,7 +196,6 @@ export class GameScene extends Phaser.Scene {
   private reportReplayMatchId: string | null = null;
   private previousCurrentMatchId: string | null = null;
   private reportReplayAutoplayTurn: number | null = null;
-  private manualReplayCamera: { scrollX: number; scrollY: number; zoom: number } | null = null;
   private sceneShuttingDown = false;
   private foregroundSyncRunning = false;
   private lastForegroundSyncAt = 0;
@@ -204,6 +204,7 @@ export class GameScene extends Phaser.Scene {
   private loadingFill: Phaser.GameObjects.Rectangle | null = null;
   private loadingLabel: Phaser.GameObjects.Text | null = null;
   private loadingPercent: Phaser.GameObjects.Text | null = null;
+  private loadingTip: Phaser.GameObjects.Text | null = null;
   private loadingProgress = 0;
   private pendingMatchEndPayload:
     | import("@shared").MatchEndedMessagePayload
@@ -630,6 +631,22 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setScrollFactor(0);
+    const tipMaxWidth = Math.min(520, Math.max(240, width - 64));
+    this.loadingTip = this.add
+      .text(width / 2, barY + 64, getRandomLoadingTip(), {
+        color: THEME.colors.loadingText,
+        fontFamily: "Arial",
+        fontSize: "14px",
+        fontStyle: "italic",
+        align: "center",
+        wordWrap: {
+          width: tipMaxWidth,
+          useAdvancedWrap: true,
+        },
+        lineSpacing: 4,
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0);
     this.loadingOverlay.add([
       background,
       title,
@@ -637,6 +654,7 @@ export class GameScene extends Phaser.Scene {
       this.loadingTrack,
       this.loadingFill,
       this.loadingPercent,
+      this.loadingTip,
     ]);
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.resizeLoadingOverlay, this);
@@ -678,6 +696,11 @@ export class GameScene extends Phaser.Scene {
       .setPosition(barX, barY)
       .setSize(Math.max(1, barWidth * this.loadingProgress), barHeight);
     this.loadingPercent?.setPosition(width / 2, barY + 32);
+    if (this.loadingTip) {
+      const tipMaxWidth = Math.min(520, Math.max(240, width - 64));
+      this.loadingTip.setWordWrapWidth(tipMaxWidth);
+      this.loadingTip.setPosition(width / 2, barY + 64);
+    }
   }
 
   private hideLoadingOverlay() {
@@ -690,6 +713,8 @@ export class GameScene extends Phaser.Scene {
     this.loadingFill = null;
     this.loadingLabel = null;
     this.loadingPercent = null;
+    this.loadingTip?.destroy();
+    this.loadingTip = null;
   }
 
   preload() {
@@ -4378,11 +4403,6 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.replayPlaybackCancelled = false;
-    this.manualReplayCamera = {
-      scrollX: this.cam.scrollX,
-      scrollY: this.cam.scrollY,
-      zoom: this.cam.zoom,
-    };
     this.enterReplayMode();
     this.applyReplaySnapshot(
       turn,
@@ -4404,14 +4424,6 @@ export class GameScene extends Phaser.Scene {
       }
       this.resolveReplayResumeWaiters();
       if (!this.sceneShuttingDown) {
-        if (this.manualReplayCamera) {
-          this.cam.setZoom(this.manualReplayCamera.zoom);
-          this.cam.setScroll(
-            this.manualReplayCamera.scrollX,
-            this.manualReplayCamera.scrollY
-          );
-          this.manualReplayCamera = null;
-        }
         if (this.replayView && replay.snapshot) {
           this.applyReplaySnapshot(turn, replay.snapshot);
         }

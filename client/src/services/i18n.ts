@@ -12,6 +12,39 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "continue to report": "continuar al informe",
   "Loading end-game report...": "Cargando informe final...",
   "Loading game...": "Cargando partida...",
+  "Tip:": "Consejo:",
+  "Don't attack randomly, you could be hitting your teammates":
+    "No ataques al azar, podrías golpear a tus compañeros de equipo",
+  "Don't attack randonly, you could be hitting your teammates":
+    "No ataques al azar, podrías golpear a tus compañeros de equipo",
+  "Avoid crowded areas": "Evita las zonas concurridas",
+  "If your health drops to 5 or less, you become unconscious, you become invulnerable (fire, bombard, c4, rocket and virus still damage you)":
+    "Si tu salud baja a 5 o menos, quedas inconsciente y te vuelves invulnerable (el fuego, bombardeo, C4, cohete y virus todavía te dañan)",
+  "If your health drops to 5 or less, you become unconscious, you become invulnerable(fire, bombard, c4, rocket and virus still damages you)":
+    "Si tu salud baja a 5 o menos, quedas inconsciente y te vuelves invulnerable (el fuego, bombardeo, C4, cohete y virus todavía te dañan)",
+  "After being unconscious your max health becomes 5":
+    "Tras quedar inconsciente, tu salud máxima pasa a ser 5",
+  "After being unconscious your max health become 5":
+    "Tras quedar inconsciente, tu salud máxima pasa a ser 5",
+  "Same actions of different players are resolved in a random order, unless one player has more agility 2":
+    "Las mismas acciones de diferentes jugadores se resuelven en orden aleatorio, a menos que un jugador tenga más Agilidad 2",
+  "Same actions of diferent players are resolved in a random order, unless one player has more agility2":
+    "Las mismas acciones de diferentes jugadores se resuelven en orden aleatorio, a menos que un jugador tenga más Agilidad 2",
+  "Put trusted people in your testament, you never know if you will survive one more turn":
+    "Pon a personas de confianza en tu testamento, nunca se sabe si sobrevivirás un turno más",
+  "Put trust people in your testament, you never know if you will survive one turn more":
+    "Pon a personas de confianza en tu testamento, nunca se sabe si sobrevivirás un turno más",
+  "Tip: Don't attack randomly, you could be hitting your teammates":
+    "Consejo: No ataques al azar, podrías golpear a tus compañeros de equipo",
+  "Tip: Avoid crowded areas": "Consejo: Evita las zonas concurridas",
+  "Tip: If your health drops to 5 or less, you become unconscious, you become invulnerable (fire, bombard, c4, rocket and virus still damage you)":
+    "Consejo: Si tu salud baja a 5 o menos, quedas inconsciente y te vuelves invulnerable (el fuego, bombardeo, C4, cohete y virus todavía te dañan)",
+  "Tip: After being unconscious your max health becomes 5":
+    "Consejo: Tras quedar inconsciente, tu salud máxima pasa a ser 5",
+  "Tip: Same actions of different players are resolved in a random order, unless one player has more agility 2":
+    "Consejo: Las mismas acciones de diferentes jugadores se resuelven en orden aleatorio, a menos que un jugador tenga más Agilidad 2",
+  "Tip: Put trusted people in your testament, you never know if you will survive one more turn":
+    "Consejo: Pon a personas de confianza en tu testamento, nunca se sabe si sobrevivirás un turno más",
   "Report unavailable": "Informe no disponible",
   counterattacked: "contraatacó",
   "with a punch": "con un puñetazo",
@@ -234,9 +267,11 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Extra power": "Potencia adicional",
   "Priority Items": "Objetos prioritarios",
   "Food or drink to poison": "Comida o bebida que envenenar",
-  "Select a visible food or drink from the ground or an inventory.": "Elige comida o bebida visible del suelo o de un inventario.",
+  "Select a visible food or drink from the ground or an inventory.":
+    "Elige comida o bebida visible del suelo o de un inventario.",
   inventory: "inventario",
-  "Poison food or drink carried by this character.": "Envenena comida o bebida que lleve este personaje.",
+  "Poison food or drink carried by this character.":
+    "Envenena comida o bebida que lleve este personaje.",
   "Item to throw": "Objeto a lanzar",
   "Second Steal Item Priorities": "Prioridades del segundo robo",
   "No items carried.": "No llevas objetos.",
@@ -267,6 +302,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Match Lobby": "Sala de partida",
   "Waiting for players...": "Esperando a los jugadores...",
   Waiting: "Esperando",
+  Host: "Anfitrión",
   Manual: "Manual",
   Match: "Partida",
   "Time left": "Tiempo restante",
@@ -536,7 +572,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Move back toward the bot. The map is about to become dangerous.":
     "Vuelve a acercarte al bot. El mapa pronto será peligroso.",
   "Actions resolve by priority order: the bot’s Scare scared you away before your Axe attack could resolve! Now move back toward the bot.":
-    "Las acciones se resuelven por orden de prioridad: ¡el Asustar del bot te hizo huir asustado antes de que se resolviera tu ataque con hacha! Ahora vuelve a acercarte al bot.",
+    "Las acciones se resuelven por orden de prioridad: ¡el Asustar del bot te hizo huir antes de que se resolviera tu ataque con hacha! Ahora vuelve a acercarte al bot.",
   "Move is prepared. Select the bot’s cell, then press Ready.":
     "Desplazarse está preparado. Selecciona la casilla del bot y pulsa Listo.",
   "Notice the skull warning: this cell will be destroyed on the next turn.":
@@ -631,7 +667,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   received: "recibió",
   delivered: "entregó",
   to: "a",
-  "contracted the trafficker to deliver": "contrató al traficante para entregar",
+  "contracted the trafficker to deliver":
+    "contrató al traficante para entregar",
   "daily zarkans": "zarkans diarios",
   "hired a detective": "contrató un detective",
   "and discovered": "y descubrió",
@@ -887,7 +924,89 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Empiezas a solas, equipado únicamente con una mochila y una ración de comida. Cada día deberás elegir tus acciones, explorar el mapa, reunirte con tu equipo y eliminar a tus rivales.":
     "Empiezas a solas, equipado únicamente con una mochila y una ración de comida. Cada día deberás elegir tus acciones, explorar el mapa, reunirte con tu equipo y eliminar a tus rivales.",
   "Solo puede quedar un equipo en pie.": "Solo puede quedar un equipo en pie.",
-  Comenzar: "Comenzar"
+  Comenzar: "Comenzar",
+  "H1 Greedy": "H1 Codicioso",
+  "H2 Cannibal": "H2 Caníbal",
+  "H3 Salesman": "H3 Vendedor",
+  "H4 Pensioner": "H4 Pensionista",
+  "H5 Undetectable": "H5 Indetectable",
+  "H6 Brave": "H6 Valiente",
+  "H7 Vengeful": "H7 Vengativo",
+  "H8 Charming": "H8 Encantador",
+  "H9 Coward": "H9 Cobarde",
+  "Increases maximum health by 1": "Aumenta la vida máxima en 1",
+  "Reduces energy cost of punches by 3 points":
+    "Reduce el esfuerzo de los puñetazos en 3 puntos",
+  "Reduces energy cost of knife, bat, and axe attacks by 3 points":
+    "Reduce el esfuerzo de los ataques con cuchillo, bate y hacha en 3 puntos",
+  "Reduces energy cost of harpoon and pistol shots by 2 points":
+    "Reduce el esfuerzo de los disparos con arpón y pistola en 2 puntos",
+  "Reduces energy cost of placing C4 and traps, and detonating C4, by 2 points":
+    "Reduce el esfuerzo en 2 puntos en colocación de C4 y trampas y detonación de C4",
+  "Reduces energy cost of throwing objects by 2 points":
+    "Reduce en 2 puntos el esfuerzo de lanzar objetos",
+  "Reduces lockpicking time by 1 turn and prevents the lockpick from breaking":
+    "Reduce en un turno el tiempo para forzar cerraduras y evita que se rompa la ganzúa",
+  "Allows prioritizing up to 3 items when stealing from a player, even without inspecting them first.":
+    "Permite priorizar hasta 3 objetos al robar a un jugador, incluso sin registro previo",
+  "Allows crafting a chemical weapon, medicine, poison, or antidote chosen by the player for free. Activates when the product is specified and available, with a 7-turn cooldown; not consumed if unspecified.":
+    "Permite fabricar gratuitamente un arma química, medicamento, veneno o antídoto elegido por el jugador. Se activa cuando se especifica el producto y está disponible, con un cooldown de 7 turnos; no se pierde si no se especifica.",
+  "Allows performing the crafting action without being at the workshop":
+    "Permite realizar la acción fabricar sin estar en el taller",
+  "Increases maximum weight capacity by 5 units":
+    "Aumenta en 5 unidades la capacidad máxima de peso",
+  "Reduces damage taken by 1 (poison and virus still deal damage)":
+    "Reduce en 1 el daño recibido (veneno y virus restan igualmente)",
+  "Decreases the health threshold to faint and become wounded to 3":
+    "Disminuye a 3 el mínimo de vida para desmayarse y quedar herido",
+  "Can only die if taking damage while at 1 health; otherwise, any lethal damage leaves the character at 1 health, even from a chainsaw":
+    "Solo puede morir si recibe daño estando a 1 de vida, si no cualquier daño que le fuera a matar le deja en 1 punto de vida, incluso la motosierra",
+  "Increases dodge action success chance by 25%":
+    "Aumenta un 25% la probabilidad de éxito de la acción esquivar",
+  "Increases speed by 1 point": "Aumenta 1 punto de rapidez",
+  "Reduces movement energy cost by 1 point":
+    "Reduce en 1 punto el esfuerzo por desplazamiento",
+  "Allows performing an additional secondary action":
+    "Permite hacer una acción secundaria adicional",
+  "Neutral players reveal 5 unseen items at the location (requires talking). Takes effect even if considered an enemy. Increases charisma by 2 points":
+    "Los jugadores neutrales muestran 5 objetos que el personaje no vea de la localización (requiere hablar). Tiene efecto incluso si se considera enemigo. Aumenta 2 punto de simpatía",
+  "Allows sleeping with neutral players. Takes effect even if considered an enemy. Increases charisma by 2 points each time you sleep with a neutral":
+    "Se puede dormir con jugadores neutrales. Tiene efecto incluso si se considera enemigo. Cada vez que se duerma con un neutral aumenta 2 puntos de simpatía",
+  "Allows controlling 1 civilian neutral (requires talking). Takes effect even if considered an enemy. Once per match, reveals the position of all civilian neutrals. Increases charisma by 1 point":
+    "Permite controlar a 1 neutral civil (requiere hablar). Tiene efecto incluso si se considera enemigo. Una vez en toda la partida podrá saber la posición de todos los neutrales civiles. Aumenta 1 punto de simpatía",
+  "Allows controlling 1 military neutral (requires talking). Takes effect even if considered an enemy. Once per match, reveals the position of all military neutrals. Increases charisma by 1 point":
+    "Permite controlar a 1 neutral militar (requiere hablar). Tiene efecto incluso si se considera enemigo. Una vez en toda la partida podrá saber la posición de todos los neutrales militares. Aumenta 1 puntos de simpatía",
+  "Reduces detection energy cost by 3 points":
+    "Reduce en 3 puntos el esfuerzo por detectar",
+  "Reveals hidden characters in the current location":
+    "Ve a los escondidos en la propia localización",
+  "Finds 1 extra item when performing the search action":
+    "Encuentra 1 objeto extra al realizar la acción buscar",
+  "Detects fires at any distance and identifies players in the same location or up to 1 location away":
+    "Detecta incendios a cualquier distancia e identifica a los jugadores en la misma localización o hasta 1 localización de distancia",
+  "Detects fires at any distance and identifies players in the same or an adjacent location":
+    "Detecta incendios a cualquier distancia e identifica a los jugadores en la misma localización o hasta 1 localización de distancia",
+  "Can prioritize searching for a food or drink in each search":
+    "Puede priorizar buscar una comida o bebida en cada búsqueda",
+  "Detects energy points (including bonuses if focused that turn), status, and items of all characters seen at the location (still requires items to be discovered via search to specify what to steal). If knocked out that turn, detects nothing":
+    "Detecta puntos de esfuerzo (incluso los extras si se hubiera concentrado en ese turno), estado y objetos de todos los personajes que ve en la localización (igualmente requiere que los objetos sean descubiertos mediante un registro que se podría condicionar para poder concretar qué objeto robar). Si está desmayado ese turno no detecta nada",
+  "Picks up 1 extra item without energy cost when performing the pick up action":
+    "Coge 1 objeto extra sin esfuerzo al realizar la acción coger",
+  "Allows feeding on corpses without being hungry and prevents health loss from eating a corpse":
+    "Permite alimentarse de los cadáveres sin necesidad de estar hambriento y no pierde vida por comer cadáver",
+  "Receives 1 extra zarkan for each sale in lockers":
+    "Recibe 1 zarkan extra por cada venta en taquillas",
+  "Receives 1 extra zarkan each turn": "Recibe 1 zarkan extra cada turno",
+  "Cannot be discovered by the detect action":
+    "No puede ser descubierto mediante la acción detectar",
+  "Cannot be scared without consent":
+    "No puede ser asustado si no da su consentimiento",
+  "When attacked, immediately counterattacks the attacker with a knife, nail/regular bat, or axe (random) if in the same location, even if knocked out. Counterattacks with a punch if none of these weapons are available. Counterattacks do not affect cooldowns or count as an action for intoxication. Can choose not to counterattack a neutral player (with prior notice). Does not trigger from a counterattack":
+    "Al ser atacado contrataca de inmediato con cuchillo, bate con o sin clavos o hacha (aleatorio) al agresor siempre que esté en la misma localización, incluso si se desmayara. Si no dispusiera de ninguna de estas armas contrataca con puñetazo. Los contrataques no afectan al cooldown ni se consideran una acción en cuanto a la intoxicación. Se puede decidir no contratacar a un jugador neutral (previo aviso). La habilidad no se activa si es por un contrataque",
+  "Neutral players perform these actions to help the player with this skill when sharing a location:\n- If the player with this skill is poisoned, uses an antidote to cure them. Takes effect even if considered an enemy\n- Protects the player with this skill, provided they are not considered an enemy\nIncreases charisma by 3 points":
+    "Los jugadores neutrales realizan estas acciones para favorecer al jugador que tenga esta habilidad al compartir localización:\n- Si el jugador con esta habilidad está intoxicado usa un antídoto para desintoxicarle. Tiene efecto incluso si se considera enemigo\n- Protege al jugador con esta habilidad, siempre que no sea considerado enemigo\nAumenta 3 puntos de simpatía",
+  "Automatically hides to stay unseen in the location. Also invisible to binoculars, spy drone, neutrals, and hitman. Comes out of hiding if attacking, shooting (unless using a silencer), moving, throwing, scaring, stealing, sleeping with effort, or falling in love. Also if protecting an unhidden player or being protected by one (with permission). Cannot be prioritized for attacks or scaring, but can be attacked/scared if an attack hits no one or is a bat attack. Even if assaulted, stays hidden that turn unless one of the conditions occurs":
+    "Se esconde automáticamente para no ser visto en la localización. Tampoco es visible a los prismáticos, al dron espía, a los neutrales ni al sicario. Sale de su escondite en un turno si ataca, dispara (salvo si usa silenciador), se desplaza, lanza, asusta, roba, duerme con esfuerzo o se enamora. También si protege a otro jugador que no esté escondido o si un jugador que no esté escondido le protege (esto último requiere autorización del escondido). No puede priorizarse atacar o asustar a un escondido, pero puede ser asustado o atacado si el ataque no fuera a dar a nadie o fuera un ataque con bate. Aunque un jugador escondido fuese agredido no sería visible en ese turno si no se da alguno de los casos anteriores"
 };
 
 const ENGLISH_GAME_NAMES: Record<string, string> = {
@@ -896,12 +1015,34 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
     "You have voluntarily arrived at an abandoned town with a single goal: to survive. In this turn-based role-playing and strategy game, several teams fight to the death, but there is a problem: [b]you still don't know who your allies are.[/b]",
   "Empiezas a solas, equipado únicamente con una mochila y una ración de comida. Cada día deberás elegir tus acciones, explorar el mapa, reunirte con tu equipo y eliminar a tus rivales.":
     "You start alone, equipped only with a backpack and a ration of food. Each day you must choose your actions, explore the map, regroup with your team, and eliminate your rivals.",
-  "Solo puede quedar un equipo en pie.":
-    "Only one team can be left standing.",
+  "Solo puede quedar un equipo en pie.": "Only one team can be left standing.",
   Comenzar: "Start",
   "Continuar al informe": "Continue to Report",
   "continuar al informe": "continue to report",
   "Casilla destruida en": "Tile destroyed at",
+  "Consejo:": "Tip:",
+  "No ataques al azar, podrías golpear a tus compañeros de equipo":
+    "Don't attack randomly, you could be hitting your teammates",
+  "Evita las zonas concurridas": "Avoid crowded areas",
+  "Si tu salud baja a 5 o menos, quedas inconsciente y te vuelves invulnerable (el fuego, bombardeo, C4, cohete y virus todavía te dañan)":
+    "If your health drops to 5 or less, you become unconscious, you become invulnerable (fire, bombard, c4, rocket and virus still damage you)",
+  "Tras quedar inconsciente, tu salud máxima pasa a ser 5":
+    "After being unconscious your max health becomes 5",
+  "Las mismas acciones de diferentes jugadores se resuelven en orden aleatorio, a menos que un jugador tenga más Agilidad 2":
+    "Same actions of different players are resolved in a random order, unless one player has more agility 2",
+  "Pon a personas de confianza en tu testamento, nunca se sabe si sobrevivirás un turno más":
+    "Put trusted people in your testament, you never know if you will survive one more turn",
+  "Consejo: No ataques al azar, podrías golpear a tus compañeros de equipo":
+    "Tip: Don't attack randomly, you could be hitting your teammates",
+  "Consejo: Evita las zonas concurridas": "Tip: Avoid crowded areas",
+  "Consejo: Si tu salud baja a 5 o menos, quedas inconsciente y te vuelves invulnerable (el fuego, bombardeo, C4, cohete y virus todavía te dañan)":
+    "Tip: If your health drops to 5 or less, you become unconscious, you become invulnerable (fire, bombard, c4, rocket and virus still damage you)",
+  "Consejo: Tras quedar inconsciente, tu salud máxima pasa a ser 5":
+    "Tip: After being unconscious your max health becomes 5",
+  "Consejo: Las mismas acciones de diferentes jugadores se resuelven en orden aleatorio, a menos que un jugador tenga más Agilidad 2":
+    "Tip: Same actions of different players are resolved in a random order, unless one player has more agility 2",
+  "Consejo: Pon a personas de confianza en tu testamento, nunca se sabe si sobrevivirás un turno más":
+    "Tip: Put trusted people in your testament, you never know if you will survive one more turn",
   "Detecta incendios a cualquier distancia e identifica a los jugadores en la misma localización o hasta 1 localización de distancia":
     "Detects fires at any distance and identifies players in the same or an adjacent location",
   "Crear un incendio": "Start a fire",
@@ -1158,7 +1299,83 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   "Percepción 3": "Perception 3",
   "Percepción 4": "Perception 4",
   "Percepción 5": "Perception 5",
-  "Percepción 6": "Perception 6"
+  "Percepción 6": "Perception 6",
+  "H1 Codicioso": "H1 Greedy",
+  "H2 Caníbal": "H2 Cannibal",
+  "H3 Vendedor": "H3 Salesman",
+  "H4 Pensionista": "H4 Pensioner",
+  "H5 Indetectable": "H5 Undetectable",
+  "H6 Valiente": "H6 Brave",
+  "H7 Vengativo": "H7 Vengeful",
+  "H8 Encantador": "H8 Charming",
+  "H9 Cobarde": "H9 Coward",
+  "Aumenta la vida máxima en 1": "Increases maximum health by 1",
+  "Reduce el esfuerzo de los puñetazos en 3 puntos":
+    "Reduces energy cost of punches by 3 points",
+  "Reduce el esfuerzo de los ataques con cuchillo, bate y hacha en 3 puntos":
+    "Reduces energy cost of knife, bat, and axe attacks by 3 points",
+  "Reduce el esfuerzo de los disparos con arpón y pistola en 2 puntos":
+    "Reduces energy cost of harpoon and pistol shots by 2 points",
+  "Reduce el esfuerzo en 2 puntos en colocación de C4 y trampas y detonación de C4":
+    "Reduces energy cost of placing C4 and traps, and detonating C4, by 2 points",
+  "Reduce en 2 puntos el esfuerzo de lanzar objetos":
+    "Reduces energy cost of throwing objects by 2 points",
+  "Reduce en un turno el tiempo para forzar cerraduras y evita que se rompa la ganzúa":
+    "Reduces lockpicking time by 1 turn and prevents the lockpick from breaking",
+  "Permite fabricar gratuitamente un arma química, medicamento, veneno o antídoto elegido por el jugador. Se activa cuando se especifica el producto y está disponible, con un cooldown de 7 turnos; no se pierde si no se especifica.":
+    "Allows crafting a chemical weapon, medicine, poison, or antidote chosen by the player for free. Activates when the product is specified and available, with a 7-turn cooldown; not consumed if unspecified.",
+  "Permite realizar la acción fabricar sin estar en el taller":
+    "Allows performing the crafting action without being at the workshop",
+  "Aumenta en 5 unidades la capacidad máxima de peso":
+    "Increases maximum weight capacity by 5 units",
+  "Reduce en 1 el daño recibido (veneno y virus restan igualmente)":
+    "Reduces damage taken by 1 (poison and virus still deal damage)",
+  "Disminuye a 3 el mínimo de vida para desmayarse y quedar herido":
+    "Decreases the health threshold to faint and become wounded to 3",
+  "Solo puede morir si recibe daño estando a 1 de vida, si no cualquier daño que le fuera a matar le deja en 1 punto de vida, incluso la motosierra":
+    "Can only die if taking damage while at 1 health; otherwise, any lethal damage leaves the character at 1 health, even from a chainsaw",
+  "Aumenta un 25% la probabilidad de éxito de la acción esquivar":
+    "Increases dodge action success chance by 25%",
+  "Aumenta 1 punto de rapidez": "Increases speed by 1 point",
+  "Reduce en 1 punto el esfuerzo por desplazamiento":
+    "Reduces movement energy cost by 1 point",
+  "Permite hacer una acción secundaria adicional":
+    "Allows performing an additional secondary action",
+  "Los jugadores neutrales muestran 5 objetos que el personaje no vea de la localización (requiere hablar). Tiene efecto incluso si se considera enemigo. Aumenta 2 punto de simpatía":
+    "Neutral players reveal 5 unseen items at the location (requires talking). Takes effect even if considered an enemy. Increases charisma by 2 points",
+  "Se puede dormir con jugadores neutrales. Tiene efecto incluso si se considera enemigo. Cada vez que se duerma con un neutral aumenta 2 puntos de simpatía":
+    "Allows sleeping with neutral players. Takes effect even if considered an enemy. Increases charisma by 2 points each time you sleep with a neutral",
+  "Permite controlar a 1 neutral civil (requiere hablar). Tiene efecto incluso si se considera enemigo. Una vez en toda la partida podrá saber la posición de todos los neutrales civiles. Aumenta 1 punto de simpatía":
+    "Allows controlling 1 civilian neutral (requires talking). Takes effect even if considered an enemy. Once per match, reveals the position of all civilian neutrals. Increases charisma by 1 point",
+  "Permite controlar a 1 neutral militar (requiere hablar). Tiene efecto incluso si se considera enemigo. Una vez en toda la partida podrá saber la posición de todos los neutrales militares. Aumenta 1 puntos de simpatía":
+    "Allows controlling 1 military neutral (requires talking). Takes effect even if considered an enemy. Once per match, reveals the position of all military neutrals. Increases charisma by 1 point",
+  "Reduce en 3 puntos el esfuerzo por detectar":
+    "Reduces detection energy cost by 3 points",
+  "Ve a los escondidos en la propia localización":
+    "Reveals hidden characters in the current location",
+  "Encuentra 1 objeto extra al realizar la acción buscar":
+    "Finds 1 extra item when performing the search action",
+  "Puede priorizar buscar una comida o bebida en cada búsqueda":
+    "Can prioritize searching for a food or drink in each search",
+  "Detecta puntos de esfuerzo (incluso los extras si se hubiera concentrado en ese turno), estado y objetos de todos los personajes que ve en la localización (igualmente requiere que los objetos sean descubiertos mediante un registro que se podría condicionar para poder concretar qué objeto robar). Si está desmayado ese turno no detecta nada":
+    "Detects energy points (including bonuses if focused that turn), status, and items of all characters seen at the location (still requires items to be discovered via search to specify what to steal). If knocked out that turn, detects nothing",
+  "Coge 1 objeto extra sin esfuerzo al realizar la acción coger":
+    "Picks up 1 extra item without energy cost when performing the pick up action",
+  "Permite alimentarse de los cadáveres sin necesidad de estar hambriento y no pierde vida por comer cadáver":
+    "Allows feeding on corpses without being hungry and prevents health loss from eating a corpse",
+  "Recibe 1 zarkan extra por cada venta en taquillas":
+    "Receives 1 extra zarkan for each sale in lockers",
+  "Recibe 1 zarkan extra cada turno": "Receives 1 extra zarkan each turn",
+  "No puede ser descubierto mediante la acción detectar":
+    "Cannot be discovered by the detect action",
+  "No puede ser asustado si no da su consentimiento":
+    "Cannot be scared without consent",
+  "Al ser atacado contrataca de inmediato con cuchillo, bate con o sin clavos o hacha (aleatorio) al agresor siempre que esté en la misma localización, incluso si se desmayara. Si no dispusiera de ninguna de estas armas contrataca con puñetazo. Los contrataques no afectan al cooldown ni se consideran una acción en cuanto a la intoxicación. Se puede decidir no contratacar a un jugador neutral (previo aviso). La habilidad no se activa si es por un contrataque":
+    "When attacked, immediately counterattacks the attacker with a knife, nail/regular bat, or axe (random) if in the same location, even if knocked out. Counterattacks with a punch if none of these weapons are available. Counterattacks do not affect cooldowns or count as an action for intoxication. Can choose not to counterattack a neutral player (with prior notice). Does not trigger from a counterattack",
+  "Los jugadores neutrales realizan estas acciones para favorecer al jugador que tenga esta habilidad al compartir localización:\n- Si el jugador con esta habilidad está intoxicado usa un antídoto para desintoxicarle. Tiene efecto incluso si se considera enemigo\n- Protege al jugador con esta habilidad, siempre que no sea considerado enemigo\nAumenta 3 puntos de simpatía":
+    "Neutral players perform these actions to help the player with this skill when sharing a location:\n- If the player with this skill is poisoned, uses an antidote to cure them. Takes effect even if considered an enemy\n- Protects the player with this skill, provided they are not considered an enemy\nIncreases charisma by 3 points",
+  "Se esconde automáticamente para no ser visto en la localización. Tampoco es visible a los prismáticos, al dron espía, a los neutrales ni al sicario. Sale de su escondite en un turno si ataca, dispara (salvo si usa silenciador), se desplaza, lanza, asusta, roba, duerme con esfuerzo o se enamora. También si protege a otro jugador que no esté escondido o si un jugador que no esté escondido le protege (esto último requiere autorización del escondido). No puede priorizarse atacar o asustar a un escondido, pero puede ser asustado o atacado si el ataque no fuera a dar a nadie o fuera un ataque con bate. Aunque un jugador escondido fuese agredido no sería visible en ese turno si no se da alguno de los casos anteriores":
+    "Automatically hides to stay unseen in the location. Also invisible to binoculars, spy drone, neutrals, and hitman. Comes out of hiding if attacking, shooting (unless using a silencer), moving, throwing, scaring, stealing, sleeping with effort, or falling in love. Also if protecting an unhidden player or being protected by one (with permission). Cannot be prioritized for attacks or scaring, but can be attacked/scared if an attack hits no one or is a bat attack. Even if assaulted, stays hidden that turn unless one of the conditions occurs"
 };
 
 const PREFIX_TRANSLATIONS: Array<[RegExp, string]> = [

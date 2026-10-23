@@ -130,6 +130,7 @@ export class GameBoardRenderer {
   private locationSelectionBorderGraphics: Phaser.GameObjects.Graphics | null = null;
   private tutorialCellMarker: Phaser.GameObjects.Graphics | null = null;
   private tutorialCellTween: Phaser.Tweens.Tween | null = null;
+  private initialCameraCentered = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -185,7 +186,7 @@ export class GameBoardRenderer {
     this.applyMapRenderingState();
   }
 
-  renderMap(map: GameMap): void {
+  renderMap(map: GameMap, centerCamera = false): void {
     this.clearMapTileSprites();
     const dx = TILE_WIDTH;
     const dy = TILE_HEIGHT;
@@ -432,7 +433,10 @@ export class GameBoardRenderer {
       gridWidth * 2,
       gridHeight * 2,
     );
-    this.camera.centerOn(gridWidth / 2, gridHeight / 2);
+    if (!this.initialCameraCentered || centerCamera) {
+      this.camera.centerOn(gridWidth / 2, gridHeight / 2);
+      this.initialCameraCentered = true;
+    }
     this.scene.registry.set("currentMatchMap", map);
     this.renderItems(map);
     const replayView = this.callbacks.getReplayView();

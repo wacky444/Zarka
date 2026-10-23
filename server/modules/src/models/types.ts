@@ -33,4 +33,5 @@ export interface AsyncTurnState extends nkruntime.MatchState {
   lastAutoAdvanceAt?: number;
   lastAutoCheckAt?: number;
   lastBotAutoAdvanceAt?: number;
+  matchRemoved?: boolean;
 }

@@ -52,7 +52,13 @@ const suites = [
     name: "chainsaw-action-warnings",
     entryPoint: "test/ChainsawActionWarnings.test.ts"
   },
-  { name: "ranked-matchmaking", entryPoint: "test/RankedMatchmaking.test.ts" }
+  { name: "ranked-matchmaking", entryPoint: "test/RankedMatchmaking.test.ts" },
+  { name: "loading-tips", entryPoint: "test/LoadingTips.test.ts" },
+  {
+    name: "lobby-player-card",
+    entryPoint: "test/LobbyPlayerCard.test.ts",
+    alias: { phaser: phaserShim, phaser3spectorjs: phaserShim }
+  }
 ];
 
 try {

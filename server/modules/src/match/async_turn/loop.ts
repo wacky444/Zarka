@@ -50,6 +50,9 @@ function areOnlyBotsAlive(match: MatchRecord): boolean {
 
 export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
   function (ctx, logger, nk, dispatcher, tick, state, messages) {
+    if (state.matchRemoved) {
+      return null;
+    }
     const runtimeMatchId = ctx.matchId;
     if (!runtimeMatchId) {
       return { state };

@@ -41,6 +41,9 @@ export function getStateRpc(
   }
 
   const match: MatchRecord = read.match;
+  if (match.removed) {
+    return JSON.stringify({ error: "not_found" });
+  }
   const viewerId = ctx?.userId ?? null;
   const viewAll = json.view_all === true && isAdminUser(nk, viewerId);
   if (

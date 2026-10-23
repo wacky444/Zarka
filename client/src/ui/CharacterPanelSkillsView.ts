@@ -792,7 +792,7 @@ export class CharacterPanelSkillsView {
     const textWidth = cardWidth - CARD_PADDING * 2;
 
     const descText = this.scene.add
-      .text(CARD_PADDING, startY + 54, skill.description, {
+      .text(CARD_PADDING, startY + 54, t(skill.description), {
         fontSize: "13px",
         color: THEME.colors.modalText,
         wordWrap: { width: textWidth, useAdvancedWrap: true },
@@ -809,7 +809,7 @@ export class CharacterPanelSkillsView {
       .setInteractive({ useHandCursor: false });
 
     const nameText = this.scene.add
-      .text(CARD_PADDING, startY + 8, skill.name, {
+      .text(CARD_PADDING, startY + 8, t(skill.name), {
         fontSize: "15px",
         color: THEME.colors.textPrimary,
         fontStyle: "bold"

@@ -390,7 +390,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             true,
           );
         } catch {}
-        return null;
+        state.matchRemoved = true;
       } else if (msg && msg.type === "match_ended") {
         try {
           const payload = JSON.stringify({

@@ -1203,9 +1203,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     cooldown: 3,
     experience: {
       base: 5,
-      conditional: [
-        { value: 3, condition: "Con esfuerzo extra." }
-      ]
+      conditional: [{ value: 3, condition: "Con esfuerzo extra." }]
     },
     effects: [{ description: "Gana 5 puntos de experiencia." }],
     extraExecution: {
@@ -1653,7 +1651,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     developed: true,
     hidden: true,
     texture: "Board Game Icons",
-    frame: "delivery_box.png",
+    frame: "hand_cube.png",
     actionOrder: 99,
     actionSubOrder: 10,
     notes: ["Evento privado al contratar una entrega del traficante."],
