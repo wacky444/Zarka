@@ -251,6 +251,7 @@ export function getTutorialSkillHighlights(options: {
   isTutorialChooseSkills: boolean;
   pendingUpgrades: readonly SkillId[];
   abilities?: readonly SkillId[];
+  activeCategory?: SkillCategory | null;
 }): TutorialSkillHighlightState {
   if (!options.isTutorialChooseSkills) {
     return {
@@ -269,9 +270,7 @@ export function getTutorialSkillHighlights(options: {
     options.pendingUpgrades.indexOf("strength2") !== -1 ||
     abilities.indexOf("strength2") !== -1;
 
-  const bothSelected = hasVitality && hasStrength;
-
-  if (bothSelected) {
+  if (hasVitality && hasStrength) {
     return {
       highlightedCategory: null,
       confirmHighlighted: true,
@@ -280,14 +279,25 @@ export function getTutorialSkillHighlights(options: {
     };
   }
 
+  const activeCategory = options.activeCategory ?? "offensive";
+
+  // Step 1: In the initially open Offensive tab, click Strength 2 upgrade
+  if (!hasStrength) {
+    const isOffensive = activeCategory === "offensive";
+    return {
+      highlightedCategory: isOffensive ? null : "offensive",
+      confirmHighlighted: false,
+      highlightStrength2Upgrade: isOffensive,
+      highlightVitalityUpgrade: false
+    };
+  }
+
+  // Step 2: Switch to Defense tab and click Vitality upgrade
+  const isDefense = activeCategory === "defense";
   return {
-    highlightedCategory: !hasVitality
-      ? "defense"
-      : !hasStrength
-        ? "offensive"
-        : null,
+    highlightedCategory: isDefense ? null : "defense",
     confirmHighlighted: false,
-    highlightStrength2Upgrade: !hasStrength,
-    highlightVitalityUpgrade: !hasVitality
+    highlightStrength2Upgrade: false,
+    highlightVitalityUpgrade: isDefense
   };
 }

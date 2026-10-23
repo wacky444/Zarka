@@ -625,7 +625,8 @@ export class CharacterPanelSkillsView {
     const highlights = getTutorialSkillHighlights({
       isTutorialChooseSkills: this.tutorialChooseSkillsMode,
       pendingUpgrades: this.pendingUpgrades,
-      abilities: this.currentCharacter?.abilities
+      abilities: this.currentCharacter?.abilities,
+      activeCategory: this.activeCategory
     });
 
     this.categoryTabs.setHighlightedKey(highlights.highlightedCategory);

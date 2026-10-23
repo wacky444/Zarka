@@ -437,42 +437,75 @@ test("tutorial skills highlights guide player to defense tab, strength2 upgrade 
     }
   );
 
-  // Active tutorial mode, neither selected -> Defense subtab, Strength 2 upgrade button, and Vitality upgrade button highlighted
+  // Active tutorial mode, neither selected, opens on offensive tab -> Strength 2 upgrade button highlighted
   assert.deepEqual(
     getTutorialSkillHighlights({
       isTutorialChooseSkills: true,
-      pendingUpgrades: []
+      pendingUpgrades: [],
+      activeCategory: "offensive"
+    }),
+    {
+      highlightedCategory: null,
+      confirmHighlighted: false,
+      highlightStrength2Upgrade: true,
+      highlightVitalityUpgrade: false
+    }
+  );
+
+  // If user navigated away to defense tab before upgrading strength2 -> Offensive subtab highlighted
+  assert.deepEqual(
+    getTutorialSkillHighlights({
+      isTutorialChooseSkills: true,
+      pendingUpgrades: [],
+      activeCategory: "defense"
+    }),
+    {
+      highlightedCategory: "offensive",
+      confirmHighlighted: false,
+      highlightStrength2Upgrade: false,
+      highlightVitalityUpgrade: false
+    }
+  );
+
+  // Strength 2 selected, still on offensive tab -> Defense subtab highlighted
+  assert.deepEqual(
+    getTutorialSkillHighlights({
+      isTutorialChooseSkills: true,
+      pendingUpgrades: ["strength2"],
+      activeCategory: "offensive"
     }),
     {
       highlightedCategory: "defense",
       confirmHighlighted: false,
-      highlightStrength2Upgrade: true,
-      highlightVitalityUpgrade: true
+      highlightStrength2Upgrade: false,
+      highlightVitalityUpgrade: false
     }
   );
 
-  // Only strength2 selected -> Defense subtab and Vitality upgrade button highlighted, strength2 upgrade button NOT highlighted
+  // Strength 2 selected, switched to defense tab -> Vitality upgrade button highlighted
   assert.deepEqual(
     getTutorialSkillHighlights({
       isTutorialChooseSkills: true,
-      pendingUpgrades: ["strength2"]
+      pendingUpgrades: ["strength2"],
+      activeCategory: "defense"
     }),
     {
-      highlightedCategory: "defense",
+      highlightedCategory: null,
       confirmHighlighted: false,
       highlightStrength2Upgrade: false,
       highlightVitalityUpgrade: true
     }
   );
 
-  // Only vitality selected -> Offensive subtab and Strength 2 upgrade button highlighted, vitality upgrade button NOT highlighted
+  // Only vitality selected while on offensive tab -> Offensive subtab not highlighted, Strength 2 upgrade button highlighted
   assert.deepEqual(
     getTutorialSkillHighlights({
       isTutorialChooseSkills: true,
-      pendingUpgrades: ["vitality"]
+      pendingUpgrades: ["vitality"],
+      activeCategory: "offensive"
     }),
     {
-      highlightedCategory: "offensive",
+      highlightedCategory: null,
       confirmHighlighted: false,
       highlightStrength2Upgrade: true,
       highlightVitalityUpgrade: false
@@ -525,10 +558,11 @@ test("tutorial skills highlights guide player to defense tab, strength2 upgrade 
     getTutorialSkillHighlights({
       isTutorialChooseSkills: true,
       pendingUpgrades: [],
-      abilities: ["strength2"]
+      abilities: ["strength2"],
+      activeCategory: "defense"
     }),
     {
-      highlightedCategory: "defense",
+      highlightedCategory: null,
       confirmHighlighted: false,
       highlightStrength2Upgrade: false,
       highlightVitalityUpgrade: true
