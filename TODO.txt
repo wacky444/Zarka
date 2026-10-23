@@ -64,19 +64,11 @@
 
 - feature, npc
 
-- improvement, tutorial feedback 2
-	- introduccion, donde estoy, que tengo que hacer, tengo que tener miedo de otros?
-
-	-Zarka es un juego de rol y estrategia que se desarrolla en un pueblo abandonado, Zarka, en el que varios
-equipos se enfrentarán matándose unos a otros hasta que solo queden vivos miembros de un equipo.
-
 - general gui
 	- sacar el chat de la pestaña, en modo pc
 	- iconitos redondos para abrir el log y chat
 	- en el chat: un poco de margen entre mensajes, el nombre del usuario en bold, colores
 
 - autoplay en modo reproducir, al cambiar turno se reproduzca automaticamente
-
-- bug, dont allow in tutorial to rank 2 levels of skills
 
 - bug, change posion to show items on ground or items in inventory of players registered, all in the same select
