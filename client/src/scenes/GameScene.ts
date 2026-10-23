@@ -1035,7 +1035,8 @@ export class GameScene extends Phaser.Scene {
     this.tutorialArrow = this.add
       .image(0, 0, "tutorial-forward-arrow")
       .setDisplaySize(28, 28)
-      .setOrigin(1, 0.5);
+      .setOrigin(1, 0.5)
+      .setTint(THEME.colors.tutorialHighlight);
     this.tutorialArrowContainer.add(this.tutorialArrow);
 
     this.tweens.add({
