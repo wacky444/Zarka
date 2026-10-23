@@ -446,6 +446,7 @@ export class GameBoardRenderer {
     );
     this.applyMapRenderingState();
     this.refreshTurnDependentUi();
+    this.refreshLocationSelectionVisuals();
   }
 
   refreshTurnDependentUi(): void {

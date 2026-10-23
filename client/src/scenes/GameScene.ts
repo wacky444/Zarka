@@ -844,6 +844,12 @@ export class GameScene extends Phaser.Scene {
             return null;
           }
           const step = this.tutorialController.currentStep;
+          if (step === "inspect_current_cell") {
+            return TUTORIAL_CELL_COORDS.playerStart;
+          }
+          if (step === "inspect_nearby_cell") {
+            return TUTORIAL_CELL_COORDS.botStart;
+          }
           if (step === "return_to_bot") {
             const mainAction = this.characterPanel?.getMainActionSelection();
             if (mainAction?.actionId !== ActionLibrary.move.id) {
@@ -2348,6 +2354,7 @@ export class GameScene extends Phaser.Scene {
     this.tutorialInstructionView?.setStep(currentStep);
     this.characterPanel?.setTutorialStep(currentStep, isTutorial);
     this.updateTutorialArrowPosition();
+    this.refreshLocationSelectionVisuals();
   }
 
   private updateTutorialArrowPosition(): void {
