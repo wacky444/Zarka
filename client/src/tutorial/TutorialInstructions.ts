@@ -65,7 +65,7 @@ export const TUTORIAL_INSTRUCTIONS: Record<
   plan_axe_attack: {
     instruction:
       "He is lying, he is not on your team! Plan an Axe attack against him.",
-    hint: "Axe Attack is prepared. Select Tutorial Bot as the target, then press Ready."
+    hint: "Select Axe Attack, choose Tutorial Bot as the target, then press Ready."
   },
   resolve_bot_scare: {
     instruction:
@@ -75,7 +75,7 @@ export const TUTORIAL_INSTRUCTIONS: Record<
   return_to_bot: {
     instruction:
       "Actions resolve by priority order: the bot’s Scare scared you away before your Axe attack could resolve! Now move back toward the bot.",
-    hint: "Move is prepared. Select the bot’s cell, then press Ready."
+    hint: "Select Move, choose the bot’s cell, then press Ready."
   },
   observe_destruction_warning: {
     instruction:
@@ -85,7 +85,7 @@ export const TUTORIAL_INSTRUCTIONS: Record<
   scare_bot_to_doomed_cell: {
     instruction:
       "Use Scare with extra power to choose the bot’s destination: the doomed cell.",
-    hint: "Scare is prepared. Set Extra Power to 1, target the bot, and select the skull-marked cell."
+    hint: "Select Scare, set Extra Power to 1, target the bot, and select the skull-marked cell."
   },
   resolve_destruction: {
     instruction:
