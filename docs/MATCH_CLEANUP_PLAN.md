@@ -18,14 +18,15 @@ Use a server-side scheduled cleanup worker (or equivalent periodic Nakama job) o
 
 ### A. Started matches with no human gameplay
 
-- Candidate: started, non-tutorial, non-terminal match with at least one human participant.
+- Candidate: started, non-terminal match with at least one human participant, including tutorial matches.
 - Activity clock: timestamp of the latest successfully accepted human gameplay action/turn submission (including a human-submitted pass or explicitly committed no-op, if the game permits it). Do not count AFK-generated/random actions, bot actions, background turn advancement, reconnects, reads, or UI opens.
 - At 14 days without qualifying human action: end as **draw** with terminal reason `inactivity_timeout` (or `cancelled` if product adopts a distinct cancelled state; inspect existing state/report contracts first). Draw is the safer compatibility choice because a new cancelled status may require broad client/report/schema changes. Explicitly label the reason in report and both players' match cards.
+- Apply the same inactivity clock and terminal outcome to tutorials. Tutorial bot actions do not count as human activity; a tutorial with no human gameplay action for 14 days ends as an inactivity draw. Ensure this does not mark the player's tutorial as completed.
 - Decide policy for one-human/solo matches separately: recommend same terminal draw/abandonment status, no competitive winner inferred from absent opponents.
 
 ### B. Not-started lobbies with no roster activity
 
-- Candidate: not started, non-tutorial lobby.
+- Candidate: not started lobby, including tutorial lobbies.
 - Activity clock: creation time initially; reset only on successful human join or leave that changes roster. Repeated list/read/presence refreshes do not reset it.
 - At 14 days without roster activity: remove/close the lobby and exclude it from both match lists. Preserve an audit reason/timestamp if supported, but no match report is required.
 - If creator leaves and an empty lobby remains, consider immediate removal; otherwise the 14-day rule applies. Make join-versus-expiry atomic so a join at the deadline cannot be lost.
@@ -37,7 +38,7 @@ Use a server-side scheduled cleanup worker (or equivalent periodic Nakama job) o
 3. **All humans leave/disconnect:** disconnect alone is not definitive in a resumable async game. Apply the same 14-day human-action timeout; optionally use a separate shorter timeout only for explicitly ephemeral empty real-time sessions.
 4. **Lobby with players who remain present but do nothing:** presence/read traffic does not reset roster activity. Expire after 14 days.
 5. **Finished matches:** never classify as stale active matches. Keep reports/history under existing retention policy; cleanup of old finished records is a separate product/data-retention decision.
-6. **Tutorial matches:** exclude from normal cleanup unless a separate short-lived tutorial policy is explicitly desired; verify abandoned tutorial records do not appear in either list.
+6. **Tutorial matches:** include in the same 14-day cleanup. Tutorial bot/automation actions do not refresh the human-action clock, and cleanup must not mark the tutorial profile as completed. Apply lobby roster inactivity rules to unstarted tutorial matches.
 7. **Ranked matches:** do not silently award rating or a winner on inactivity. Confirm ranked-specific timeout/forfeit rules before applying draw; potentially exclude until that policy exists.
 8. **Corrupt, orphaned, or legacy records missing timestamps:** use safe fallback (`created_at`, then start time/known turn history) and log/quarantine records that cannot be classified. Never silently delete records solely because a new timestamp field is absent.
 9. **Concurrent expiry and user action:** re-read/version-check immediately before transition; only transition if still eligible and timestamp unchanged/older than cutoff. A successful human action or roster change must win the race.
@@ -69,7 +70,7 @@ Use a server-side scheduled cleanup worker (or equivalent periodic Nakama job) o
 - A started ordinary match with no qualifying human-submitted action for 14 days is terminalized exactly once as an inactivity draw (unless a separately approved cancellation status is implemented); AFK/random and bot turns do not reset the clock.
 - A lobby not started with no successful join/leave roster activity for 14 days is removed and no longer discoverable.
 - Human action or roster activity racing the worker prevents erroneous expiry.
-- Finished reports remain available; ranked/tutorial rules are explicit and tested.
+- Finished reports remain available; ranked and tutorial rules are explicit and tested. Stale tutorials end without granting tutorial completion.
 - Legacy records are handled without mass deletion, cleanup is observable, and repeated worker runs are safe.
 
 ## Research: similar problem and Nakama behavior
@@ -90,7 +91,7 @@ Use a server-side scheduled cleanup worker (or equivalent periodic Nakama job) o
 
 ## Open decisions
 
-- Is 14 days appropriate for all unranked matches, including matches with a single human and long correspondence-style play?
+- Is 14 days appropriate for all unranked matches and tutorials, including matches with a single human and long correspondence-style play?
 - Should the user-facing terminal state be `draw` with reason, or should the project add a distinct `cancelled` status throughout shared/client/report contracts?
 - Should ranked games have a timeout-forfeit policy instead of draw, and what rating consequences apply?
 - Should empty lobbies be removed immediately when their final member leaves, or only after the inactivity window?
