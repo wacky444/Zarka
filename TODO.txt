@@ -12,7 +12,6 @@
 
 - improvement, tutorial step 6 should teach about prioritize items
 
-
 - improvement, bots doesnt buy	
 	- in the future they should waste coins on detective	
 	
@@ -67,7 +66,6 @@
 - general gui
 	- sacar el chat de la pestaña, en modo pc
 	- iconitos redondos para abrir el log y chat
-	- en el chat: un poco de margen entre mensajes, el nombre del usuario en bold, colores
 
 - autoplay en modo reproducir, al cambiar turno se reproduzca automaticamente
 
