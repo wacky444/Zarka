@@ -763,6 +763,12 @@ export class GameScene extends Phaser.Scene {
         this.load.image(key, buildBoardIconUrl(frame));
       }
     }
+    if (!this.textures.exists("replay-film")) {
+      this.load.image(
+        "replay-film",
+        assetPath("assets/images/replay-icons/film.png")
+      );
+    }
     if (!this.textures.exists("tutorial-forward-arrow")) {
       this.load.image(
         "tutorial-forward-arrow",

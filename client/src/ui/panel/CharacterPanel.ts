@@ -469,10 +469,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       .setVisible(false)
       .setInteractive({ useHandCursor: true });
     const logPlayButton = scene.add
-      .text(baseX + 200, logControlY, "Play", {
-        fontSize: "16px",
-        color: "#4ade80"
-      })
+      .image(baseX + 200, logControlY, "replay-film")
+      .setDisplaySize(20, 20)
+      .setTint(THEME.colors.healthAccent)
       .setOrigin(0, 0)
       .setVisible(false)
       .setInteractive({ useHandCursor: true });

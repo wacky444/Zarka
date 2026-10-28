@@ -29,7 +29,7 @@ function readAxialMetadata(value: unknown): Axial | null {
 export interface CharacterPanelLogElements {
   prevButton: Phaser.GameObjects.Text;
   nextButton: Phaser.GameObjects.Text;
-  playButton: Phaser.GameObjects.Text;
+  playButton: Phaser.GameObjects.Image;
   turnLabel: Phaser.GameObjects.Text;
   statusText: Phaser.GameObjects.Text;
   eventsBox: Phaser.GameObjects.Rectangle;
@@ -356,18 +356,22 @@ export class CharacterPanelLogView {
   }
 
   private applyButtonState(
-    button: Phaser.GameObjects.Text,
+    button: Phaser.GameObjects.Text | Phaser.GameObjects.Image,
     enabled: boolean,
     isPlay: boolean
   ): void {
     if (!enabled) {
       button.setAlpha(0.4);
-      button.setColor(isPlay ? "#355e3b" : "#5b678a");
+      if (button instanceof Phaser.GameObjects.Text) {
+        button.setColor(isPlay ? "#355e3b" : "#5b678a");
+      }
       button.disableInteractive();
       return;
     }
     button.setAlpha(1);
-    button.setColor(isPlay ? "#4ade80" : "#a0b7ff");
+    if (button instanceof Phaser.GameObjects.Text) {
+      button.setColor(isPlay ? "#4ade80" : "#a0b7ff");
+    }
     button.setInteractive({ useHandCursor: true });
   }
 
