@@ -744,33 +744,62 @@ export class CharacterPanelPlayerListView {
     this.teamsTabListContent.removeAll(false);
 
     const teamCounts: Record<string, number> = {};
+    for (const team of match.teams ?? []) {
+      teamCounts[team] = 0;
+    }
     if (match.teamCounts) {
       for (const team in match.teamCounts) {
         teamCounts[team] = match.teamCounts[team];
       }
-    } else {
-      if (Array.isArray(match.teams)) {
-        for (const team of match.teams) {
-          teamCounts[team] = 0;
+    }
+
+    let allPlayerTeamsKnown = list.length > 0;
+    for (const option of list) {
+      const character = match.playerCharacters?.[option.id];
+      const teamId =
+        match.revealedTeamsByPlayerId?.[option.id]?.trim() ||
+        character?.secretTeamId?.trim() ||
+        character?.teamId?.trim();
+      if (!teamId) {
+        allPlayerTeamsKnown = false;
+        break;
+      }
+    }
+
+    if (allPlayerTeamsKnown) {
+      for (const team of Object.keys(teamCounts)) {
+        teamCounts[team] = 0;
+      }
+      for (const option of list) {
+        const character = match.playerCharacters?.[option.id];
+        const isDead =
+          match.deadCharacters?.[option.id] === true ||
+          character?.statuses?.conditions?.includes("dead") ||
+          (typeof character?.stats?.health?.current === "number" &&
+            character.stats.health.current <= 0);
+        if (isDead) continue;
+        const teamId =
+          match.revealedTeamsByPlayerId?.[option.id]?.trim() ||
+          character?.secretTeamId?.trim() ||
+          character?.teamId?.trim();
+        if (teamId) {
+          teamCounts[teamId] = (teamCounts[teamId] ?? 0) + 1;
         }
       }
-      if (match.playerCharacters) {
-        for (const id in match.playerCharacters) {
-          const char = match.playerCharacters[id];
-          const isDead =
-            match.deadCharacters?.[id] === true ||
-            char?.statuses?.conditions?.includes("dead") ||
-            (typeof char?.stats?.health?.current === "number" &&
-              char.stats.health.current <= 0);
-          if (!isDead) {
-            if (char?.teamId) {
-              teamCounts[char.teamId] = (teamCounts[char.teamId] ?? 0) + 1;
-            }
-            if (char?.secretTeamId) {
-              teamCounts[char.secretTeamId] =
-                (teamCounts[char.secretTeamId] ?? 0) + 1;
-            }
-          }
+    } else if (!match.teamCounts && match.playerCharacters) {
+      for (const [id, character] of Object.entries(match.playerCharacters)) {
+        const isDead =
+          match.deadCharacters?.[id] === true ||
+          character?.statuses?.conditions?.includes("dead") ||
+          (typeof character?.stats?.health?.current === "number" &&
+            character.stats.health.current <= 0);
+        if (isDead) continue;
+        if (character?.teamId) {
+          teamCounts[character.teamId] = (teamCounts[character.teamId] ?? 0) + 1;
+        }
+        if (character?.secretTeamId) {
+          teamCounts[character.secretTeamId] =
+            (teamCounts[character.secretTeamId] ?? 0) + 1;
         }
       }
     }
