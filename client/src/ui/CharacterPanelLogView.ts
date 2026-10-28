@@ -32,6 +32,9 @@ const CRITICAL_REPLAY_ACTION_IDS = new Set<string>([
 ]);
 
 function getEventImportance(event: ReplayEvent): ReplayImportance {
+  if (event.importance !== undefined) {
+    return event.importance;
+  }
   if (event.kind === "player") {
     const actionId = event.action.actionId as string;
     if (actionId === "zarkan_income") {
@@ -41,7 +44,7 @@ function getEventImportance(event: ReplayEvent): ReplayImportance {
       return ReplayImportance.Critical;
     }
   }
-  return event.importance ?? ReplayImportance.Notable;
+  return ReplayImportance.Notable;
 }
 
 function readAxialMetadata(value: unknown): Axial | null {
