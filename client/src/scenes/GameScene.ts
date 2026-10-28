@@ -4240,6 +4240,32 @@ export class GameScene extends Phaser.Scene {
     turn: number,
     snapshot: ReplaySnapshot | undefined
   ): void {
+    if (!snapshot && !this.currentMatch) {
+      return;
+    }
+    if (!this.currentMatch && snapshot) {
+      const playerCharacters = snapshot.playerCharacters ?? {};
+      const matchId = this.registry.get("currentMatchId") as string | null;
+      if (!matchId) {
+        return;
+      }
+      this.currentMatch = {
+        match_id: matchId,
+        players: Object.keys(playerCharacters),
+        playerCharacters,
+        playerList: playerCharacters,
+        size: snapshot.map?.cols ?? 0,
+        created_at: 0,
+        current_turn: turn,
+        started: true,
+        removed: 0,
+        map: snapshot.map,
+        items: snapshot.items,
+        traps: snapshot.traps,
+        c4s: snapshot.c4s,
+        deadCharacters: snapshot.deadCharacters
+      };
+    }
     if (!this.currentMatch) {
       return;
     }
