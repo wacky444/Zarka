@@ -619,6 +619,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       onShopTabShow: () => {
         this.shopView.setVisible(true);
         this.shopView.setScrollerEnable(true);
+        this.shopView.bringElementsToTop();
       },
       onShopTabHide: () => {
         this.shopView.setVisible(false);
@@ -662,6 +663,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   bringElementsToTop(): void {
     this.actionPlanView?.bringElementsToTop();
+    this.shopView?.bringElementsToTop();
     for (const elem of this.readyView.getElements()) {
       this.bringToTop(elem);
     }
@@ -932,6 +934,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private updateScrollMaskPosition(): void {
     const matrix = this.getWorldTransformMatrix();
     this.actionPlanView?.updateScrollMaskPosition({ tx: matrix.tx, ty: matrix.ty });
+    this.shopView?.updateScrollMaskPosition({ tx: matrix.tx, ty: matrix.ty });
   }
 
   setPanelSize(width: number, height: number) {

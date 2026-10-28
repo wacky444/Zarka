@@ -82,6 +82,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     | "pyromaniac"
     | "bomber"
     | null = null;
+  private layoutOptions: CharacterPanelShopViewLayout;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -89,6 +90,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     layout: CharacterPanelShopViewLayout
   ) {
     super();
+    this.layoutOptions = { ...layout };
     const width = layout.boxWidth;
     const height = Math.max(180, layout.panelHeight - layout.contentTop - layout.margin);
 
@@ -338,6 +340,46 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     return this.elements;
   }
 
+  bringElementsToTop(): void {
+    this.parent.bringToTop(this.headerBox);
+    this.parent.bringToTop(this.balanceText);
+    this.parent.bringToTop(this.donateButtonBackground);
+    this.parent.bringToTop(this.donateButtonLabel);
+    this.parent.bringToTop(this.testamentSelector);
+    this.parent.bringToTop(this.detectiveSelector);
+    this.parent.bringToTop(this.droneLocationSelector);
+  }
+
+  updateScrollMaskPosition(worldTransform: { tx: number; ty: number }): void {
+    if (!this.scrollMaskShape) {
+      return;
+    }
+    const selectorY = this.layoutOptions.contentTop + 8 + HEADER_HEIGHT + 10;
+    const listTop = this.getShopListTop(selectorY);
+    this.scrollMaskShape.setPosition(
+      worldTransform.tx + this.layoutOptions.margin + 12,
+      worldTransform.ty + listTop
+    );
+  }
+
+  private isPointerInScrollBounds(pointer: Phaser.Input.Pointer): boolean {
+    if (!this.scrollMaskShape) {
+      return true;
+    }
+    const x = pointer.x;
+    const y = pointer.y;
+    const shapeX = this.scrollMaskShape.x;
+    const shapeY = this.scrollMaskShape.y;
+    const shapeWidth = this.scrollMaskShape.width;
+    const shapeHeight = this.scrollMaskShape.height;
+    return (
+      x >= shapeX &&
+      x <= shapeX + shapeWidth &&
+      y >= shapeY &&
+      y <= shapeY + shapeHeight
+    );
+  }
+
   setTutorialShopPolicy(
     allowedShopIds: readonly ShopId[] | null,
     highlightedShopId: ShopId | null
@@ -547,6 +589,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
   }
 
   layout(options: CharacterPanelShopViewLayout): void {
+    this.layoutOptions = { ...options };
     const width = options.boxWidth;
     const height = Math.max(180, options.panelHeight - options.contentTop - options.margin);
     this.background.setPosition(options.margin, options.contentTop);
@@ -598,6 +641,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     } else {
       this.scrollPanel.layout?.();
     }
+    this.bringElementsToTop();
   }
 
   destroy(): void {
@@ -746,6 +790,9 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     buyBackground?.on(
       Phaser.Input.Events.POINTER_UP,
       (pointer: Phaser.Input.Pointer) => {
+        if (!this.isPointerInScrollBounds(pointer)) {
+          return;
+        }
         if (isPointerTap(pointer)) {
           this.beginShopPurchase(definition.id);
         }
