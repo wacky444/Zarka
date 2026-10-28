@@ -322,6 +322,7 @@ export class PlaceTrackerAction extends BaseAction {
       };
       events.push({
         kind: "player",
+        importance: 1,
         actorId: participant.playerId,
         action,
         visibility: { scope: "limited", playerIds: [participant.playerId] },

@@ -1,6 +1,11 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import { ActionLibrary, CellLibrary, getActionEnergyDiscount } from "@shared";
+import {
+  ActionLibrary,
+  CellLibrary,
+  getActionEnergyDiscount,
+  ReplayImportance
+} from "@shared";
 import type {
   ActionDefinition,
   ActionId,
@@ -1769,6 +1774,7 @@ export function executeAction(
         match.playerCharacters![participant.playerId] = participant.character;
         return {
           kind: "player",
+          importance: 1,
           actorId: participant.playerId,
           action: {
             actionId: action.id,
@@ -1927,5 +1933,27 @@ function calculateActionExperience(
     }
   }
 
+  const criticalActionIds = new Set<ActionId>([
+    "axe_attack",
+    "bat_attack",
+    "chainsaw_attack",
+    "detonate_c4",
+    "fire_rocket_launcher",
+    "knife_attack",
+    "punch",
+    "poison_food",
+    "shoot_harpoon",
+    "shoot_pistol",
+    "throw_object",
+    "use_chemical_weapon"
+  ]);
+  for (const event of eventsForAction) {
+    if (
+      event.kind === "player" &&
+      criticalActionIds.has(event.action.actionId)
+    ) {
+      event.importance = ReplayImportance.Critical;
+    }
+  }
   return eventsForAction;
 }

@@ -475,6 +475,21 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       .setOrigin(0, 0)
       .setVisible(false)
       .setInteractive({ useHandCursor: true });
+    const logFilterTrack = scene.add
+      .rectangle(baseX + 232, logControlY + 10, 72, 4, 0x64748b)
+      .setOrigin(0, 0.5)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    const logFilterKnob = scene.add
+      .circle(baseX + 232, logControlY + 10, 7, THEME.colors.healthAccent)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    const logFilterLabel = scene.add
+      .text(baseX + 316, logControlY + 2, "0", {
+        fontSize: "14px",
+        color: THEME.colors.textPrimary
+      })
+      .setVisible(false);
     const logBoxY = contentTop + 48;
     const logBoxHeight = Math.max(BOX_HEIGHT, height - logBoxY - MARGIN);
     const logEventsBox = scene.add
@@ -503,6 +518,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.add(logTurnLabel);
     this.add(logNextButton);
     this.add(logPlayButton);
+    this.add(logFilterTrack);
+    this.add(logFilterKnob);
+    this.add(logFilterLabel);
     this.add(logEventsBox);
     this.add(logStatusText);
     this.add(logEventsText);
@@ -512,6 +530,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         prevButton: logPrevButton,
         nextButton: logNextButton,
         playButton: logPlayButton,
+        filterTrack: logFilterTrack,
+        filterKnob: logFilterKnob,
+        filterLabel: logFilterLabel,
         turnLabel: logTurnLabel,
         statusText: logStatusText,
         eventsBox: logEventsBox,
@@ -1355,6 +1376,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   setLogTurnInfo(maxTurn: number, initialTurn?: number) {
     this.logView.setTurnInfo(maxTurn, initialTurn);
+  }
+
+  setLogImportanceThreshold(threshold: 0 | 1 | 2) {
+    this.logView.setImportanceThreshold(threshold);
   }
 
   setLogReplay(turn: number, maxTurn: number, events: ReplayEvent[]) {

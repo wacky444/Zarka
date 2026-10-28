@@ -7,6 +7,7 @@ test("public elimination and destruction notices survive replay tailoring", () =
   const events: ReplayEvent[] = [
     {
       kind: "player",
+      importance: 1,
       actorId: "victim",
       action: {
         actionId: "status_dead",
@@ -28,18 +29,21 @@ test("public elimination and destruction notices survive replay tailoring", () =
     },
     {
       kind: "player",
+      importance: 1,
       actorId: "attacker",
       action: { actionId: "knife_attack" },
       targets: [{ targetId: "victim", damageTaken: 1 }],
     },
     {
       kind: "map",
+      importance: 1,
       cell: { q: 100, r: -100 },
       action: "destroyed",
       visibility: { scope: "all" },
     },
     {
       kind: "map",
+      importance: 1,
       cell: { q: 100, r: -100 },
       action: "destroyed",
     },
@@ -48,6 +52,7 @@ test("public elimination and destruction notices survive replay tailoring", () =
   assert.deepEqual(tailorReplayEvents(events, "observer", undefined, 0), [
     {
       kind: "player",
+      importance: 1,
       actorId: "victim",
       action: {
         actionId: "status_dead",
@@ -57,6 +62,7 @@ test("public elimination and destruction notices survive replay tailoring", () =
     },
     {
       kind: "map",
+      importance: 1,
       cell: { q: 100, r: -100 },
       action: "destroyed",
       visibility: { scope: "all" },

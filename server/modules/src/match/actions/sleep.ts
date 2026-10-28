@@ -100,6 +100,7 @@ export class SleepAction extends BaseSelfHealAction {
       }
       events.push({
         kind: "player",
+        importance: 1,
         actorId: participant.playerId,
         action,
         targets: [target],

@@ -413,6 +413,7 @@ export function buyShopItemRpc(
         if (damageTaken > 0) {
           postPurchaseEvents.push({
             kind: "player",
+            importance: 1,
             actorId: playerId,
             action: {
               actionId: "buy_bomber",
@@ -454,6 +455,7 @@ export function buyShopItemRpc(
               : "buy_bomber";
   const event: ReplayPlayerEvent = {
     kind: "player",
+    importance: 1,
     actorId: ctx.userId,
     action: {
       actionId,

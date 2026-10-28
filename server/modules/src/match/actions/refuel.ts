@@ -63,6 +63,7 @@ export class RefuelAction extends BaseAction {
       }));
       events.push({
         kind: "player",
+        importance: 1,
         actorId: participant.playerId,
         action: {
           actionId: ActionLibrary.refuel.id as ActionId,

@@ -108,6 +108,7 @@ export function createFailedActionEvent(
 ): ReplayPlayerEvent {
   return {
     kind: "player",
+    importance: 1,
     actorId: participant.playerId,
     action: {
       actionId: "failedAction",
@@ -698,6 +699,7 @@ function createUnconsciousReplayEvent(
   }
   return {
     kind: "player",
+    importance: 1,
     actorId,
     action: {
       actionId: STATUS_UNCONSCIOUS_ACTION_ID,
@@ -718,6 +720,7 @@ function createDeathReplayEvent(
   }
   return {
     kind: "player",
+    importance: 1,
     actorId,
     action: {
       actionId: STATUS_DEAD_ACTION_ID,

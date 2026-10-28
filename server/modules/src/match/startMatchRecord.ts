@@ -36,6 +36,7 @@ export function startMatchRecord(
     if (character && effectiveTeam) {
       turn0Events.push({
         kind: "player",
+        importance: 1,
         actorId: character.id,
         action: {
           actionId: "team_assigned",

@@ -27,6 +27,7 @@ const MATCH_ID = "report-replay-match";
 const VIEWER_ID = "viewer";
 const HIDDEN_EVENT = {
   kind: "player",
+  importance: 1,
   actorId: "other-player",
   action: { actionId: "status_hidden" },
   visibility: { scope: "limited", playerIds: ["other-player"] },

@@ -12,6 +12,7 @@ import {
   type ActionId,
   type Axial,
   type ReplayEvent,
+  ReplayImportance,
   type ZarkanDonationRecord
 } from "@shared";
 
@@ -30,6 +31,9 @@ export interface CharacterPanelLogElements {
   prevButton: Phaser.GameObjects.Text;
   nextButton: Phaser.GameObjects.Text;
   playButton: Phaser.GameObjects.Image;
+  filterTrack: Phaser.GameObjects.Rectangle;
+  filterKnob: Phaser.GameObjects.Arc;
+  filterLabel: Phaser.GameObjects.Text;
   turnLabel: Phaser.GameObjects.Text;
   statusText: Phaser.GameObjects.Text;
   eventsBox: Phaser.GameObjects.Rectangle;
@@ -66,6 +70,9 @@ export class CharacterPanelLogView {
   private teams: Record<string, string> = {};
   private visible = false;
   private eliminationKeys = new Set<string>();
+  private importanceThreshold = ReplayImportance.Routine;
+  private replayEvents: ReplayEvent[] = [];
+  private draggingFilter = false;
 
   constructor(private readonly options: CharacterPanelLogViewOptions) {
     this.elements = options.elements;
@@ -73,6 +80,9 @@ export class CharacterPanelLogView {
       options.elements.prevButton,
       options.elements.nextButton,
       options.elements.playButton,
+      options.elements.filterTrack,
+      options.elements.filterKnob,
+      options.elements.filterLabel,
       options.elements.turnLabel,
       options.elements.statusText,
       options.elements.eventsBox,
@@ -86,6 +96,8 @@ export class CharacterPanelLogView {
     prevButton.off(Phaser.Input.Events.POINTER_UP, this.handlePrevClick, this);
     nextButton.off(Phaser.Input.Events.POINTER_UP, this.handleNextClick, this);
     playButton.off(Phaser.Input.Events.POINTER_UP, this.handlePlayClick, this);
+    this.elements.filterTrack.scene.input.off("pointermove", this.handleFilterDrag, this);
+    this.elements.filterTrack.scene.input.off(Phaser.Input.Events.POINTER_UP, this.handleFilterPointerUp, this);
   }
 
   setUsernames(map: Record<string, string>): void {
@@ -143,6 +155,7 @@ export class CharacterPanelLogView {
     this.displayedTurn = resolvedTurn;
     this.lastRequestedTurn = resolvedTurn;
     this.loading = false;
+    this.replayEvents = events;
     this.replayEventStrings = this.formatReplayEvents(events);
     this.eventStrings = [
       ...this.replayEventStrings,
@@ -172,6 +185,7 @@ export class CharacterPanelLogView {
     this.displayedTurn = null;
     this.eventStrings = [];
     this.replayEventStrings = [];
+    this.replayEvents = [];
     this.showStatus(message || t("Replay not available."));
     this.updateTurnLabel();
     this.updateButtons();
@@ -250,6 +264,11 @@ export class CharacterPanelLogView {
       this.elements.nextButton.x + this.elements.nextButton.width + 24,
       controlY + 2
     );
+    const filterX = this.elements.playButton.x + this.elements.playButton.width + 12;
+    this.elements.filterTrack.setPosition(filterX, controlY + 10);
+    this.elements.filterKnob.setY(controlY + 10);
+    this.elements.filterLabel.setPosition(filterX + 82, controlY + 2);
+    this.updateFilterControls();
     const logBoxY = contentTop + 48;
     const logBoxHeight = Math.max(180, panelHeight - logBoxY - margin);
     this.elements.eventsBox.setPosition(margin, logBoxY);
@@ -268,11 +287,55 @@ export class CharacterPanelLogView {
     return this.selectedTurn;
   }
 
+  setImportanceThreshold(threshold: ReplayImportance): void {
+    this.importanceThreshold = Phaser.Math.Clamp(threshold, 0, ReplayImportance.Critical);
+    this.updateFilterControls();
+    this.replayEventStrings = this.formatReplayEvents(this.replayEvents);
+    this.eventStrings = [
+      ...this.replayEventStrings,
+      ...this.formatDonationEvents(this.displayedTurn ?? 0)
+    ];
+    this.updateEventText();
+    this.refreshDisplay();
+  }
+
   private bindInteractions(): void {
     const { prevButton, nextButton, playButton } = this.elements;
     prevButton.on(Phaser.Input.Events.POINTER_UP, this.handlePrevClick, this);
     nextButton.on(Phaser.Input.Events.POINTER_UP, this.handleNextClick, this);
     playButton.on(Phaser.Input.Events.POINTER_UP, this.handlePlayClick, this);
+    this.elements.filterTrack.on(Phaser.Input.Events.POINTER_DOWN, this.handleFilterPointer, this);
+    this.elements.filterKnob.on(Phaser.Input.Events.POINTER_DOWN, this.handleFilterPointer, this);
+    this.elements.filterTrack.scene.input.on("pointermove", this.handleFilterDrag, this);
+    this.elements.filterTrack.scene.input.on(Phaser.Input.Events.POINTER_UP, this.handleFilterPointerUp, this);
+  }
+
+  private handleFilterDrag = (pointer: Phaser.Input.Pointer): void => {
+    if (this.draggingFilter) {
+      this.handleFilterPointer(pointer);
+    }
+  };
+
+  private handleFilterPointerUp = (): void => {
+    this.draggingFilter = false;
+  };
+
+  private handleFilterPointer = (pointer: Phaser.Input.Pointer): void => {
+    this.draggingFilter = true;
+    const bounds = this.elements.filterTrack.getBounds();
+    const ratio = Phaser.Math.Clamp((pointer.worldX - bounds.left) / bounds.width, 0, 1);
+    this.importanceThreshold = Math.round(ratio * ReplayImportance.Critical);
+    this.updateFilterControls();
+    this.replayEventStrings = this.formatReplayEvents(this.replayEvents);
+    this.eventStrings = [...this.replayEventStrings, ...this.formatDonationEvents(this.displayedTurn ?? 0)];
+    this.updateEventText();
+    this.refreshDisplay();
+  };
+
+  private updateFilterControls(): void {
+    const ratio = this.importanceThreshold / ReplayImportance.Critical;
+    this.elements.filterKnob.setX(this.elements.filterTrack.x + ratio * this.elements.filterTrack.width);
+    this.elements.filterLabel.setText(String(this.importanceThreshold));
   }
 
   private handlePrevClick = () => {
@@ -441,6 +504,9 @@ export class CharacterPanelLogView {
     if (!Array.isArray(events) || events.length === 0) {
       return [];
     }
+    events = events.filter(
+      (event) => (event.importance ?? ReplayImportance.Notable) >= this.importanceThreshold
+    );
     const lines: string[] = [];
     const eliminatedInLog = new Set<string>();
     for (const event of events) {

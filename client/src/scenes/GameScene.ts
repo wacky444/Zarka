@@ -4161,6 +4161,7 @@ export class GameScene extends Phaser.Scene {
     const maxTurn = this.currentMatch?.current_turn ?? 0;
     const firstTurn = maxTurn > 0 ? 1 : 0;
     this.characterPanel.setLogTurnInfo(maxTurn, firstTurn);
+    this.characterPanel.setLogImportanceThreshold(2);
     this.reportReplayAutoplayTurn = firstTurn;
     this.enterReplayMode();
     this.characterPanel.openLogTab();

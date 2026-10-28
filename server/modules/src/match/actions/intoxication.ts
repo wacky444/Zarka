@@ -59,6 +59,7 @@ export function consumePoisonedServing(character: PlayerCharacter): PoisonedFood
       overdose: "unconscious",
       healthEvent: {
         kind: "player",
+        importance: 1,
         actorId: character.id,
         action: { actionId: "status_unconscious", metadata: { health: currentHealth } },
       },
@@ -95,6 +96,7 @@ export function applyIntoxicationBeforeAction(
     match.playerCharacters![playerId] = character;
     events.push({
       kind: "player",
+      importance: 1,
       actorId: playerId,
       action: {
         actionId: "poison_food",

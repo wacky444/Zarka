@@ -14,10 +14,17 @@ export interface ReplayTurn {
   events: ReplayEvent[];
 }
 
+export enum ReplayImportance {
+  Routine = 0,
+  Notable = 1,
+  Critical = 2
+}
+
 export type ReplayEvent = ReplayPlayerEvent | ReplayMapEvent;
 
 export interface ReplayPlayerEvent {
   kind: "player";
+  importance: ReplayImportance;
   actorId: string;
   action: ReplayActionDone;
   targets?: ReplayActionTarget[];
@@ -26,6 +33,7 @@ export interface ReplayPlayerEvent {
 
 export interface ReplayMapEvent {
   kind: "map";
+  importance: ReplayImportance;
   cell: Axial;
   action: ReplayMapEventType;
   sourceActorId?: string;

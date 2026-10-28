@@ -205,6 +205,7 @@ export class InspectAction extends BaseAction {
       };
       const event: ReplayPlayerEvent = {
         kind: "player",
+        importance: 1,
         actorId: participant.playerId,
         action,
       };

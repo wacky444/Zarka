@@ -75,6 +75,7 @@ export function applyFireDamageBeforeAction(
       const damageTaken = Math.max(0, -outcome.result.delta);
       events.push({
         kind: "player",
+        importance: 1,
         actorId: playerId,
         action: {
           actionId: "fire_damage",

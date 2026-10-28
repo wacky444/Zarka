@@ -53,6 +53,7 @@ export function executeStartChainsawAction(
 
     events.push({
       kind: "player",
+      importance: 1,
       actorId: participant.playerId,
       action: {
         actionId: ActionLibrary.start_chainsaw.id,

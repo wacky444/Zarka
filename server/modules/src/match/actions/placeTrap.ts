@@ -242,6 +242,7 @@ export class PlaceTrapAction extends BaseAction {
         );
         events.push({
           kind: "player",
+          importance: 1,
           actorId: participant.playerId,
           action: {
             actionId: ActionLibrary.place_trap.id as ActionId,
@@ -426,6 +427,7 @@ export function triggerTrapsForTransition(
   return [
     {
       kind: "player",
+      importance: 1,
       actorId: triggeredTrap.ownerId,
       action: {
         actionId: ActionLibrary.place_trap.id,

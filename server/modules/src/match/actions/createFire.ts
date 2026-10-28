@@ -150,6 +150,7 @@ export class CreateFireAction extends BaseAction {
 
       const event: ReplayPlayerEvent = {
         kind: "player",
+        importance: 2,
         actorId: participant.playerId,
         action: {
           actionId: ActionLibrary.create_fire.id as ActionId,

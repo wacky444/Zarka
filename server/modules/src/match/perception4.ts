@@ -69,6 +69,7 @@ export function createPerception4DetectionEvents(
     }
     events.push({
       kind: "player",
+      importance: 1,
       actorId: viewerId,
       action: {
         actionId: ActionLibrary.detect.id,

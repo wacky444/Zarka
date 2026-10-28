@@ -23,6 +23,7 @@ export function applyScheduledDestruction(
       delete tile.meta.rocketLauncherExplosionVisible;
       replayEvents.push({
         kind: "map",
+        importance: 1,
         cell: tile.coord,
         action: "destroyed",
         visibility: { scope: "all" },
@@ -63,6 +64,7 @@ export function applyScheduledDestruction(
     const teamId = character.secretTeamId?.trim() || character.teamId?.trim();
     replayEvents.push({
       kind: "player",
+      importance: 1,
       actorId: character.id,
       action: {
         actionId: "status_dead",

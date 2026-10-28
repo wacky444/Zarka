@@ -269,6 +269,7 @@ function appendHiddenStatusEvents(
     }
     events.push({
       kind: "player",
+      importance: 1,
       actorId: playerId,
       action: { actionId: ActionLibrary.status_hidden.id },
       visibility: { scope: "limited", playerIds: [playerId] },
@@ -292,6 +293,7 @@ function decrementChainsawTurns(match: MatchRecord, events: ReplayEvent[]): void
         delete character.statuses.chainsaw;
         events.push({
           kind: "player",
+          importance: 1,
           actorId: playerId,
           action: {
             actionId: ActionLibrary.start_chainsaw.id,
@@ -302,6 +304,7 @@ function decrementChainsawTurns(match: MatchRecord, events: ReplayEvent[]): void
         character.statuses.chainsaw.remainingTurns = nextRemaining;
         events.push({
           kind: "player",
+          importance: 1,
           actorId: playerId,
           action: {
             actionId: ActionLibrary.start_chainsaw.id,
@@ -353,6 +356,7 @@ export function advanceTurn(
       if (character && effectiveTeam) {
         replayEvents.push({
           kind: "player",
+          importance: 1,
           actorId: character.id,
           action: {
             actionId: "team_assigned",

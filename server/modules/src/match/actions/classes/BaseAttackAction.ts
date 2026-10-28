@@ -241,6 +241,7 @@ export abstract class BaseAttackAction extends BaseAction {
       }
       events.push({
         kind: "player",
+        importance: 2,
         actorId: participant.playerId,
         action,
         targets: targetEntries,

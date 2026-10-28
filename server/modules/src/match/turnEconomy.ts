@@ -41,6 +41,7 @@ export function applyZarkanIncome(
     character.economy.incomeInterval = 1;
     replayEvents.push({
       kind: "player",
+      importance: 0,
       actorId: playerId,
       action: {
         actionId: "zarkan_income" as ActionId,
@@ -85,6 +86,7 @@ export function applyPendingZarkanPayout(
       character.economy.pendingZarkans = 0;
       replayEvents.push({
         kind: "player",
+        importance: 1,
         actorId: playerId,
         action: {
           actionId: "detective_reward",
@@ -151,6 +153,7 @@ export function applyTraffickerDeliveries(
       else recipient.inventory.carriedItems.push({ itemId, quantity: 1, weight: definition.weight });
       replayEvents.push({
         kind: "player",
+        importance: 1,
         actorId: recipient.id,
         action: { actionId: "give", metadata: { traffickerDelivery: true, itemId, fromPlayerId: playerId } },
         visibility: { scope: "limited", playerIds: [recipient.id] },
@@ -222,6 +225,7 @@ export function applyTestaments(
     deceased.economy.zarkans = 0;
     replayEvents.push({
       kind: "player",
+      importance: 1,
       actorId: deceased.id,
       action: {
         actionId: "give",

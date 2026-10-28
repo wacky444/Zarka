@@ -121,6 +121,7 @@ export class FocusAction extends BaseAction {
       events.push(...healthEvents);
       events.push({
         kind: "player",
+        importance: 1,
         actorId: participant.playerId,
         action,
         targets: [target],

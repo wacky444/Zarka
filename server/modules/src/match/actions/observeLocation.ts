@@ -123,6 +123,7 @@ export class ObserveLocationAction extends BaseAction {
       match.playerCharacters![participant.playerId] = participant.character;
       events.push({
         kind: "player",
+        importance: 1,
         actorId: participant.playerId,
         action,
         visibility: { scope: "limited", playerIds: [participant.playerId] },
@@ -189,6 +190,7 @@ class ActivateCamerasAction extends BaseAction {
       match.playerCharacters![participant.playerId] = participant.character;
       events.push({
         kind: "player",
+        importance: 1,
         actorId: participant.playerId,
         action,
         visibility: { scope: "all" },

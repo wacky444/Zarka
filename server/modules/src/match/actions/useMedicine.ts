@@ -115,6 +115,7 @@ export class UseMedicineAction extends BaseAction {
       }
       events.push({
         kind: "player",
+        importance: 1,
         actorId: participant.playerId,
         action,
         targets: appliedTargets,

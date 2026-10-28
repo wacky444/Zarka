@@ -111,6 +111,7 @@ export function dropOverweightItems(match: MatchRecord): ReplayPlayerEvent[] {
     }
     events.push({
       kind: "player",
+      importance: 1,
       actorId: playerId,
       action: {
         actionId: "drop",

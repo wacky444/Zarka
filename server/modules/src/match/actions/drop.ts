@@ -302,6 +302,7 @@ export class DropAction extends BaseAction {
 
       events.push({
         kind: "player",
+        importance: 1,
         actorId: participant.playerId,
         action
       });

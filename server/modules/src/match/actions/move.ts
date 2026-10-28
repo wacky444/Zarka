@@ -58,6 +58,7 @@ export class MoveAction extends BaseAction {
       if (entry.character.lockpickProgress) {
         events.push({
           kind: "player",
+          importance: 1,
           actorId: entry.playerId,
           action: {
             actionId: ActionLibrary.pick_lock.id,
@@ -79,6 +80,7 @@ export class MoveAction extends BaseAction {
       }
       events.push({
         kind: "player",
+        importance: 1,
         actorId: entry.playerId,
         action,
       });

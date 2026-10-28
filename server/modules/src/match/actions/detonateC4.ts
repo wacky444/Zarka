@@ -91,6 +91,7 @@ function detonateCharge(
   return [
     {
       kind: "player",
+      importance: 2,
       actorId: participant.playerId,
       action: {
         actionId: ActionLibrary.detonate_c4.id as ActionId,

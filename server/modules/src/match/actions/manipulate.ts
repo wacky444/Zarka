@@ -157,6 +157,7 @@ export class ManipulateAction extends BaseAction {
         const coord = participant.character.position?.coord;
         events.push({
           kind: "player",
+          importance: 1,
           actorId: participant.playerId,
           action: {
             actionId: definition.id,

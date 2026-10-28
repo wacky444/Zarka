@@ -110,6 +110,7 @@ export class PlaceC4Action extends BaseAction {
         addDetonator(participant.character);
         events.push({
           kind: "player",
+          importance: 1,
           actorId: participant.playerId,
           action: {
             actionId: ActionLibrary.place_c4.id as ActionId,

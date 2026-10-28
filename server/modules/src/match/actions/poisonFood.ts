@@ -69,7 +69,8 @@ export class PoisonFoodAction extends BaseAction {
         if (poisoned > 0) {
           const action: ReplayActionDone = { actionId, effects: ReplayActionEffect.Hit, metadata: { consumedItemId: "poison", poisonedItems: poisoned } };
           if (participant.character.position?.coord) action.originLocation = participant.character.position.coord;
-          events.push({ kind: "player", actorId: participant.playerId, action, targets: selectedTargets });
+          events.push({ kind: "player",
+  importance: 1, actorId: participant.playerId, action, targets: selectedTargets });
         } else {
           events.push(createFailedActionEvent(participant, actionId, { reason: poisonCount <= 0 ? "missing_item" : "invalid_target", ...(poisonCount <= 0 ? { missingItemId: "poison" } : {}) }));
         }
@@ -133,7 +134,8 @@ export class PoisonFoodAction extends BaseAction {
         if (participant.character.position?.coord) {
           action.originLocation = participant.character.position.coord;
         }
-        events.push({ kind: "player", actorId: participant.playerId, action, targets: poisonedTargets });
+        events.push({ kind: "player",
+  importance: 1, actorId: participant.playerId, action, targets: poisonedTargets });
       } else {
         events.push(createFailedActionEvent(participant, actionId, { reason: "missing_item", missingItemId: "poison" }));
       }

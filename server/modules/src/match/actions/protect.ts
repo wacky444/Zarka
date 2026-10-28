@@ -87,6 +87,7 @@ export class ProtectAction extends BaseAction {
       action.effects = guardEffectMask();
       events.push({
         kind: "player",
+        importance: 1,
         actorId: participant.playerId,
         action,
         targets: appliedTargets,

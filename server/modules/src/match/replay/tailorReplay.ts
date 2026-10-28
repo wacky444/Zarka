@@ -71,6 +71,7 @@ export function tailorReplayEvents(
           ?.teamId;
         result.push({
           kind: "player",
+          importance: 1,
           actorId: event.actorId,
           action: {
             actionId: event.action.actionId,

@@ -173,6 +173,7 @@ export function maybeTriggerVengefulCounterAttack(
 
   const counterEvent: ReplayPlayerEvent = {
     kind: "player",
+    importance: 1,
     actorId: targetId,
     action: {
       actionId: weapon.actionId,

@@ -52,6 +52,7 @@ export function applyVirusInfection(
       const damageTaken = Math.max(0, -outcome.result.delta);
       const infectionEvent: ReplayPlayerEvent = {
         kind: "player",
+        importance: 1,
         actorId: sourceId,
         action: {
           actionId: "inject_virus",

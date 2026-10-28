@@ -143,6 +143,7 @@ export class ScareAction extends BaseAction {
           };
           events.push({
             kind: "player",
+            importance: 1,
             actorId: participant.playerId,
             action,
             targets: [targetEvent],
@@ -159,6 +160,7 @@ export class ScareAction extends BaseAction {
         if (target.lockpickProgress) {
           events.push({
             kind: "player",
+            importance: 1,
             actorId: targetSelection.id,
             action: {
               actionId: ActionLibrary.pick_lock.id,
@@ -194,6 +196,7 @@ export class ScareAction extends BaseAction {
         };
         events.push({
           kind: "player",
+          importance: 1,
           actorId: participant.playerId,
           action,
           targets: [targetEvent],

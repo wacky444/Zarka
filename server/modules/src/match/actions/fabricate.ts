@@ -83,6 +83,7 @@ export class FabricateAction extends BaseAction {
         };
         events.push({
           kind: "player",
+          importance: 1,
           actorId: participant.playerId,
           action: {
             actionId: ActionLibrary.fabricate.id,
@@ -131,6 +132,7 @@ export function executeDexterity3Fabrication(
     if (failure) {
       events.push({
         kind: "player",
+        importance: 1,
         actorId: playerId,
         action: {
           actionId: ActionLibrary.fabricate.id,
@@ -151,6 +153,7 @@ export function executeDexterity3Fabrication(
     const coord = character.position?.coord;
     events.push({
       kind: "player",
+      importance: 1,
       actorId: playerId,
       action: {
         actionId: ActionLibrary.fabricate.id,

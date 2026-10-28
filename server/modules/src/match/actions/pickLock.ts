@@ -52,6 +52,7 @@ export function instantUnlockWithLockpick(
   }
   return {
     kind: "player",
+    importance: 1,
     actorId: playerId,
     action: {
       actionId: ActionLibrary.pick_lock.id,
@@ -125,7 +126,8 @@ export function executePickLockAction(
     if (!tileId || !safe) {
       character.lockpickProgress = undefined;
       clearPlanByKey(participant.character, participant.planKey);
-      events.push({ kind: "player", actorId: participant.playerId, action: {
+      events.push({ kind: "player",
+  importance: 1, actorId: participant.playerId, action: {
         actionId: ActionLibrary.pick_lock.id,
         metadata: { outcome: "failure", reason: "safe_not_visible" },
       }});
@@ -157,7 +159,8 @@ export function executePickLockAction(
       if (participant.plan.actionId === ActionLibrary.pick_lock.id) {
         clearPlanByKey(character, participant.planKey);
       }
-      events.push({ kind: "player", actorId: participant.playerId, action: {
+      events.push({ kind: "player",
+  importance: 1, actorId: participant.playerId, action: {
         actionId: ActionLibrary.pick_lock.id,
         metadata: { outcome: "progress", turnsCompleted, turnsRequired: required, safeItemId: safe.safeItemId, tileId },
       }});
@@ -169,7 +172,8 @@ export function executePickLockAction(
     if (participant.plan.actionId === ActionLibrary.pick_lock.id) {
       clearPlanByKey(character, participant.planKey);
     }
-    events.push({ kind: "player", actorId: participant.playerId, action: {
+    events.push({ kind: "player",
+  importance: 1, actorId: participant.playerId, action: {
       actionId: ActionLibrary.pick_lock.id,
       metadata: {
         outcome: "success",

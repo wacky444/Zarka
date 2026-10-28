@@ -93,6 +93,7 @@ export class InjectVaccineAction extends BaseAction {
       };
       events.push({
         kind: "player",
+        importance: 1,
         actorId: participant.playerId,
         action,
         targets: [targetEntry],

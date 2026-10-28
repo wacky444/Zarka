@@ -351,6 +351,7 @@ export class StealAction extends BaseAction {
       };
       const replayEvent: ReplayPlayerEvent = {
         kind: "player",
+        importance: 1,
         actorId: participant.playerId,
         action
       };

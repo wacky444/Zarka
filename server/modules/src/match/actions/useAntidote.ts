@@ -94,7 +94,8 @@ export class UseAntidoteAction extends BaseAction {
           metadata: { consumedItemId: "antidote", antidotesConsumed: targets.length, extraExecutions },
         };
         if (position?.coord) action.originLocation = position.coord;
-        events.push({ kind: "player", actorId: participant.playerId, action, targets });
+        events.push({ kind: "player",
+  importance: 1, actorId: participant.playerId, action, targets });
       }
     }
     return events;
