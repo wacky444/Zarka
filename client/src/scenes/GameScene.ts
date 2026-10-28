@@ -124,6 +124,7 @@ export class GameScene extends Phaser.Scene {
   private currentMatch: MatchRecord | null = null;
   private boardRenderer: GameBoardRenderer | null = null;
   private playerNameMap: Record<string, string> = {};
+  private replayNamesMatchId: string | null = null;
   private characterPanel: CharacterPanel | null = null;
   private characterPanelDesktopWidth = 0;
   private menuButton: UIButton | null = null;
@@ -803,6 +804,7 @@ export class GameScene extends Phaser.Scene {
     this.replayPaused = false;
     this.replayPlaybackCancelled = false;
     this.replayView = null;
+    this.replayNamesMatchId = null;
     this.replayQueue = [];
     this.replayPlaying = false;
     this.logTabActive = false;
@@ -4303,6 +4305,23 @@ export class GameScene extends Phaser.Scene {
       this.renderMap(replayMatch.map);
     }
     this.renderPlayerCharacters(replayMatch);
+    if (this.replayNamesMatchId !== replayMatch.match_id) {
+      this.replayNamesMatchId = replayMatch.match_id;
+      void this.resolvePlayerNames(replayMatch).then(() => {
+        const activeReplay = this.replayView;
+        if (!activeReplay || activeReplay.match.match_id !== replayMatch.match_id) {
+          return;
+        }
+        this.renderPlayerCharacters(activeReplay.match);
+        this.characterPanel?.updateFromMatch(
+          activeReplay.match,
+          this.currentUserId,
+          Object.keys(this.playerNameMap).length > 0
+            ? this.playerNameMap
+            : undefined
+        );
+      });
+    }
     this.updateReplayControls();
   }
 
