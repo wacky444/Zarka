@@ -494,7 +494,7 @@ export const ItemLibrary: ItemLibraryDefinition = {
     id: "zarkan3",
     name: "Moneda de 3 zarkans",
     category: ItemCategory.Special,
-    sprite: "Items/zarkan.png",
+    sprite: "Items/3zarkan.png",
     weapon: false,
     consumable: false,
     canBeStolen: false,
