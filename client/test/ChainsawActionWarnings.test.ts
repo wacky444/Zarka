@@ -177,4 +177,21 @@ test("tile destroyed translates correctly in Spanish and English", () => {
   }
 });
 
+test("cooldown abbreviation translates between CD and Enf", () => {
+  const previousLocale = getLocale();
+  try {
+    setLocale("es");
+    assert.equal(t("CD"), "Enf");
+    assert.equal(t("CD:"), "Enf:");
+    assert.equal(t("CD: 3"), "Enf: 3");
+    setLocale("en");
+    assert.equal(t("CD"), "CD");
+    assert.equal(t("Enf"), "CD");
+    assert.equal(t("Enf:"), "CD:");
+    assert.equal(t("Enf: 3"), "CD: 3");
+  } finally {
+    setLocale(previousLocale);
+  }
+});
+
 

@@ -1328,7 +1328,7 @@ export class GridSelect extends Phaser.GameObjects.Container {
               this.scene.rexUI.add.BBCodeText(
                 x + cellWidth / 2,
                 y,
-                `[color=${THEME.colors.cooldown}]CD: ${cooldownRemaining}[/color]`,
+                `[color=${THEME.colors.cooldown}]${t("CD")}: ${cooldownRemaining}[/color]`,
                 {
                   fontSize: "11px",
                   color: THEME.colors.cooldown,

@@ -656,6 +656,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Health: "Salud",
   Energy: "Energía",
   "Energy: Unknown": "Energía: Desconocida",
+  CD: "Enf",
+  "CD:": "Enf:",
   Weight: "Peso",
   Team: "Equipo",
   team: "equipo",
@@ -1011,6 +1013,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
 
 const ENGLISH_GAME_NAMES: Record<string, string> = {
   "Bienvenido a Zarka": "Welcome to Zarka",
+  Enf: "CD",
+  "Enf:": "CD:",
   "Has llegado voluntariamente a un pueblo abandonado con un único objetivo: sobrevivir. En este juego de rol y estrategia por turnos, varios equipos se enfrentan a muerte, pero hay un problema: [b]aún no sabes quiénes son tus aliados.[/b]":
     "You have voluntarily arrived at an abandoned town with a single goal: to survive. In this turn-based role-playing and strategy game, several teams fight to the death, but there is a problem: [b]you still don't know who your allies are.[/b]",
   "Empiezas a solas, equipado únicamente con una mochila y una ración de comida. Cada día deberás elegir tus acciones, explorar el mapa, reunirte con tu equipo y eliminar a tus rivales.":
@@ -1383,6 +1387,7 @@ const PREFIX_TRANSLATIONS: Array<[RegExp, string]> = [
   [/^Health\s+/, "Salud "],
   [/^Energy\s+/, "Energía "],
   [/^Energy:\s*/, "Energía: "],
+  [/^CD:\s*/, "Enf: "],
   [/^Weight:\s*/, "Peso: "],
   [/^Team:\s*/, "Equipo: "],
   [/^Missing\s+/, "Falta "],
@@ -1502,6 +1507,10 @@ function translateValue(value: string): string {
       return tileDestroyed[1]
         ? `Tile destroyed at ${tileDestroyed[1]}`
         : "Tile destroyed at";
+    }
+    const cdMatch = value.match(/^Enf:\s*(.*)$/);
+    if (cdMatch) {
+      return cdMatch[1] ? `CD: ${cdMatch[1]}` : "CD:";
     }
     return ENGLISH_GAME_NAMES[value] ?? value;
   }
