@@ -504,9 +504,14 @@ export class CharacterPanelLogView {
     if (!Array.isArray(events) || events.length === 0) {
       return [];
     }
-    events = events.filter(
-      (event) => (event.importance ?? ReplayImportance.Notable) >= this.importanceThreshold
-    );
+    events = events.filter((event) => {
+      const importance =
+        event.importance ??
+        (event.kind === "player" && (event.action.actionId as string) === "zarkan_income"
+          ? ReplayImportance.Routine
+          : ReplayImportance.Notable);
+      return importance >= this.importanceThreshold;
+    });
     const lines: string[] = [];
     const eliminatedInLog = new Set<string>();
     for (const event of events) {
@@ -516,7 +521,11 @@ export class CharacterPanelLogView {
         const levelsGained = (
           event.action.metadata as { levelsGained?: unknown } | undefined
         )?.levelsGained;
-        if (typeof levelsGained === "number" && levelsGained > 0) {
+        if (
+          this.importanceThreshold === ReplayImportance.Routine &&
+          typeof levelsGained === "number" &&
+          levelsGained > 0
+        ) {
           lines.push(`${actor} ${t("leveled up")} (+${levelsGained})`);
         }
         if (actionId === "start_chainsaw") {
