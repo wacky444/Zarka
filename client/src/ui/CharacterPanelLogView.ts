@@ -1251,9 +1251,9 @@ export class CharacterPanelLogView {
               const targetName = this.resolvePlayerName(targetId);
               lines.push(
                 damage > 0
-                  ? `${targetName} ${t(
-                      "was affected by a virus"
-                    )} ${t("and lost")} ${damage} ${t("health")}`
+                  ? `${actor} ${t("virus made")} ${targetName} ${t(
+                      "sick and suffered"
+                    )} ${damage} ${t("damage")}`
                   : `${targetName} ${t("was exposed to a virus")}`
               );
             } else {

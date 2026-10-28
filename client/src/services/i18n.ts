@@ -782,6 +782,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "detected nobody": "no detectó a nadie",
   ea: "cada uno",
   "was affected by a virus": "fue afectado por un virus",
+  "virus made": "virus enfermó a",
+  "sick and suffered": "y sufrió",
   "was exposed to a virus": "estuvo expuesto a un virus",
   vaccinated: "vacunó a",
   "vaccinated themselves": "se vacunó",
