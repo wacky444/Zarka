@@ -16,6 +16,34 @@ import {
   type ZarkanDonationRecord
 } from "@shared";
 
+const CRITICAL_REPLAY_ACTION_IDS = new Set<string>([
+  "axe_attack",
+  "bat_attack",
+  "chainsaw_attack",
+  "detonate_c4",
+  "fire_rocket_launcher",
+  "knife_attack",
+  "punch",
+  "poison_food",
+  "shoot_harpoon",
+  "shoot_pistol",
+  "throw_object",
+  "use_chemical_weapon"
+]);
+
+function getEventImportance(event: ReplayEvent): ReplayImportance {
+  if (event.kind === "player") {
+    const actionId = event.action.actionId as string;
+    if (actionId === "zarkan_income") {
+      return ReplayImportance.Routine;
+    }
+    if (CRITICAL_REPLAY_ACTION_IDS.has(actionId)) {
+      return ReplayImportance.Critical;
+    }
+  }
+  return event.importance ?? ReplayImportance.Notable;
+}
+
 function readAxialMetadata(value: unknown): Axial | null {
   if (!value || typeof value !== "object") {
     return null;
@@ -504,14 +532,9 @@ export class CharacterPanelLogView {
     if (!Array.isArray(events) || events.length === 0) {
       return [];
     }
-    events = events.filter((event) => {
-      const importance =
-        event.importance ??
-        (event.kind === "player" && (event.action.actionId as string) === "zarkan_income"
-          ? ReplayImportance.Routine
-          : ReplayImportance.Notable);
-      return importance >= this.importanceThreshold;
-    });
+    events = events.filter(
+      (event) => getEventImportance(event) >= this.importanceThreshold
+    );
     const lines: string[] = [];
     const eliminatedInLog = new Set<string>();
     for (const event of events) {
