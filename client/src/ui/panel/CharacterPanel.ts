@@ -112,7 +112,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private tutorialStepId: TutorialStepId | null = null;
   private tutorialActive = false;
   private tutorialAllowedMainActionIds: ReadonlySet<ActionId> | null = null;
-  private tutorialAllowedSecondaryActionIds: ReadonlySet<ActionId> | null = null;
+  private tutorialAllowedSecondaryActionIds: ReadonlySet<ActionId> | null =
+    null;
   private tutorialActionEditingEnabled = true;
   private tutorialReadyEnabled = true;
   private logView!: CharacterPanelLogView;
@@ -237,7 +238,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         .setOrigin(0.5, 0.5)
         .setInteractive({ useHandCursor: true });
       const badge = scene.add
-        .rectangle(index * tabWidth + tabWidth - 10, 6, 8, 8, THEME.colors.unreadBadge)
+        .rectangle(
+          index * tabWidth + tabWidth - 10,
+          6,
+          8,
+          8,
+          THEME.colors.unreadBadge
+        )
         .setOrigin(0.5, 0)
         .setVisible(false);
       rect.on(Phaser.Input.Events.POINTER_UP, () => {
@@ -384,20 +391,32 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       worldTransform: { tx: matrix.tx, ty: matrix.ty }
     });
 
-    this.actionPlanView.on("dexterity3-selection-change", (itemId: string | null) => {
-      this.emit("dexterity3-selection-change", itemId);
-    });
-    this.actionPlanView.on("main-action-change", (payload: MainActionSelection) => {
-      this.setReadyEnabled(this.readyEnabled);
-      this.emit("main-action-change", payload);
-    });
-    this.actionPlanView.on("secondary-action-change", (payload: SecondaryActionSelection) => {
-      this.setReadyEnabled(this.readyEnabled);
-      this.emit("secondary-action-change", payload);
-    });
-    this.actionPlanView.on("extra-secondary-action-change", (payload: SecondaryActionSelection) => {
-      this.emit("extra-secondary-action-change", payload);
-    });
+    this.actionPlanView.on(
+      "dexterity3-selection-change",
+      (itemId: string | null) => {
+        this.emit("dexterity3-selection-change", itemId);
+      }
+    );
+    this.actionPlanView.on(
+      "main-action-change",
+      (payload: MainActionSelection) => {
+        this.setReadyEnabled(this.readyEnabled);
+        this.emit("main-action-change", payload);
+      }
+    );
+    this.actionPlanView.on(
+      "secondary-action-change",
+      (payload: SecondaryActionSelection) => {
+        this.setReadyEnabled(this.readyEnabled);
+        this.emit("secondary-action-change", payload);
+      }
+    );
+    this.actionPlanView.on(
+      "extra-secondary-action-change",
+      (payload: SecondaryActionSelection) => {
+        this.emit("extra-secondary-action-change", payload);
+      }
+    );
     this.actionPlanView.on("main-action-location-request", () => {
       this.emit("main-action-location-request");
     });
@@ -728,11 +747,14 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.hideStatusElements();
       this.skillsView.setVisible(true);
     }
-    const policy = this.tutorialStepId ? getTutorialUiPolicy(this.tutorialStepId) : null;
+    const policy = this.tutorialStepId
+      ? getTutorialUiPolicy(this.tutorialStepId)
+      : null;
     const shouldHighlightCharacterSubtab =
       this.tutorialActive &&
       policy?.highlightedCharacterSubtab != null &&
-      this.characterSubtabs.getActiveKey() !== policy.highlightedCharacterSubtab;
+      this.characterSubtabs.getActiveKey() !==
+        policy.highlightedCharacterSubtab;
     this.characterSubtabs.setHighlightedKey(
       shouldHighlightCharacterSubtab ? policy!.highlightedCharacterSubtab : null
     );
@@ -742,7 +764,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (!this.tabsController) {
       return;
     }
-    const policy = this.tutorialStepId ? getTutorialUiPolicy(this.tutorialStepId) : null;
+    const policy = this.tutorialStepId
+      ? getTutorialUiPolicy(this.tutorialStepId)
+      : null;
     const shouldHighlightTab =
       this.tutorialActive &&
       policy?.highlightedTab != null &&
@@ -800,15 +824,17 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.shopView.setTutorialShopPolicy(null, null);
       this.characterSubtabs.setHighlightedKey(null);
       this.tabsController?.setHighlightedTab(null);
-      this.updateFromMatch(this.currentMatch, this.currentUserId, this.lastUserMap);
+      this.updateFromMatch(
+        this.currentMatch,
+        this.currentUserId,
+        this.lastUserMap
+      );
       return;
     }
 
     const policy = getTutorialUiPolicy(stepId);
     this.tutorialAllowedMainActionIds = new Set(policy.primaryActionIds);
-    this.tutorialAllowedSecondaryActionIds = new Set(
-      policy.secondaryActionIds
-    );
+    this.tutorialAllowedSecondaryActionIds = new Set(policy.secondaryActionIds);
     this.tutorialActionEditingEnabled = !active || policy.actionEditingEnabled;
     this.tutorialReadyEnabled = !active || policy.readyEnabled;
 
@@ -849,11 +875,16 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const shouldHighlightCharacterSubtab =
       active &&
       policy.highlightedCharacterSubtab !== null &&
-      this.characterSubtabs.getActiveKey() !== policy.highlightedCharacterSubtab;
+      this.characterSubtabs.getActiveKey() !==
+        policy.highlightedCharacterSubtab;
     this.characterSubtabs.setHighlightedKey(
       shouldHighlightCharacterSubtab ? policy.highlightedCharacterSubtab : null
     );
-    this.updateFromMatch(this.currentMatch, this.currentUserId, this.lastUserMap);
+    this.updateFromMatch(
+      this.currentMatch,
+      this.currentUserId,
+      this.lastUserMap
+    );
     if (active && policy.actionEditingEnabled) {
       this.actionPlanView?.syncTutorialActionSelection(
         policy,
@@ -879,8 +910,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
     if (activeTab === "shop") {
       const shopTarget = this.shopView.getHighlightedTarget();
-      if (shopTarget && (shopTarget as unknown as { visible?: boolean }).visible !== false) {
-        return (shopTarget as unknown as Phaser.GameObjects.Components.GetBounds).getBounds();
+      if (
+        shopTarget &&
+        (shopTarget as unknown as { visible?: boolean }).visible !== false
+      ) {
+        return (
+          shopTarget as unknown as Phaser.GameObjects.Components.GetBounds
+        ).getBounds();
       }
     }
 
@@ -894,15 +930,25 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
       if (activeSubtab === "skills") {
         const skillsTarget = this.skillsView.getHighlightedTarget();
-        if (skillsTarget && (skillsTarget as unknown as { visible?: boolean }).visible !== false) {
-          return (skillsTarget as unknown as Phaser.GameObjects.Components.GetBounds).getBounds();
+        if (
+          skillsTarget &&
+          (skillsTarget as unknown as { visible?: boolean }).visible !== false
+        ) {
+          return (
+            skillsTarget as unknown as Phaser.GameObjects.Components.GetBounds
+          ).getBounds();
         }
       }
 
       if (activeSubtab === "status") {
         const actionTarget = this.actionPlanView?.getHighlightedTarget();
-        if (actionTarget && (actionTarget as unknown as { visible?: boolean }).visible !== false) {
-          return (actionTarget as unknown as Phaser.GameObjects.Components.GetBounds).getBounds();
+        if (
+          actionTarget &&
+          (actionTarget as unknown as { visible?: boolean }).visible !== false
+        ) {
+          return (
+            actionTarget as unknown as Phaser.GameObjects.Components.GetBounds
+          ).getBounds();
         }
 
         const readyTarget = this.readyView.getHighlightedTarget();
@@ -933,7 +979,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   private updateScrollMaskPosition(): void {
     const matrix = this.getWorldTransformMatrix();
-    this.actionPlanView?.updateScrollMaskPosition({ tx: matrix.tx, ty: matrix.ty });
+    this.actionPlanView?.updateScrollMaskPosition({
+      tx: matrix.tx,
+      ty: matrix.ty
+    });
     this.shopView?.updateScrollMaskPosition({ tx: matrix.tx, ty: matrix.ty });
   }
 
@@ -1089,9 +1138,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
             ? account.displayName.trim()
             : null;
         const name =
-          accountDisplayName ??
-          this.lastUserMap[this.currentUserId] ??
-          null;
+          accountDisplayName ?? this.lastUserMap[this.currentUserId] ?? null;
         const ready =
           this.currentMatch.readyStates?.[this.currentUserId] ?? false;
         this.applyCharacter(character, name, ready);
@@ -1163,6 +1210,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.currentCharacter = character;
     this.statusView.update(character, name);
     this.skillsView.update(character);
+    this.updateCharacterSubtabs();
 
     this.actionPlanView.update({
       character,
@@ -1215,7 +1263,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     const mainSelection = this.actionPlanView.getMainActionSelection();
     const secondaryActionId =
       this.actionPlanView.getSecondaryActionSelectionId() ??
-      this.currentMatch?.playerCharacters?.[this.currentUserId ?? ""]?.actionPlan?.secondary?.actionId ??
+      this.currentMatch?.playerCharacters?.[this.currentUserId ?? ""]
+        ?.actionPlan?.secondary?.actionId ??
       null;
     return isTutorialReadyActionAllowed(this.tutorialStepId, {
       mainActionId: this.actionPlanView.getMainActionSelectionId(),
@@ -1230,6 +1279,20 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     return this.currentCharacter?.progression?.availableSkillPoints ?? 0;
   }
 
+  private updateCharacterSubtabs(): void {
+    if (!this.characterSubtabs) {
+      return;
+    }
+    const unspent = this.getUnspentSkillPoints();
+    if (unspent > 0) {
+      this.characterSubtabs.setTabLabel("skills", `Skills (${unspent})`);
+      this.characterSubtabs.setTabTextColor("skills", THEME.colors.warning);
+    } else {
+      this.characterSubtabs.setTabLabel("skills", "Skills");
+      this.characterSubtabs.setTabTextColor("skills", null);
+    }
+  }
+
   private setReadyEnabled(enabled: boolean) {
     this.readyEnabled = enabled;
     if (!this.readyView) {
@@ -1242,6 +1305,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.characterSubtabs.getActiveKey() === "status";
     const tutorialReadyAllowed = this.isTutorialReadyAllowed();
     const unspentPoints = this.getUnspentSkillPoints();
+    this.updateCharacterSubtabs();
 
     this.readyView.refresh({
       enabled,
@@ -1249,8 +1313,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       isStatusActive,
       unspentSkillPoints: unspentPoints,
       currentTurn: this.currentTurn,
-      plannedEnergyCost:
-        this.actionPlanView?.getTotalPlannedEnergyCost() ?? 0,
+      plannedEnergyCost: this.actionPlanView?.getTotalPlannedEnergyCost() ?? 0,
       availableEnergy: this.actionPlanView?.getAvailableEnergy() ?? 0,
       willBeOverweight: this.actionPlanView?.willBeOverweight() ?? false,
       hasChainsawOrderConflict:
