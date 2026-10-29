@@ -192,7 +192,6 @@ export class CharacterPanelLogView {
       ...this.replayEventStrings,
       ...this.formatDonationEvents(resolvedTurn)
     ];
-    this.notifyEliminationEvents(resolvedTurn, events);
     this.updateEventText();
     this.updateTurnLabel();
     this.updateButtons();
@@ -316,6 +315,10 @@ export class CharacterPanelLogView {
 
   getSelectedTurn(): number | null {
     return this.selectedTurn;
+  }
+
+  getMaxTurn(): number {
+    return this.maxTurn;
   }
 
   setImportanceThreshold(threshold: ReplayImportance): void {

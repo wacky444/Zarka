@@ -1137,7 +1137,6 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.currentTurn = 0;
       this.applyCharacter(null, null, false);
       this.actionPlanView?.applyTutorialActionEditingState();
-      this.setLogTurnInfo(0);
       return;
     }
     this.currentTurn = match.current_turn ?? 0;
@@ -1407,6 +1406,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   setLogPlaybackState(active: boolean) {
     this.logView.setPlaybackState(active);
+  }
+
+  getLogMaxTurn(): number {
+    return this.logView.getMaxTurn();
   }
 
   beginDetectivePurchase(): void {
