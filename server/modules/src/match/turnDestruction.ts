@@ -1,6 +1,6 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import type { ReplayEvent } from "@shared";
+import { ReplayImportance, type ReplayEvent } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { applyHealthDelta } from "./actions/utils";
 import { isCharacterDead } from "../utils/playerCharacter";
@@ -9,7 +9,7 @@ import { findTileAtCoord } from "../utils/location";
 export function applyScheduledDestruction(
   match: MatchRecord,
   resolvedTurn: number,
-  logger: nkruntime.Logger,
+  logger: nkruntime.Logger
 ): ReplayEvent[] {
   const replayEvents: ReplayEvent[] = [];
 
@@ -26,7 +26,7 @@ export function applyScheduledDestruction(
         importance: 1,
         cell: tile.coord,
         action: "destroyed",
-        visibility: { scope: "all" },
+        visibility: { scope: "all" }
       });
     }
   }
@@ -64,13 +64,13 @@ export function applyScheduledDestruction(
     const teamId = character.secretTeamId?.trim() || character.teamId?.trim();
     replayEvents.push({
       kind: "player",
-      importance: 1,
+      importance: ReplayImportance.Critical,
       actorId: character.id,
       action: {
         actionId: "status_dead",
-        ...(teamId ? { metadata: { teamId } } : {}),
+        ...(teamId ? { metadata: { teamId } } : {})
       },
-      visibility: { scope: "all" },
+      visibility: { scope: "all" }
     });
   }
 

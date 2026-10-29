@@ -28,10 +28,14 @@ const CRITICAL_REPLAY_ACTION_IDS = new Set<string>([
   "shoot_harpoon",
   "shoot_pistol",
   "throw_object",
+  "status_dead",
   "use_chemical_weapon"
 ]);
 
 function getEventImportance(event: ReplayEvent): ReplayImportance {
+  if (event.kind === "player" && CRITICAL_REPLAY_ACTION_IDS.has(event.action.actionId as string)) {
+    return ReplayImportance.Critical;
+  }
   if (event.importance !== undefined) {
     return event.importance;
   }
