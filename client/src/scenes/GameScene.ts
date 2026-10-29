@@ -114,6 +114,7 @@ type CachedReplay = {
 interface GameSceneStartData {
   matchId?: string;
   reportReplay?: boolean;
+  userId?: string;
 }
 
 const TUTORIAL_VICTORY_DELAY_MS = 3000;
@@ -842,7 +843,8 @@ export class GameScene extends Phaser.Scene {
       .catch((error: unknown) => {
         console.warn("Failed to refresh ranked match status:", error);
       });
-    this.currentUserId = this.registry.get("currentUserId") as string | null;
+    this.currentUserId =
+      (data?.userId ?? this.registry.get("currentUserId")) as string | null;
     if (this.turnService) {
       this.turnService.setOnTurnAdvanced(this.turnAdvancedHandler);
       this.turnService.setOnMatchEnded(this.matchEndedHandler);
@@ -1798,6 +1800,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePlayerEliminated(payload: PlayerEliminationBannerEvent) {
+    if (this.replayModeActive || this.reportReplayMode || this.replayView) {
+      return;
+    }
     const character = this.currentMatch?.playerCharacters?.[payload.playerId];
     const teamId =
       payload.teamId?.trim() ||
@@ -2151,7 +2156,11 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const turn = this.replayView?.turn ?? 0;
-    const maxTurn = this.currentMatch?.current_turn ?? turn;
+    const maxTurn = Math.max(
+      this.characterPanel?.getLogMaxTurn() ?? 0,
+      this.currentMatch?.current_turn ?? 0,
+      turn
+    );
     const navigationEnabled =
       !this.logFetchRunning && !this.manualReplayPlaying;
     const cachedReplay = this.logReplayCache.get(turn);
@@ -2351,8 +2360,10 @@ export class GameScene extends Phaser.Scene {
         ? this.playerNameMap
         : undefined;
     this.characterPanel.updateFromMatch(match, this.currentUserId, nameMap);
-    const turns = match?.current_turn ?? 0;
-    this.characterPanel.setLogTurnInfo(turns);
+    if (!this.replayModeActive && !this.reportReplayMode && !this.replayView) {
+      const turns = match?.current_turn ?? 0;
+      this.characterPanel.setLogTurnInfo(turns);
+    }
     if (!match) {
       this.logReplayCache.clear();
       return;
@@ -4183,7 +4194,11 @@ export class GameScene extends Phaser.Scene {
     if (!this.replayView || this.manualReplayPlaying || this.logFetchRunning) {
       return;
     }
-    const maxTurn = this.currentMatch?.current_turn ?? this.replayView.turn;
+    const maxTurn = Math.max(
+      this.characterPanel?.getLogMaxTurn() ?? 0,
+      this.currentMatch?.current_turn ?? 0,
+      this.replayView.turn
+    );
     const targetTurn = Phaser.Math.Clamp(
       this.replayView.turn + delta,
       0,
@@ -4258,6 +4273,10 @@ export class GameScene extends Phaser.Scene {
       if (!matchId) {
         return;
       }
+      const initialTurn = Math.max(
+        this.characterPanel?.getLogMaxTurn() ?? 0,
+        turn
+      );
       this.currentMatch = {
         match_id: matchId,
         players: Object.keys(playerCharacters),
@@ -4265,7 +4284,7 @@ export class GameScene extends Phaser.Scene {
         playerList: playerCharacters,
         size: snapshot.map?.cols ?? 0,
         created_at: 0,
-        current_turn: turn,
+        current_turn: initialTurn,
         started: true,
         removed: 0,
         map: snapshot.map,
@@ -4347,9 +4366,11 @@ export class GameScene extends Phaser.Scene {
   private handleLogTabOpened() {
     this.logTabActive = true;
     this.completeVisibleTutorialSteps();
-    const turns = this.currentMatch?.current_turn ?? 0;
-    if (turns === 0) {
-      this.characterPanel?.setLogTurnInfo(0);
+    if (!this.replayModeActive && !this.reportReplayMode && !this.replayView) {
+      const turns = this.currentMatch?.current_turn ?? 0;
+      if (turns === 0) {
+        this.characterPanel?.setLogTurnInfo(0);
+      }
     }
   }
 
@@ -4359,7 +4380,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleLogTurnRequest(turn: number) {
-    const maxTurn = this.currentMatch?.current_turn ?? 0;
+    const maxTurn = Math.max(
+      this.characterPanel?.getLogMaxTurn() ?? 0,
+      this.currentMatch?.current_turn ?? 0
+    );
     if (!this.characterPanel) {
       return;
     }
@@ -4421,6 +4445,12 @@ export class GameScene extends Phaser.Scene {
         preTurnSnapshot: payload.preTurnSnapshot
       };
       this.logReplayCache.set(resolvedTurn, replay);
+      if (this.currentMatch) {
+        this.currentMatch.current_turn = Math.max(
+          this.currentMatch.current_turn ?? 0,
+          maxTurn
+        );
+      }
       panel.setLogReplay(resolvedTurn, maxTurn, events);
       this.completeVisibleTutorialSteps();
       this.applyReplaySnapshot(

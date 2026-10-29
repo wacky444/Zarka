@@ -54,6 +54,7 @@ const suites = [
   },
   { name: "ranked-matchmaking", entryPoint: "test/RankedMatchmaking.test.ts" },
   { name: "loading-tips", entryPoint: "test/LoadingTips.test.ts" },
+  { name: "replay-turn-loading", entryPoint: "test/ReplayTurnLoading.test.ts", alias: { phaser: phaserShim, phaser3spectorjs: phaserShim } },
   {
     name: "lobby-player-card",
     entryPoint: "test/LobbyPlayerCard.test.ts",
