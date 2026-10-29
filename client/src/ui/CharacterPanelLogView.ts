@@ -1326,10 +1326,16 @@ export class CharacterPanelLogView {
           } else if (actionId === "detect") {
             if (Array.isArray(event.targets) && event.targets.length > 0) {
               for (const target of event.targets) {
-                const targetName = this.resolvePlayerName(target.targetId);
                 const distance =
                   (target.metadata as { distance?: number } | undefined)
                     ?.distance ?? -1;
+                if (
+                  distance === 0 &&
+                  this.importanceThreshold > ReplayImportance.Routine
+                ) {
+                  continue;
+                }
+                const targetName = this.resolvePlayerName(target.targetId);
                 const locationLabel =
                   distance === 0
                     ? `(${t("same location")})`
