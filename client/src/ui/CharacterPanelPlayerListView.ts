@@ -3,6 +3,7 @@ import { t } from "../services/i18n";
 import type { MatchRecord } from "@shared";
 import type { PlayerOption } from "./PlayerSelector";
 import { formatPlayerPerceptionDetails } from "./PlayerPerceptionDetails";
+import { HoverTooltip } from "./HoverTooltip";
 
 type PlayerTabListEntry = {
   playerId: string;
@@ -90,6 +91,7 @@ export class CharacterPanelPlayerListView {
   private teamsTabEmpty: Phaser.GameObjects.Text;
   private teamsTabEntries: Phaser.GameObjects.GameObject[] = [];
   private readonly elements: Phaser.GameObjects.GameObject[];
+  private tooltip: HoverTooltip | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -429,6 +431,31 @@ export class CharacterPanelPlayerListView {
       this.teamsTabListScrollPanel,
       this.teamsTabEmpty
     ];
+
+    scene.input.on(
+      Phaser.Input.Events.POINTER_DOWN,
+      this.handleScenePointerDown
+    );
+    scene.input.on(
+      Phaser.Input.Events.GAME_OUT,
+      this.handleSceneGameOut
+    );
+  }
+
+  private readonly handleScenePointerDown = (): void => {
+    this.tooltip?.hide();
+  };
+
+  private readonly handleSceneGameOut = (): void => {
+    this.tooltip?.hide();
+  };
+
+  private ensureTooltip(): HoverTooltip {
+    if (!this.tooltip) {
+      this.tooltip = new HoverTooltip(this.scene);
+      this.tooltip.getGameObject().setDepth(10005);
+    }
+    return this.tooltip;
   }
 
   getElements(): Phaser.GameObjects.GameObject[] {
@@ -455,6 +482,10 @@ export class CharacterPanelPlayerListView {
     const isTeamsActive = isVisible && this.subtabs.getActiveKey() === "teams";
 
     this.subtabs.setVisible(isVisible);
+
+    if (!isPlayersActive) {
+      this.tooltip?.hide();
+    }
 
     this.playersTabListTitle.setVisible(isPlayersActive);
     this.playersTabListScrollPanel.setVisible?.(isPlayersActive);
@@ -605,6 +636,7 @@ export class CharacterPanelPlayerListView {
   }
 
   refresh(): void {
+    this.tooltip?.hide();
     const match = this.currentMatch;
     const list = this.playerOptions;
     const availableIds = new Set(list.map((option) => option.id));
@@ -696,6 +728,37 @@ export class CharacterPanelPlayerListView {
         })
         .setOrigin(1, 0.5)
         .setVisible(isReady);
+      if (isReady) {
+        readyIcon.setInteractive({ useHandCursor: true });
+        readyIcon.on(
+          Phaser.Input.Events.POINTER_OVER,
+          (pointer: Phaser.Input.Pointer) => {
+            if (!pointer.wasTouch) {
+              this.ensureTooltip().show(pointer.x, pointer.y, {
+                body: t("Player is ready")
+              });
+            }
+          }
+        );
+        readyIcon.on(
+          Phaser.Input.Events.POINTER_OUT,
+          () => {
+            this.tooltip?.hide();
+          }
+        );
+        readyIcon.on(Phaser.Input.Events.POINTER_UP, () => {
+          this.playersTabSelection = option.id;
+          this.applySelectionStyles();
+          this.refreshPlayerCard();
+        });
+        readyIcon.on(
+          Phaser.Input.Events.POINTER_WHEEL,
+          (_pointer: Phaser.Input.Pointer, _dx: number, dy: number) => {
+            this.tooltip?.hide();
+            this.playersTabListScrollPanel.addChildOY?.(-dy * 0.35, true);
+          }
+        );
+      }
       const label = this.scene.add
         .text(PLAYER_LIST_LABEL_PADDING, y + rowHeight / 2, option.label, {
           fontSize: "14px",
@@ -906,6 +969,17 @@ export class CharacterPanelPlayerListView {
   }
 
   destroy(): void {
+    this.scene.input.off(
+      Phaser.Input.Events.POINTER_DOWN,
+      this.handleScenePointerDown
+    );
+    this.scene.input.off(
+      Phaser.Input.Events.GAME_OUT,
+      this.handleSceneGameOut
+    );
+    this.tooltip?.destroy();
+    this.tooltip = null;
+
     this.playersTabCardDetailsPanel.clearMask?.();
     this.playersTabCardDetailsMask.destroy();
     this.playersTabCardDetailsMaskShape.destroy();
@@ -957,6 +1031,7 @@ export class CharacterPanelPlayerListView {
   }
 
   clearSelectionStyles(): void {
+    this.tooltip?.hide();
     this.playersTabCardDetailsPanel.setVisible?.(false);
     this.playersTabCardDetailsPanel.setMouseWheelScrollerEnable?.(false);
     this.playersTabCardDetailsPanel.setScrollerEnable?.(false);

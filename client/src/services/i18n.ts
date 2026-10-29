@@ -810,6 +810,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "[ ] Ready": "[ ] Listo",
   "[x] Ready": "[x] Listo",
   Ready: "Listo",
+  "Player is ready": "El jugador está listo",
   "All other players are ready. Ready now to advance the turn?":
     "Todos los demás jugadores están listos. ¿Listo para avanzar el turno?",
   "[ ] Prioritize food/drink": "[ ] Priorizar comida/bebida",
