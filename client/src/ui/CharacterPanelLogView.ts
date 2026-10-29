@@ -33,7 +33,10 @@ const CRITICAL_REPLAY_ACTION_IDS = new Set<string>([
 ]);
 
 function getEventImportance(event: ReplayEvent): ReplayImportance {
-  if (event.kind === "player" && CRITICAL_REPLAY_ACTION_IDS.has(event.action.actionId as string)) {
+  if (
+    event.kind === "player" &&
+    CRITICAL_REPLAY_ACTION_IDS.has(event.action.actionId as string)
+  ) {
     return ReplayImportance.Critical;
   }
   if (event.importance !== undefined) {
@@ -131,8 +134,16 @@ export class CharacterPanelLogView {
     prevButton.off(Phaser.Input.Events.POINTER_UP, this.handlePrevClick, this);
     nextButton.off(Phaser.Input.Events.POINTER_UP, this.handleNextClick, this);
     playButton.off(Phaser.Input.Events.POINTER_UP, this.handlePlayClick, this);
-    this.elements.filterTrack.scene.input.off("pointermove", this.handleFilterDrag, this);
-    this.elements.filterTrack.scene.input.off(Phaser.Input.Events.POINTER_UP, this.handleFilterPointerUp, this);
+    this.elements.filterTrack.scene.input.off(
+      "pointermove",
+      this.handleFilterDrag,
+      this
+    );
+    this.elements.filterTrack.scene.input.off(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleFilterPointerUp,
+      this
+    );
   }
 
   setUsernames(map: Record<string, string>): void {
@@ -298,7 +309,8 @@ export class CharacterPanelLogView {
       this.elements.nextButton.x + this.elements.nextButton.width + 24,
       controlY + 2
     );
-    const filterX = this.elements.playButton.x + this.elements.playButton.width + 12;
+    const filterX =
+      this.elements.playButton.x + this.elements.playButton.width + 12;
     this.elements.filterTrack.setPosition(filterX, controlY + 10);
     this.elements.filterKnob.setY(controlY + 10);
     this.elements.filterLabel.setPosition(filterX + 82, controlY + 2);
@@ -326,7 +338,11 @@ export class CharacterPanelLogView {
   }
 
   setImportanceThreshold(threshold: ReplayImportance): void {
-    this.importanceThreshold = Phaser.Math.Clamp(threshold, 0, ReplayImportance.Critical);
+    this.importanceThreshold = Phaser.Math.Clamp(
+      threshold,
+      0,
+      ReplayImportance.Critical
+    );
     this.updateFilterControls();
     this.replayEventStrings = this.formatReplayEvents(this.replayEvents);
     this.eventStrings = [
@@ -342,10 +358,26 @@ export class CharacterPanelLogView {
     prevButton.on(Phaser.Input.Events.POINTER_UP, this.handlePrevClick, this);
     nextButton.on(Phaser.Input.Events.POINTER_UP, this.handleNextClick, this);
     playButton.on(Phaser.Input.Events.POINTER_UP, this.handlePlayClick, this);
-    this.elements.filterTrack.on(Phaser.Input.Events.POINTER_DOWN, this.handleFilterPointer, this);
-    this.elements.filterKnob.on(Phaser.Input.Events.POINTER_DOWN, this.handleFilterPointer, this);
-    this.elements.filterTrack.scene.input.on("pointermove", this.handleFilterDrag, this);
-    this.elements.filterTrack.scene.input.on(Phaser.Input.Events.POINTER_UP, this.handleFilterPointerUp, this);
+    this.elements.filterTrack.on(
+      Phaser.Input.Events.POINTER_DOWN,
+      this.handleFilterPointer,
+      this
+    );
+    this.elements.filterKnob.on(
+      Phaser.Input.Events.POINTER_DOWN,
+      this.handleFilterPointer,
+      this
+    );
+    this.elements.filterTrack.scene.input.on(
+      "pointermove",
+      this.handleFilterDrag,
+      this
+    );
+    this.elements.filterTrack.scene.input.on(
+      Phaser.Input.Events.POINTER_UP,
+      this.handleFilterPointerUp,
+      this
+    );
   }
 
   private handleFilterDrag = (pointer: Phaser.Input.Pointer): void => {
@@ -361,18 +393,27 @@ export class CharacterPanelLogView {
   private handleFilterPointer = (pointer: Phaser.Input.Pointer): void => {
     this.draggingFilter = true;
     const bounds = this.elements.filterTrack.getBounds();
-    const ratio = Phaser.Math.Clamp((pointer.worldX - bounds.left) / bounds.width, 0, 1);
+    const ratio = Phaser.Math.Clamp(
+      (pointer.worldX - bounds.left) / bounds.width,
+      0,
+      1
+    );
     this.importanceThreshold = Math.round(ratio * ReplayImportance.Critical);
     this.updateFilterControls();
     this.replayEventStrings = this.formatReplayEvents(this.replayEvents);
-    this.eventStrings = [...this.replayEventStrings, ...this.formatDonationEvents(this.displayedTurn ?? 0)];
+    this.eventStrings = [
+      ...this.replayEventStrings,
+      ...this.formatDonationEvents(this.displayedTurn ?? 0)
+    ];
     this.updateEventText();
     this.refreshDisplay();
   };
 
   private updateFilterControls(): void {
     const ratio = this.importanceThreshold / ReplayImportance.Critical;
-    this.elements.filterKnob.setX(this.elements.filterTrack.x + ratio * this.elements.filterTrack.width);
+    this.elements.filterKnob.setX(
+      this.elements.filterTrack.x + ratio * this.elements.filterTrack.width
+    );
     this.elements.filterLabel.setText(String(this.importanceThreshold));
   }
 
@@ -1329,10 +1370,7 @@ export class CharacterPanelLogView {
                 const distance =
                   (target.metadata as { distance?: number } | undefined)
                     ?.distance ?? -1;
-                if (
-                  distance === 0 &&
-                  this.importanceThreshold > ReplayImportance.Routine
-                ) {
+                if (this.importanceThreshold > ReplayImportance.Routine) {
                   continue;
                 }
                 const targetName = this.resolvePlayerName(target.targetId);
