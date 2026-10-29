@@ -301,18 +301,18 @@ export class CharacterPanelReadyView {
 
     const warningRowIsActive =
       options.isCharacterActive && options.isStatusActive;
-    const showSkillsWarning = hasUnspentSkillPoints && warningRowIsActive;
+    const showSkillsWarning = mustSpendSkillPoints && warningRowIsActive;
     const showEnergyWarning =
-      !hasUnspentSkillPoints &&
+      !showSkillsWarning &&
       options.plannedEnergyCost > options.availableEnergy &&
       warningRowIsActive;
     const showOverweightWarning =
-      !hasUnspentSkillPoints &&
+      !showSkillsWarning &&
       !showEnergyWarning &&
       options.willBeOverweight &&
       warningRowIsActive;
     const showChainsawOrderWarning =
-      !hasUnspentSkillPoints &&
+      !showSkillsWarning &&
       !showEnergyWarning &&
       !showOverweightWarning &&
       options.hasChainsawOrderConflict === true &&

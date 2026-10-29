@@ -1400,6 +1400,7 @@ const PREFIX_TRANSLATIONS: Array<[RegExp, string]> = [
   [/^Cost:\s*/, "Coste: "],
   [/^Available Skill:\s*/, "Puntos disponibles: "],
   [/^Players \(/, "Jugadores ("],
+  [/^Skills \(/, "Habilidades ("],
   [/^Teams \(/, "Equipos ("],
   [/^Match:\s*/, "Partida: "],
   [/^Name:\s*/, "Nombre: "],

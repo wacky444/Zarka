@@ -55,6 +55,7 @@ export class Subtabs<T extends string = string> {
   private highlightedKey: T | null = null;
   private entries: SubtabEntry<T>[] = [];
   private readonly elements: Phaser.GameObjects.GameObject[] = [];
+  private readonly customTextColors = new Map<T, string>();
   private height: number;
   private gap: number;
 
@@ -87,6 +88,23 @@ export class Subtabs<T extends string = string> {
       return;
     }
     this.highlightedKey = key;
+    this.updateStyles();
+  }
+
+  setTabLabel(key: T, label: string): void {
+    const entry = this.entries.find((e) => e.key === key);
+    if (!entry) {
+      return;
+    }
+    entry.label.setText(label);
+  }
+
+  setTabTextColor(key: T, color: string | null): void {
+    if (color === null) {
+      this.customTextColors.delete(key);
+    } else {
+      this.customTextColors.set(key, color);
+    }
     this.updateStyles();
   }
 
@@ -153,6 +171,7 @@ export class Subtabs<T extends string = string> {
     }
     this.entries = [];
     this.elements.length = 0;
+    this.customTextColors.clear();
   }
 
   private createEntries(): void {
@@ -228,8 +247,11 @@ export class Subtabs<T extends string = string> {
             : inactiveStroke,
         isHighlighted ? 1 : isActive ? activeStrokeAlpha : inactiveStrokeAlpha
       );
-      entry.label.setColor(isActive ? activeTextColor : inactiveTextColor);
-      entry.label.setAlpha(isActive || isHighlighted ? 1 : 0.7);
+      const customColor = this.customTextColors.get(entry.key);
+      entry.label.setColor(
+        customColor ?? (isActive ? activeTextColor : inactiveTextColor)
+      );
+      entry.label.setAlpha(customColor || isActive || isHighlighted ? 1 : 0.7);
     }
   }
 }
