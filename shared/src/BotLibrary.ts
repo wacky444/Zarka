@@ -73,8 +73,7 @@ const BOT_NAMES = [
 const BODIES = [
   "body_human_white.png",
   "body_human_light.png",
-  "body_human_tan.png",
-  "body_orc.png"
+  "body_human_tan.png"
 ] as const;
 
 function buildBotProfile(name: string, index: number): BotProfile {
