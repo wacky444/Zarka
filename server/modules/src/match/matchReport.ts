@@ -270,13 +270,14 @@ export function buildMatchReport(
       carriedWeightTotal: 0,
     };
     const user = userMap[playerId];
+    const isBot = /^bot\d+$/i.test(playerId);
     aggregates[playerId] = {
       player_id: playerId,
-      player_name: getUserName(user, playerId),
+      player_name: isBot ? character.name : getUserName(user, playerId),
       character_id: character.id,
       character_name: character.name,
       team_id: effectiveTeamId(character, playerId),
-      skin: readSkin(user),
+      skin: readSkin(user) ?? character.skin,
       alive: !isCharacterDead(character),
       damage_dealt: 0,
       damage_received: 0,
