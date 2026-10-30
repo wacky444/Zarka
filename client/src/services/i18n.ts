@@ -767,6 +767,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "target out of range": "objetivo fuera de rango",
   "target had no items to steal": "el objetivo no tiene objetos que robar",
   "is protected": "está protegido",
+  protects: "protege a",
   "target is protected": "el objetivo está protegido",
   "an action": "una acción",
   extra: "extra",

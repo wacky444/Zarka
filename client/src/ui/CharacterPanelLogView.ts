@@ -1172,6 +1172,15 @@ export class CharacterPanelLogView {
             lines.push(`${actor} ${t("counterattacked")}`);
           } else if (actionId === "start_chainsaw") {
             lines.push(`${actor} ${t("started the chainsaw")}`);
+          } else if (actionId === "protect") {
+            const targetId = event.targets?.[0]?.targetId;
+            if (targetId && targetId !== event.actorId) {
+              lines.push(`${actor} ${t("protects")} ${this.resolvePlayerName(targetId)}`);
+            } else {
+              lines.push(`${actor} ${t("used")} ${actionName}${extraLabel}`);
+            }
+          } else if (actionId === "inject_virus" || actionId === "inject_vaccine") {
+            // Handled specifically below
           } else {
             lines.push(`${actor} ${t("used")} ${actionName}${extraLabel}`);
           }
@@ -1572,7 +1581,7 @@ export class CharacterPanelLogView {
                   `${targetName} ${t("lost")} ${energyLost} ${t("energy")}`
                 );
               }
-            } else {
+            } else if (actionId !== "focus" && actionId !== "protect") {
               lines.push(`${targetName} ${t("was affected")}`);
             }
           }
