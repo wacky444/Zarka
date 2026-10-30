@@ -434,11 +434,13 @@ export function buyShopItemRpc(
   }
 
   actor = match.playerCharacters[ctx.userId] ?? actor;
-  match.playerCharacters[ctx.userId] = actor;
   if (traffickerItem) {
-    actor.pendingTraffickerDeliveries ??= [];
-    actor.pendingTraffickerDeliveries.push(traffickerItem);
+    const pending = Array.isArray(actor.pendingTraffickerDeliveries)
+      ? [...actor.pendingTraffickerDeliveries, traffickerItem]
+      : [traffickerItem];
+    actor.pendingTraffickerDeliveries = pending;
   }
+  match.playerCharacters[ctx.userId] = actor;
   const actionId =
     resolvedShopId.startsWith("trafficker_")
       ? "buy_trafficker"

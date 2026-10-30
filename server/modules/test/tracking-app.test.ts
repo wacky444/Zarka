@@ -16,6 +16,7 @@ import {
   SERVER_USER_ID
 } from "../src/constants";
 import type { MatchRecord } from "../src/models/types";
+import { advanceTurn } from "../src/match/advanceTurn";
 import { buyShopItemRpc } from "../src/rpc/buyShopItem";
 import { createDefaultCharacter } from "../src/utils/playerCharacter";
 
@@ -198,6 +199,43 @@ test("buyShopItemRpc succeeds and reports 0 when no c4 or traps exist", () => {
   assert.equal(metadata.c4Current, 0);
   assert.equal(metadata.c4Distance1, 0);
   assert.equal(metadata.trapsLocation, 0);
+});
+
+test("harpoon trafficker purchase persists pending delivery and delivers item on turn advance", () => {
+  const match = createMatchWithState({ actorZarkans: 100 });
+  match.playerCharacters.buyer.pendingTraffickerDeliveries = [];
+  const { fakeNakama, stored } = createNakama(match);
+
+  buyShopItemRpc(
+    createTestContext("buyer"),
+    createTestLogger(),
+    fakeNakama,
+    JSON.stringify({
+      match_id: "test-match",
+      shop_id: "trafficker_harpoon"
+    })
+  );
+
+  assert.deepEqual(
+    stored.value.playerCharacters.buyer.pendingTraffickerDeliveries,
+    ["harpoon"]
+  );
+  assert.equal(stored.value.playerCharacters.buyer.economy.zarkans, 80);
+
+  const result = advanceTurn(stored.value, 2, createTestLogger());
+  const deliveryEvent = result.events.find(
+    (e) =>
+      e.kind === "player" &&
+      e.action.actionId === "give" &&
+      (e.action.metadata as { traffickerDelivery?: boolean })?.traffickerDelivery === true
+  );
+  assert.ok(deliveryEvent, "expected a trafficker delivery replay event");
+  assert.equal(
+    stored.value.playerCharacters.buyer.inventory.carriedItems.some(
+      (item) => item.itemId === "harpoon" && item.quantity > 0
+    ),
+    true
+  );
 });
 
 test("rocket launcher trafficker purchase persists a pending delivery", () => {

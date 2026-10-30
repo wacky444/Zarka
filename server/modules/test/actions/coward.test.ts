@@ -16,7 +16,7 @@ import { tailorReplayEvents } from "../../src/match/replay/tailorReplay";
 import { tailorPlayerCharactersForViewer } from "../../src/utils/matchView";
 import { createDefaultCharacter } from "../../src/utils/playerCharacter";
 
-const logger = { debug: () => {}, warn: () => {} } as unknown as nkruntime.Logger;
+const logger = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} } as unknown as nkruntime.Logger;
 
 function createCharacter(id: string, q: number): PlayerCharacter {
   const character = createDefaultCharacter(id);

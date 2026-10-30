@@ -923,7 +923,7 @@ export class CharacterPanelLogView {
               : t("item");
           const recipient = this.resolvePlayerName(event.actorId);
           const source =
-            typeof sourceId === "string"
+            typeof sourceId === "string" && sourceId !== event.actorId
               ? this.resolvePlayerName(sourceId)
               : t("the trafficker");
           lines.push(

@@ -154,11 +154,13 @@ export function applyTraffickerDeliveries(
       continue;
     }
     recipient.inventory ??= { carriedItems: [] };
-    recipient.inventory.carriedItems ??= [];
+    const carriedItems = Array.isArray(recipient.inventory.carriedItems)
+      ? [...recipient.inventory.carriedItems]
+      : [];
     for (const itemId of deliveries) {
       const definition = ItemLibrary[itemId as ItemId];
       if (!definition) {
-        logger.error(
+        logger?.error?.(
           "trafficker_delivery_unknown_item match=%s turn=%d owner=%s item=%s",
           match.match_id,
           match.current_turn ?? 0,
@@ -167,9 +169,9 @@ export function applyTraffickerDeliveries(
         );
         continue;
       }
-      const existing = recipient.inventory.carriedItems.find((stack) => stack.itemId === itemId);
+      const existing = carriedItems.find((stack) => stack.itemId === itemId);
       if (existing) existing.quantity += 1;
-      else recipient.inventory.carriedItems.push({ itemId, quantity: 1, weight: definition.weight });
+      else carriedItems.push({ itemId, quantity: 1, weight: definition.weight });
       replayEvents.push({
         kind: "player",
         importance: 1,
@@ -177,7 +179,7 @@ export function applyTraffickerDeliveries(
         action: { actionId: "give", metadata: { traffickerDelivery: true, itemId, fromPlayerId: playerId } },
         visibility: { scope: "limited", playerIds: [recipient.id] },
       });
-      logger.info(
+      logger?.info?.(
         "trafficker_delivery_complete match=%s turn=%d owner=%s recipient=%s item=%s quantity=%d",
         match.match_id,
         match.current_turn ?? 0,
@@ -187,6 +189,8 @@ export function applyTraffickerDeliveries(
         existing ? existing.quantity : 1,
       );
     }
+    recipient.inventory.carriedItems = carriedItems;
+    match.playerCharacters[recipient.id] = recipient;
   }
   logger.info(
     "trafficker_delivery_scan_complete match=%s turn=%d queued_at_scan=%d",

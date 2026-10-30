@@ -671,6 +671,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   to: "a",
   "contracted the trafficker to deliver":
     "contrató al traficante para entregar",
+  "the trafficker": "el traficante",
   "daily zarkans": "zarkans diarios",
   "hired a detective": "contrató un detective",
   "and discovered": "y descubrió",
