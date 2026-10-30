@@ -1107,7 +1107,7 @@ export class SettingsScene extends Phaser.Scene {
 
     const categoriesToShow = SKIN_CATEGORIES.filter(
       (cat) => SKIN_OPTIONS[cat].length > 0
-    );
+    ).sort((a, b) => (a === "hat" ? -1 : b === "hat" ? 1 : 0));
     this.skinCategoryOrder = categoriesToShow;
 
     for (let i = 0; i < categoriesToShow.length; i++) {
