@@ -96,10 +96,13 @@ export class TurnService {
       return {};
     }
 
+    const uuidPattern =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const missing = ids.filter((id) => !this.usernameCache.has(id));
-    if (missing.length > 0) {
+    const lookupIds = missing.filter((id) => uuidPattern.test(id));
+    if (lookupIds.length > 0) {
       try {
-        const response = await this.client.getUsers(this.session, missing);
+        const response = await this.client.getUsers(this.session, lookupIds);
         const users = Array.isArray(response?.users)
           ? (response.users as BasicUser[])
           : [];
