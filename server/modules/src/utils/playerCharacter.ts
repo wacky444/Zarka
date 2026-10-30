@@ -153,6 +153,18 @@ function createSeededRandom(seed: string): RandomFn {
   };
 }
 
+function shuffle<T>(items: T[], rng: RandomFn): T[] {
+  const shuffled = items.slice();
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(rng() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [
+      shuffled[swapIndex],
+      shuffled[index]
+    ];
+  }
+  return shuffled;
+}
+
 interface SpawnTile {
   id: string;
   coord: {
@@ -346,6 +358,7 @@ export function assignSpawnPositions(
   }
 
   const rng = createSeededRandom(`${map.seed}:${match.match_id}`);
+  const spawnRoster = shuffle(roster, rng);
   const pool = buildSpawnPool(
     walkableTiles,
     map.cols,
@@ -354,7 +367,7 @@ export function assignSpawnPositions(
     rng
   );
 
-  for (const playerId of roster) {
+  for (const playerId of spawnRoster) {
     const character = match.playerCharacters?.[playerId];
     if (!character) {
       continue;
@@ -370,7 +383,7 @@ export function assignSpawnPositions(
 
   const nextSpawnTile = (): SpawnTile | undefined => pool.shift();
 
-  for (const playerId of roster) {
+  for (const playerId of spawnRoster) {
     const character = match.playerCharacters?.[playerId];
     if (!character) {
       continue;
