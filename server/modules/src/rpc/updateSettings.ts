@@ -8,6 +8,7 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { normalizeMatchName } from "../utils/normalize";
 import { clampNumber, validateTime } from "../utils/validation";
+import { ensureAllPlayerCharacters } from "../utils/playerCharacter";
 import {
   MAX_BOT_PLAYERS,
   MAX_NORMAL_MATCH_SIZE,
@@ -92,7 +93,10 @@ export function updateSettingsRpc(
   if (typeof newRows === "number") match.rows = newRows;
   if (typeof newRoundTime === "string") match.roundTime = newRoundTime;
   if (typeof newAutoSkip === "boolean") match.autoSkip = newAutoSkip;
-  if (typeof newBotPlayers === "number") match.botPlayers = newBotPlayers;
+  if (typeof newBotPlayers === "number") {
+    match.botPlayers = newBotPlayers;
+    ensureAllPlayerCharacters(match);
+  }
   if (typeof newTurnsToBeAt1Tile === "number") {
     match.turnsToBeAt1Tile = newTurnsToBeAt1Tile;
     if (match.map) {
