@@ -127,6 +127,7 @@ export class CharacterPanelLogView {
   private importanceThreshold = ReplayImportance.Routine;
   private replayEvents: ReplayEvent[] = [];
   private draggingFilter = false;
+  private eventsViewportWidth = 0;
 
   constructor(private readonly options: CharacterPanelLogViewOptions) {
     this.elements = options.elements;
@@ -366,6 +367,7 @@ export class CharacterPanelLogView {
     this.elements.statusText.setPosition(margin + 16, logBoxY + 16);
     this.elements.eventsText.setPosition(0, 0);
     this.elements.eventsText.setWordWrapWidth(boxWidth - 32);
+    this.eventsViewportWidth = boxWidth;
     const eventsBoxTransform = this.options.elements.eventsBox.getWorldTransformMatrix();
     this.eventsMaskShape.setPosition(eventsBoxTransform.tx, eventsBoxTransform.ty);
     this.eventsMaskShape.setSize(boxWidth, logBoxHeight);
@@ -587,6 +589,15 @@ export class CharacterPanelLogView {
     } else {
       this.showStatus(t("No events recorded."));
     }
+    this.refreshEventsScrollContent();
+  }
+
+  private refreshEventsScrollContent(): void {
+    this.eventsContent.setSize(
+      this.eventsViewportWidth,
+      Math.max(this.elements.eventsText.height, 1)
+    );
+    this.eventsScrollPanel.layout?.();
   }
 
   private showStatus(message: string): void {
