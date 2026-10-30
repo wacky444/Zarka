@@ -80,7 +80,7 @@ export interface CharacterPanelLogElements {
 }
 
 interface CharacterPanelLogViewOptions {
-  panel: Phaser.Events.EventEmitter;
+  panel: Phaser.GameObjects.Container;
   elements: CharacterPanelLogElements;
   onRequestReplay: (turn: number) => void;
   onPlay: (turn: number) => void;
@@ -150,6 +150,7 @@ export class CharacterPanelLogView {
     this.eventsScrollPanel.setScrollFactor?.(0);
     this.eventsScrollPanel.setMask?.(this.eventsMask);
     this.eventsContent.setScrollFactor(0);
+    options.panel.add(this.eventsScrollPanel);
     this.allElements = [
       options.elements.prevButton,
       options.elements.nextButton,
@@ -365,7 +366,8 @@ export class CharacterPanelLogView {
     this.elements.statusText.setPosition(margin + 16, logBoxY + 16);
     this.elements.eventsText.setPosition(0, 0);
     this.elements.eventsText.setWordWrapWidth(boxWidth - 32);
-    this.eventsMaskShape.setPosition(margin, logBoxY);
+    const panelTransform = this.options.elements.eventsBox.getWorldTransformMatrix();
+    this.eventsMaskShape.setPosition(panelTransform.tx + margin, panelTransform.ty + logBoxY);
     this.eventsMaskShape.setSize(boxWidth, logBoxHeight);
     this.eventsScrollPanel.setPosition?.(margin, logBoxY);
     this.eventsScrollPanel.setSize?.(boxWidth, logBoxHeight);
