@@ -70,9 +70,19 @@ export class CharacterPanelChatView {
   private messageAreaTop = 0;
   private messageAreaBottom = 0;
   private messageAreaWidth = 0;
-  private messageScrollOffset = 0;
-  private messagesMask: Phaser.Display.Masks.GeometryMask | null = null;
-  private messagesMaskShape: Phaser.GameObjects.Rectangle | null = null;
+  private readonly messagesContent: Phaser.GameObjects.Container;
+  private readonly messagesScrollPanel: Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible & {
+    layout?: () => void; setOrigin?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
+    setPosition?: (x: number, y: number) => Phaser.GameObjects.GameObject;
+    setSize?: (width: number, height: number) => void; setMinSize?: (width: number, height: number) => void;
+    setScrollFactor?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
+    setMask?: (mask: Phaser.Display.Masks.GeometryMask) => Phaser.GameObjects.GameObject;
+    clearMask?: () => Phaser.GameObjects.GameObject;
+    setVisible?: (visible: boolean) => Phaser.GameObjects.GameObject;
+    setMouseWheelScrollerEnable?: (enabled: boolean) => void; setScrollerEnable?: (enabled: boolean) => void;
+  } | null;
+  private readonly messagesMask: Phaser.Display.Masks.GeometryMask;
+  private readonly messagesMaskShape: Phaser.GameObjects.Rectangle;
   private inputLayout: ChatInputLayout | null = null;
   private previousParentSize: { width: string; height: string } | null = null;
   private inputValue = "";
@@ -130,14 +140,27 @@ export class CharacterPanelChatView {
             wordWrap: { width: 280, useAdvancedWrap: true }
           })
     ) as Phaser.GameObjects.Text;
+    this.messagesContent = this.scene.add.container(0, 0);
+    this.messagesContent.add(this.messagesText);
     this.messagesMaskShape = this.scene.add.rectangle(0, 0, 1, 1, 0xffffff, 0).setOrigin(0, 0).setScrollFactor(0);
     this.messagesMask = this.messagesMaskShape.createGeometryMask();
-    this.messagesText.setMask(this.messagesMask);
-    this.messagesBox.setInteractive();
-    this.messagesBox.on(Phaser.Input.Events.POINTER_WHEEL, (_pointer: Phaser.Input.Pointer, _objects: Phaser.GameObjects.GameObject[], _dx: number, dy: number) => {
-      this.messageScrollOffset = Phaser.Math.Clamp(this.messageScrollOffset + dy * 0.6, 0, Math.max(0, this.messagesText.height - this.messageAreaHeight));
-      this.alignMessagesTextToBottom();
-    });
+    this.messagesScrollPanel = this.scene.rexUI
+      ? this.scene.rexUI.add.scrollablePanel({
+          x: 0, y: 0, width: 100, height: 100, scrollMode: 0,
+          panel: { child: this.messagesContent, mask: false },
+          slider: {
+            track: this.scene.rexUI.add.roundRectangle(0, 0, 4, 80, 2, 0x1f2a4a),
+            thumb: this.scene.rexUI.add.roundRectangle(0, 0, 6, 32, 3, 0x3b82f6)
+          },
+          scroller: { threshold: 10, rectBoundsInteractive: true, slidingDeceleration: 5000, backDeceleration: 2000, pointerOutRelease: true },
+          mouseWheelScroller: { focus: 2, speed: 0.35 },
+          space: { left: 0, right: 2, top: 0, bottom: 0, panel: 4 }
+        }) as typeof this.messagesScrollPanel
+      : null;
+    this.messagesScrollPanel?.setOrigin?.(0, 0);
+    this.messagesScrollPanel?.setScrollFactor?.(0);
+    this.messagesScrollPanel?.setMask?.(this.messagesMask);
+    this.messagesContent.setScrollFactor(0);
     this.overlayText = this.scene.add
       .text(0, 0, "No messages yet.", {
         fontSize: "15px",
@@ -228,7 +251,7 @@ export class CharacterPanelChatView {
       this.titleText,
       this.statusText,
       this.messagesBox,
-      this.messagesText,
+      ...(this.messagesScrollPanel ? [this.messagesScrollPanel] : [this.messagesText]),
       this.overlayText,
       this.inputBackground,
       this.sendButton,
@@ -258,9 +281,10 @@ export class CharacterPanelChatView {
     );
     window.removeEventListener("resize", this.visualViewportChangeHandler);
     this.inputElement.remove();
-    this.messagesText.clearMask(false);
-    this.messagesMask?.destroy();
-    this.messagesMaskShape?.destroy();
+    this.messagesScrollPanel?.clearMask?.();
+    this.messagesMask.destroy();
+    this.messagesMaskShape.destroy();
+    this.messagesContent.destroy();
     this.inputBackground.off(Phaser.Input.Events.POINTER_DOWN);
     this.inputBackground.disableInteractive();
     this.sendButton.disableInteractive();
@@ -353,8 +377,12 @@ export class CharacterPanelChatView {
     this.messagesBox.setDisplaySize(layout.boxWidth, boxHeight);
     this.messageAreaTop = layout.boxY + 8;
     this.messageAreaBottom = layout.boxY + boxHeight - 8;
-    this.messagesMaskShape?.setPosition(layout.panelX + layout.margin, layout.panelY + layout.boxY);
-    this.messagesMaskShape?.setSize(layout.boxWidth, boxHeight);
+    this.messagesMaskShape.setPosition(layout.panelX + layout.margin, layout.panelY + layout.boxY);
+    this.messagesMaskShape.setSize(layout.boxWidth, boxHeight);
+    this.messagesScrollPanel?.setPosition?.(layout.margin, layout.boxY);
+    this.messagesScrollPanel?.setSize?.(layout.boxWidth, boxHeight);
+    this.messagesScrollPanel?.setMinSize?.(layout.boxWidth, boxHeight);
+    this.messagesScrollPanel?.layout?.();
     this.messageAreaHeight = messageAreaHeight;
     if (messageWidthChanged) {
       this.messagesText.setWordWrapWidth(layout.boxWidth - 32);
@@ -402,13 +430,13 @@ export class CharacterPanelChatView {
   }
 
   private alignMessagesTextToBottom() {
-    this.messagesText.setPosition(
-      this.messagesText.x,
-      Math.max(
-        this.messageAreaTop,
-        this.messageAreaBottom - this.messagesText.height + this.messageScrollOffset
-      )
-    );
+    if (this.messagesScrollPanel) {
+      this.messagesText.setPosition(0, 0);
+      this.messagesContent.setSize(this.messageAreaWidth, this.messagesText.height);
+      this.messagesScrollPanel.layout?.();
+      return;
+    }
+    this.messagesText.setPosition(this.messagesText.x, Math.max(this.messageAreaTop, this.messageAreaBottom - this.messagesText.height));
   }
 
   private lockGameParentSize() {
@@ -445,13 +473,11 @@ export class CharacterPanelChatView {
 
   setMessages(messages: ChatMessageViewModel[]) {
     this.messages = messages.slice(-MAX_MESSAGES);
-    this.messageScrollOffset = 0;
     this.refreshMessages();
   }
 
   appendMessage(message: ChatMessageViewModel) {
     this.messages = [...this.messages, message].slice(-MAX_MESSAGES);
-    this.messageScrollOffset = 0;
     this.refreshMessages();
     if (!message.isSelf) {
       playRandomSound(this.scene, "sci_fi_hover", {
@@ -541,7 +567,6 @@ export class CharacterPanelChatView {
   private refreshMessages() {
     if (this.messages.length === 0) {
       this.messagesText.setText("");
-      this.messageScrollOffset = 0;
       this.messagesText.setVisible(false);
       this.overlayMessage =
         this.connectionState === "ready"
