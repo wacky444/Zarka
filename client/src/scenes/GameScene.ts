@@ -844,8 +844,8 @@ export class GameScene extends Phaser.Scene {
       .catch((error: unknown) => {
         console.warn("Failed to refresh ranked match status:", error);
       });
-    this.currentUserId =
-      (data?.userId ?? this.registry.get("currentUserId")) as string | null;
+    this.currentUserId = (data?.userId ??
+      this.registry.get("currentUserId")) as string | null;
     if (this.turnService) {
       this.turnService.setOnTurnAdvanced(this.turnAdvancedHandler);
       this.turnService.setOnMatchEnded(this.matchEndedHandler);
@@ -4346,7 +4346,10 @@ export class GameScene extends Phaser.Scene {
       this.replayNamesMatchId = replayMatch.match_id;
       void this.resolvePlayerNames(replayMatch).then(() => {
         const activeReplay = this.replayView;
-        if (!activeReplay || activeReplay.match.match_id !== replayMatch.match_id) {
+        if (
+          !activeReplay ||
+          activeReplay.match.match_id !== replayMatch.match_id
+        ) {
           return;
         }
         this.renderPlayerCharacters(activeReplay.match);
@@ -4418,7 +4421,7 @@ export class GameScene extends Phaser.Scene {
     let loadedTurn: number | null = null;
     const panel = this.characterPanel;
     const service = this.turnService;
-    const matchId = this.registry.get("currentMatchId") as string | null;
+    const matchId = this.currentMatch?.match_id ?? null;
     if (!panel || !service || !matchId) {
       panel?.setLogError("Replay not available.");
       return;
@@ -4441,12 +4444,7 @@ export class GameScene extends Phaser.Scene {
       if (this.sceneShuttingDown) {
         return;
       }
-      if (
-        this.registry.get("currentMatchId") !== matchId ||
-        this.currentMatch?.match_id !== matchId
-      ) {
-        return;
-      }
+
       const payload = this.parseRpcPayload<GetReplayPayload>(res);
       if (payload.error) {
         throw new Error(payload.error);
