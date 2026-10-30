@@ -96,6 +96,21 @@ interface CharacterPanelLogViewOptions {
 export class CharacterPanelLogView {
   private readonly elements: CharacterPanelLogElements;
   private readonly allElements: Phaser.GameObjects.GameObject[];
+  private readonly eventsContent: Phaser.GameObjects.Container;
+  private readonly eventsScrollPanel: Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible & {
+    setOrigin?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
+    setPosition?: (x: number, y: number) => Phaser.GameObjects.GameObject;
+    setSize?: (width: number, height: number) => void;
+    setMinSize?: (width: number, height: number) => void;
+    setScrollFactor?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
+    setMask?: (mask: Phaser.Display.Masks.GeometryMask) => Phaser.GameObjects.GameObject;
+    clearMask?: () => Phaser.GameObjects.GameObject;
+    layout?: () => void;
+    setMouseWheelScrollerEnable?: (enabled: boolean) => void;
+    setScrollerEnable?: (enabled: boolean) => void;
+  };
+  private readonly eventsMask: Phaser.Display.Masks.GeometryMask;
+  private readonly eventsMaskShape: Phaser.GameObjects.Rectangle;
   private maxTurn = 0;
   private selectedTurn: number | null = null;
   private displayedTurn: number | null = null;
@@ -115,6 +130,26 @@ export class CharacterPanelLogView {
 
   constructor(private readonly options: CharacterPanelLogViewOptions) {
     this.elements = options.elements;
+    const scene = options.elements.eventsBox.scene;
+    this.eventsContent = scene.add.container(0, 0);
+    this.eventsContent.add(options.elements.eventsText);
+    this.eventsMaskShape = scene.add.rectangle(0, 0, 1, 1, 0xffffff, 0).setOrigin(0, 0).setScrollFactor(0);
+    this.eventsMask = this.eventsMaskShape.createGeometryMask();
+    this.eventsScrollPanel = scene.rexUI.add.scrollablePanel({
+      x: 0, y: 0, width: 100, height: 100, scrollMode: 0,
+      panel: { child: this.eventsContent, mask: false },
+      slider: {
+        track: scene.rexUI.add.roundRectangle(0, 0, 4, 80, 2, 0x1f2a4a),
+        thumb: scene.rexUI.add.roundRectangle(0, 0, 6, 32, 3, 0x3b82f6)
+      },
+      scroller: { threshold: 10, rectBoundsInteractive: true, slidingDeceleration: 5000, backDeceleration: 2000, pointerOutRelease: true },
+      mouseWheelScroller: { focus: 2, speed: 0.35 },
+      space: { left: 16, right: 8, top: 16, bottom: 12, panel: 4 }
+    }) as typeof this.eventsScrollPanel;
+    this.eventsScrollPanel.setOrigin?.(0, 0);
+    this.eventsScrollPanel.setScrollFactor?.(0);
+    this.eventsScrollPanel.setMask?.(this.eventsMask);
+    this.eventsContent.setScrollFactor(0);
     this.allElements = [
       options.elements.prevButton,
       options.elements.nextButton,
@@ -125,13 +160,17 @@ export class CharacterPanelLogView {
       options.elements.turnLabel,
       options.elements.statusText,
       options.elements.eventsBox,
-      options.elements.eventsText
+      this.eventsScrollPanel
     ];
     this.bindInteractions();
   }
 
   destroy(): void {
     const { prevButton, nextButton, playButton } = this.elements;
+    this.eventsScrollPanel.clearMask?.();
+    this.eventsMask.destroy();
+    this.eventsMaskShape.destroy();
+    this.eventsContent.destroy();
     prevButton.off(Phaser.Input.Events.POINTER_UP, this.handlePrevClick, this);
     nextButton.off(Phaser.Input.Events.POINTER_UP, this.handleNextClick, this);
     playButton.off(Phaser.Input.Events.POINTER_UP, this.handlePlayClick, this);
@@ -256,6 +295,8 @@ export class CharacterPanelLogView {
     forceEnsure: boolean;
   }): void {
     this.visible = options.visible;
+    this.eventsScrollPanel.setMouseWheelScrollerEnable?.(options.visible);
+    this.eventsScrollPanel.setScrollerEnable?.(options.visible);
     for (const obj of this.allElements) {
       (
         obj as Phaser.GameObjects.GameObject & {
@@ -322,8 +363,16 @@ export class CharacterPanelLogView {
     this.elements.eventsBox.setSize(boxWidth, logBoxHeight);
     this.elements.eventsBox.setDisplaySize(boxWidth, logBoxHeight);
     this.elements.statusText.setPosition(margin + 16, logBoxY + 16);
-    this.elements.eventsText.setPosition(margin + 16, logBoxY + 16);
+    this.elements.eventsText.setPosition(0, 0);
     this.elements.eventsText.setWordWrapWidth(boxWidth - 32);
+    this.eventsMaskShape.setPosition(margin, logBoxY);
+    this.eventsMaskShape.setSize(boxWidth, logBoxHeight);
+    this.eventsScrollPanel.setPosition?.(margin, logBoxY);
+    this.eventsScrollPanel.setSize?.(boxWidth, logBoxHeight);
+    this.eventsScrollPanel.setMinSize?.(boxWidth, logBoxHeight);
+    this.eventsScrollPanel.layout?.();
+    this.eventsContent.setSize(boxWidth, this.elements.eventsText.height);
+    this.eventsScrollPanel.layout?.();
   }
 
   getElements(): Phaser.GameObjects.GameObject[] {
