@@ -34,17 +34,10 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
     "Pon a personas de confianza en tu testamento, nunca se sabe si sobrevivirás un turno más",
   "Put trust people in your testament, you never know if you will survive one turn more":
     "Pon a personas de confianza en tu testamento, nunca se sabe si sobrevivirás un turno más",
-  "Tip: Don't attack randomly, you could be hitting your teammates":
-    "Consejo: No ataques al azar, podrías golpear a tus compañeros de equipo",
-  "Tip: Avoid crowded areas": "Consejo: Evita las zonas concurridas",
-  "Tip: If your health drops to 5 or less, you become unconscious, you become invulnerable (fire, bombard, c4, rocket and virus still damage you)":
-    "Consejo: Si tu salud baja a 5 o menos, quedas inconsciente y te vuelves invulnerable (el fuego, bombardeo, C4, cohete y virus todavía te dañan)",
-  "Tip: After being unconscious your max health becomes 5":
-    "Consejo: Tras quedar inconsciente, tu salud máxima pasa a ser 5",
-  "Tip: Same actions of different players are resolved in a random order, unless one player has more agility 2":
-    "Consejo: Las mismas acciones de diferentes jugadores se resuelven en orden aleatorio, a menos que un jugador tenga más Agilidad 2",
-  "Tip: Put trusted people in your testament, you never know if you will survive one more turn":
-    "Consejo: Pon a personas de confianza en tu testamento, nunca se sabe si sobrevivirás un turno más",
+  "The virus doesn't damage the carrier, if you don't mind being away from your teammates, it can be a good idea to sniff some vials":
+    "El virus no daña al portador, si no te importa estar confinado lejos de tus amigos, puede ser una buena idea chupar viales",
+  "When you are overweight, the less valuable items from your inventory will be dropped at the end of the turn":
+    "Cuando te pasas de peso, los objetos menos valiosos se caeran de tu inventario al final del turno",
   "Report unavailable": "Informe no disponible",
   counterattacked: "contraatacó",
   "with a punch": "con un puñetazo",
@@ -1041,17 +1034,6 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
     "Same actions of different players are resolved in a random order, unless one player has more agility 2",
   "Pon a personas de confianza en tu testamento, nunca se sabe si sobrevivirás un turno más":
     "Put trusted people in your testament, you never know if you will survive one more turn",
-  "Consejo: No ataques al azar, podrías golpear a tus compañeros de equipo":
-    "Tip: Don't attack randomly, you could be hitting your teammates",
-  "Consejo: Evita las zonas concurridas": "Tip: Avoid crowded areas",
-  "Consejo: Si tu salud baja a 5 o menos, quedas inconsciente y te vuelves invulnerable (el fuego, bombardeo, C4, cohete y virus todavía te dañan)":
-    "Tip: If your health drops to 5 or less, you become unconscious, you become invulnerable (fire, bombard, c4, rocket and virus still damage you)",
-  "Consejo: Tras quedar inconsciente, tu salud máxima pasa a ser 5":
-    "Tip: After being unconscious your max health becomes 5",
-  "Consejo: Las mismas acciones de diferentes jugadores se resuelven en orden aleatorio, a menos que un jugador tenga más Agilidad 2":
-    "Tip: Same actions of different players are resolved in a random order, unless one player has more agility 2",
-  "Consejo: Pon a personas de confianza en tu testamento, nunca se sabe si sobrevivirás un turno más":
-    "Tip: Put trusted people in your testament, you never know if you will survive one more turn",
   "Detecta incendios a cualquier distancia e identifica a los jugadores en la misma localización o hasta 1 localización de distancia":
     "Detects fires at any distance and identifies players in the same or an adjacent location",
   "Crear un incendio": "Start a fire",

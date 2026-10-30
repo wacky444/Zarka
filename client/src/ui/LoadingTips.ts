@@ -7,6 +7,8 @@ export const LOADING_TIPS: readonly string[] = [
   "After being unconscious your max health becomes 5",
   "Same actions of different players are resolved in a random order, unless one player has more agility 2",
   "Put trusted people in your testament, you never know if you will survive one more turn",
+  "The virus doesn't damage the carrier, if you don't mind being away from your teammates, it can be a good idea to sniff some vials",
+  "When you are overweight, the less valuable items from your inventory will be dropped at the end of the turn"
 ] as const;
 
 export function getRandomLoadingTipKey(): string {

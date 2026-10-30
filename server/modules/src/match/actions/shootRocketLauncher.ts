@@ -55,12 +55,18 @@ export class ShootRocketLauncherAction extends BaseAction {
         targetTile.meta?.destroyed !== true &&
         axialDistance(origin, target) <= 1;
 
+      if (!validTarget || !target || !targetTile) {
+        this.clearPlan(participant);
+        match.playerCharacters![participant.playerId] = participant.character;
+        continue;
+      }
+
       // The launcher is consumed by the firing attempt and cannot be reused.
       const consumed = consumeCarriedItem(
         participant.character,
         "rocket_launcher",
       );
-      if (!consumed || !validTarget || !target || !targetTile) {
+      if (!consumed) {
         this.clearPlan(participant);
         match.playerCharacters![participant.playerId] = participant.character;
         continue;
