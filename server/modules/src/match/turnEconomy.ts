@@ -107,7 +107,26 @@ export function applyTraffickerDeliveries(
   logger: nkruntime.Logger,
 ): void {
   const characters = match.playerCharacters;
-  if (!characters) return;
+  if (!characters) {
+    logger.warn(
+      "trafficker_delivery_skipped match=%s turn=%d reason=no_player_characters",
+      match.match_id,
+      match.current_turn ?? 0,
+    );
+    return;
+  }
+  let queuedCount = 0;
+  for (const playerId in characters) {
+    const deliveries = characters[playerId]?.pendingTraffickerDeliveries;
+    if (Array.isArray(deliveries)) queuedCount += deliveries.length;
+  }
+  logger.info(
+    "trafficker_delivery_scan match=%s turn=%d characters=%d queued=%d",
+    match.match_id,
+    match.current_turn ?? 0,
+    Object.keys(characters).length,
+    queuedCount,
+  );
   for (const playerId in characters) {
     const deceased = characters[playerId];
     const deliveries = deceased?.pendingTraffickerDeliveries;
@@ -169,6 +188,12 @@ export function applyTraffickerDeliveries(
       );
     }
   }
+  logger.info(
+    "trafficker_delivery_scan_complete match=%s turn=%d queued_at_scan=%d",
+    match.match_id,
+    match.current_turn ?? 0,
+    queuedCount,
+  );
 }
 
 export function applyTestaments(

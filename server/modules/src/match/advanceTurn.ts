@@ -323,11 +323,30 @@ export function advanceTurn(
   logger: nkruntime.Logger,
   nk?: nkruntime.Nakama,
 ): AdvanceTurnResult {
+  logger.info(
+    "turn_advance_started match=%s resolved_turn=%d current_turn=%d players=%d characters=%d",
+    match.match_id,
+    resolvedTurn,
+    match.current_turn ?? 0,
+    Array.isArray(match.players) ? match.players.length : 0,
+    match.playerCharacters ? Object.keys(match.playerCharacters).length : 0,
+  );
   if (!Array.isArray(match.players) || !match.playerCharacters) {
+    logger.warn(
+      "turn_advance_skipped match=%s resolved_turn=%d reason=%s",
+      match.match_id,
+      resolvedTurn,
+      !Array.isArray(match.players) ? "no_players" : "no_player_characters",
+    );
     return { events: [] };
   }
   const characters = match.playerCharacters;
   if (Object.keys(characters).length === 0) {
+    logger.warn(
+      "turn_advance_skipped match=%s resolved_turn=%d reason=no_characters",
+      match.match_id,
+      resolvedTurn,
+    );
     return { events: [] };
   }
   for (const playerId in characters) {
@@ -401,7 +420,18 @@ export function advanceTurn(
     }
     decrementIntoxicationAfterAction(match, intoxicatedActorIds);
   }
+  logger.info(
+    "turn_advance_before_trafficker_delivery match=%s resolved_turn=%d",
+    match.match_id,
+    resolvedTurn,
+  );
   applyTraffickerDeliveries(match, replayEvents, logger);
+  logger.info(
+    "turn_advance_after_trafficker_delivery match=%s resolved_turn=%d replay_events=%d",
+    match.match_id,
+    resolvedTurn,
+    replayEvents.length,
+  );
   replayEvents.push(...dropOverweightItems(match));
   replayEvents.push(...applyVirusInfection(match, resolvedTurn, logger));
   replayEvents.push(
