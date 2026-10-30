@@ -4441,6 +4441,12 @@ export class GameScene extends Phaser.Scene {
       if (this.sceneShuttingDown) {
         return;
       }
+      if (
+        this.registry.get("currentMatchId") !== matchId ||
+        this.currentMatch?.match_id !== matchId
+      ) {
+        return;
+      }
       const payload = this.parseRpcPayload<GetReplayPayload>(res);
       if (payload.error) {
         throw new Error(payload.error);
