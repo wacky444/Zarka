@@ -2,19 +2,23 @@ import type { Skin, SkinId } from "./UserAccount";
 
 export type SkinCategory = keyof Skin;
 
+export const NUM_SHOE = 20;
+export const NUM_SHIRT = 111;
+export const NUM_HAIR = 69;
+
 export const SKIN_CATEGORIES: readonly SkinCategory[] = [
   "body",
   "shoes",
   "shirt",
   "hair",
-  "hat",
+  "hat"
 ];
 
 export const BODY_OPTIONS: readonly SkinId[] = [
   "body_human_white.png",
   "body_human_light.png",
   "body_human_tan.png",
-  "body_orc.png",
+  "body_orc.png"
 ];
 
 function buildRange(prefix: string, count: number, digits: number): SkinId[] {
@@ -29,9 +33,9 @@ function buildRange(prefix: string, count: number, digits: number): SkinId[] {
 
 export const SHOES_OPTIONS: readonly SkinId[] = buildRange("shoe_", 20, 2);
 
-export const SHIRT_OPTIONS: readonly SkinId[] = buildRange("shirt_", 120, 3);
+export const SHIRT_OPTIONS: readonly SkinId[] = buildRange("shirt_", 111, 3);
 
-export const HAIR_OPTIONS: readonly SkinId[] = buildRange("hair_", 96, 3);
+export const HAIR_OPTIONS: readonly SkinId[] = buildRange("hair_", 69, 3);
 
 export const HAT_OPTIONS: readonly SkinId[] = [];
 
@@ -40,7 +44,7 @@ export const SKIN_OPTIONS: Readonly<Record<SkinCategory, readonly SkinId[]>> = {
   shoes: SHOES_OPTIONS,
   shirt: SHIRT_OPTIONS,
   hair: HAIR_OPTIONS,
-  hat: HAT_OPTIONS,
+  hat: HAT_OPTIONS
 };
 
 export const DEFAULT_SKIN: Skin = {
@@ -48,7 +52,7 @@ export const DEFAULT_SKIN: Skin = {
   shoes: "shoe_01.png",
   shirt: "shirt_001.png",
   hair: "hair_001.png",
-  hat: "",
+  hat: ""
 };
 
 export function isValidSkinId(category: SkinCategory, id: SkinId): boolean {

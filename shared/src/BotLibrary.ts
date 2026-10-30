@@ -1,3 +1,4 @@
+import { NUM_HAIR, NUM_SHIRT, NUM_SHOE } from "./SkinOptions";
 import type { Skin } from "./UserAccount";
 
 export interface BotProfile {
@@ -113,9 +114,9 @@ function buildBotProfile(name: string, index: number): BotProfile {
       }
     };
   }
-  const shoes = String((index * 7) % 20 + 1).padStart(2, "0");
-  const shirt = String((index * 17) % 120 + 1).padStart(3, "0");
-  const hair = String((index * 13) % 96 + 1).padStart(3, "0");
+  const shoes = String(((index * 7) % NUM_SHOE) + 1).padStart(2, "0");
+  const shirt = String(((index * 17) % NUM_SHIRT) + 1).padStart(3, "0");
+  const hair = String(((index * 13) % NUM_HAIR) + 1).padStart(3, "0");
   return {
     name,
     skin: {
@@ -128,8 +129,8 @@ function buildBotProfile(name: string, index: number): BotProfile {
   };
 }
 
-export const BOT_LIBRARY: readonly BotProfile[] = BOT_NAMES.map(
-  (name, index) => buildBotProfile(name, index)
+export const BOT_LIBRARY: readonly BotProfile[] = BOT_NAMES.map((name, index) =>
+  buildBotProfile(name, index)
 );
 
 export function isBot(playerId: string | null | undefined): boolean {
