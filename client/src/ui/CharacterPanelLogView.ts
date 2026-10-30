@@ -366,8 +366,8 @@ export class CharacterPanelLogView {
     this.elements.statusText.setPosition(margin + 16, logBoxY + 16);
     this.elements.eventsText.setPosition(0, 0);
     this.elements.eventsText.setWordWrapWidth(boxWidth - 32);
-    const panelTransform = this.options.elements.eventsBox.getWorldTransformMatrix();
-    this.eventsMaskShape.setPosition(panelTransform.tx + margin, panelTransform.ty + logBoxY);
+    const eventsBoxTransform = this.options.elements.eventsBox.getWorldTransformMatrix();
+    this.eventsMaskShape.setPosition(eventsBoxTransform.tx, eventsBoxTransform.ty);
     this.eventsMaskShape.setSize(boxWidth, logBoxHeight);
     this.eventsScrollPanel.setPosition?.(margin, logBoxY);
     this.eventsScrollPanel.setSize?.(boxWidth, logBoxHeight);
