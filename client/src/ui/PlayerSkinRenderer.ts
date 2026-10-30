@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import type { Skin, SkinCategory } from "@shared";
-import { DEFAULT_SKIN } from "@shared";
+import { DEFAULT_SKIN, SKIN_OPTIONS } from "@shared";
 
 /** Layer order from back to front for compositing skin sprites. */
 export const SKIN_LAYER_ORDER: readonly SkinCategory[] = [
@@ -142,10 +142,11 @@ export function createSkinLayers(
 ): SkinLayers {
   const layers: SkinLayers = {};
   for (const cat of SKIN_LAYER_ORDER) {
-    const frame = skin[cat];
+    const frame = skin[cat] || SKIN_OPTIONS[cat][0];
     if (!frame) continue;
     const sprite = scene.add.image(x, y, "char", frame);
     sprite.setScale(scale);
+    sprite.setVisible(Boolean(skin[cat]));
     layers[cat] = sprite;
   }
   return layers;
