@@ -868,11 +868,15 @@ export class GameScene extends Phaser.Scene {
         getCurrentUserId: () => this.currentUserId,
         isAdminViewEnabled: () => this.adminViewEnabled,
         getPlayerSkin: (playerId) =>
+          this.currentMatch?.playerCharacters?.[playerId]?.skin ??
           this.playerSkinMap.get(playerId) ??
           (playerId === this.currentUserId
             ? (this.currentPlayerSkin ?? undefined)
             : undefined),
-        getPlayerName: (playerId) => this.playerNameMap[playerId] ?? playerId,
+        getPlayerName: (playerId) =>
+          this.currentMatch?.playerCharacters?.[playerId]?.name ??
+          this.playerNameMap[playerId] ??
+          playerId,
         getLocationSelection: () => ({
           active:
             this.locationSelectionActive &&
