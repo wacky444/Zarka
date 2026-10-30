@@ -97,17 +97,33 @@ export function ensureAllPlayerCharacters(match: MatchRecord): boolean {
       mutated = true;
     }
     const botMatch = /^bot(\d+)$/i.exec(playerId);
-    if (botMatch && BOT_LIBRARY.length > 0 && character.name === playerId) {
-      const matchSeed = match.match_id ?? "match";
+    const isLibraryProfile = BOT_LIBRARY.some(
+      (profile) => profile.name === character.name
+    );
+    if (
+      botMatch &&
+      BOT_LIBRARY.length > 0 &&
+      (character.name === playerId || isLibraryProfile)
+    ) {
+      const matchId = match.match_id ?? "match";
       let seed = 2166136261;
-      const key = `${matchSeed}:${playerId}`;
-      for (let index = 0; index < key.length; index += 1) {
-        seed = Math.imul(seed ^ key.charCodeAt(index), 16777619) >>> 0;
+      for (let index = 0; index < matchId.length; index += 1) {
+        seed = Math.imul(seed ^ matchId.charCodeAt(index), 16777619) >>> 0;
       }
-      const profile = BOT_LIBRARY[seed % BOT_LIBRARY.length];
-      character.name = profile.name;
-      character.skin = { ...profile.skin };
-      mutated = true;
+      const botIndex = Math.max(0, Number(botMatch[1]) - 1);
+      const profile = BOT_LIBRARY[(botIndex + (seed % BOT_LIBRARY.length)) % BOT_LIBRARY.length];
+      if (
+        character.name !== profile.name ||
+        character.skin?.body !== profile.skin.body ||
+        character.skin?.shoes !== profile.skin.shoes ||
+        character.skin?.shirt !== profile.skin.shirt ||
+        character.skin?.hair !== profile.skin.hair ||
+        character.skin?.hat !== profile.skin.hat
+      ) {
+        character.name = profile.name;
+        character.skin = { ...profile.skin };
+        mutated = true;
+      }
     }
   };
 
