@@ -53,7 +53,6 @@
 	<SubTexture name="shirt_021.png" x="255" y="17" width="16" height="16"/>
 	<SubTexture name="shirt_022.png" x="272" y="17" width="16" height="16"/>
 	<SubTexture name="shirt_023.png" x="289" y="17" width="16" height="16"/>
-
 	<SubTexture name="shirt_024.png" x="119" y="34" width="16" height="16"/>
 	<SubTexture name="shirt_025.png" x="136" y="34" width="16" height="16"/>
 	<SubTexture name="shirt_026.png" x="153" y="34" width="16" height="16"/>
@@ -212,6 +211,43 @@
 	<SubTexture name="hair_067.png" x="340" y="187" width="16" height="16"/>
 	<SubTexture name="hair_068.png" x="357" y="187" width="16" height="16"/>
 	<SubTexture name="hair_069.png" x="374" y="187" width="16" height="16"/>
+
+	<SubTexture name="hat_001.png" x="476" y="0" width="16" height="16"/>
+	<SubTexture name="hat_002.png" x="493" y="0" width="16" height="16"/>
+	<SubTexture name="hat_003.png" x="510" y="0" width="16" height="16"/>
+	<SubTexture name="hat_004.png" x="527" y="0" width="16" height="16"/>
+	<SubTexture name="hat_005.png" x="476" y="17" width="16" height="16"/>
+	<SubTexture name="hat_006.png" x="493" y="17" width="16" height="16"/>
+	<SubTexture name="hat_007.png" x="510" y="17" width="16" height="16"/>
+	<SubTexture name="hat_008.png" x="527" y="17" width="16" height="16"/>
+	<SubTexture name="hat_009.png" x="476" y="34" width="16" height="16"/>
+	<SubTexture name="hat_010.png" x="493" y="34" width="16" height="16"/>
+	<SubTexture name="hat_011.png" x="510" y="34" width="16" height="16"/>
+	<SubTexture name="hat_012.png" x="527" y="34" width="16" height="16"/>
+	<SubTexture name="hat_013.png" x="476" y="51" width="16" height="16"/>
+	<SubTexture name="hat_014.png" x="493" y="51" width="16" height="16"/>
+	<SubTexture name="hat_015.png" x="510" y="51" width="16" height="16"/>
+	<SubTexture name="hat_016.png" x="527" y="51" width="16" height="16"/>
+	<SubTexture name="hat_017.png" x="476" y="68" width="16" height="16"/>
+	<SubTexture name="hat_018.png" x="493" y="68" width="16" height="16"/>
+	<SubTexture name="hat_019.png" x="510" y="68" width="16" height="16"/>
+	<SubTexture name="hat_020.png" x="527" y="68" width="16" height="16"/>
+	<SubTexture name="hat_021.png" x="476" y="85" width="16" height="16"/>
+	<SubTexture name="hat_022.png" x="493" y="85" width="16" height="16"/>
+	<SubTexture name="hat_023.png" x="510" y="85" width="16" height="16"/>
+	<SubTexture name="hat_024.png" x="527" y="85" width="16" height="16"/>
+	<SubTexture name="hat_025.png" x="476" y="102" width="16" height="16"/>
+	<SubTexture name="hat_026.png" x="493" y="102" width="16" height="16"/>
+	<SubTexture name="hat_027.png" x="510" y="102" width="16" height="16"/>
+	<SubTexture name="hat_028.png" x="527" y="102" width="16" height="16"/>
+	<SubTexture name="hat_029.png" x="476" y="119" width="16" height="16"/>
+	<SubTexture name="hat_030.png" x="493" y="119" width="16" height="16"/>
+	<SubTexture name="hat_031.png" x="510" y="119" width="16" height="16"/>
+	<SubTexture name="hat_032.png" x="527" y="119" width="16" height="16"/>
+	<SubTexture name="hat_033.png" x="476" y="136" width="16" height="16"/>
+	<SubTexture name="hat_034.png" x="493" y="136" width="16" height="16"/>
+	<SubTexture name="hat_035.png" x="510" y="136" width="16" height="16"/>
+	<SubTexture name="hat_036.png" x="527" y="136" width="16" height="16"/>
 
 
 	<SubTexture name="shield_buckler.png" x="306" y="0" width="16" height="16"/>
