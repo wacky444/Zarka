@@ -1,5 +1,6 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
+import { BOT_LIBRARY } from "@shared";
 import type {
   MatchRecord,
   PlayerCharacter,
@@ -90,7 +91,20 @@ export function ensureAllPlayerCharacters(match: MatchRecord): boolean {
 
   const ensureId = (playerId: string) => {
     if (!match.playerCharacters[playerId]) {
-      match.playerCharacters[playerId] = createDefaultCharacter(playerId);
+      const character = createDefaultCharacter(playerId);
+      const botMatch = /^bot(\d+)$/i.exec(playerId);
+      if (botMatch && BOT_LIBRARY.length > 0) {
+        const matchSeed = match.match_id ?? "match";
+        let seed = 2166136261;
+        const key = `${matchSeed}:${playerId}`;
+        for (let index = 0; index < key.length; index += 1) {
+          seed = Math.imul(seed ^ key.charCodeAt(index), 16777619) >>> 0;
+        }
+        const profile = BOT_LIBRARY[seed % BOT_LIBRARY.length];
+        character.name = profile.name;
+        character.skin = { ...profile.skin };
+      }
+      match.playerCharacters[playerId] = character;
       mutated = true;
     }
   };

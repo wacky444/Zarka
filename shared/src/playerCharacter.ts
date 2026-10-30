@@ -3,10 +3,12 @@ import type { ActionCondition } from "./Action";
 import type { SkillId } from "./skills/Skill";
 import type { ItemId } from "./Item";
 import type { Dexterity3ProductId, ManipulateOperationSelection } from "./RecipesLibrary";
+import type { Skin } from "./UserAccount";
 
 export interface PlayerCharacter {
   id: string;
   name: string;
+  skin?: Skin;
   teamId?: string;
   secretTeamId?: string;
   stats: PlayerCharacterStats;

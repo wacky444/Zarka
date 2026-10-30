@@ -17,6 +17,7 @@ export * from "./chat";
 export * from "./UserAccount";
 export * from "./Tutorial";
 export * from "./SkinOptions";
+export * from "./BotLibrary";
 export * from "./skills/Skill";
 export * from "./skills/SkillLibrary";
 export * from "./skills/SkillLogic";

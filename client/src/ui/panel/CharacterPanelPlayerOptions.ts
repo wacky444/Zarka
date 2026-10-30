@@ -60,7 +60,10 @@ export function buildPlayerOptions(
       label,
       labelColor,
       name,
-      ...resolveSprite(id, account?.cosmetics.selectedSkinId ?? null)
+      ...resolveSprite(
+        id,
+        character?.skin ?? account?.cosmetics.selectedSkinId ?? null
+      )
     });
   }
   return options;
