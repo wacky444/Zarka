@@ -52,9 +52,10 @@ function buildSkinItems(
   category: SkinCategory,
   unlockedCosmeticIds: ReadonlySet<string>
 ): GridSelectItem[] {
-  const options = SKIN_OPTIONS[category];
+  const options = SKIN_OPTIONS[category].filter(
+    (frame) => category !== "hat" || unlockedCosmeticIds.has(frame)
+  );
   return options.map((frame) => {
-    const locked = category === "hat" && !unlockedCosmeticIds.has(frame);
     const name = frame.replace(/\.png$/, "").replace(/_/g, "");
     const shortName = frame
       .replace(/^[^_]+_/, "")
@@ -62,9 +63,8 @@ function buildSkinItems(
       .replace(/_/g, " ");
     return {
       id: frame,
-      name: locked ? `${name} (Locked)` : name,
-      shortName: locked ? `${shortName} · Locked` : shortName,
-      disabled: locked,
+      name,
+      shortName,
       texture: "char",
       frame,
       iconScale: 2,
