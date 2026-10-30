@@ -29,27 +29,28 @@ const CRITICAL_REPLAY_ACTION_IDS = new Set<string>([
   "shoot_pistol",
   "throw_object",
   "status_dead",
-  "use_chemical_weapon"
+  "use_chemical_weapon",
+  "inject_virus"
 ]);
 
 function getEventImportance(event: ReplayEvent): ReplayImportance {
-  if (
-    event.kind === "player" &&
-    CRITICAL_REPLAY_ACTION_IDS.has(event.action.actionId as string)
-  ) {
-    return ReplayImportance.Critical;
-  }
-  if (event.importance !== undefined) {
-    return event.importance;
-  }
   if (event.kind === "player") {
     const actionId = event.action.actionId as string;
-    if (actionId === "zarkan_income") {
-      return ReplayImportance.Routine;
+    const isVirusInfectionTick =
+      actionId === "inject_virus" &&
+      (event.action.metadata as { infectionTick?: boolean } | undefined)?.infectionTick === true;
+    if (isVirusInfectionTick) {
+      return event.importance !== undefined ? event.importance : ReplayImportance.Notable;
     }
     if (CRITICAL_REPLAY_ACTION_IDS.has(actionId)) {
       return ReplayImportance.Critical;
     }
+    if (actionId === "zarkan_income") {
+      return ReplayImportance.Routine;
+    }
+  }
+  if (event.importance !== undefined) {
+    return event.importance;
   }
   return ReplayImportance.Notable;
 }
@@ -1175,11 +1176,16 @@ export class CharacterPanelLogView {
           } else if (actionId === "protect") {
             const targetId = event.targets?.[0]?.targetId;
             if (targetId && targetId !== event.actorId) {
-              lines.push(`${actor} ${t("protects")} ${this.resolvePlayerName(targetId)}`);
+              lines.push(
+                `${actor} ${t("protects")} ${this.resolvePlayerName(targetId)}`
+              );
             } else {
               lines.push(`${actor} ${t("used")} ${actionName}${extraLabel}`);
             }
-          } else if (actionId === "inject_virus" || actionId === "inject_vaccine") {
+          } else if (
+            actionId === "inject_virus" ||
+            actionId === "inject_vaccine"
+          ) {
             // Handled specifically below
           } else {
             lines.push(`${actor} ${t("used")} ${actionName}${extraLabel}`);
