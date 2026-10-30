@@ -47,6 +47,14 @@ function isValidHair(id: string): boolean {
   return num >= 1 && num <= 96;
 }
 
+function isValidHat(id: string): boolean {
+  if (id === "") return true;
+  const match = /^hat_(\d{3})\.png$/.exec(id);
+  if (!match) return false;
+  const num = parseInt(match[1], 10);
+  return num >= 1 && num <= 36;
+}
+
 function validateSkin(skin: unknown): import("@shared").Skin | null {
   const rec = asRecord(skin);
   if (!rec) return null;
@@ -61,7 +69,7 @@ function validateSkin(skin: unknown): import("@shared").Skin | null {
   if (shoes === undefined || !isValidShoe(shoes)) return null;
   if (shirt === undefined || !isValidShirt(shirt)) return null;
   if (hair === undefined || !isValidHair(hair)) return null;
-  if (hat !== undefined && hat !== "") return null;
+  if (hat !== undefined && !isValidHat(hat)) return null;
 
   return { body, shoes, shirt, hair, hat: hat ?? "" };
 }

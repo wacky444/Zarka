@@ -37,7 +37,7 @@ export const SHIRT_OPTIONS: readonly SkinId[] = buildRange("shirt_", 111, 3);
 
 export const HAIR_OPTIONS: readonly SkinId[] = buildRange("hair_", 69, 3);
 
-export const HAT_OPTIONS: readonly SkinId[] = [];
+export const HAT_OPTIONS: readonly SkinId[] = buildRange("hat_", 36, 3);
 
 export const SKIN_OPTIONS: Readonly<Record<SkinCategory, readonly SkinId[]>> = {
   body: BODY_OPTIONS,
