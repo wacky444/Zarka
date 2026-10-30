@@ -870,13 +870,15 @@ export class GameScene extends Phaser.Scene {
         isAdminViewEnabled: () => this.adminViewEnabled,
         getPlayerSkin: (playerId) =>
           this.currentMatch?.playerCharacters?.[playerId]?.skin ??
+          this.currentMatch?.playerList?.[playerId]?.skin ??
           this.playerSkinMap.get(playerId) ??
           (playerId === this.currentUserId
             ? (this.currentPlayerSkin ?? undefined)
             : undefined),
         getPlayerName: (playerId) => {
           const characterName =
-            this.currentMatch?.playerCharacters?.[playerId]?.name;
+            this.currentMatch?.playerCharacters?.[playerId]?.name ??
+            this.currentMatch?.playerList?.[playerId]?.name;
           if (isBot(playerId)) {
             return characterName ?? this.playerNameMap[playerId] ?? playerId;
           }

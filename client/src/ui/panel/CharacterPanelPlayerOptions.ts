@@ -39,9 +39,10 @@ export function buildPlayerOptions(
       typeof account?.displayName === "string" && account.displayName.trim()
         ? account.displayName.trim()
         : null;
+    const listEntry = match.playerList[id];
     const baseName = isBot(id)
-      ? (character?.name ?? usernames[id] ?? id)
-      : (accountDisplayName ?? usernames[id] ?? character?.name ?? id);
+      ? (character?.name ?? listEntry?.name ?? usernames[id] ?? id)
+      : (accountDisplayName ?? usernames[id] ?? character?.name ?? listEntry?.name ?? id);
     const name = baseName.length > 0 ? baseName : id;
     const label = id === currentUserId ? `${name} (You)` : name;
     const revealedTeamId =
@@ -63,7 +64,10 @@ export function buildPlayerOptions(
       name,
       ...resolveSprite(
         id,
-        character?.skin ?? account?.cosmetics.selectedSkinId ?? null
+        character?.skin ??
+          listEntry?.skin ??
+          account?.cosmetics.selectedSkinId ??
+          null
       )
     });
   }

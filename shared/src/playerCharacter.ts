@@ -70,6 +70,7 @@ export interface PlayerTrackerView {
 export interface PlayerCharacterUnknown {
   id: string;
   name: string;
+  skin?: Skin;
 }
 
 export interface PlayerCharacterStats {

@@ -379,7 +379,8 @@ export function tailorMatchForPlayer(
     const char = match.playerCharacters[id];
     playerList[id] = {
       id: char.id,
-      name: char.name
+      name: char.name,
+      ...(char.skin ? { skin: char.skin } : {})
     };
     const isDead =
       isCharacterDead(char) ||
