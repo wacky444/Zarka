@@ -5,6 +5,7 @@ export type SkinCategory = keyof Skin;
 export const NUM_SHOE = 20;
 export const NUM_SHIRT = 111;
 export const NUM_HAIR = 69;
+export const NUM_HATS = 37;
 
 export const SKIN_CATEGORIES: readonly SkinCategory[] = [
   "body",
@@ -31,13 +32,21 @@ function buildRange(prefix: string, count: number, digits: number): SkinId[] {
   return result;
 }
 
-export const SHOES_OPTIONS: readonly SkinId[] = buildRange("shoe_", 20, 2);
+export const SHOES_OPTIONS: readonly SkinId[] = buildRange(
+  "shoe_",
+  NUM_SHOE,
+  2
+);
 
-export const SHIRT_OPTIONS: readonly SkinId[] = buildRange("shirt_", 111, 3);
+export const SHIRT_OPTIONS: readonly SkinId[] = buildRange(
+  "shirt_",
+  NUM_SHIRT,
+  3
+);
 
-export const HAIR_OPTIONS: readonly SkinId[] = buildRange("hair_", 69, 3);
+export const HAIR_OPTIONS: readonly SkinId[] = buildRange("hair_", NUM_HAIR, 3);
 
-export const HAT_OPTIONS: readonly SkinId[] = buildRange("hat_", 36, 3);
+export const HAT_OPTIONS: readonly SkinId[] = buildRange("hat_", NUM_HATS, 3);
 
 export const SKIN_OPTIONS: Readonly<Record<SkinCategory, readonly SkinId[]>> = {
   body: BODY_OPTIONS,
