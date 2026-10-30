@@ -47,7 +47,6 @@ import type {
   LeaveMatchPayload,
   JoinMatchPayload,
   CreateMatchPayload,
-  SubmitTurnPayload,
   GetStatePayload,
   StartMatchPayload,
   RemoveMatchPayload
@@ -75,7 +74,6 @@ export class MainScene extends Phaser.Scene {
   private currentRuntimeMatchId: string | null = null;
   private currentMatchName: string | null = null;
   private currentMatchCreator?: string;
-  private moveCounter = 0;
   private matchesListView!: MatchesListView;
   private myMatchesListView!: MyMatchesListView;
   private lobbyView!: LobbyView;
@@ -185,7 +183,6 @@ export class MainScene extends Phaser.Scene {
       // Track joined match
       this.setCurrentMatchId(matchId);
       this.currentRuntimeMatchId = runtimeMatchId;
-      this.moveCounter = 0;
       const count = Array.isArray(parsed.players)
         ? parsed.players.length
         : undefined;
@@ -558,20 +555,6 @@ export class MainScene extends Phaser.Scene {
         } else {
           this.statusText.setText("leave_match error (see console).");
           console.log("leave_match response:", parsed);
-        }
-      });
-      this.lobbyView.setOnEndTurn(async () => {
-        if (!this.currentMatchId || !this.turnService) return;
-        const move = { n: ++this.moveCounter, ts: Date.now() };
-        const res = await this.turnService.submitTurn(
-          this.currentMatchId,
-          move
-        );
-        const parsed = this.parseRpcPayload<SubmitTurnPayload>(res);
-        if (parsed && parsed.ok) {
-          this.statusText.setText(`Turn submitted. Turn #: ${parsed.turn}`);
-        } else {
-          this.statusText.setText("submit_turn error (see console).");
         }
       });
       this.lobbyView.setOnStartMatch(async () => {

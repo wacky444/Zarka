@@ -100,7 +100,6 @@ export class LobbyView {
   private backToMenuButton?: UIButton;
 
   private onLeave?: () => void | Promise<void>;
-  private onEndTurn?: () => void | Promise<void>;
   private onSettingsChange?: (s: InMatchSettings) => void | Promise<void>;
   private onStartMatch?: () => void | Promise<void>;
   private onRemoveMatch?: () => void | Promise<void>;
@@ -220,18 +219,6 @@ export class LobbyView {
       ["inMatch"]
     );
     this.actionSizer.add(this.leaveButton, { padding: 2 });
-
-    const endTurnBtn = makeButton(
-      scene,
-      0,
-      0,
-      "End Turn",
-      async () => {
-        if (this.onEndTurn) await this.onEndTurn();
-      },
-      ["inMatch"]
-    );
-    this.actionSizer.add(endTurnBtn, { padding: 2 });
 
     this.startMatchButton = makeButton(
       scene,
@@ -618,10 +605,6 @@ export class LobbyView {
 
   setOnLeave(handler: () => void | Promise<void>) {
     this.onLeave = handler;
-  }
-
-  setOnEndTurn(handler: () => void | Promise<void>) {
-    this.onEndTurn = handler;
   }
 
   setOnSettingsChange(handler: (s: InMatchSettings) => void | Promise<void>) {
