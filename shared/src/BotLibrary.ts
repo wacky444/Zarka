@@ -131,3 +131,12 @@ function buildBotProfile(name: string, index: number): BotProfile {
 export const BOT_LIBRARY: readonly BotProfile[] = BOT_NAMES.map(
   (name, index) => buildBotProfile(name, index)
 );
+
+export function isBot(playerId: string | null | undefined): boolean {
+  if (!playerId) {
+    return false;
+  }
+  return /^bot\d+$/i.test(playerId);
+}
+
+export const isBotId = isBot;

@@ -1,4 +1,4 @@
-import type { MatchRecord, Skin, UserAccount } from "@shared";
+import { isBot, type MatchRecord, type Skin, type UserAccount } from "@shared";
 import { THEME } from "../ColorPalette";
 import type { PlayerOption } from "../PlayerSelector";
 import type { PlayerOptionSkinInfo } from "./PlayerOptionSkinCache";
@@ -39,8 +39,7 @@ export function buildPlayerOptions(
       typeof account?.displayName === "string" && account.displayName.trim()
         ? account.displayName.trim()
         : null;
-    const isBot = /^bot\d+$/i.test(id);
-    const baseName = isBot
+    const baseName = isBot(id)
       ? (character?.name ?? usernames[id] ?? id)
       : (accountDisplayName ?? usernames[id] ?? character?.name ?? id);
     const name = baseName.length > 0 ? baseName : id;

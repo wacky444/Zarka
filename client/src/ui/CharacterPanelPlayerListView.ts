@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { t } from "../services/i18n";
-import type { MatchRecord } from "@shared";
+import { isBot, type MatchRecord } from "@shared";
 import type { PlayerOption } from "./PlayerSelector";
 import { formatPlayerPerceptionDetails } from "./PlayerPerceptionDetails";
 import { HoverTooltip } from "./HoverTooltip";
@@ -718,9 +718,8 @@ export class CharacterPanelPlayerListView {
         character?.statuses?.conditions?.includes("dead") ||
         (typeof character?.stats?.health?.current === "number" &&
           character.stats.health.current <= 0);
-      const isBot = /^bot\d+$/i.test(option.id);
       const isReady =
-        !isDead && (isBot || match?.readyStates?.[option.id] === true);
+        !isDead && (isBot(option.id) || match?.readyStates?.[option.id] === true);
       const readyIcon = this.scene.add
         .text(itemWidth - PLAYER_LIST_LABEL_PADDING, y + rowHeight / 2, "✓", {
           fontSize: "14px",

@@ -23,6 +23,7 @@ import { MatchChatService } from "../services/chatService";
 import {
   ActionLibrary,
   ExtraExecutionEffect,
+  isBot,
   CellLibrary,
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
@@ -876,7 +877,7 @@ export class GameScene extends Phaser.Scene {
         getPlayerName: (playerId) => {
           const characterName =
             this.currentMatch?.playerCharacters?.[playerId]?.name;
-          if (/^bot\d+$/i.test(playerId)) {
+          if (isBot(playerId)) {
             return characterName ?? this.playerNameMap[playerId] ?? playerId;
           }
           return this.playerNameMap[playerId] ?? characterName ?? playerId;

@@ -1,4 +1,6 @@
 import {
+  isBot,
+  isBotId,
   ActionLibrary,
   CellLibrary,
   neighbors,
@@ -324,9 +326,7 @@ function coordKey(coord: Axial | undefined): string {
   return `${coord.q}:${coord.r}`;
 }
 
-export function isBotId(playerId: string): boolean {
-  return /^bot\d+$/i.test(playerId);
-}
+export { isBot, isBotId };
 
 function determinePersonality(playerId: string): BotPersonality {
   const match = /^bot(\d+)$/i.exec(playerId);

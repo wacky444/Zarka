@@ -1,7 +1,7 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
 import { RANKED_DAILY_PRESENCE_COLLECTION, SERVER_USER_ID } from "../constants";
-import { TUTORIAL_BOT_ID } from "@shared";
+import { isBot, TUTORIAL_BOT_ID } from "@shared";
 
 export const RANKED_DAILY_PRESENCE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const STORAGE_PAGE_SIZE = 100;
@@ -15,7 +15,7 @@ export function isRankedPresenceUserId(userId: string): boolean {
   return (
     userId !== SERVER_USER_ID &&
     userId !== TUTORIAL_BOT_ID &&
-    !/^bot\d+$/.test(userId)
+    !isBot(userId)
   );
 }
 
