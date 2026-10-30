@@ -48,18 +48,23 @@ import {
   stopMenuMusic
 } from "../animation/soundPlayer";
 
-function buildSkinItems(category: SkinCategory): GridSelectItem[] {
+function buildSkinItems(
+  category: SkinCategory,
+  unlockedCosmeticIds: ReadonlySet<string>
+): GridSelectItem[] {
   const options = SKIN_OPTIONS[category];
   return options.map((frame) => {
-    const name = frame.replace(/\.png$/, "").replace(/_/g, " ");
+    const locked = category === "hat" && !unlockedCosmeticIds.has(frame);
+    const name = frame.replace(/\.png$/, "").replace(/_/g, "");
     const shortName = frame
       .replace(/^[^_]+_/, "")
       .replace(/\.png$/, "")
       .replace(/_/g, " ");
     return {
       id: frame,
-      name,
-      shortName,
+      name: locked ? `${name} (Locked)` : name,
+      shortName: locked ? `${shortName} · Locked` : shortName,
+      disabled: locked,
       texture: "char",
       frame,
       iconScale: 2,
@@ -181,6 +186,7 @@ export class SettingsScene extends Phaser.Scene {
   private skinCategoryOrder: SkinCategory[] = [];
   private previewLayers: SkinLayers = {};
   private currentSkin: Skin = { ...DEFAULT_SKIN };
+  private unlockedCosmeticIds = new Set<string>(["hat_001.png"]);
   private saving = false;
   private readonly rankedPresenceForegroundHandler = () => {
     if (
@@ -1128,7 +1134,7 @@ export class SettingsScene extends Phaser.Scene {
         mobileCellContent: "image"
       });
 
-      const items = buildSkinItems(cat);
+      const items = buildSkinItems(cat, this.unlockedCosmeticIds);
       selector.setItems(items);
       selector.setValue(this.currentSkin[cat], false);
 
@@ -1281,6 +1287,16 @@ export class SettingsScene extends Phaser.Scene {
         );
 
         this.playerStatsText.setText(lines.join("\n"));
+
+        this.unlockedCosmeticIds = new Set(
+          userAccount.cosmetics.unlockedCosmeticIds ?? ["hat_001.png"]
+        );
+        for (const cat of this.skinCategoryOrder) {
+          const selector = this.skinSelectors[cat];
+          if (selector) {
+            selector.setItems(buildSkinItems(cat, this.unlockedCosmeticIds));
+          }
+        }
 
         const skin = userAccount.cosmetics.selectedSkinId;
         if (skin && typeof skin === "object") {

@@ -103,11 +103,22 @@ export function updateSkinRpc(
     } satisfies import("@shared").UpdateSkinPayload);
   }
 
+  let hasHatAccess = true;
   let status: ReturnType<typeof updateAccountMetadata>;
   try {
     status = updateAccountMetadata(nk, callerUserId, (metadata) => {
       const existingZarka = asRecord(metadata.zarka);
       const existingCosmetics = asRecord(existingZarka?.cosmetics);
+      const unlockedCosmeticIds = Array.isArray(existingCosmetics?.unlockedCosmeticIds)
+        ? existingCosmetics.unlockedCosmeticIds.filter(
+            (id): id is string => typeof id === "string",
+          )
+        : ["hat_001.png"];
+      hasHatAccess =
+        skin.hat === "" ||
+        skin.hat === "hat_001.png" ||
+        unlockedCosmeticIds.includes(skin.hat);
+      if (!hasHatAccess) return metadata;
       return {
         ...metadata,
         zarka: {
@@ -127,6 +138,12 @@ export function updateSkinRpc(
     );
     return JSON.stringify({
       error: "internal_error",
+    } satisfies import("@shared").UpdateSkinPayload);
+  }
+
+  if (!hasHatAccess) {
+    return JSON.stringify({
+      error: "hat_locked",
     } satisfies import("@shared").UpdateSkinPayload);
   }
 

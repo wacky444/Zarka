@@ -58,6 +58,7 @@ function buildDefaultCosmetics(): import("@shared").UserCosmetics {
       hat: "",
     },
     unlockedSkinIds: ["default"],
+    unlockedCosmeticIds: ["hat_001.png"],
   };
 }
 
@@ -147,7 +148,7 @@ function buildAccountFromUser(
       ? cosmeticsObj.unlockedCosmeticIds.filter(
           (x): x is string => typeof x === "string",
         )
-      : undefined,
+      : defaultsCosmetics.unlockedCosmeticIds,
   };
 
   const createdAtMs = parseEpochMs(
