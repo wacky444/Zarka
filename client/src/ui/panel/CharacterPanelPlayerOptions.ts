@@ -39,8 +39,10 @@ export function buildPlayerOptions(
       typeof account?.displayName === "string" && account.displayName.trim()
         ? account.displayName.trim()
         : null;
-    const baseName =
-      accountDisplayName ?? usernames[id] ?? character?.name ?? id;
+    const isBot = /^bot\d+$/i.test(id);
+    const baseName = isBot
+      ? (character?.name ?? usernames[id] ?? id)
+      : (accountDisplayName ?? usernames[id] ?? character?.name ?? id);
     const name = baseName.length > 0 ? baseName : id;
     const label = id === currentUserId ? `${name} (You)` : name;
     const revealedTeamId =
