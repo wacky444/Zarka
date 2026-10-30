@@ -70,6 +70,9 @@ export class CharacterPanelChatView {
   private messageAreaTop = 0;
   private messageAreaBottom = 0;
   private messageAreaWidth = 0;
+  private messageScrollOffset = 0;
+  private messagesMask: Phaser.Display.Masks.GeometryMask | null = null;
+  private messagesMaskShape: Phaser.GameObjects.Rectangle | null = null;
   private inputLayout: ChatInputLayout | null = null;
   private previousParentSize: { width: string; height: string } | null = null;
   private inputValue = "";
@@ -127,6 +130,14 @@ export class CharacterPanelChatView {
             wordWrap: { width: 280, useAdvancedWrap: true }
           })
     ) as Phaser.GameObjects.Text;
+    this.messagesMaskShape = this.scene.add.rectangle(0, 0, 1, 1, 0xffffff, 0).setOrigin(0, 0).setScrollFactor(0);
+    this.messagesMask = this.messagesMaskShape.createGeometryMask();
+    this.messagesText.setMask(this.messagesMask);
+    this.messagesBox.setInteractive();
+    this.messagesBox.on(Phaser.Input.Events.POINTER_WHEEL, (_pointer: Phaser.Input.Pointer, _objects: Phaser.GameObjects.GameObject[], _dx: number, dy: number) => {
+      this.messageScrollOffset = Phaser.Math.Clamp(this.messageScrollOffset + dy * 0.6, 0, Math.max(0, this.messagesText.height - this.messageAreaHeight));
+      this.alignMessagesTextToBottom();
+    });
     this.overlayText = this.scene.add
       .text(0, 0, "No messages yet.", {
         fontSize: "15px",
@@ -247,6 +258,9 @@ export class CharacterPanelChatView {
     );
     window.removeEventListener("resize", this.visualViewportChangeHandler);
     this.inputElement.remove();
+    this.messagesText.clearMask(false);
+    this.messagesMask?.destroy();
+    this.messagesMaskShape?.destroy();
     this.inputBackground.off(Phaser.Input.Events.POINTER_DOWN);
     this.inputBackground.disableInteractive();
     this.sendButton.disableInteractive();
@@ -339,6 +353,8 @@ export class CharacterPanelChatView {
     this.messagesBox.setDisplaySize(layout.boxWidth, boxHeight);
     this.messageAreaTop = layout.boxY + 8;
     this.messageAreaBottom = layout.boxY + boxHeight - 8;
+    this.messagesMaskShape?.setPosition(layout.panelX + layout.margin, layout.panelY + layout.boxY);
+    this.messagesMaskShape?.setSize(layout.boxWidth, boxHeight);
     this.messageAreaHeight = messageAreaHeight;
     if (messageWidthChanged) {
       this.messagesText.setWordWrapWidth(layout.boxWidth - 32);
@@ -390,7 +406,7 @@ export class CharacterPanelChatView {
       this.messagesText.x,
       Math.max(
         this.messageAreaTop,
-        this.messageAreaBottom - this.messagesText.height
+        this.messageAreaBottom - this.messagesText.height + this.messageScrollOffset
       )
     );
   }
@@ -429,11 +445,13 @@ export class CharacterPanelChatView {
 
   setMessages(messages: ChatMessageViewModel[]) {
     this.messages = messages.slice(-MAX_MESSAGES);
+    this.messageScrollOffset = 0;
     this.refreshMessages();
   }
 
   appendMessage(message: ChatMessageViewModel) {
     this.messages = [...this.messages, message].slice(-MAX_MESSAGES);
+    this.messageScrollOffset = 0;
     this.refreshMessages();
     if (!message.isSelf) {
       playRandomSound(this.scene, "sci_fi_hover", {
@@ -523,6 +541,7 @@ export class CharacterPanelChatView {
   private refreshMessages() {
     if (this.messages.length === 0) {
       this.messagesText.setText("");
+      this.messageScrollOffset = 0;
       this.messagesText.setVisible(false);
       this.overlayMessage =
         this.connectionState === "ready"
@@ -533,9 +552,7 @@ export class CharacterPanelChatView {
     }
     const hasBBCode = Boolean(this.scene.rexUI);
     const groups = groupChatMessages(this.messages);
-    let startIndex = 0;
-    while (startIndex < groups.length) {
-      const formattedGroups = groups.slice(startIndex).map((group) => {
+    const formattedGroups = groups.map((group) => {
         const entry = group.first;
         const time = formatTime(entry.timestamp);
         const name = entry.senderLabel.trim();
@@ -578,15 +595,7 @@ export class CharacterPanelChatView {
         return lines.join("\n");
       });
 
-      this.messagesText.setText(formattedGroups.join("\n\n"));
-      if (
-        this.messagesText.height <= this.messageAreaHeight ||
-        startIndex === groups.length - 1
-      ) {
-        break;
-      }
-      startIndex += 1;
-    }
+    this.messagesText.setText(formattedGroups.join("\n\n"));
     this.alignMessagesTextToBottom();
     this.messagesText.setVisible(this.visible);
     this.overlayMessage = "";
