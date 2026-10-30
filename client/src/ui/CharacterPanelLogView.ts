@@ -1563,7 +1563,11 @@ export class CharacterPanelLogView {
               lines.push(
                 `${targetName} ${t("fled to")} (${movedTo.q}, ${movedTo.r})`
               );
-              if (energyLost && energyLost > 0) {
+              if (
+                energyLost &&
+                energyLost > 0 &&
+                this.importanceThreshold === ReplayImportance.Routine
+              ) {
                 lines.push(
                   `${targetName} ${t("lost")} ${energyLost} ${t("energy")}`
                 );
