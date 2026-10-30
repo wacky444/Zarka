@@ -873,10 +873,14 @@ export class GameScene extends Phaser.Scene {
           (playerId === this.currentUserId
             ? (this.currentPlayerSkin ?? undefined)
             : undefined),
-        getPlayerName: (playerId) =>
-          this.currentMatch?.playerCharacters?.[playerId]?.name ??
-          this.playerNameMap[playerId] ??
-          playerId,
+        getPlayerName: (playerId) => {
+          const characterName =
+            this.currentMatch?.playerCharacters?.[playerId]?.name;
+          if (/^bot\d+$/i.test(playerId)) {
+            return characterName ?? this.playerNameMap[playerId] ?? playerId;
+          }
+          return this.playerNameMap[playerId] ?? characterName ?? playerId;
+        },
         getLocationSelection: () => ({
           active:
             this.locationSelectionActive &&
