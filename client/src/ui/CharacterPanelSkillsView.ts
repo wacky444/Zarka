@@ -86,11 +86,17 @@ export class CharacterPanelSkillsView {
     layout: CharacterPanelSkillsViewLayout
   ) {
     const startY = layout.contentTop;
-    const width = layout.boxWidth;
+    const width = Math.max(120, layout.boxWidth);
     const height = Math.max(180, layout.panelHeight - startY - layout.margin);
 
     this.background = scene.add
-      .rectangle(layout.margin, startY, width, height, THEME.colors.panelBackground)
+      .rectangle(
+        layout.margin,
+        startY,
+        width,
+        height,
+        THEME.colors.panelBackground
+      )
       .setOrigin(0, 0)
       .setVisible(false);
     this.background.setStrokeStyle?.(1, THEME.colors.panelBorder, 0.8);
@@ -113,25 +119,21 @@ export class CharacterPanelSkillsView {
     parent.add(this.headerBox);
 
     this.unspentPointsLabel = scene.add
-      .text(
-        layout.margin + 12,
-        headerY + 18,
-        "Available Skill: 0",
-        {
-          fontSize: "15px",
-          color: THEME.colors.zarkanGold
-        }
-      )
+      .text(layout.margin + 12, headerY + 18, "Available Skill: 0", {
+        fontSize: "15px",
+        color: THEME.colors.zarkanGold
+      })
       .setOrigin(0, 0.5)
       .setVisible(false);
     parent.add(this.unspentPointsLabel);
 
-    this.experienceLabel = scene.add.text(
-      layout.margin + 12,
-      headerY + 50,
-      "Experience: 0 / 10 · Level 1",
-      { fontSize: "13px", color: THEME.colors.experienceText }
-    ).setOrigin(0, 0.5).setVisible(false);
+    this.experienceLabel = scene.add
+      .text(layout.margin + 12, headerY + 50, "Experience: 0 / 10 · Level 1", {
+        fontSize: "13px",
+        color: THEME.colors.experienceText
+      })
+      .setOrigin(0, 0.5)
+      .setVisible(false);
     parent.add(this.experienceLabel);
 
     const btnHeight = 26;
@@ -184,7 +186,11 @@ export class CharacterPanelSkillsView {
       )
       .setOrigin(0, 0)
       .setVisible(false);
-    this.confirmBtnBg.setStrokeStyle?.(1, THEME.colors.buttonConfirmBorder, 0.8);
+    this.confirmBtnBg.setStrokeStyle?.(
+      1,
+      THEME.colors.buttonConfirmBorder,
+      0.8
+    );
     parent.add(this.confirmBtnBg);
 
     this.confirmBtnText = scene.add
@@ -330,8 +336,22 @@ export class CharacterPanelSkillsView {
         mask: false
       },
       slider: {
-        track: scene.rexUI.add.roundRectangle(0, 0, 4, 120, 2, THEME.colors.loadingTrack),
-        thumb: scene.rexUI.add.roundRectangle(0, 0, 6, 36, 3, THEME.colors.loadingFill)
+        track: scene.rexUI.add.roundRectangle(
+          0,
+          0,
+          4,
+          120,
+          2,
+          THEME.colors.loadingTrack
+        ),
+        thumb: scene.rexUI.add.roundRectangle(
+          0,
+          0,
+          6,
+          36,
+          3,
+          THEME.colors.loadingFill
+        )
       },
       scroller: {
         threshold: 10,
@@ -350,8 +370,16 @@ export class CharacterPanelSkillsView {
     this.scrollPanel.setScrollFactor?.(0);
     const rawScrollPanel = this.scrollPanel as unknown as {
       childrenMap?: {
-        scrollableBlock?: { setScrollFactor?: (x: number, y?: number) => void; scrollFactorX?: number; scrollFactorY?: number };
-        child?: { setScrollFactor?: (x: number, y?: number) => void; scrollFactorX?: number; scrollFactorY?: number };
+        scrollableBlock?: {
+          setScrollFactor?: (x: number, y?: number) => void;
+          scrollFactorX?: number;
+          scrollFactorY?: number;
+        };
+        child?: {
+          setScrollFactor?: (x: number, y?: number) => void;
+          scrollFactorX?: number;
+          scrollFactorY?: number;
+        };
       };
     };
     if (rawScrollPanel?.childrenMap?.scrollableBlock) {
@@ -516,7 +544,10 @@ export class CharacterPanelSkillsView {
       this.revertBtnBg.disableInteractive();
       this.revertBtnText.setAlpha(0.4);
 
-      this.confirmBtnBg.setFillStyle(THEME.colors.buttonDisabledBackground, 0.5);
+      this.confirmBtnBg.setFillStyle(
+        THEME.colors.buttonDisabledBackground,
+        0.5
+      );
       this.confirmBtnBg.disableInteractive();
       this.confirmBtnText.setAlpha(0.4);
     }
@@ -539,7 +570,10 @@ export class CharacterPanelSkillsView {
     }
     const progression = this.currentCharacter?.progression;
     const experience = Math.max(0, progression?.experience ?? 0);
-    const experienceForNextLevel = Math.max(0, progression?.experienceForNextLevel ?? 0);
+    const experienceForNextLevel = Math.max(
+      0,
+      progression?.experienceForNextLevel ?? 0
+    );
     const level = Math.max(1, progression?.level ?? 1);
     this.experienceLabel.setText(
       experienceForNextLevel > 0
@@ -556,7 +590,9 @@ export class CharacterPanelSkillsView {
       const hasInvestedRank = committedRank > 0;
       item.cardBg.setStrokeStyle(
         hasInvestedRank ? 2 : 1,
-        hasInvestedRank ? THEME.colors.healthAccent : THEME.colors.skillCardBorder,
+        hasInvestedRank
+          ? THEME.colors.healthAccent
+          : THEME.colors.skillCardBorder,
         hasInvestedRank ? 1 : 0.9
       );
 
@@ -612,7 +648,10 @@ export class CharacterPanelSkillsView {
           item.upgradeBtnBg.setInteractive({ useHandCursor: true });
           item.upgradeBtnText.setAlpha(1);
         } else {
-          item.upgradeBtnBg.setFillStyle(THEME.colors.buttonDisabledBackground, 0.6);
+          item.upgradeBtnBg.setFillStyle(
+            THEME.colors.buttonDisabledBackground,
+            0.6
+          );
           item.upgradeBtnBg.disableInteractive();
           item.upgradeBtnText.setAlpha(0.6);
         }
@@ -634,7 +673,11 @@ export class CharacterPanelSkillsView {
     if (this.confirmBtnHighlighted) {
       this.confirmBtnBg.setStrokeStyle(3, THEME.colors.tutorialHighlight, 1);
     } else {
-      this.confirmBtnBg.setStrokeStyle(1, THEME.colors.buttonConfirmBorder, 0.8);
+      this.confirmBtnBg.setStrokeStyle(
+        1,
+        THEME.colors.buttonConfirmBorder,
+        0.8
+      );
     }
 
     for (const item of this.cardItems) {
@@ -652,7 +695,7 @@ export class CharacterPanelSkillsView {
 
   layout(options: CharacterPanelSkillsViewLayout): void {
     const startY = options.contentTop;
-    const width = options.boxWidth;
+    const width = Math.max(120, options.boxWidth);
     const height = Math.max(180, options.panelHeight - startY - options.margin);
 
     this.background.setPosition(options.margin, startY);
@@ -665,14 +708,8 @@ export class CharacterPanelSkillsView {
     this.headerBox.setSize(headerWidth, HEADER_HEIGHT);
     this.headerBox.setDisplaySize(headerWidth, HEADER_HEIGHT);
 
-    this.unspentPointsLabel.setPosition(
-      options.margin + 12,
-      headerY + 18
-    );
-    this.experienceLabel.setPosition(
-      options.margin + 12,
-      headerY + 50
-    );
+    this.unspentPointsLabel.setPosition(options.margin + 12, headerY + 18);
+    this.experienceLabel.setPosition(options.margin + 12, headerY + 50);
 
     const btnHeight = 26;
     const confirmBtnWidth = 70;
@@ -719,7 +756,10 @@ export class CharacterPanelSkillsView {
     this.scrollPanel.setSize?.(listWidth, listHeight);
     this.scrollPanel.setMinSize?.(listWidth, listHeight);
     const nextCardWidth = Math.max(0, listWidth - 8);
-    if (this.skillCardWidth !== nextCardWidth) {
+    if (
+      nextCardWidth > CARD_PADDING * 2 + 20 &&
+      this.skillCardWidth !== nextCardWidth
+    ) {
       this.skillCardWidth = nextCardWidth;
       this.rebuildSkillList();
     } else {
@@ -757,6 +797,9 @@ export class CharacterPanelSkillsView {
   }
 
   private buildSkillList(cardWidth: number): void {
+    if (cardWidth <= CARD_PADDING * 2 + 20) {
+      return;
+    }
     const skills = Object.values(SkillLibrary).filter(
       (skill) =>
         skill.category === this.activeCategory &&
@@ -789,7 +832,7 @@ export class CharacterPanelSkillsView {
     startY: number,
     cardWidth: number
   ): number {
-    const textWidth = cardWidth - CARD_PADDING * 2;
+    const textWidth = Math.max(60, cardWidth - CARD_PADDING * 2);
 
     const descText = this.scene.add
       .text(CARD_PADDING, startY + 54, t(skill.description), {
@@ -803,7 +846,14 @@ export class CharacterPanelSkillsView {
     const cardHeight = Math.max(82, 54 + descText.height + CARD_PADDING);
 
     const cardBg = this.scene.add
-      .rectangle(0, startY, cardWidth, cardHeight, THEME.colors.skillCardBackground, 0.95)
+      .rectangle(
+        0,
+        startY,
+        cardWidth,
+        cardHeight,
+        THEME.colors.skillCardBackground,
+        0.95
+      )
       .setOrigin(0, 0)
       .setStrokeStyle(1, THEME.colors.skillCardBorder, 0.9)
       .setInteractive({ useHandCursor: false });
@@ -829,7 +879,14 @@ export class CharacterPanelSkillsView {
     const btnY = startY + 26;
 
     const upgradeBtnBg = this.scene.add
-      .rectangle(btnX, btnY, btnWidth, btnHeight, THEME.colors.buttonConfirmFill, 1)
+      .rectangle(
+        btnX,
+        btnY,
+        btnWidth,
+        btnHeight,
+        THEME.colors.buttonConfirmFill,
+        1
+      )
       .setOrigin(0, 0)
       .setVisible(skill.implemented);
 
@@ -845,7 +902,14 @@ export class CharacterPanelSkillsView {
     const decBtnWidth = 22;
     const decBtnX = btnX - 6 - decBtnWidth;
     const decrementBtnBg = this.scene.add
-      .rectangle(decBtnX, btnY, decBtnWidth, btnHeight, THEME.colors.buttonDangerFill, 0.8)
+      .rectangle(
+        decBtnX,
+        btnY,
+        decBtnWidth,
+        btnHeight,
+        THEME.colors.buttonDangerFill,
+        0.8
+      )
       .setOrigin(0, 0)
       .setVisible(false);
 

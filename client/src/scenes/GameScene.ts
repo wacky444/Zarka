@@ -496,6 +496,16 @@ export class GameScene extends Phaser.Scene {
     event.preventDefault();
     this.handleBackNavigation(false);
   };
+  private readonly enterKeyHandler = (event: KeyboardEvent) => {
+    if (event.key !== "Enter" || this.mobileLayout) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+      return;
+    }
+    this.characterPanel?.focusChat();
+  };
   private readonly browserBackHandler = () => {
     this.handleBackNavigation(true);
   };
@@ -800,6 +810,60 @@ export class GameScene extends Phaser.Scene {
         assetPath("assets/images/Board Game Icons/warning.png")
       );
     }
+    if (!this.textures.exists("chat-expand")) {
+      this.load.image(
+        "chat-expand",
+        assetPath("assets/images/chat-icons/expand.png")
+      );
+    }
+    if (!this.textures.exists("chat-collapse")) {
+      this.load.image(
+        "chat-collapse",
+        assetPath("assets/images/chat-icons/collapse.png")
+      );
+    }
+    if (!this.textures.exists("chat-arrow-up")) {
+      this.load.image(
+        "chat-arrow-up",
+        assetPath("assets/images/chat-icons/arrowUp.png")
+      );
+    }
+    if (!this.textures.exists("chat-arrow-down")) {
+      this.load.image(
+        "chat-arrow-down",
+        assetPath("assets/images/chat-icons/arrowDown.png")
+      );
+    }
+    if (!this.textures.exists("chat-talk")) {
+      this.load.image(
+        "chat-talk",
+        assetPath("assets/images/chat-icons/talk.png")
+      );
+    }
+    if (!this.textures.exists("chat-send")) {
+      this.load.image(
+        "chat-send",
+        assetPath("assets/images/chat-icons/open.png")
+      );
+    }
+    if (!this.textures.exists("chat-massive-multiplayer")) {
+      this.load.image(
+        "chat-massive-multiplayer",
+        assetPath("assets/images/chat-icons/massiveMultiplayer.png")
+      );
+    }
+    if (!this.textures.exists("chat-multiplayer")) {
+      this.load.image(
+        "chat-multiplayer",
+        assetPath("assets/images/chat-icons/multiplayer.png")
+      );
+    }
+    if (!this.textures.exists("chat-singleplayer")) {
+      this.load.image(
+        "chat-singleplayer",
+        assetPath("assets/images/chat-icons/singleplayer.png")
+      );
+    }
     preloadReplaySounds(this);
   }
 
@@ -1044,6 +1108,7 @@ export class GameScene extends Phaser.Scene {
     this.characterPanel.on("shop-purchase", this.handleShopPurchase, this);
     this.characterPanel.on("donate-zarkans", this.handleZarkansDonation, this);
     this.input.keyboard?.on("keydown", this.escapeKeyHandler);
+    this.input.keyboard?.on("keydown", this.enterKeyHandler);
     this.installBrowserHistoryGuard();
 
     if (this.turnService) {
@@ -1387,6 +1452,7 @@ export class GameScene extends Phaser.Scene {
       this.hoverTooltip?.destroy();
       this.hoverTooltip = null;
       this.input.keyboard?.off("keydown", this.escapeKeyHandler);
+      this.input.keyboard?.off("keydown", this.enterKeyHandler);
       this.removeBrowserHistoryGuard();
       if (this.turnService) {
         this.turnService.setOnTurnAdvanced();
@@ -2204,6 +2270,9 @@ export class GameScene extends Phaser.Scene {
   private layoutUI() {
     const width = this.uiCam ? this.uiCam.width : this.scale.width;
     const height = this.uiCam ? this.uiCam.height : this.scale.height;
+    if (width <= 0 || height <= 0) {
+      return;
+    }
     const isMobileView = isMobile(width);
     this.syncMapRenderingPauseForGridModal();
 
@@ -2221,6 +2290,7 @@ export class GameScene extends Phaser.Scene {
         this.characterPanel.setPosition(0, 0);
         this.characterPanel.setPanelSize(width, height);
         this.characterPanel.setPanelVisibility(showSidebar);
+        this.characterPanel.setChatOverlayMode(false);
       } else {
         this.characterPanel.setPanelVisibility(true);
         this.characterPanel.setPosition(
@@ -2231,6 +2301,15 @@ export class GameScene extends Phaser.Scene {
           this.characterPanelDesktopWidth,
           height
         );
+        this.chatTabActive = true;
+        const chatBottomY = height - (this.menuButton ? this.menuButton.height + 16 : 50);
+        const chatWidth = Math.min(380, width - this.characterPanelDesktopWidth - 24);
+        this.characterPanel.setChatOverlayMode(true, {
+          x: 10,
+          bottomY: chatBottomY,
+          width: Math.max(260, chatWidth),
+          maxHeight: height
+        });
       }
     }
 
@@ -2368,6 +2447,9 @@ export class GameScene extends Phaser.Scene {
   private handleResize(gameSize: Phaser.Structs.Size) {
     const width = gameSize.width ?? this.scale.width;
     const height = gameSize.height ?? this.scale.height;
+    if (width <= 0 || height <= 0) {
+      return;
+    }
     this.cam.setSize(width, height);
     this.uiCam.setSize(width, height);
     this.layoutUI();
@@ -4035,6 +4117,9 @@ export class GameScene extends Phaser.Scene {
         return true;
       }
     }
+    if (this.characterPanel?.isPointOverChat(x, y)) {
+      return true;
+    }
     if (!this.characterPanel || !this.uiCam || !this.characterPanel.visible) {
       return false;
     }
@@ -4048,7 +4133,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleTabChange(key: string) {
-    this.chatTabActive = key === "chat";
+    this.chatTabActive = !this.mobileLayout || key === "chat";
     this.logTabActive = key === "log";
     if (this.mobileLayout) {
       this.layoutUI();

@@ -14,6 +14,7 @@ export interface CharacterPanelTabEntry {
   rect: Phaser.GameObjects.Rectangle;
   text: Phaser.GameObjects.Text;
   badge?: Phaser.GameObjects.Rectangle;
+  hidden?: boolean;
 }
 
 interface CharacterPanelTabsOptions {
@@ -65,7 +66,27 @@ export class CharacterPanelTabs {
     return this.activeKey === key;
   }
 
+  isTabHidden(key: TabKey): boolean {
+    const tab = this.options.tabs.find((entry) => entry.key === key);
+    return tab?.hidden === true;
+  }
+
+  setTabHidden(key: TabKey, hidden: boolean): void {
+    const tab = this.options.tabs.find((entry) => entry.key === key);
+    if (!tab || tab.hidden === hidden) {
+      return;
+    }
+    tab.hidden = hidden;
+    if (hidden && this.activeKey === key) {
+      this.setActiveTab(this.options.defaultKey);
+    }
+    this.refresh();
+  }
+
   isTabUnread(key: TabKey): boolean {
+    if (this.isTabHidden(key)) {
+      return false;
+    }
     return this.unreadTabs.has(key) && !this.isActive(key);
   }
 
@@ -88,6 +109,9 @@ export class CharacterPanelTabs {
   }
 
   setActiveTab(key: TabKey): void {
+    if (this.isTabHidden(key)) {
+      return;
+    }
     if (key === this.activeKey) {
       if (key === "log") {
         this.options.onLogVisibilityChange({
@@ -122,6 +146,12 @@ export class CharacterPanelTabs {
 
   private updateStyles(): void {
     for (const tab of this.options.tabs) {
+      if (tab.hidden) {
+        tab.rect.setVisible(false).disableInteractive();
+        tab.text.setVisible(false).disableInteractive();
+        tab.badge?.setVisible(false);
+        continue;
+      }
       const active = tab.key === this.activeKey;
       const highlighted = tab.key === this.highlightedKey;
       const unread = !active && this.unreadTabs.has(tab.key);
@@ -168,12 +198,14 @@ export class CharacterPanelTabs {
     } else {
       this.options.onPlayersTabHide();
     }
-    const showChat = this.activeKey === "chat";
-    this.toggleElements(this.options.chatElements, showChat);
-    if (showChat) {
-      this.options.onChatTabShow();
-    } else {
-      this.options.onChatTabHide();
+    if (!this.isTabHidden("chat")) {
+      const showChat = this.activeKey === "chat";
+      this.toggleElements(this.options.chatElements, showChat);
+      if (showChat) {
+        this.options.onChatTabShow();
+      } else {
+        this.options.onChatTabHide();
+      }
     }
     const showLog = this.activeKey === "log";
     this.options.onLogVisibilityChange({ visible: showLog, forceEnsure });
