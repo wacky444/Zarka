@@ -1459,8 +1459,8 @@ export class SettingsScene extends Phaser.Scene {
       return;
     }
 
-    if (trimmed.length > 128) {
-      this.statusText.setText("Display name must be 128 characters or less");
+    if (trimmed.length > 20) {
+      this.statusText.setText("Display name must be 20 characters or less");
       return;
     }
 
