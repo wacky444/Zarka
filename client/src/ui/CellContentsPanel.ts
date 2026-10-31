@@ -396,7 +396,7 @@ export class CellContentsPanel {
 
     addItemSection("Visible items", actualEntries, "No visible items");
     addItemSection(
-      "Possible items for this cell",
+      "Initial items for this cell",
       possibleEntries,
       "No possible items"
     );
