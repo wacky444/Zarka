@@ -520,7 +520,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Choose any cell directly next to your current one.":
     "Elige cualquier casilla junto a la actual.",
   "Choose Vitality for more HP and Strength 2 to make axe attacks cost less energy.":
-    "Elige Vitalidad para tener más PV y Fuerza 2 para reducir la energía de los ataques con hacha.",
+    "Elige Vitalidad para tener más PV y Fuerza 2 para reducir el esfuerzo de los ataques con hacha.",
   "Open Character → Skills. Buy both skills; you can switch between Offensive and Defense.":
     "Abre Personaje → Habilidades. Compra ambas habilidades; puedes cambiar entre Ataque y Defensa.",
   "Search this cell to reveal objects that are hidden from you.":
@@ -532,7 +532,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Pick Up is the only available main action. The visible objects are on your cell.":
     "Coger es la única acción principal disponible. Los objetos visibles están en tu casilla.",
   "Use Feed on yourself. It restores energy.":
-    "Usa Alimentar contigo. Recuperarás energía.",
+    "Usa Alimentar contigo. Recuperarás esfuerzo.",
   "Feed is the only available secondary action. Submit the turn with Ready.":
     "Alimentar es la única acción secundaria disponible. Envía el turno con Listo.",
   "The bot has entered your cell and sent a message. Open Chat to read it.":
@@ -638,9 +638,9 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "erupted in flames": "ardió en llamas",
   Skills: "Habilidades",
   "Unspent points": "Puntos sin gastar",
-  "Insufficient energy": "Energía insuficiente",
+  "Insufficient energy": "Esfuerzo insuficiente",
   "Insufficient energy, actions hurt for 1 damage and actions with extra effort will fail.":
-    "Energía insuficiente, las acciones causan 1 punto de daño y las acciones con esfuerzo adicional fallarán.",
+    "Esfuerzo insuficiente, las acciones causan 1 punto de daño y las acciones con esfuerzo adicional fallarán.",
   Overweight: "Sobrecargado",
   "Your current actions may make you overweight":
     "Tus acciones actuales pueden sobrecargarte.",
@@ -649,8 +649,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Utility: "Utilidad",
   NPC: "PNJ",
   Health: "Salud",
-  Energy: "Energía",
-  "Energy: Unknown": "Energía: Desconocida",
+  Energy: "Esfuerzo",
+  "Energy: Unknown": "Esfuerzo: Desconocido",
   CD: "Enf",
   "CD:": "Enf:",
   Weight: "Peso",
@@ -769,7 +769,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   extra: "extra",
   "belongs to the team": "pertenece al equipo",
   "infiltrated in team": "infiltrado en el equipo",
-  energy: "energía",
+  energy: "esfuerzo",
   Detected: "Detectado",
   Affected: "Afectado",
   "was affected": "fue afectado",
@@ -1374,8 +1374,8 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
 const PREFIX_TRANSLATIONS: Array<[RegExp, string]> = [
   [/^Volume:\s*/, "Volumen: "],
   [/^Health\s+/, "Salud "],
-  [/^Energy\s+/, "Energía "],
-  [/^Energy:\s*/, "Energía: "],
+  [/^Energy\s+/, "Esfuerzo "],
+  [/^Energy:\s*/, "Esfuerzo: "],
   [/^CD:\s*/, "Enf: "],
   [/^Weight:\s*/, "Peso: "],
   [/^Team:\s*/, "Equipo: "],
