@@ -4421,7 +4421,7 @@ export class GameScene extends Phaser.Scene {
     let loadedTurn: number | null = null;
     const panel = this.characterPanel;
     const service = this.turnService;
-    const matchId = this.currentMatch?.match_id ?? null;
+    const matchId = this.registry.get("currentMatchId") as string | null;
     if (!panel || !service || !matchId) {
       panel?.setLogError("Replay not available.");
       return;
