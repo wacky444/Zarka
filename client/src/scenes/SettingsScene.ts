@@ -298,7 +298,7 @@ export class SettingsScene extends Phaser.Scene {
       this,
       0,
       0,
-      "Change",
+      "Change Name",
       async () => {
         await this.promptChangeDisplayName();
       },
