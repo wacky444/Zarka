@@ -4,10 +4,7 @@ import { makeButton, type UIButton } from "../ui/button";
 import { SessionManager } from "../services/sessionManager";
 import { FacebookService } from "../services/facebookService";
 import { t } from "../services/i18n";
-import {
-  isAdminViewEnabled,
-  setAdminViewEnabled
-} from "../services/adminView";
+import { isAdminViewEnabled, setAdminViewEnabled } from "../services/adminView";
 import type { AccountService } from "../services/AccountService";
 import { TurnService } from "../services/turnService";
 import {
@@ -174,8 +171,10 @@ export class SettingsScene extends Phaser.Scene {
   private rankedMatchSlotsIncreaseButton!: UIButton;
   private rankedMatchSlots = 0;
   private confirmedRankedMatchSlots = 0;
-  private rankedMatchSlotsSaveTimer: ReturnType<typeof setTimeout> | null = null;
-  private rankedMatchSlotsPending: { value: number; revision: number } | null = null;
+  private rankedMatchSlotsSaveTimer: ReturnType<typeof setTimeout> | null =
+    null;
+  private rankedMatchSlotsPending: { value: number; revision: number } | null =
+    null;
   private rankedMatchSlotsRevision = 0;
   private rankedMatchSlotsSaving = false;
   private rankedMatchSlotsSaveError = false;
@@ -194,9 +193,11 @@ export class SettingsScene extends Phaser.Scene {
       document.visibilityState === "visible"
     ) {
       void this.turnService?.touchRankedPresence();
-      void this.turnService?.refreshRankedQueueAndMatches().catch((error: unknown) => {
-        console.warn("Failed to refresh ranked match status:", error);
-      });
+      void this.turnService
+        ?.refreshRankedQueueAndMatches()
+        .catch((error: unknown) => {
+          console.warn("Failed to refresh ranked match status:", error);
+        });
     }
   };
 
@@ -331,7 +332,7 @@ export class SettingsScene extends Phaser.Scene {
       0,
       "Nakama Server Logs",
       () => this.openAdminServerView(),
-      ["account"],
+      ["account"]
     ).setOrigin(0.5, 0);
     this.adminServerButton.setVisible(false);
     this.accountRoot.add(this.adminServerButton);
@@ -448,9 +449,15 @@ export class SettingsScene extends Phaser.Scene {
       .setOrigin(0.5, 0);
     this.accountRoot.add(this.facebookStatusText);
 
-    this.linkFacebookButton = makeButton(this, 0, 0, "Link Facebook", async () => {
-      await this.linkFacebook();
-    }).setOrigin(0.5, 0);
+    this.linkFacebookButton = makeButton(
+      this,
+      0,
+      0,
+      "Link Facebook",
+      async () => {
+        await this.linkFacebook();
+      }
+    ).setOrigin(0.5, 0);
     this.accountRoot.add(this.linkFacebookButton);
 
     this.unlinkFacebookButton = makeButton(
@@ -476,7 +483,9 @@ export class SettingsScene extends Phaser.Scene {
       .text(
         0,
         0,
-        t("Turn reminders can be delayed by Android or browser power management."),
+        t(
+          "Turn reminders can be delayed by Android or browser power management."
+        ),
         {
           color: "#cccccc",
           fontSize: "13px",
@@ -634,9 +643,11 @@ export class SettingsScene extends Phaser.Scene {
       );
     }
     void this.turnService.touchRankedPresence();
-    void this.turnService.refreshRankedQueueAndMatches().catch((error: unknown) => {
-      console.warn("Failed to refresh ranked match status:", error);
-    });
+    void this.turnService
+      .refreshRankedQueueAndMatches()
+      .catch((error: unknown) => {
+        console.warn("Failed to refresh ranked match status:", error);
+      });
     void this.refreshPushNotificationUi();
     await this.loadUserInfo();
   }
@@ -689,7 +700,9 @@ export class SettingsScene extends Phaser.Scene {
 
     this.userInfoText.setVisible(showAccount);
     this.displayNameText.setVisible(showAccount);
-    this.changeDisplayNameButton.setVisible(showAccount && this.displayNameLoaded);
+    this.changeDisplayNameButton.setVisible(
+      showAccount && this.displayNameLoaded
+    );
     this.adminViewToggle.setVisible(showAccount && this.isAdmin);
     this.adminServerButton.setVisible(showAccount && this.isAdmin);
     this.skinStatsTitle.setVisible(showAccount);
@@ -734,10 +747,7 @@ export class SettingsScene extends Phaser.Scene {
     const viewportHeight = this.scale.height;
     const contentWidth = Math.min(
       ACCOUNT_LAYOUT.maxWidth,
-      Math.max(
-        280,
-        viewportWidth - ACCOUNT_LAYOUT.horizontalPadding * 2
-      )
+      Math.max(280, viewportWidth - ACCOUNT_LAYOUT.horizontalPadding * 2)
     );
     const contentLeft = (viewportWidth - contentWidth) / 2;
     const centerX = viewportWidth / 2;
@@ -819,7 +829,8 @@ export class SettingsScene extends Phaser.Scene {
         slotsStepperX + this.rankedMatchSlotsDecreaseButton.width / 2,
         cursorY
       );
-      slotsStepperX += this.rankedMatchSlotsDecreaseButton.width + slotsStepperGap;
+      slotsStepperX +=
+        this.rankedMatchSlotsDecreaseButton.width + slotsStepperGap;
       this.rankedMatchSlotsValueText.setPosition(
         slotsStepperX + this.rankedMatchSlotsValueText.width / 2,
         cursorY + 2
@@ -836,7 +847,8 @@ export class SettingsScene extends Phaser.Scene {
           this.rankedMatchSlotsIncreaseButton.height
         ) + 4;
       this.rankedMatchSlotsStateText.setPosition(centerX, cursorY);
-      cursorY += this.rankedMatchSlotsStateText.height + ACCOUNT_LAYOUT.sectionGap;
+      cursorY +=
+        this.rankedMatchSlotsStateText.height + ACCOUNT_LAYOUT.sectionGap;
 
       this.facebookTitle.setPosition(centerX, cursorY);
       cursorY += this.facebookTitle.height + 6;
@@ -877,20 +889,26 @@ export class SettingsScene extends Phaser.Scene {
       this.skinTitle.setPosition(centerX, cursorY);
       cursorY += this.skinTitle.height + 12;
 
-      const narrowSkinLayout = contentWidth < ACCOUNT_LAYOUT.narrowSkinBreakpoint;
+      const narrowSkinLayout =
+        contentWidth < ACCOUNT_LAYOUT.narrowSkinBreakpoint;
       const previewColumnWidth = ACCOUNT_LAYOUT.previewSize + 40;
       const previewTop = cursorY;
       let selectorX = contentLeft;
       let selectorY = cursorY;
       let selectorWidth = contentWidth;
       const previewCenterY =
-        previewTop + this.previewLabel.height + 12 + ACCOUNT_LAYOUT.previewSize / 2;
+        previewTop +
+        this.previewLabel.height +
+        12 +
+        ACCOUNT_LAYOUT.previewSize / 2;
       const previewBottom =
         previewTop + this.previewLabel.height + 12 + ACCOUNT_LAYOUT.previewSize;
 
       if (!narrowSkinLayout) {
-        selectorX = contentLeft + previewColumnWidth + ACCOUNT_LAYOUT.sectionGap;
-        selectorWidth = contentWidth - (previewColumnWidth + ACCOUNT_LAYOUT.sectionGap);
+        selectorX =
+          contentLeft + previewColumnWidth + ACCOUNT_LAYOUT.sectionGap;
+        selectorWidth =
+          contentWidth - (previewColumnWidth + ACCOUNT_LAYOUT.sectionGap);
         const previewCenterX = contentLeft + previewColumnWidth / 2;
         this.previewLabel.setPosition(previewCenterX, previewTop);
         for (const layer of Object.values(this.previewLayers)) {
@@ -914,7 +932,8 @@ export class SettingsScene extends Phaser.Scene {
         selector.setPosition(selectorX, selectorBottom);
         selectorBottom += selector.height + ACCOUNT_LAYOUT.selectorGap;
       }
-      cursorY = Math.max(previewBottom, selectorBottom) + ACCOUNT_LAYOUT.sectionGap;
+      cursorY =
+        Math.max(previewBottom, selectorBottom) + ACCOUNT_LAYOUT.sectionGap;
     } else if (this.activeSettingsTab === "notifications") {
       this.pushTitle.setPosition(centerX, cursorY);
       cursorY += this.pushTitle.height + 6;
@@ -1000,9 +1019,13 @@ export class SettingsScene extends Phaser.Scene {
     this.updateRankedMatchSlotsControl();
 
     try {
-      const rpcRes = await this.client.rpc(this.session, "set_ranked_match_slots", {
-        ranked_match_slots: pending.value
-      });
+      const rpcRes = await this.client.rpc(
+        this.session,
+        "set_ranked_match_slots",
+        {
+          ranked_match_slots: pending.value
+        }
+      );
       const raw = (rpcRes as unknown as { payload?: unknown }).payload;
       const response = (typeof raw === "string" ? JSON.parse(raw) : raw) as
         | SetRankedMatchSlotsPayload
@@ -1053,7 +1076,13 @@ export class SettingsScene extends Phaser.Scene {
           : t("Enabled");
     this.rankedMatchSlotsStateText.setText(stateText);
     this.rankedMatchSlotsStateText.setColor(
-      saving ? "#facc15" : this.rankedMatchSlotsSaveError ? "#f87171" : disabled ? "#888888" : "#86efac"
+      saving
+        ? "#facc15"
+        : this.rankedMatchSlotsSaveError
+          ? "#f87171"
+          : disabled
+            ? "#888888"
+            : "#86efac"
     );
 
     if (disabled) {
@@ -1417,7 +1446,11 @@ export class SettingsScene extends Phaser.Scene {
       console.warn("Push notification settings update failed:", error);
       this.pushState = await getPushNotificationState();
       this.pushStatusText.setText(
-        t(disabling ? "Failed to disable notifications." : "Failed to enable notifications.")
+        t(
+          disabling
+            ? "Failed to disable notifications."
+            : "Failed to enable notifications."
+        )
       );
     } finally {
       this.pushBusy = false;
@@ -1432,7 +1465,7 @@ export class SettingsScene extends Phaser.Scene {
     }
     this.scene.start("AdminServerScene", {
       client: this.client,
-      session: this.session,
+      session: this.session
     });
   }
 

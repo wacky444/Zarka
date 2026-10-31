@@ -224,6 +224,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Facebook account is not linked": "La cuenta de Facebook no está vinculada",
   "Failed to unlink Facebook account":
     "No se pudo desvincular la cuenta de Facebook",
+  "Display name must be 20 characters or less":
+    "El nombre visible debe tener 20 caracteres o menos",
   "Display name must be 128 characters or less":
     "El nombre visible debe tener 128 caracteres o menos",
   "Enter new display name:": "Escribe el nuevo nombre visible:",
