@@ -25,12 +25,14 @@ export class CharacterPanelStatusView {
   private readonly healthBar: ProgressBar;
   private readonly energyBar: ProgressBar;
   private readonly elements: Phaser.GameObjects.GameObject[];
+  private currentLayout: CharacterPanelStatusViewLayout;
 
   constructor(
     scene: Phaser.Scene,
     parent: Phaser.GameObjects.Container,
     layout: CharacterPanelStatusViewLayout
   ) {
+    this.currentLayout = layout;
     const portraitScale = layout.portraitSize / 16;
     const barX = layout.margin * 2 + layout.portraitSize;
     this.portrait = createSkinContainer(
@@ -102,6 +104,7 @@ export class CharacterPanelStatusView {
   update(character: PlayerCharacter | null, playerName: string | null): void {
     if (!character) {
       this.nameText.setText("No character");
+      this.fitNameText();
       this.healthLabel.setText("Health");
       this.energyLabel.setText(t("Energy"));
       this.healthBar.setValue(0);
@@ -117,6 +120,7 @@ export class CharacterPanelStatusView {
       temporaryEnergy > 0 ? ` (+${temporaryEnergy} extra)` : ""
     }`;
     this.nameText.setText(playerName ?? character.name);
+    this.fitNameText();
     this.healthLabel.setText(`Health ${health.current}/${health.max}`);
     this.energyLabel.setText(energyLabel);
     this.healthBar.setValue(
@@ -128,18 +132,29 @@ export class CharacterPanelStatusView {
   }
 
   layout(layout: CharacterPanelStatusViewLayout): void {
+    this.currentLayout = layout;
     const barX = layout.margin * 2 + layout.portraitSize;
     this.portrait.setPosition(
       layout.margin + layout.portraitSize / 2,
       layout.contentTop + layout.portraitSize / 2
     );
     this.nameText.setPosition(layout.margin, layout.contentTop - 14);
+    this.fitNameText();
     this.healthLabel.setPosition(barX, layout.contentTop - 14);
     this.healthBar.setPosition(barX, layout.contentTop);
     this.healthBar.resize(layout.barWidth, layout.barHeight);
     this.energyLabel.setPosition(barX, layout.contentTop + 32);
     this.energyBar.setPosition(barX, layout.contentTop + 46);
     this.energyBar.resize(layout.barWidth, layout.barHeight);
+  }
+
+  private fitNameText(): void {
+    const maxWidth = this.currentLayout.portraitSize;
+    this.nameText.setScale(1);
+    if (this.nameText.width > maxWidth && this.nameText.width > 0) {
+      const scale = maxWidth / this.nameText.width;
+      this.nameText.setScale(scale);
+    }
   }
 
   destroy(): void {
