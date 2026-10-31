@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CharacterPanelLogView } from "../src/ui/CharacterPanelLogView";
 import type { ReplayEvent } from "@shared";
+import { getLocale, setLocale } from "../src/services/i18n";
 
 function createMockScene() {
   const mask = { destroy() {} };
@@ -95,4 +96,61 @@ test("setReplay does not trigger onElimination and preserves maxTurn when loadin
   assert.equal(logView.getMaxTurn(), 33);
   assert.equal(logView.getSelectedTurn(), 8);
   assert.match(turnLabel.text, /8 \/ 33/);
+});
+
+test("formatReplayEvents formats focus action with temporary energy gained", () => {
+  const previousLocale = getLocale();
+  try {
+    const scene = createMockScene();
+    const eventsText = createMockElement(scene);
+    const logView = new CharacterPanelLogView({
+      panel: { add() {} } as any,
+      elements: {
+        prevButton: createMockElement(scene) as any,
+        nextButton: createMockElement(scene) as any,
+        playButton: createMockElement(scene) as any,
+        filterTrack: createMockElement(scene) as any,
+        filterKnob: createMockElement(scene) as any,
+        filterLabel: createMockElement(scene) as any,
+        turnLabel: createMockElement(scene) as any,
+        statusText: createMockElement(scene) as any,
+        eventsBox: createMockElement(scene) as any,
+        eventsText: eventsText as any
+      },
+      onRequestReplay: () => {},
+      onPlay: () => {},
+      formatActionName: (id: string) => id
+    });
+
+    const events: ReplayEvent[] = [
+      {
+        kind: "player",
+        actorId: "player",
+        action: {
+          actionId: "focus",
+          metadata: {
+            energyBonus: 6
+          }
+        },
+        targets: [
+          {
+            targetId: "player",
+            metadata: {
+              energyBonus: 6
+            }
+          }
+        ]
+      }
+    ];
+
+    setLocale("es");
+    logView.setReplay(1, 1, events);
+    assert.equal(eventsText.text, "player usó Concentrarse, obtuvo 6 de esfuerzo temporal");
+
+    setLocale("en");
+    logView.setReplay(1, 1, events);
+    assert.equal(eventsText.text, "player used Focus, obtained 6 temporary energy");
+  } finally {
+    setLocale(previousLocale);
+  }
 });

@@ -1244,6 +1244,17 @@ export class CharacterPanelLogView {
             } else {
               lines.push(`${actor} ${t("used")} ${actionName}${extraLabel}`);
             }
+          } else if (actionId === "focus") {
+            const energyBonus =
+              typeof (event.action.metadata as { energyBonus?: unknown })
+                ?.energyBonus === "number"
+                ? (event.action.metadata as { energyBonus: number }).energyBonus
+                : 6;
+            lines.push(
+              `${actor} ${t("used")} ${actionName}${extraLabel}, ${t(
+                "obtained"
+              )} ${energyBonus} ${t("temporary energy")}`
+            );
           } else if (
             actionId === "inject_virus" ||
             actionId === "inject_vaccine"
