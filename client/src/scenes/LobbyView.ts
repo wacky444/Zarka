@@ -457,8 +457,21 @@ export class LobbyView {
       0,
       "← Return",
       () => {
-        scene.scene.sleep("MainScene");
-        scene.scene.run("GameScene");
+        const mainScene = scene as unknown as {
+          launchGameScene?: () => void;
+          currentMatchId?: string | null;
+          currentUserId?: string | null;
+        };
+        if (typeof mainScene.launchGameScene === "function") {
+          mainScene.launchGameScene();
+        } else {
+          scene.scene.sleep("MainScene");
+          scene.scene.run("GameScene", {
+            matchId: mainScene.currentMatchId ?? undefined,
+            reportReplay: false,
+            userId: mainScene.currentUserId ?? undefined
+          });
+        }
       },
       ["inMatch"]
     );

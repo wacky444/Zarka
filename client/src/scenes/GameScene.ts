@@ -548,10 +548,15 @@ export class GameScene extends Phaser.Scene {
 
   private returnToMainMenu(): void {
     this.removeBrowserHistoryGuard();
-    if (this.reportReplayMode && this.reportReplayMatchId) {
+    const replayMode = this.reportReplayMode;
+    const replayMatchId = this.reportReplayMatchId;
+    this.reportReplayMode = false;
+    this.reportReplayMatchId = null;
+    this.sys.settings.data = {};
+    if (replayMode && replayMatchId) {
       this.registry.set("currentMatchId", this.previousCurrentMatchId);
       this.scene.start("EndGameReportScene", {
-        matchId: this.reportReplayMatchId,
+        matchId: replayMatchId,
         userId: this.currentUserId ?? undefined
       });
       return;
@@ -819,11 +824,14 @@ export class GameScene extends Phaser.Scene {
     this.logFetchRunning = false;
     this.logPendingTurn = null;
     this.manualReplayPlaying = false;
+    this.sys.settings.data = {};
     this.previousCurrentMatchId = this.registry.get("currentMatchId") as
       | string
       | null;
     if (this.reportReplayMatchId) {
       this.registry.set("currentMatchId", this.reportReplayMatchId);
+    } else if (data?.matchId) {
+      this.registry.set("currentMatchId", data.matchId);
     }
     this.tutorialVictoryDelayTimer?.remove(false);
     this.tutorialVictoryDelayTimer = null;
@@ -1242,6 +1250,10 @@ export class GameScene extends Phaser.Scene {
     );
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.sceneShuttingDown = true;
+      this.reportReplayMode = false;
+      this.reportReplayMatchId = null;
+      this.sys.settings.data = {};
+      this.logReplayCache.clear();
       if (this.foregroundRestoreTimer !== null) {
         window.clearTimeout(this.foregroundRestoreTimer);
         this.foregroundRestoreTimer = null;
@@ -4421,7 +4433,10 @@ export class GameScene extends Phaser.Scene {
     let loadedTurn: number | null = null;
     const panel = this.characterPanel;
     const service = this.turnService;
-    const matchId = this.registry.get("currentMatchId") as string | null;
+    const matchId =
+      (this.reportReplayMode ? this.reportReplayMatchId : null) ??
+      this.currentMatch?.match_id ??
+      (this.registry.get("currentMatchId") as string | null);
     if (!panel || !service || !matchId) {
       panel?.setLogError("Replay not available.");
       return;
@@ -4442,6 +4457,13 @@ export class GameScene extends Phaser.Scene {
         this.reportReplayMode
       );
       if (this.sceneShuttingDown) {
+        return;
+      }
+      const currentActiveMatchId =
+        (this.reportReplayMode ? this.reportReplayMatchId : null) ??
+        this.currentMatch?.match_id ??
+        (this.registry.get("currentMatchId") as string | null);
+      if (currentActiveMatchId !== matchId) {
         return;
       }
 

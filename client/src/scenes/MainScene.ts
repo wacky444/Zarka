@@ -252,24 +252,21 @@ export class MainScene extends Phaser.Scene {
           this.lobbyView.setMatchStarted(isStarted);
           if (isStarted) {
             this.showView("inMatch");
-            this.scene.sleep("MainScene");
-            this.scene.run("GameScene");
+            this.launchGameScene(matchId);
             return;
           }
         } catch (e) {
           console.warn("Failed to load creator info", e);
           if (parsed.started) {
             this.showView("inMatch");
-            this.scene.sleep("MainScene");
-            this.scene.run("GameScene");
+            this.launchGameScene(matchId);
             return;
           }
         }
       }
       if (parsed.started) {
         this.showView("inMatch");
-        this.scene.sleep("MainScene");
-        this.scene.run("GameScene");
+        this.launchGameScene(matchId);
         return;
       }
       this.showView("inMatch");
@@ -413,8 +410,7 @@ export class MainScene extends Phaser.Scene {
           }
         }
         if (p.started && this.activeView === "inMatch") {
-          this.scene.sleep("MainScene");
-          this.scene.run("GameScene");
+          this.launchGameScene(this.currentMatchId ?? undefined);
         }
       });
       this.turnService.setOnMatchRemoved(() => {
@@ -569,8 +565,7 @@ export class MainScene extends Phaser.Scene {
             } else {
               this.statusText.setText("Match started.");
             }
-            this.scene.sleep("MainScene");
-            this.scene.run("GameScene");
+            this.launchGameScene(this.currentMatchId ?? undefined);
           } else {
             this.statusText.setText("start_match error (see console).");
             console.log("start_match response:", parsed);
@@ -765,6 +760,22 @@ export class MainScene extends Phaser.Scene {
     await this.joinMatch(matchId);
   }
 
+  launchGameScene(matchId?: string): void {
+    const resolvedMatchId = matchId ?? this.currentMatchId ?? undefined;
+    if (
+      this.scene.isActive("GameScene") ||
+      this.scene.isSleeping("GameScene")
+    ) {
+      this.scene.stop("GameScene");
+    }
+    this.scene.sleep("MainScene");
+    this.scene.run("GameScene", {
+      matchId: resolvedMatchId,
+      reportReplay: false,
+      userId: this.currentUserId ?? undefined
+    });
+  }
+
   private openMatchReport(matchId: string) {
     if (!matchId) {
       return;
@@ -904,13 +915,7 @@ export class MainScene extends Phaser.Scene {
     if (this.currentMatchId === matchId) {
       this.currentMatchName = match.name ?? "Tutorial";
       this.showView("inMatch");
-      if (
-        !this.scene.isActive("GameScene") &&
-        !this.scene.isSleeping("GameScene")
-      ) {
-        this.scene.sleep("MainScene");
-        this.scene.run("GameScene");
-      }
+      this.launchGameScene(matchId);
       return "opened";
     }
     if (match.started === false || match.removed !== 0) {
@@ -918,8 +923,7 @@ export class MainScene extends Phaser.Scene {
       this.currentRuntimeMatchId = match.runtime_match_id ?? matchId;
       this.currentMatchName = match.name ?? "Tutorial";
       this.showView("inMatch");
-      this.scene.sleep("MainScene");
-      this.scene.run("GameScene");
+      this.launchGameScene(matchId);
       return "opened";
     }
 
