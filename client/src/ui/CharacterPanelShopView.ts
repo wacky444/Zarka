@@ -590,7 +590,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
 
   layout(options: CharacterPanelShopViewLayout): void {
     this.layoutOptions = { ...options };
-    const width = options.boxWidth;
+    const width = Math.max(120, options.boxWidth);
     const height = Math.max(180, options.panelHeight - options.contentTop - options.margin);
     this.background.setPosition(options.margin, options.contentTop);
     this.background.setSize(width, height);
@@ -635,7 +635,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     this.scrollPanel.setSize?.(listWidth, listHeight);
     this.scrollPanel.setMinSize?.(listWidth, listHeight);
     const nextCardWidth = Math.max(0, listWidth - 8);
-    if (this.shopCardWidth !== nextCardWidth) {
+    if (nextCardWidth > CARD_PADDING * 2 + 20 && this.shopCardWidth !== nextCardWidth) {
       this.shopCardWidth = nextCardWidth;
       this.rebuildShopList();
     } else {
@@ -681,6 +681,9 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
   }
 
   private buildShopList(cardWidth: number): void {
+    if (cardWidth <= CARD_PADDING * 2 + 20) {
+      return;
+    }
     this.shopCardWidth = cardWidth;
     let currentY = 0;
     const definitions = Object.values(ShopLibrary).filter(
@@ -699,7 +702,7 @@ export class CharacterPanelShopView extends Phaser.Events.EventEmitter {
     startY: number,
     cardWidth: number
   ): number {
-    const textWidth = cardWidth - CARD_PADDING * 2;
+    const textWidth = Math.max(60, cardWidth - CARD_PADDING * 2);
     const description = this.scene.add
       .text(CARD_PADDING, startY + 54, definition.description, {
         fontSize: "13px",

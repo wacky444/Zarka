@@ -499,6 +499,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
     "Un sicario prestigioso con una motosierra y un chaleco antibalas.",
   "20 + 5 per person": "20 + 5 por persona",
   "Match Chat": "Chat de partida",
+  General: "General",
   Tutorial: "Tutorial",
   Step: "Paso",
   Hint: "Pista",

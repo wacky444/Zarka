@@ -1,9 +1,11 @@
 import Phaser from "phaser";
 import { t } from "../services/i18n";
 import { isMobile } from "../utils/isMobile";
-import { groupChatMessages, type ChatMessageGroupItem } from "./chatMessageGrouping";
+import {
+  groupChatMessages,
+  type ChatMessageGroupItem
+} from "./chatMessageGrouping";
 import { THEME } from "./ColorPalette";
-import { makeButton, type UIButton } from "./button";
 import { playRandomSound } from "../animation/soundPlayer";
 
 export type ChatConnectionState = "idle" | "connecting" | "ready" | "error";
@@ -17,6 +19,18 @@ interface CharacterPanelChatViewOptions {
   onSend: (message: string) => void;
   onFocusChange?: (focused: boolean) => void;
   maxInputLength?: number;
+}
+
+export interface ChatViewLayoutBounds {
+  margin?: number;
+  contentTop?: number;
+  boxWidth: number;
+  panelHeight: number;
+  panelX: number;
+  panelY: number;
+  mode?: "panel" | "overlay";
+  overlayBottomY?: number;
+  maxHeight?: number;
 }
 
 interface ChatInputLayout {
@@ -53,9 +67,25 @@ export class CharacterPanelChatView {
   private readonly onSend: (message: string) => void;
   private readonly onFocusChange?: (focused: boolean) => void;
   private readonly maxInputLength: number;
+  private readonly container: Phaser.GameObjects.Container;
   private readonly elements: Array<
     Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible
   >;
+  private readonly overlayBackground: Phaser.GameObjects.Rectangle;
+  private readonly headerBackground: Phaser.GameObjects.Rectangle;
+  private readonly talkIcon: Phaser.GameObjects.Image;
+  private readonly statusDot: Phaser.GameObjects.Arc;
+  private readonly expandButton: Phaser.GameObjects.Rectangle;
+  private readonly expandIcon: Phaser.GameObjects.Image;
+  private readonly expandBadge: Phaser.GameObjects.Arc;
+  private readonly scrollDownButton: Phaser.GameObjects.Rectangle;
+  private readonly scrollDownIcon: Phaser.GameObjects.Image;
+  private readonly massiveMultiplayerButton: Phaser.GameObjects.Rectangle;
+  private readonly massiveMultiplayerIcon: Phaser.GameObjects.Image;
+  private readonly multiplayerButton: Phaser.GameObjects.Rectangle;
+  private readonly multiplayerIcon: Phaser.GameObjects.Image;
+  private readonly singleplayerButton: Phaser.GameObjects.Rectangle;
+  private readonly singleplayerIcon: Phaser.GameObjects.Image;
   private readonly titleText: Phaser.GameObjects.Text;
   private readonly statusText: Phaser.GameObjects.Text;
   private readonly messagesBox: Phaser.GameObjects.Rectangle;
@@ -63,7 +93,8 @@ export class CharacterPanelChatView {
   private readonly overlayText: Phaser.GameObjects.Text;
   private readonly inputBackground: Phaser.GameObjects.Rectangle;
   private readonly inputElement: HTMLInputElement;
-  private readonly sendButton: UIButton;
+  private readonly sendButton: Phaser.GameObjects.Rectangle;
+  private readonly sendIcon: Phaser.GameObjects.Image;
   private sendCooldownUntil = 0;
   private sendCooldownTimer: number | null = null;
   private messageAreaHeight = Number.POSITIVE_INFINITY;
@@ -71,16 +102,29 @@ export class CharacterPanelChatView {
   private messageAreaBottom = 0;
   private messageAreaWidth = 0;
   private readonly messagesContent: Phaser.GameObjects.Container;
-  private readonly messagesScrollPanel: Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible & {
-    layout?: () => void; setOrigin?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
-    setPosition?: (x: number, y: number) => Phaser.GameObjects.GameObject;
-    setSize?: (width: number, height: number) => void; setMinSize?: (width: number, height: number) => void;
-    setScrollFactor?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
-    setMask?: (mask: Phaser.Display.Masks.GeometryMask) => Phaser.GameObjects.GameObject;
-    clearMask?: () => Phaser.GameObjects.GameObject;
-    setVisible?: (visible: boolean) => Phaser.GameObjects.GameObject;
-    setMouseWheelScrollerEnable?: (enabled: boolean) => void; setScrollerEnable?: (enabled: boolean) => void;
-  } | null;
+  private readonly messagesScrollPanel:
+    | (Phaser.GameObjects.GameObject &
+        Phaser.GameObjects.Components.Visible & {
+          layout?: () => void;
+          setOrigin?: (x: number, y?: number) => Phaser.GameObjects.GameObject;
+          setPosition?: (x: number, y: number) => Phaser.GameObjects.GameObject;
+          setSize?: (width: number, height: number) => void;
+          setMinSize?: (width: number, height: number) => void;
+          setScrollFactor?: (
+            x: number,
+            y?: number
+          ) => Phaser.GameObjects.GameObject;
+          setMask?: (
+            mask: Phaser.Display.Masks.GeometryMask
+          ) => Phaser.GameObjects.GameObject;
+          clearMask?: () => Phaser.GameObjects.GameObject;
+          setVisible?: (visible: boolean) => Phaser.GameObjects.GameObject;
+          setMouseWheelScrollerEnable?: (enabled: boolean) => void;
+          setScrollerEnable?: (enabled: boolean) => void;
+          scrollToBottom?: () => void;
+          t?: number;
+        })
+    | null;
   private readonly messagesMask: Phaser.Display.Masks.GeometryMask;
   private readonly messagesMaskShape: Phaser.GameObjects.Rectangle;
   private inputLayout: ChatInputLayout | null = null;
@@ -93,6 +137,11 @@ export class CharacterPanelChatView {
   private connectionState: ChatConnectionState = "idle";
   private overlayMessage = "";
   private messages: ChatMessageViewModel[] = [];
+  private mode: "panel" | "overlay" = "panel";
+  private expanded = false;
+  private unreadWhileCompact = false;
+  private boundsRect: Phaser.Geom.Rectangle | null = null;
+  private lastLayoutBounds: ChatViewLayoutBounds | null = null;
   private readonly visualViewportChangeHandler = () => {
     this.updateInputForVisualViewport();
   };
@@ -105,14 +154,158 @@ export class CharacterPanelChatView {
     this.onSend = options.onSend;
     this.onFocusChange = options.onFocusChange;
     this.maxInputLength = options.maxInputLength ?? 70;
+
+    this.container = this.scene.add.container(0, 0);
+    this.container.setScrollFactor(0);
+
+    this.overlayBackground = this.scene.add
+      .rectangle(0, 0, 100, 100, 0x0a1020, 0.68)
+      .setStrokeStyle(1, 0x253754, 0.85)
+      .setOrigin(0, 0)
+      .setVisible(false)
+      .setInteractive();
+
+    this.headerBackground = this.scene.add
+      .rectangle(0, 0, 100, 26, 0x141d33, 0.85)
+      .setStrokeStyle(1, 0x2b3e64, 0.9)
+      .setOrigin(0, 0)
+      .setVisible(false);
+
+    this.talkIcon = this.scene.add
+      .image(0, 0, "chat-talk")
+      .setDisplaySize(14, 14)
+      .setOrigin(0, 0.5)
+      .setVisible(false);
+
+    this.statusDot = this.scene.add
+      .circle(0, 0, 4, 0x22c55e)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false);
+
+    this.expandButton = this.scene.add
+      .rectangle(0, 0, 24, 22, 0x1a2640, 0.9)
+      .setStrokeStyle(1, 0x3d547c, 1)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.expandButton.on(Phaser.Input.Events.POINTER_OVER, () => {
+      this.expandButton.setFillStyle(0x2d3e66, 0.95);
+    });
+    this.expandButton.on(Phaser.Input.Events.POINTER_OUT, () => {
+      this.expandButton.setFillStyle(0x1a2640, 0.9);
+    });
+    this.expandButton.on(Phaser.Input.Events.POINTER_UP, () => {
+      this.toggleExpand();
+    });
+
+    this.expandIcon = this.scene.add
+      .image(0, 0, "chat-expand")
+      .setDisplaySize(14, 14)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false);
+
+    this.expandBadge = this.scene.add
+      .circle(0, 0, 4, THEME.colors.unreadBadge)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false);
+
+    this.scrollDownButton = this.scene.add
+      .rectangle(0, 0, 22, 22, 0x162238, 0.85)
+      .setStrokeStyle(1, 0x2b3d60, 1)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.scrollDownButton.on(Phaser.Input.Events.POINTER_OVER, () => {
+      this.scrollDownButton.setFillStyle(0x283a5e, 0.95);
+    });
+    this.scrollDownButton.on(Phaser.Input.Events.POINTER_OUT, () => {
+      this.scrollDownButton.setFillStyle(0x162238, 0.85);
+    });
+    this.scrollDownButton.on(Phaser.Input.Events.POINTER_UP, () => {
+      this.scrollToBottom();
+    });
+
+    this.scrollDownIcon = this.scene.add
+      .image(0, 0, "chat-arrow-down")
+      .setDisplaySize(18, 18)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false);
+
+    this.massiveMultiplayerButton = this.scene.add
+      .rectangle(0, 0, 22, 22, 0x162238, 0.85)
+      .setStrokeStyle(1, 0x2b3d60, 1)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.massiveMultiplayerButton.on(Phaser.Input.Events.POINTER_OVER, () => {
+      this.massiveMultiplayerButton.setFillStyle(0x283a5e, 0.95);
+    });
+    this.massiveMultiplayerButton.on(Phaser.Input.Events.POINTER_OUT, () => {
+      this.massiveMultiplayerButton.setFillStyle(0x162238, 0.85);
+    });
+    this.massiveMultiplayerButton.on(Phaser.Input.Events.POINTER_UP, () => {
+      // buttons does nothing for now
+    });
+
+    this.massiveMultiplayerIcon = this.scene.add
+      .image(0, 0, "chat-massive-multiplayer")
+      .setDisplaySize(18, 18)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false);
+
+    this.multiplayerButton = this.scene.add
+      .rectangle(0, 0, 22, 22, 0x162238, 0.85)
+      .setStrokeStyle(1, 0x2b3d60, 1)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.multiplayerButton.on(Phaser.Input.Events.POINTER_OVER, () => {
+      this.multiplayerButton.setFillStyle(0x283a5e, 0.95);
+    });
+    this.multiplayerButton.on(Phaser.Input.Events.POINTER_OUT, () => {
+      this.multiplayerButton.setFillStyle(0x162238, 0.85);
+    });
+    this.multiplayerButton.on(Phaser.Input.Events.POINTER_UP, () => {
+      // buttons does nothing for now
+    });
+
+    this.multiplayerIcon = this.scene.add
+      .image(0, 0, "chat-multiplayer")
+      .setDisplaySize(18, 18)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false);
+
+    this.singleplayerButton = this.scene.add
+      .rectangle(0, 0, 22, 22, 0x162238, 0.85)
+      .setStrokeStyle(1, 0x2b3d60, 1)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.singleplayerButton.on(Phaser.Input.Events.POINTER_OVER, () => {
+      this.singleplayerButton.setFillStyle(0x283a5e, 0.95);
+    });
+    this.singleplayerButton.on(Phaser.Input.Events.POINTER_OUT, () => {
+      this.singleplayerButton.setFillStyle(0x162238, 0.85);
+    });
+    this.singleplayerButton.on(Phaser.Input.Events.POINTER_UP, () => {
+      // buttons does nothing for now
+    });
+
+    this.singleplayerIcon = this.scene.add
+      .image(0, 0, "chat-singleplayer")
+      .setDisplaySize(18, 18)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false);
+
     this.titleText = this.scene.add
-      .text(0, 0, "Match Chat", {
+      .text(0, 0, t("General"), {
         fontSize: "16px",
         fontFamily: "Arial, sans-serif",
         fontStyle: "bold",
         color: THEME.colors.textPrimary
       })
       .setVisible(false);
+
     this.statusText = this.scene.add
       .text(0, 0, "", {
         fontSize: "14px",
@@ -120,11 +313,13 @@ export class CharacterPanelChatView {
         color: THEME.colors.loadingPercent
       })
       .setVisible(false);
+
     this.messagesBox = this.scene.add
       .rectangle(0, 0, 100, 100, THEME.colors.cardBackground)
       .setStrokeStyle(1, THEME.colors.collapsedBorder, 1)
       .setOrigin(0, 0)
       .setVisible(false);
+
     this.messagesText = (
       this.scene.rexUI
         ? this.scene.rexUI.add.BBCodeText(0, 0, "", {
@@ -140,40 +335,65 @@ export class CharacterPanelChatView {
             wordWrap: { width: 280, useAdvancedWrap: true }
           })
     ) as Phaser.GameObjects.Text;
+
     this.messagesContent = this.scene.add.container(0, 0);
     this.messagesContent.add(this.messagesText);
-    this.messagesMaskShape = this.scene.add.rectangle(0, 0, 1, 1, 0xffffff, 0).setOrigin(0, 0).setScrollFactor(0);
+    this.messagesMaskShape = this.scene.add
+      .rectangle(0, 0, 1, 1, 0xffffff, 0)
+      .setOrigin(0, 0)
+      .setScrollFactor(0);
     this.messagesMask = this.messagesMaskShape.createGeometryMask();
+
     this.messagesScrollPanel = this.scene.rexUI
-      ? this.scene.rexUI.add.scrollablePanel({
-          x: 0, y: 0, width: 100, height: 100, scrollMode: 0,
+      ? (this.scene.rexUI.add.scrollablePanel({
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 100,
+          scrollMode: 0,
           panel: { child: this.messagesContent, mask: false },
           slider: {
-            track: this.scene.rexUI.add.roundRectangle(0, 0, 4, 80, 2, 0x1f2a4a),
+            track: this.scene.rexUI.add.roundRectangle(
+              0,
+              0,
+              4,
+              80,
+              2,
+              0x1f2a4a
+            ),
             thumb: this.scene.rexUI.add.roundRectangle(0, 0, 6, 32, 3, 0x3b82f6)
           },
-          scroller: { threshold: 10, rectBoundsInteractive: true, slidingDeceleration: 5000, backDeceleration: 2000, pointerOutRelease: true },
+          scroller: {
+            threshold: 10,
+            rectBoundsInteractive: true,
+            slidingDeceleration: 5000,
+            backDeceleration: 2000,
+            pointerOutRelease: true
+          },
           mouseWheelScroller: { focus: 2, speed: 0.35 },
           space: { left: 0, right: 2, top: 0, bottom: 0, panel: 4 }
-        }) as typeof this.messagesScrollPanel
+        }) as typeof this.messagesScrollPanel)
       : null;
     this.messagesScrollPanel?.setOrigin?.(0, 0);
     this.messagesScrollPanel?.setScrollFactor?.(0);
     this.messagesScrollPanel?.setMask?.(this.messagesMask);
     this.messagesContent.setScrollFactor(0);
+
     this.overlayText = this.scene.add
       .text(0, 0, "No messages yet.", {
         fontSize: "15px",
         fontFamily: "Arial, sans-serif",
-        color: THEME.colors.textMuted,
+        color: THEME.colors.textMuted
       })
       .setVisible(false);
+
     this.inputBackground = this.scene.add
       .rectangle(0, 0, 100, 44, THEME.colors.collapsedBackground)
       .setStrokeStyle(1, THEME.colors.collapsedBorder, 1)
       .setOrigin(0, 0)
       .setVisible(false)
       .setInteractive({ useHandCursor: true });
+
     this.inputElement = document.createElement("input");
     this.inputElement.type = "text";
     this.inputElement.inputMode = "text";
@@ -195,6 +415,7 @@ export class CharacterPanelChatView {
     this.inputElement.style.outline = "none";
     this.inputElement.style.caretColor = THEME.colors.textPrimary;
     document.body.appendChild(this.inputElement);
+
     window.visualViewport?.addEventListener(
       "resize",
       this.visualViewportChangeHandler
@@ -205,6 +426,7 @@ export class CharacterPanelChatView {
     );
     window.addEventListener("orientationchange", this.orientationChangeHandler);
     window.addEventListener("resize", this.visualViewportChangeHandler);
+
     this.inputElement.addEventListener("input", () => {
       this.inputValue = clampLength(
         this.inputElement.value,
@@ -243,19 +465,72 @@ export class CharacterPanelChatView {
         this.trySend();
       }
     });
-    this.sendButton = makeButton(this.scene, 0, 0, "Send", () => {
+
+    this.sendButton = this.scene.add
+      .rectangle(0, 0, 36, 36, 0x162238, 0.85)
+      .setStrokeStyle(1, 0x2b3d60, 1)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.sendButton.on(Phaser.Input.Events.POINTER_OVER, () => {
+      if (this.canSend()) {
+        this.sendButton.setFillStyle(0x283a5e, 0.95);
+      }
+    });
+    this.sendButton.on(Phaser.Input.Events.POINTER_OUT, () => {
+      this.sendButton.setFillStyle(0x162238, 0.85);
+    });
+    this.sendButton.on(Phaser.Input.Events.POINTER_UP, () => {
       this.trySend();
     });
-    this.sendButton.setVisible(false);
+
+    this.sendIcon = this.scene.add
+      .image(0, 0, "chat-send")
+      .setDisplaySize(18, 18)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false);
+
+    this.container.add([
+      this.overlayBackground,
+      this.headerBackground,
+      this.talkIcon,
+      this.titleText,
+      this.statusDot,
+      this.statusText,
+      this.expandButton,
+      this.expandIcon,
+      this.expandBadge,
+      this.massiveMultiplayerButton,
+      this.massiveMultiplayerIcon,
+      this.multiplayerButton,
+      this.multiplayerIcon,
+      this.singleplayerButton,
+      this.singleplayerIcon,
+      this.scrollDownButton,
+      this.scrollDownIcon,
+      this.messagesBox,
+      ...(this.messagesScrollPanel
+        ? [this.messagesScrollPanel]
+        : [this.messagesText]),
+      this.overlayText,
+      this.inputBackground,
+      this.sendButton,
+      this.sendIcon
+    ]);
+
     this.elements = [
       this.titleText,
       this.statusText,
       this.messagesBox,
-      ...(this.messagesScrollPanel ? [this.messagesScrollPanel] : [this.messagesText]),
+      ...(this.messagesScrollPanel
+        ? [this.messagesScrollPanel]
+        : [this.messagesText]),
       this.overlayText,
       this.inputBackground,
       this.sendButton,
+      this.sendIcon
     ];
+
     this.inputBackground.on(Phaser.Input.Events.POINTER_DOWN, () => {
       if (!this.inputEnabled) {
         return;
@@ -287,16 +562,78 @@ export class CharacterPanelChatView {
     this.messagesContent.destroy();
     this.inputBackground.off(Phaser.Input.Events.POINTER_DOWN);
     this.inputBackground.disableInteractive();
+    this.sendButton.off(Phaser.Input.Events.POINTER_UP);
+    this.sendButton.off(Phaser.Input.Events.POINTER_OVER);
+    this.sendButton.off(Phaser.Input.Events.POINTER_OUT);
     this.sendButton.disableInteractive();
-    for (const element of this.elements) {
-      element.destroy();
-    }
+    this.expandButton.off(Phaser.Input.Events.POINTER_UP);
+    this.expandButton.off(Phaser.Input.Events.POINTER_OVER);
+    this.expandButton.off(Phaser.Input.Events.POINTER_OUT);
+    this.scrollDownButton.off(Phaser.Input.Events.POINTER_UP);
+    this.scrollDownButton.off(Phaser.Input.Events.POINTER_OVER);
+    this.scrollDownButton.off(Phaser.Input.Events.POINTER_OUT);
+    this.massiveMultiplayerButton.off(Phaser.Input.Events.POINTER_UP);
+    this.massiveMultiplayerButton.off(Phaser.Input.Events.POINTER_OVER);
+    this.massiveMultiplayerButton.off(Phaser.Input.Events.POINTER_OUT);
+    this.massiveMultiplayerButton.disableInteractive();
+    this.multiplayerButton.off(Phaser.Input.Events.POINTER_UP);
+    this.multiplayerButton.off(Phaser.Input.Events.POINTER_OVER);
+    this.multiplayerButton.off(Phaser.Input.Events.POINTER_OUT);
+    this.multiplayerButton.disableInteractive();
+    this.singleplayerButton.off(Phaser.Input.Events.POINTER_UP);
+    this.singleplayerButton.off(Phaser.Input.Events.POINTER_OVER);
+    this.singleplayerButton.off(Phaser.Input.Events.POINTER_OUT);
+    this.singleplayerButton.disableInteractive();
+    this.container.destroy();
+  }
+
+  getContainer(): Phaser.GameObjects.Container {
+    return this.container;
   }
 
   getElements(): Array<
     Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible
   > {
-    return this.elements;
+    return [this.container];
+  }
+
+  isExpanded(): boolean {
+    return this.expanded;
+  }
+
+  getMode(): "panel" | "overlay" {
+    return this.mode;
+  }
+
+  setExpanded(expanded: boolean): void {
+    if (this.expanded === expanded) {
+      return;
+    }
+    this.expanded = expanded;
+    if (expanded) {
+      this.unreadWhileCompact = false;
+      this.expandBadge.setVisible(false);
+    }
+    if (
+      this.scene.textures.exists("chat-collapse") &&
+      this.scene.textures.exists("chat-expand")
+    ) {
+      this.expandIcon.setTexture(expanded ? "chat-collapse" : "chat-expand");
+    }
+    if (this.lastLayoutBounds) {
+      this.layout(this.lastLayoutBounds);
+    }
+  }
+
+  toggleExpand(): void {
+    this.setExpanded(!this.expanded);
+  }
+
+  containsPoint(x: number, y: number): boolean {
+    if (!this.visible || this.mode !== "overlay" || !this.boundsRect) {
+      return false;
+    }
+    return this.boundsRect.contains(x, y);
   }
 
   startSendCooldown(durationMs: number) {
@@ -305,29 +642,250 @@ export class CharacterPanelChatView {
     if (this.sendCooldownTimer !== null) {
       clearTimeout(this.sendCooldownTimer);
     }
-    this.sendCooldownTimer = window.setTimeout(() => {
-      this.sendCooldownUntil = 0;
-      this.sendCooldownTimer = null;
-      this.updateInputStyles();
-    }, Math.max(0, durationMs));
+    this.sendCooldownTimer = window.setTimeout(
+      () => {
+        this.sendCooldownUntil = 0;
+        this.sendCooldownTimer = null;
+        this.updateInputStyles();
+      },
+      Math.max(0, durationMs)
+    );
     this.updateInputStyles();
   }
 
-  layout(bounds: {
-    margin: number;
-    contentTop: number;
-    boxWidth: number;
-    panelHeight: number;
-    panelX: number;
-    panelY: number;
-  }) {
-    const { margin, contentTop, boxWidth, panelHeight, panelX, panelY } =
-      bounds;
-    this.titleText.setPosition(margin, contentTop);
-    this.statusText.setPosition(
-      this.titleText.x + this.titleText.width + 12,
-      contentTop
+  layout(bounds: ChatViewLayoutBounds) {
+    this.lastLayoutBounds = bounds;
+    if (bounds.mode) {
+      this.mode = bounds.mode;
+    }
+
+    if (this.mode === "overlay") {
+      this.layoutOverlay(bounds);
+    } else {
+      this.layoutPanel(bounds);
+    }
+  }
+
+  private layoutOverlay(bounds: ChatViewLayoutBounds) {
+    const currentWidth = bounds.boxWidth;
+    const currentHeight = this.expanded
+      ? Math.min(360, Math.max(260, (bounds.maxHeight ?? 600) - 100))
+      : 210;
+    const bottomY = bounds.overlayBottomY ?? bounds.panelY + bounds.panelHeight;
+    const panelY = bottomY - currentHeight;
+    const panelX = bounds.panelX;
+
+    this.container.setPosition(panelX, panelY);
+    this.boundsRect = new Phaser.Geom.Rectangle(
+      panelX,
+      panelY,
+      currentWidth,
+      currentHeight
     );
+
+    this.overlayBackground
+      .setPosition(0, 0)
+      .setSize(currentWidth, currentHeight)
+      .setDisplaySize(currentWidth, currentHeight)
+      .setVisible(this.visible);
+
+    this.headerBackground
+      .setPosition(6, 6)
+      .setSize(currentWidth - 12, 26)
+      .setDisplaySize(currentWidth - 12, 26)
+      .setVisible(this.visible);
+
+    this.talkIcon.setPosition(12, 19).setVisible(this.visible);
+
+    this.titleText
+      .setFontSize("13px")
+      .setText(t("General"))
+      .setPosition(30, 11)
+      .setVisible(this.visible);
+
+    this.statusDot
+      .setPosition(this.titleText.x + this.titleText.width + 10, 19)
+      .setVisible(this.visible);
+
+    this.statusText
+      .setPosition(this.statusDot.x + 8, 11)
+      .setFontSize("12px")
+      .setVisible(this.visible);
+
+    this.expandButton
+      .setPosition(currentWidth - 19, 19)
+      .setVisible(this.visible);
+    this.expandIcon.setPosition(currentWidth - 19, 19).setVisible(this.visible);
+    if (
+      this.scene.textures.exists("chat-collapse") &&
+      this.scene.textures.exists("chat-expand")
+    ) {
+      this.expandIcon.setTexture(
+        this.expanded ? "chat-collapse" : "chat-expand"
+      );
+    }
+    this.expandBadge
+      .setPosition(currentWidth - 10, 10)
+      .setVisible(this.visible && !this.expanded && this.unreadWhileCompact);
+
+    const railX = 17;
+    const boxX = 32;
+    const boxY = 36;
+    const inputHeight = 36;
+    const inputY = currentHeight - inputHeight - 8;
+    const boxHeight = Math.max(40, inputY - boxY - 6);
+    const boxWidth = currentWidth - boxX - 8;
+
+    const btnSize = 22;
+    const btnGap = 3;
+    const y1 = boxY + 11;
+    const y2 = y1 + btnSize + btnGap;
+    const y3 = y2 + btnSize + btnGap;
+
+    this.massiveMultiplayerButton
+      .setPosition(railX, y1)
+      .setVisible(this.visible);
+    this.massiveMultiplayerIcon.setPosition(railX, y1).setVisible(this.visible);
+
+    this.multiplayerButton.setPosition(railX, y2).setVisible(this.visible);
+    this.multiplayerIcon.setPosition(railX, y2).setVisible(this.visible);
+
+    this.singleplayerButton.setPosition(railX, y3).setVisible(this.visible);
+    this.singleplayerIcon.setPosition(railX, y3).setVisible(this.visible);
+
+    this.scrollDownButton
+      .setPosition(railX, boxY + boxHeight - 12)
+      .setVisible(this.visible);
+    this.scrollDownIcon
+      .setPosition(railX, boxY + boxHeight - 12)
+      .setVisible(this.visible);
+
+    this.messagesBox
+      .setPosition(boxX, boxY)
+      .setSize(boxWidth, boxHeight)
+      .setDisplaySize(boxWidth, boxHeight)
+      .setFillStyle(0x060b16, 0.6)
+      .setStrokeStyle(1, 0x1c2b44, 0.7)
+      .setVisible(this.visible);
+
+    this.messageAreaTop = boxY + 8;
+    this.messageAreaBottom = boxY + boxHeight - 8;
+    this.messageAreaHeight = Math.max(0, boxHeight - 16);
+    const messageWidthChanged = this.messageAreaWidth !== boxWidth;
+    this.messageAreaWidth = boxWidth;
+
+    this.messagesMaskShape.setPosition(panelX + boxX, panelY + boxY);
+    this.messagesMaskShape.setSize(boxWidth, boxHeight);
+
+    this.messagesScrollPanel?.setPosition?.(boxX, boxY);
+    this.messagesScrollPanel?.setSize?.(boxWidth, boxHeight);
+    this.messagesScrollPanel?.setMinSize?.(boxWidth, boxHeight);
+    this.messagesScrollPanel?.layout?.();
+
+    if (messageWidthChanged) {
+      this.messagesText.setWordWrapWidth(boxWidth - 16);
+      this.refreshMessages();
+    }
+    this.alignMessagesTextToBottom();
+    this.scrollToBottom();
+    this.scene.time?.delayedCall(0, () => this.scrollToBottom());
+    this.scene.time?.delayedCall(50, () => this.scrollToBottom());
+    this.overlayText.setPosition(boxX + 8, boxY + 8);
+
+    const sendBtnSize = 36;
+    const inputX = 6;
+    const inputWidth = currentWidth - 12 - sendBtnSize - 6;
+
+    this.inputBackground
+      .setPosition(inputX, inputY)
+      .setSize(inputWidth, inputHeight)
+      .setDisplaySize(inputWidth, inputHeight)
+      .setFillStyle(0x0a1020, 0.85)
+      .setStrokeStyle(
+        1,
+        this.inputFocused ? THEME.colors.loadingFill : 0x283856,
+        1
+      )
+      .setVisible(this.visible);
+
+    const sendBtnX = inputX + inputWidth + 6 + sendBtnSize / 2;
+    const sendBtnY = inputY + inputHeight / 2;
+    this.sendButton
+      .setPosition(sendBtnX, sendBtnY)
+      .setSize(sendBtnSize, inputHeight)
+      .setDisplaySize(sendBtnSize, inputHeight)
+      .setVisible(this.visible);
+    this.sendIcon.setPosition(sendBtnX, sendBtnY).setVisible(this.visible);
+
+    const canvasRect = this.scene.game.canvas.getBoundingClientRect();
+    const scaleX = canvasRect.width / this.scene.scale.width;
+    const scaleY = canvasRect.height / this.scene.scale.height;
+
+    this.inputLayout = {
+      margin: inputX,
+      panelX,
+      panelY,
+      boxWidth,
+      boxY,
+      inputWidth,
+      inputHeight,
+      inputY,
+      scaleX,
+      scaleY
+    };
+
+    this.inputElement.style.left = `${canvasRect.left + (panelX + inputX) * scaleX}px`;
+    this.inputElement.style.top = `${canvasRect.top + (panelY + inputY) * scaleY}px`;
+    this.inputElement.style.width = `${inputWidth * scaleX}px`;
+    this.inputElement.style.height = `${inputHeight * scaleY}px`;
+
+    this.updateOverlayVisibility();
+    this.updateInputStyles();
+  }
+
+  private layoutPanel(bounds: ChatViewLayoutBounds) {
+    this.container.setPosition(0, 0);
+    this.boundsRect = new Phaser.Geom.Rectangle(
+      bounds.panelX,
+      bounds.panelY,
+      bounds.boxWidth,
+      bounds.panelHeight
+    );
+
+    this.overlayBackground.setVisible(false);
+    this.headerBackground.setVisible(false);
+    this.talkIcon.setVisible(false);
+    this.statusDot.setVisible(false);
+    this.expandButton.setVisible(false);
+    this.expandIcon.setVisible(false);
+    this.expandBadge.setVisible(false);
+    this.scrollDownButton.setVisible(false);
+    this.scrollDownIcon.setVisible(false);
+    this.massiveMultiplayerButton.setVisible(false);
+    this.massiveMultiplayerIcon.setVisible(false);
+    this.multiplayerButton.setVisible(false);
+    this.multiplayerIcon.setVisible(false);
+    this.singleplayerButton.setVisible(false);
+    this.singleplayerIcon.setVisible(false);
+
+    const margin = bounds.margin ?? 16;
+    const contentTop = bounds.contentTop ?? 50;
+    const boxWidth = bounds.boxWidth;
+    const panelHeight = bounds.panelHeight;
+    const panelX = bounds.panelX;
+    const panelY = bounds.panelY;
+
+    this.titleText
+      .setFontSize("16px")
+      .setText(t("Match Chat"))
+      .setPosition(margin, contentTop)
+      .setVisible(this.visible);
+
+    this.statusText
+      .setFontSize("14px")
+      .setPosition(this.titleText.x + this.titleText.width + 12, contentTop)
+      .setVisible(this.visible);
+
     const boxY = contentTop + 32;
     const inputHeight = 50;
     const inputBottomInset = 64;
@@ -337,6 +895,12 @@ export class CharacterPanelChatView {
     );
     this.overlayText.setPosition(margin + 16, boxY + 8);
     const inputWidth = Math.max(140, boxWidth - 100);
+
+    this.messagesBox
+      .setFillStyle(THEME.colors.cardBackground, 1)
+      .setStrokeStyle(1, THEME.colors.collapsedBorder, 1);
+    this.inputBackground.setFillStyle(THEME.colors.collapsedBackground, 1);
+
     this.inputBackground.setSize(inputWidth, inputHeight);
     this.inputBackground.setDisplaySize(inputWidth, inputHeight);
     const canvasRect = this.scene.game.canvas.getBoundingClientRect();
@@ -377,7 +941,10 @@ export class CharacterPanelChatView {
     this.messagesBox.setDisplaySize(layout.boxWidth, boxHeight);
     this.messageAreaTop = layout.boxY + 8;
     this.messageAreaBottom = layout.boxY + boxHeight - 8;
-    this.messagesMaskShape.setPosition(layout.panelX + layout.margin, layout.panelY + layout.boxY);
+    this.messagesMaskShape.setPosition(
+      layout.panelX + layout.margin,
+      layout.panelY + layout.boxY
+    );
     this.messagesMaskShape.setSize(layout.boxWidth, boxHeight);
     this.messagesScrollPanel?.setPosition?.(layout.margin, layout.boxY);
     this.messagesScrollPanel?.setSize?.(layout.boxWidth, boxHeight);
@@ -394,7 +961,15 @@ export class CharacterPanelChatView {
     }
     this.alignMessagesTextToBottom();
     this.inputBackground.setPosition(layout.margin, inputY);
-    this.sendButton.setPosition(layout.margin + layout.inputWidth + 16, inputY + 10);
+    const sendBtnSize = 40;
+    const sendBtnX = layout.margin + layout.inputWidth + 16 + sendBtnSize / 2;
+    const sendBtnY = inputY + layout.inputHeight / 2;
+    this.sendButton
+      .setPosition(sendBtnX, sendBtnY)
+      .setSize(sendBtnSize, sendBtnSize)
+      .setDisplaySize(sendBtnSize, sendBtnSize)
+      .setVisible(this.visible);
+    this.sendIcon.setPosition(sendBtnX, sendBtnY).setVisible(this.visible);
     this.inputElement.style.left = `${
       canvasRect.left + (layout.panelX + layout.margin) * layout.scaleX
     }px`;
@@ -420,23 +995,48 @@ export class CharacterPanelChatView {
       visibleTop + visibleHeight - layout.inputHeight * layout.scaleY - 8;
     const top = Math.max(visibleTop, Math.min(normalTop, keyboardSafeTop));
     const inputY = (top - canvasRect.top) / layout.scaleY - layout.panelY;
-    this.positionInputRow(inputY);
+    if (this.mode === "panel") {
+      this.positionInputRow(inputY);
+    }
   }
 
   private restoreInputRowPosition() {
-    if (this.inputLayout) {
+    if (this.inputLayout && this.mode === "panel") {
       this.positionInputRow(this.inputLayout.inputY);
     }
+  }
+
+  scrollToBottom(): void {
+    if (!this.messagesScrollPanel) {
+      return;
+    }
+    this.messagesScrollPanel.layout?.();
+    if (this.messagesScrollPanel.scrollToBottom) {
+      this.messagesScrollPanel.scrollToBottom();
+    } else if (this.messagesScrollPanel.t !== undefined) {
+      this.messagesScrollPanel.t = 1;
+    }
+    this.messagesScrollPanel.layout?.();
   }
 
   private alignMessagesTextToBottom() {
     if (this.messagesScrollPanel) {
       this.messagesText.setPosition(0, 0);
-      this.messagesContent.setSize(this.messageAreaWidth, this.messagesText.height);
+      this.messagesContent.setSize(
+        this.messageAreaWidth,
+        this.messagesText.height
+      );
       this.messagesScrollPanel.layout?.();
+      this.scrollToBottom();
       return;
     }
-    this.messagesText.setPosition(this.messagesText.x, Math.max(this.messageAreaTop, this.messageAreaBottom - this.messagesText.height));
+    this.messagesText.setPosition(
+      this.messagesText.x,
+      Math.max(
+        this.messageAreaTop,
+        this.messageAreaBottom - this.messagesText.height
+      )
+    );
   }
 
   private lockGameParentSize() {
@@ -474,22 +1074,42 @@ export class CharacterPanelChatView {
   setMessages(messages: ChatMessageViewModel[]) {
     this.messages = messages.slice(-MAX_MESSAGES);
     this.refreshMessages();
+    this.scrollToBottom();
+    this.scene.time?.delayedCall(0, () => this.scrollToBottom());
+    this.scene.time?.delayedCall(50, () => this.scrollToBottom());
+    this.scene.time?.delayedCall(150, () => this.scrollToBottom());
   }
 
   appendMessage(message: ChatMessageViewModel) {
     this.messages = [...this.messages, message].slice(-MAX_MESSAGES);
     this.refreshMessages();
+    this.scrollToBottom();
+    this.scene.time?.delayedCall(0, () => this.scrollToBottom());
+    this.scene.time?.delayedCall(50, () => this.scrollToBottom());
     if (!message.isSelf) {
       playRandomSound(this.scene, "sci_fi_hover", {
         pitchRange: 0,
-        rateRange: 0,
+        rateRange: 0
       });
+      if (this.mode === "overlay" && !this.expanded) {
+        this.unreadWhileCompact = true;
+        this.expandBadge?.setVisible(this.visible);
+      }
     }
   }
 
   setConnectionState(state: ChatConnectionState, message?: string) {
     this.connectionState = state;
     this.statusText.setText(message ?? this.buildStateLabel(state));
+    const dotColor =
+      state === "ready"
+        ? 0x22c55e
+        : state === "connecting"
+          ? 0xeab308
+          : state === "error"
+            ? 0xef4444
+            : 0x64748b;
+    this.statusDot.setFillStyle(dotColor);
     if (state === "ready") {
       this.overlayMessage = this.messages.length === 0 ? "Be the first." : "";
     } else if (state === "connecting") {
@@ -517,8 +1137,28 @@ export class CharacterPanelChatView {
 
   handleVisibilityChange(visible: boolean) {
     this.visible = visible;
+    this.container.setVisible(visible);
     for (const element of this.elements) {
       element.setVisible(visible);
+    }
+    if (this.mode === "overlay") {
+      this.overlayBackground.setVisible(visible);
+      this.headerBackground.setVisible(visible);
+      this.talkIcon.setVisible(visible);
+      this.statusDot.setVisible(visible);
+      this.expandButton.setVisible(visible);
+      this.expandIcon.setVisible(visible);
+      this.expandBadge.setVisible(
+        visible && !this.expanded && this.unreadWhileCompact
+      );
+      this.scrollDownButton.setVisible(visible);
+      this.scrollDownIcon.setVisible(visible);
+      this.massiveMultiplayerButton.setVisible(visible);
+      this.massiveMultiplayerIcon.setVisible(visible);
+      this.multiplayerButton.setVisible(visible);
+      this.multiplayerIcon.setVisible(visible);
+      this.singleplayerButton.setVisible(visible);
+      this.singleplayerIcon.setVisible(visible);
     }
     if (!visible) {
       this.blurInput();
@@ -550,6 +1190,10 @@ export class CharacterPanelChatView {
     this.inputElement.blur();
   }
 
+  isInputFocused(): boolean {
+    return this.inputFocused;
+  }
+
   private trySend() {
     if (!this.inputEnabled || this.isCoolingDown()) {
       return;
@@ -578,47 +1222,42 @@ export class CharacterPanelChatView {
     const hasBBCode = Boolean(this.scene.rexUI);
     const groups = groupChatMessages(this.messages);
     const formattedGroups = groups.map((group) => {
-        const entry = group.first;
-        const time = formatTime(entry.timestamp);
-        const name = entry.senderLabel.trim();
-        const label = entry.isSystem
-          ? "System"
-          : entry.isSelf
-          ? name
-            ? name.endsWith("(You)")
-              ? name
-              : `${name} (You)`
-            : "You"
-          : name || "Unknown";
+      const entry = group.first;
+      const time = formatTime(entry.timestamp);
+      const rawName = entry.senderLabel.trim();
+      const name = rawName.replace(/\s*\(You\)$/, "").trim();
+      const label = entry.isSystem
+        ? "System"
+        : name || "Unknown";
 
-        const senderColor = entry.isSystem
-          ? THEME.colors.zarkanGold
-          : entry.isSelf
+      const senderColor = entry.isSystem
+        ? THEME.colors.zarkanGold
+        : entry.isSelf
           ? THEME.colors.loadingPercent
           : THEME.colors.textPrimary;
 
-        const timeTag = hasBBCode
-          ? `[color=${THEME.colors.textMuted}]${time}[/color]`
-          : time;
-        const senderTag = hasBBCode
-          ? `[color=${senderColor}][b]${label}[/b][/color]`
-          : label;
+      const timeTag = hasBBCode
+        ? `[color=${THEME.colors.textMuted}]${time}[/color]`
+        : time;
+      const senderTag = hasBBCode
+        ? `[color=${senderColor}][b]${label}[/b][/color]`
+        : label;
 
-        const groupMessages =
-          group.messages && group.messages.length > 0
-            ? group.messages
-            : [group.first];
+      const groupMessages =
+        group.messages && group.messages.length > 0
+          ? group.messages
+          : [group.first];
 
-        const lines = groupMessages.map((msg, idx) => {
-          const text = msg.content.trim();
-          if (idx === 0) {
-            return `${timeTag} ${senderTag}: ${text}`;
-          }
-          return text;
-        });
-
-        return lines.join("\n");
+      const lines = groupMessages.map((msg, idx) => {
+        const text = msg.content.trim();
+        if (idx === 0) {
+          return `${timeTag} ${senderTag}: ${text}`;
+        }
+        return text;
       });
+
+      return lines.join("\n");
+    });
 
     this.messagesText.setText(formattedGroups.join("\n\n"));
     this.alignMessagesTextToBottom();
@@ -640,8 +1279,17 @@ export class CharacterPanelChatView {
     return "";
   }
 
+  private canSend(): boolean {
+    return (
+      this.visible &&
+      this.panelVisible &&
+      this.inputEnabled &&
+      !this.isCoolingDown() &&
+      this.inputValue.trim().length > 0
+    );
+  }
+
   private updateInputStyles() {
-    const cooling = this.isCoolingDown();
     this.inputElement.style.display =
       this.visible && this.panelVisible ? "block" : "none";
     this.inputElement.disabled =
@@ -653,18 +1301,16 @@ export class CharacterPanelChatView {
         : THEME.colors.collapsedBorder,
       1
     );
-    const canSend =
-      this.visible &&
-      this.inputEnabled &&
-      !cooling &&
-      this.inputValue.trim().length > 0;
+    const canSend = this.canSend();
     if (canSend) {
       this.sendButton.setAlpha(1);
-      this.sendButton.setColor(THEME.colors.healthRecover);
+      this.sendIcon.setAlpha(1);
+      this.sendButton.setStrokeStyle(1, 0x3b82f6, 1);
       this.sendButton.setInteractive({ useHandCursor: true });
     } else {
       this.sendButton.setAlpha(0.4);
-      this.sendButton.setColor(THEME.buttons.disabled.text);
+      this.sendIcon.setAlpha(0.35);
+      this.sendButton.setStrokeStyle(1, 0x22314a, 0.8);
       this.sendButton.disableInteractive();
     }
   }
@@ -682,8 +1328,8 @@ export class CharacterPanelChatView {
       this.overlayMessage.trim().length > 0
         ? this.overlayMessage
         : this.messages.length === 0
-        ? "No messages yet."
-        : ""
+          ? "No messages yet."
+          : ""
     );
   }
 }

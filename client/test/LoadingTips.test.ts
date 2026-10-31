@@ -7,8 +7,8 @@ import {
 } from "../src/ui/LoadingTips";
 import { getLocale, setLocale, t } from "../src/services/i18n";
 
-test("loading tips collection contains all 6 expected gameplay tips", () => {
-  assert.equal(LOADING_TIPS.length, 6);
+test("loading tips collection contains all expected gameplay tips", () => {
+  assert.equal(LOADING_TIPS.length, 8);
   assert.ok(
     LOADING_TIPS.includes("Don't attack randomly, you could be hitting your teammates"),
   );

@@ -118,6 +118,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private tutorialReadyEnabled = true;
   private logView!: CharacterPanelLogView;
   private chatView!: CharacterPanelChatView;
+  private chatOverlayMode = false;
+  private chatOverlayBounds: {
+    x: number;
+    bottomY: number;
+    width: number;
+    maxHeight: number;
+  } | null = null;
   private statusView!: CharacterPanelStatusView;
   private inventoryView!: CharacterPanelInventoryView;
   private playerOptionSkinCache!: PlayerOptionSkinCache;
@@ -435,7 +442,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.setReadyEnabled(this.readyEnabled);
     });
 
-    const boxWidth = width - MARGIN * 2;
+    const boxWidth = Math.max(120, width - MARGIN * 2);
     this.inventoryView = new CharacterPanelInventoryView(scene, this, {
       margin: MARGIN,
       contentTop,
@@ -602,7 +609,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.skillsView = new CharacterPanelSkillsView(scene, this, {
       margin: MARGIN,
       contentTop: subtabBottom,
-      boxWidth: width - MARGIN * 2,
+      boxWidth: Math.max(120, width - MARGIN * 2),
       panelHeight: this.panelHeight
     });
     this.skillsView.setOnConfirmSkills((skillIds) => {
@@ -974,7 +981,91 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   setPanelVisibility(visible: boolean): void {
     this.setVisible(visible);
     this.setActive(visible);
-    this.chatView?.setPanelVisible(visible);
+    if (!this.chatOverlayMode) {
+      this.chatView?.setPanelVisible(visible);
+    }
+  }
+
+  setChatOverlayMode(
+    enabled: boolean,
+    bounds?: { x: number; bottomY: number; width: number; maxHeight: number }
+  ): void {
+    const changed = this.chatOverlayMode !== enabled;
+    this.chatOverlayMode = enabled;
+    if (bounds) {
+      this.chatOverlayBounds = bounds;
+    }
+
+    const chatContainer = this.chatView.getContainer();
+
+    if (enabled) {
+      this.tabsController.setTabHidden("chat", true);
+      if (this.tabsController.getActiveTab() === "chat") {
+        this.tabsController.setActiveTab("character");
+      }
+      this.tabLayout.layout(this.panelWidth);
+
+      if (changed || chatContainer.parentContainer === this) {
+        this.remove(chatContainer, false);
+        this.scene.add.existing(chatContainer);
+        this.scene.cameras.main?.ignore(chatContainer);
+        chatContainer.setDepth(900);
+      }
+
+      this.chatView.setPanelVisible(true);
+      this.chatView.handleVisibilityChange(true);
+      if (this.chatOverlayBounds) {
+        const height = this.chatView.isExpanded() ? 350 : 210;
+        this.chatView.layout({
+          mode: "overlay",
+          panelX: this.chatOverlayBounds.x,
+          panelY: this.chatOverlayBounds.bottomY - height,
+          boxWidth: this.chatOverlayBounds.width,
+          panelHeight: height,
+          overlayBottomY: this.chatOverlayBounds.bottomY,
+          maxHeight: this.chatOverlayBounds.maxHeight
+        });
+      }
+
+      if (changed) {
+        this.emit("chat-tab-opened");
+      }
+    } else {
+      this.tabsController.setTabHidden("chat", false);
+      this.tabLayout.layout(this.panelWidth);
+
+      if (changed || chatContainer.parentContainer !== this) {
+        this.scene.children.remove(chatContainer);
+        this.add(chatContainer);
+      }
+
+      const isChat = this.tabsController.getActiveTab() === "chat";
+      this.chatView.handleVisibilityChange(isChat);
+
+      const contentTop = 40 + 16;
+      const boxWidth = this.panelWidth - 16 * 2;
+      this.chatView.layout({
+        mode: "panel",
+        margin: 16,
+        contentTop,
+        boxWidth,
+        panelHeight: this.panelHeight,
+        panelX: this.x,
+        panelY: this.y
+      });
+    }
+  }
+
+  isPointOverChat(x: number, y: number): boolean {
+    return this.chatView?.containsPoint(x, y) ?? false;
+  }
+
+  isChatInputEnabled(): boolean {
+    return Boolean(this.chatView);
+  }
+
+  focusChat(): void {
+    this.chatView?.focusInput();
   }
 
   private updateScrollMaskPosition(): void {
@@ -987,6 +1078,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   setPanelSize(width: number, height: number) {
+    if (width <= 0 || height <= 0) {
+      return;
+    }
     this.panelWidth = width;
     this.panelHeight = height;
     this.setSize(width, height);
@@ -1034,10 +1128,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.skillsView.layout({
       margin: MARGIN,
       contentTop: subtabBottom,
-      boxWidth: width - MARGIN * 2,
+      boxWidth: Math.max(120, width - MARGIN * 2),
       panelHeight: height
     });
-    const boxWidth = width - MARGIN * 2;
+    const boxWidth = Math.max(120, width - MARGIN * 2);
     const itemsBoxY = contentTop;
     const itemsBoxWidth = boxWidth;
     this.inventoryView.layout({
@@ -1067,8 +1161,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         panelHeight: height
       });
     }
-    if (this.chatView) {
+    if (this.chatView && !this.chatOverlayMode) {
       this.chatView.layout({
+        mode: "panel",
         margin: MARGIN,
         contentTop,
         boxWidth,
@@ -1088,6 +1183,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   }
 
   markChatUnread(unread: boolean) {
+    if (this.chatOverlayMode) {
+      return;
+    }
     if (unread && this.tabsController?.getActiveTab() === "chat") {
       return;
     }

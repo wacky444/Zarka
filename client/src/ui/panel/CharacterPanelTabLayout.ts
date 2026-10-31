@@ -40,9 +40,10 @@ export class CharacterPanelTabLayout {
     if (!this.mobileNavigation) {
       return;
     }
-    const index = this.tabs.findIndex((tab) => tab.key === key);
-    const visibleCount = this.getVisibleTabCount(this.getWidth());
-    if (index < 0 || visibleCount >= this.tabs.length) {
+    const availableTabs = this.tabs.filter((tab) => !tab.hidden);
+    const index = availableTabs.findIndex((tab) => tab.key === key);
+    const visibleCount = this.getVisibleTabCount(this.getWidth(), availableTabs.length);
+    if (index < 0 || visibleCount >= availableTabs.length) {
       this.startIndex = 0;
       this.layout(this.getWidth());
       return;
@@ -60,33 +61,35 @@ export class CharacterPanelTabLayout {
     if (!highlightedTabKey) {
       return null;
     }
-    const highlightedTabIndex = this.tabs.findIndex(
+    const availableTabs = this.tabs.filter((tab) => !tab.hidden);
+    const highlightedTabIndex = availableTabs.findIndex(
       (tab) => tab.key === highlightedTabKey
     );
     if (highlightedTabIndex < 0) {
       return null;
     }
-    const visibleCount = this.getVisibleTabCount(this.getWidth());
+    const visibleCount = this.getVisibleTabCount(this.getWidth(), availableTabs.length);
     const showArrows =
-      this.mobileNavigation && this.tabs.length > visibleCount;
+      this.mobileNavigation && availableTabs.length > visibleCount;
     if (showArrows && highlightedTabIndex < this.startIndex) {
       return this.previousButton;
     }
     if (showArrows && highlightedTabIndex >= this.startIndex + visibleCount) {
       return this.nextButton;
     }
-    return this.tabs[highlightedTabIndex]?.rect ?? null;
+    return availableTabs[highlightedTabIndex]?.rect ?? null;
   }
 
   move(delta: number): void {
     if (!this.mobileNavigation) {
       return;
     }
-    const visibleCount = this.getVisibleTabCount(this.getWidth());
-    if (visibleCount >= this.tabs.length) {
+    const availableTabs = this.tabs.filter((tab) => !tab.hidden);
+    const visibleCount = this.getVisibleTabCount(this.getWidth(), availableTabs.length);
+    if (visibleCount >= availableTabs.length) {
       return;
     }
-    const maxStart = this.tabs.length - visibleCount;
+    const maxStart = availableTabs.length - visibleCount;
     this.startIndex = Math.max(
       0,
       Math.min(maxStart, this.startIndex + delta)
@@ -95,12 +98,13 @@ export class CharacterPanelTabLayout {
   }
 
   layout(width: number): void {
+    const availableTabs = this.tabs.filter((tab) => !tab.hidden);
     const compact =
       this.mobileNavigation &&
-      this.getVisibleTabCount(width) < this.tabs.length;
+      this.getVisibleTabCount(width, availableTabs.length) < availableTabs.length;
     const visibleCount = compact
-      ? this.getVisibleTabCount(width)
-      : this.tabs.length;
+      ? this.getVisibleTabCount(width, availableTabs.length)
+      : availableTabs.length;
     const tabAreaWidth = compact
       ? Math.max(1, width - TAB_ARROW_WIDTH * 2)
       : width;
@@ -111,11 +115,19 @@ export class CharacterPanelTabLayout {
     } else {
       this.startIndex = Math.max(
         0,
-        Math.min(this.tabs.length - visibleCount, this.startIndex)
+        Math.min(availableTabs.length - visibleCount, this.startIndex)
       );
     }
 
-    this.tabs.forEach((tab, index) => {
+    for (const tab of this.tabs) {
+      if (tab.hidden) {
+        tab.rect.setVisible(false).disableInteractive();
+        tab.text.setVisible(false).disableInteractive();
+        tab.badge?.setVisible(false);
+      }
+    }
+
+    availableTabs.forEach((tab, index) => {
       const visible =
         !compact ||
         (index >= this.startIndex && index < this.startIndex + visibleCount);
@@ -157,7 +169,7 @@ export class CharacterPanelTabLayout {
     }
 
     const canMovePrevious = this.startIndex > 0;
-    const canMoveNext = this.startIndex + visibleCount < this.tabs.length;
+    const canMoveNext = this.startIndex + visibleCount < availableTabs.length;
     this.previousButton
       .setPosition(0, 0)
       .setAlpha(canMovePrevious ? 1 : 0.35);
@@ -175,7 +187,7 @@ export class CharacterPanelTabLayout {
 
     const highlightedTabKey = this.getHighlightedTab?.() ?? null;
     const highlightedTabIndex = highlightedTabKey
-      ? this.tabs.findIndex((tab) => tab.key === highlightedTabKey)
+      ? availableTabs.findIndex((tab) => tab.key === highlightedTabKey)
       : -1;
 
     const hasHighlightToLeft =
@@ -196,11 +208,11 @@ export class CharacterPanelTabLayout {
       this.nextButton.setStrokeStyle();
     }
 
-    const hasUnreadToRight = this.tabs.some(
+    const hasUnreadToRight = availableTabs.some(
       (tab, index) =>
         index >= this.startIndex + visibleCount && this.isUnread(tab.key)
     );
-    const hasUnreadToLeft = this.tabs.some(
+    const hasUnreadToLeft = availableTabs.some(
       (tab, index) => index < this.startIndex && this.isUnread(tab.key)
     );
 
@@ -212,15 +224,16 @@ export class CharacterPanelTabLayout {
       .setVisible(showArrows && (hasUnreadToLeft || hasHighlightToLeft));
   }
 
-  private getVisibleTabCount(width: number): number {
-    if (width >= this.tabs.length * MOBILE_TAB_MIN_WIDTH) {
-      return this.tabs.length;
+  private getVisibleTabCount(width: number, totalCount?: number): number {
+    const total = totalCount ?? this.tabs.filter((t) => !t.hidden).length;
+    if (width >= total * MOBILE_TAB_MIN_WIDTH) {
+      return total;
     }
     const availableWidth = Math.max(1, width - TAB_ARROW_WIDTH * 2);
     return Math.max(
       1,
       Math.min(
-        this.tabs.length,
+        total,
         Math.floor(availableWidth / MOBILE_TAB_MIN_WIDTH)
       )
     );
