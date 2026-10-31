@@ -3,7 +3,7 @@ import {
   CellLibrary,
   LocalizationType,
   ItemLibrary,
-  type Axial,
+  type Axial
 } from "@shared";
 import { t } from "../services/i18n";
 import { ItemTooltipManager } from "./ItemTooltip";
@@ -43,7 +43,7 @@ const CELL_TYPE_LABELS: Record<LocalizationType, string> = {
   [LocalizationType.Restaurant]: "Restaurant",
   [LocalizationType.Road]: "Road",
   [LocalizationType.Path]: "Path",
-  [LocalizationType.Alley]: "Alley",
+  [LocalizationType.Alley]: "Alley"
 };
 
 export function getCellTypeLabel(cellType: LocalizationType): string {
@@ -96,11 +96,7 @@ export class CellContentsPanel {
       this
     );
     this.scene.input.keyboard?.on("keydown", this.handleEscape);
-    this.scene.scale.on(
-      Phaser.Scale.Events.RESIZE,
-      this.handleResize,
-      this
-    );
+    this.scene.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
   }
 
   get isOpen(): boolean {
@@ -116,7 +112,7 @@ export class CellContentsPanel {
       warningTurn?: number;
       destructionTurn?: number;
       currentTurn?: number;
-    } = {},
+    } = {}
   ): void {
     this.coord = { ...coord };
     this.cellType = cellType;
@@ -129,7 +125,7 @@ export class CellContentsPanel {
       ? options.destructionTurn
       : undefined;
     this.currentTurn = Number.isFinite(options.currentTurn)
-      ? options.currentTurn ?? 0
+      ? (options.currentTurn ?? 0)
       : 0;
     this.isVisible = true;
     this.render();
@@ -177,11 +173,7 @@ export class CellContentsPanel {
       this.handlePointerUp,
       this
     );
-    this.scene.scale.off(
-      Phaser.Scale.Events.RESIZE,
-      this.handleResize,
-      this
-    );
+    this.scene.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     this.scene.input.keyboard?.off("keydown", this.handleEscape);
     this.isVisible = false;
     this.openingPointerId = null;
@@ -319,11 +311,14 @@ export class CellContentsPanel {
     this.content = content;
     const rowHeight = Math.max(
       38,
-      Math.min(52, Math.floor((listWidth / 5) * 0.78)),
+      Math.min(52, Math.floor((listWidth / 5) * 0.78))
     );
     let contentHeight = 8;
     const actualEntries = this.entries.filter(
-      (entry) => ItemLibrary[entry.itemId] && !ItemLibrary[entry.itemId].disabled && entry.quantity > 0,
+      (entry) =>
+        ItemLibrary[entry.itemId] &&
+        !ItemLibrary[entry.itemId].disabled &&
+        entry.quantity > 0
     );
     const destructionMessage = this.getDestructionMessage();
     if (destructionMessage) {
@@ -335,17 +330,23 @@ export class CellContentsPanel {
           color: THEME.colors.warning,
           wordWrap: {
             width: listWidth - 24,
-            useAdvancedWrap: true,
-          },
+            useAdvancedWrap: true
+          }
         })
         .setOrigin(0, 0);
       content.add(this.destructionText);
-      contentHeight += Math.max(22, this.destructionText.getBounds().height) + 10;
+      contentHeight +=
+        Math.max(22, this.destructionText.getBounds().height) + 10;
     }
     const cellDefinition = CellLibrary[this.cellType];
     const possibleEntries: CellContentsEntry[] = (
       cellDefinition.startingItems ?? []
-    ).filter((entry) => ItemLibrary[entry.itemId] && !ItemLibrary[entry.itemId].disabled && entry.quantity > 0);
+    ).filter(
+      (entry) =>
+        ItemLibrary[entry.itemId] &&
+        !ItemLibrary[entry.itemId].disabled &&
+        entry.quantity > 0
+    );
     const safeCount = cellDefinition.safes?.length ?? 0;
     if (safeCount > 0) {
       possibleEntries.push({ itemId: "safe", quantity: safeCount });
@@ -353,14 +354,14 @@ export class CellContentsPanel {
     const addItemSection = (
       heading: string,
       entries: CellContentsEntry[],
-      emptyMessage: string,
+      emptyMessage: string
     ): void => {
       const sectionHeading = this.scene.add
         .text(12, contentHeight, t(heading), {
           fontFamily: "Arial",
           fontSize: "15px",
           fontStyle: "bold",
-          color: THEME.colors.modalHeader,
+          color: THEME.colors.modalHeader
         })
         .setOrigin(0, 0);
       content.add(sectionHeading);
@@ -371,7 +372,7 @@ export class CellContentsPanel {
           .text(12, contentHeight + 8, t(emptyMessage), {
             fontFamily: "Arial",
             fontSize: "14px",
-            color: THEME.colors.textMuted,
+            color: THEME.colors.textMuted
           })
           .setOrigin(0, 0);
         content.add(emptyText);
@@ -385,7 +386,7 @@ export class CellContentsPanel {
           contentHeight,
           listWidth,
           rowHeight,
-          (pointer) => pointer.id === this.openingPointerId,
+          (pointer) => pointer.id === this.openingPointerId
         );
         content.add(grid.container);
         contentHeight += grid.height;
@@ -393,23 +394,16 @@ export class CellContentsPanel {
       contentHeight += 10;
     };
 
-    addItemSection("Items in cell", actualEntries, "No visible items");
+    addItemSection("Visible items", actualEntries, "No visible items");
     addItemSection(
       "Possible items for this cell",
       possibleEntries,
-      "No possible items",
+      "No possible items"
     );
     content.setSize(listWidth, Math.max(contentHeight, 48));
 
     this.scrollMaskShape = this.scene.add
-      .rectangle(
-        modalX + 16,
-        listY,
-        listWidth,
-        listHeight,
-        0xffffff,
-        0
-      )
+      .rectangle(modalX + 16, listY, listWidth, listHeight, 0xffffff, 0)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setVisible(true);
@@ -495,7 +489,7 @@ export class CellContentsPanel {
     }
     const turnsLeft = this.destructionTurn - this.currentTurn;
     return `${t("Destroyed in")} ${turnsLeft} ${t(
-      turnsLeft === 1 ? "turn" : "turns",
+      turnsLeft === 1 ? "turn" : "turns"
     )}`;
   }
 

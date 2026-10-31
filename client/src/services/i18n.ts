@@ -397,7 +397,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "Extra Secondary Action": "Acción secundaria adicional",
   Inventory: "Inventario",
   "Cell contents": "Contenido de la celda",
-  "Items in cell": "Objetos en la casilla",
+  "Visible items": "Objetos visibles",
   "Possible items for this cell": "Objetos posibles de la casilla",
   "No visible items": "No hay objetos visibles",
   "No possible items": "No hay objetos posibles",
