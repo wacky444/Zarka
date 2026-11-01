@@ -6,10 +6,6 @@
 
 - improvement, ground visuals, alley and road have the similar sprite, check kenney hexagon pack examples
 
-- [x] improvement, train and experience
-	- Character log reports level-ups; small fireworks play over character sprite.
-	- Skills subtab shows current XP and level beneath available skill points; header row enlarged.
-
 - improvement, tutorial step 6 should teach about prioritize items
 
 - improvement, bots doesnt buy	
@@ -41,12 +37,6 @@
 	- twins, share skin and name
 	
 -t feature, implement the skill that allows to fabricate anywhere without workshop
-
-- [x] feature, lockpick
-	- Lockpicking takes 4 consecutive turns; Dexterity 1 reduces this to 3.
-	- Carried lockpick opens safe instantly and is consumed; Dexterity 1 prevents consumption.
-	- No visible safe produces a failure log; movement interrupts lockpicking with a log.
-	- Opened safe contents become visible to opener and searchable by others.
 	
 - [x] feature, dexterity3
 	- Seven-turn cooldown starts only after successful free fabrication; unselected ability remains available.
@@ -56,10 +46,6 @@
 - [x] feature, poison
 	- Poison food carried by co-located target; poisoned serving causes 5 actions of intoxication.
 	- Intoxication damages 1 health per action and doubles extra-effort cost; antidote cures same-location target.
-
-- [x] feature, chainsaw
-	- animation of start, the character vibrates, visible by others in the same cell
-	- the action order doesn't allow to use it in the same turn
 
 - feature, npc
 
