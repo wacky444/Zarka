@@ -79,25 +79,6 @@ docker compose up -d --build nakama
 - Keep type-only imports when possible (`import type { Foo } from ...`).
 - Bump both client and server code when payload contracts change, and document breaking changes in the final response.
 
-### Developing or editing character actions
-
-- Actions are defined in `shared/src/ActionLibrary.ts`. Implemented actions has developed=true.
-- For actions with actionable requirements, implement advisory checks in `client/src/ui/ActionRequirementWarnings.ts::getMissingRequirement()` and wire the result through `CharacterPanel.resolveActionMetadata()` to `GridSelectItem.missingRequirement`; `GridSelect` renders the warning. Check `requiredItems` (handle any-of alternatives explicitly), add location rules to `ACTION_REQUIRED_LOCATIONS` and labels to `LOCATION_DISPLAY_NAMES` in `ActionRequirementWarnings.ts`, and localize new messages. `ActionDefinition.requirements` only supplies descriptive tooltip text; keep enforcement server-side.
-- In the server, action implementations live in `server/modules/src/match/actions/`, and `server/modules/src/match/actionExecutor.ts` dispatches them during turn resolution through `advanceTurn.ts`.
-- In the server `server/modules/src/match/actions/targeting.ts` there is the logic for target collection
-- In the server, when developing new prioritization selectors, the `server/modules/src/rpc/updateMainAction.ts` file sets the action's complementary fields, like location target or player target.
-- In the client there is a file that shows the log to the player, formatReplayEvents in `client/src/ui/CharacterPanelLogView.ts`. Each action has its own function to format the log entry.
-- In the client there is a file that plays the action animation, ActionAnimator in `client/src/animation/moveReplay.ts`. Each action has its own function in a file to play the animation.
-- In the client there is a file that prints the action log, formatReplayEvents in `client/src/ui/CharacterPanelLogView.ts`.
-
-### Developing or editing skills
-
-- Skills are defined in `shared/src/skills/SkillLibrary.ts`, typed in `shared/src/skills/Skill.ts`, and helper calculation logic lives in `shared/src/skills/SkillLogic.ts`. Implemented skills must have `implemented: true`.
-- Character acquired skills are stored in `character.abilities` as an array of `SkillId` (supporting duplicate entries up to `max` ranks) and purchased using `character.progression.availableSkillPoints`.
-- In the server, `server/modules/src/rpc/upgradeSkill.ts` handles the `upgrade_skill` RPC: validates player state, implementation status, point costs, and max rank limits, deducts skill points, adds the ability to `character.abilities`, and applies immediate permanent stat updates (e.g. `vitality` increments `character.stats.health.max`).
-- Skills that modify action costs, combat, or turn execution should inspect `character.abilities` during resolution in `server/modules/src/match/` or specific action handlers in `server/modules/src/match/actions/`.
-- In the client, `client/src/ui/CharacterPanelSkillsView.ts` renders skills grouped by category, counts committed ranks from `character.abilities`, and invokes `turnService.upgradeSkills()` (via `GameScene`) to commit upgrades.
-
 ## Build & validation workflow
 
 ### Server environment (Docker + Nakama)
