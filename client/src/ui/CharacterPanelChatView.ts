@@ -7,6 +7,7 @@ import {
 } from "./chatMessageGrouping";
 import { THEME } from "./ColorPalette";
 import { playRandomSound } from "../animation/soundPlayer";
+import { ModalCloseButton } from "./ModalCloseButton";
 
 export type ChatConnectionState = "idle" | "connecting" | "ready" | "error";
 
@@ -78,6 +79,10 @@ export class CharacterPanelChatView {
   private readonly expandButton: Phaser.GameObjects.Rectangle;
   private readonly expandIcon: Phaser.GameObjects.Image;
   private readonly expandBadge: Phaser.GameObjects.Arc;
+  private readonly closeButton: ModalCloseButton;
+  private readonly restoreButton: Phaser.GameObjects.Rectangle;
+  private readonly restoreIcon: Phaser.GameObjects.Image;
+  private readonly minimizedText: Phaser.GameObjects.Text;
   private readonly scrollDownButton: Phaser.GameObjects.Rectangle;
   private readonly scrollDownIcon: Phaser.GameObjects.Image;
   private readonly massiveMultiplayerButton: Phaser.GameObjects.Rectangle;
@@ -139,6 +144,7 @@ export class CharacterPanelChatView {
   private messages: ChatMessageViewModel[] = [];
   private mode: "panel" | "overlay" = "panel";
   private expanded = false;
+  private minimized = false;
   private unreadWhileCompact = false;
   private boundsRect: Phaser.Geom.Rectangle | null = null;
   private lastLayoutBounds: ChatViewLayoutBounds | null = null;
@@ -164,6 +170,11 @@ export class CharacterPanelChatView {
       .setOrigin(0, 0)
       .setVisible(false)
       .setInteractive();
+    this.overlayBackground.on(Phaser.Input.Events.POINTER_UP, () => {
+      if (this.mode === "overlay" && this.minimized) {
+        this.setMinimized(false);
+      }
+    });
 
     this.headerBackground = this.scene.add
       .rectangle(0, 0, 100, 26, 0x141d33, 0.85)
@@ -208,6 +219,57 @@ export class CharacterPanelChatView {
       .circle(0, 0, 4, THEME.colors.unreadBadge)
       .setOrigin(0.5, 0.5)
       .setVisible(false);
+
+    this.closeButton = new ModalCloseButton(this.scene, 0, 0, {
+      size: 22,
+      onClick: () => {
+        this.setMinimized(true);
+      }
+    });
+    this.closeButton.setVisible(false);
+
+    this.restoreButton = this.scene.add
+      .rectangle(0, 0, 22, 22, 0x162238, 0.85)
+      .setStrokeStyle(1, 0x2b3d60, 1)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.restoreButton.on(Phaser.Input.Events.POINTER_OVER, () => {
+      this.restoreButton.setFillStyle(0x283a5e, 0.95);
+    });
+    this.restoreButton.on(Phaser.Input.Events.POINTER_OUT, () => {
+      this.restoreButton.setFillStyle(0x162238, 0.85);
+    });
+    this.restoreButton.on(Phaser.Input.Events.POINTER_UP, () => {
+      this.setMinimized(false);
+    });
+
+    this.restoreIcon = this.scene.add
+      .image(0, 0, "chat-restore-up")
+      .setDisplaySize(16, 16)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false);
+
+    this.minimizedText = (
+      this.scene.rexUI
+        ? this.scene.rexUI.add.BBCodeText(0, 0, "", {
+            fontSize: "13px",
+            fontFamily: "Arial, sans-serif",
+            color: THEME.colors.textPrimary
+          })
+        : this.scene.add.text(0, 0, "", {
+            fontSize: "13px",
+            fontFamily: "Arial, sans-serif",
+            color: THEME.colors.textPrimary
+          })
+    ) as Phaser.GameObjects.Text;
+    this.minimizedText.setOrigin(0, 0.5).setVisible(false);
+    this.minimizedText.setInteractive({ useHandCursor: true });
+    this.minimizedText.on(Phaser.Input.Events.POINTER_UP, () => {
+      if (this.mode === "overlay" && this.minimized) {
+        this.setMinimized(false);
+      }
+    });
 
     this.scrollDownButton = this.scene.add
       .rectangle(0, 0, 22, 22, 0x162238, 0.85)
@@ -500,6 +562,7 @@ export class CharacterPanelChatView {
       this.expandButton,
       this.expandIcon,
       this.expandBadge,
+      this.closeButton,
       this.massiveMultiplayerButton,
       this.massiveMultiplayerIcon,
       this.multiplayerButton,
@@ -515,7 +578,10 @@ export class CharacterPanelChatView {
       this.overlayText,
       this.inputBackground,
       this.sendButton,
-      this.sendIcon
+      this.sendIcon,
+      this.minimizedText,
+      this.restoreButton,
+      this.restoreIcon
     ]);
 
     this.elements = [
@@ -584,6 +650,14 @@ export class CharacterPanelChatView {
     this.singleplayerButton.off(Phaser.Input.Events.POINTER_OVER);
     this.singleplayerButton.off(Phaser.Input.Events.POINTER_OUT);
     this.singleplayerButton.disableInteractive();
+    this.closeButton.destroy();
+    this.restoreButton.off(Phaser.Input.Events.POINTER_UP);
+    this.restoreButton.off(Phaser.Input.Events.POINTER_OVER);
+    this.restoreButton.off(Phaser.Input.Events.POINTER_OUT);
+    this.restoreButton.disableInteractive();
+    this.minimizedText.off(Phaser.Input.Events.POINTER_UP);
+    this.minimizedText.disableInteractive();
+    this.overlayBackground.off(Phaser.Input.Events.POINTER_UP);
     this.container.destroy();
   }
 
@@ -599,6 +673,26 @@ export class CharacterPanelChatView {
 
   isExpanded(): boolean {
     return this.expanded;
+  }
+
+  isMinimized(): boolean {
+    return this.minimized;
+  }
+
+  setMinimized(minimized: boolean): void {
+    if (this.minimized === minimized) {
+      return;
+    }
+    this.minimized = minimized;
+    if (minimized) {
+      this.blurInput();
+    } else {
+      this.unreadWhileCompact = false;
+      this.expandBadge.setVisible(false);
+    }
+    if (this.lastLayoutBounds) {
+      this.layout(this.lastLayoutBounds);
+    }
   }
 
   getMode(): "panel" | "overlay" {
@@ -668,9 +762,11 @@ export class CharacterPanelChatView {
 
   private layoutOverlay(bounds: ChatViewLayoutBounds) {
     const currentWidth = bounds.boxWidth;
-    const currentHeight = this.expanded
-      ? Math.min(360, Math.max(260, (bounds.maxHeight ?? 600) - 100))
-      : 210;
+    const currentHeight = this.minimized
+      ? 30
+      : this.expanded
+        ? Math.min(360, Math.max(260, (bounds.maxHeight ?? 600) - 100))
+        : 210;
     const bottomY = bounds.overlayBottomY ?? bounds.panelY + bounds.panelHeight;
     const panelY = bottomY - currentHeight;
     const panelX = bounds.panelX;
@@ -682,6 +778,68 @@ export class CharacterPanelChatView {
       currentWidth,
       currentHeight
     );
+
+    if (this.minimized) {
+      this.overlayBackground
+        .setPosition(0, 0)
+        .setSize(currentWidth, currentHeight)
+        .setDisplaySize(currentWidth, currentHeight)
+        .setVisible(this.visible);
+
+      this.headerBackground.setVisible(false);
+      this.titleText.setVisible(false);
+      this.statusDot.setVisible(false);
+      this.statusText.setVisible(false);
+      this.expandButton.setVisible(false);
+      this.expandIcon.setVisible(false);
+      this.expandBadge.setVisible(false);
+      this.closeButton.setVisible(false);
+
+      this.massiveMultiplayerButton.setVisible(false);
+      this.massiveMultiplayerIcon.setVisible(false);
+      this.multiplayerButton.setVisible(false);
+      this.multiplayerIcon.setVisible(false);
+      this.singleplayerButton.setVisible(false);
+      this.singleplayerIcon.setVisible(false);
+      this.scrollDownButton.setVisible(false);
+      this.scrollDownIcon.setVisible(false);
+
+      this.messagesBox.setVisible(false);
+      this.messagesScrollPanel?.setVisible?.(false);
+      this.messagesText.setVisible(false);
+      this.overlayText.setVisible(false);
+      this.inputBackground.setVisible(false);
+      this.sendButton.setVisible(false);
+      this.sendIcon.setVisible(false);
+
+      this.talkIcon.setPosition(8, currentHeight / 2).setVisible(this.visible);
+
+      const restoreBtnX = currentWidth - 16;
+      const restoreBtnY = currentHeight / 2;
+      this.restoreButton
+        .setPosition(restoreBtnX, restoreBtnY)
+        .setVisible(this.visible);
+      this.restoreIcon
+        .setPosition(restoreBtnX, restoreBtnY)
+        .setVisible(this.visible);
+      if (this.scene.textures.exists("chat-restore-up")) {
+        this.restoreIcon.setTexture("chat-restore-up");
+      }
+
+      const textStartX = 28;
+      const availableTextWidth = Math.max(20, restoreBtnX - 14 - textStartX);
+      this.minimizedText
+        .setPosition(textStartX, currentHeight / 2)
+        .setVisible(this.visible);
+      this.updateMinimizedText(availableTextWidth);
+
+      this.inputElement.style.display = "none";
+      return;
+    }
+
+    this.minimizedText.setVisible(false);
+    this.restoreButton.setVisible(false);
+    this.restoreIcon.setVisible(false);
 
     this.overlayBackground
       .setPosition(0, 0)
@@ -712,10 +870,15 @@ export class CharacterPanelChatView {
       .setFontSize("12px")
       .setVisible(this.visible);
 
+    const closeBtnX = currentWidth - 18;
+    const expandBtnX = currentWidth - 44;
+
+    this.closeButton.setPosition(closeBtnX, 19).setVisible(this.visible);
+
     this.expandButton
-      .setPosition(currentWidth - 19, 19)
+      .setPosition(expandBtnX, 19)
       .setVisible(this.visible);
-    this.expandIcon.setPosition(currentWidth - 19, 19).setVisible(this.visible);
+    this.expandIcon.setPosition(expandBtnX, 19).setVisible(this.visible);
     if (
       this.scene.textures.exists("chat-collapse") &&
       this.scene.textures.exists("chat-expand")
@@ -725,7 +888,7 @@ export class CharacterPanelChatView {
       );
     }
     this.expandBadge
-      .setPosition(currentWidth - 10, 10)
+      .setPosition(expandBtnX + 9, 10)
       .setVisible(this.visible && !this.expanded && this.unreadWhileCompact);
 
     const railX = 17;
@@ -780,12 +943,15 @@ export class CharacterPanelChatView {
     this.messagesScrollPanel?.setPosition?.(boxX, boxY);
     this.messagesScrollPanel?.setSize?.(boxWidth, boxHeight);
     this.messagesScrollPanel?.setMinSize?.(boxWidth, boxHeight);
+    this.messagesScrollPanel?.setVisible?.(
+      this.visible && this.messages.length > 0
+    );
     this.messagesScrollPanel?.layout?.();
 
     if (messageWidthChanged) {
       this.messagesText.setWordWrapWidth(boxWidth - 16);
-      this.refreshMessages();
     }
+    this.refreshMessages();
     this.alignMessagesTextToBottom();
     this.scrollToBottom();
     this.scene.time?.delayedCall(0, () => this.scrollToBottom());
@@ -843,6 +1009,48 @@ export class CharacterPanelChatView {
     this.updateInputStyles();
   }
 
+  private updateMinimizedText(availableWidth: number) {
+    if (this.messages.length === 0) {
+      const emptyText =
+        this.connectionState === "connecting"
+          ? "Connecting..."
+          : this.connectionState === "error"
+            ? "Chat unavailable."
+            : t("No messages yet.");
+      this.minimizedText.setText(emptyText);
+      return;
+    }
+
+    const last = this.messages[this.messages.length - 1];
+    const time = formatTime(last.timestamp);
+    const rawName = last.senderLabel.trim();
+    const name = rawName.replace(/\s*\(You\)$/, "").trim();
+    const label = last.isSystem ? "System" : name || "Unknown";
+
+    const senderColor = last.isSystem
+      ? THEME.colors.zarkanGold
+      : last.isSelf
+        ? THEME.colors.loadingPercent
+        : THEME.colors.textPrimary;
+
+    const timeTag = this.scene.rexUI
+      ? `[color=${THEME.colors.textMuted}]${time}[/color]`
+      : time;
+    const senderTag = this.scene.rexUI
+      ? `[color=${senderColor}][b]${label}:[/b][/color]`
+      : `${label}:`;
+
+    const singleLineContent = last.content.trim().replace(/\r?\n+/g, " ");
+    const prefixLen = `${time} ${label}: `.length;
+    const maxChars = Math.max(6, Math.floor(availableWidth / 7.2) - prefixLen);
+    const content =
+      singleLineContent.length > maxChars
+        ? singleLineContent.slice(0, Math.max(0, maxChars - 1)) + "…"
+        : singleLineContent;
+
+    this.minimizedText.setText(`${timeTag} ${senderTag} ${content}`);
+  }
+
   private layoutPanel(bounds: ChatViewLayoutBounds) {
     this.container.setPosition(0, 0);
     this.boundsRect = new Phaser.Geom.Rectangle(
@@ -859,6 +1067,10 @@ export class CharacterPanelChatView {
     this.expandButton.setVisible(false);
     this.expandIcon.setVisible(false);
     this.expandBadge.setVisible(false);
+    this.closeButton.setVisible(false);
+    this.restoreButton.setVisible(false);
+    this.restoreIcon.setVisible(false);
+    this.minimizedText.setVisible(false);
     this.scrollDownButton.setVisible(false);
     this.scrollDownIcon.setVisible(false);
     this.massiveMultiplayerButton.setVisible(false);
@@ -1074,6 +1286,11 @@ export class CharacterPanelChatView {
   setMessages(messages: ChatMessageViewModel[]) {
     this.messages = messages.slice(-MAX_MESSAGES);
     this.refreshMessages();
+    if (this.mode === "overlay" && this.minimized && this.lastLayoutBounds) {
+      this.updateMinimizedText(
+        Math.max(20, this.lastLayoutBounds.boxWidth - 58)
+      );
+    }
     this.scrollToBottom();
     this.scene.time?.delayedCall(0, () => this.scrollToBottom());
     this.scene.time?.delayedCall(50, () => this.scrollToBottom());
@@ -1083,6 +1300,11 @@ export class CharacterPanelChatView {
   appendMessage(message: ChatMessageViewModel) {
     this.messages = [...this.messages, message].slice(-MAX_MESSAGES);
     this.refreshMessages();
+    if (this.mode === "overlay" && this.minimized && this.lastLayoutBounds) {
+      this.updateMinimizedText(
+        Math.max(20, this.lastLayoutBounds.boxWidth - 58)
+      );
+    }
     this.scrollToBottom();
     this.scene.time?.delayedCall(0, () => this.scrollToBottom());
     this.scene.time?.delayedCall(50, () => this.scrollToBottom());
@@ -1091,7 +1313,7 @@ export class CharacterPanelChatView {
         pitchRange: 0,
         rateRange: 0
       });
-      if (this.mode === "overlay" && !this.expanded) {
+      if (this.mode === "overlay" && !this.expanded && !this.minimized) {
         this.unreadWhileCompact = true;
         this.expandBadge?.setVisible(this.visible);
       }
@@ -1119,6 +1341,11 @@ export class CharacterPanelChatView {
     } else {
       this.overlayMessage = "";
     }
+    if (this.mode === "overlay" && this.minimized && this.lastLayoutBounds) {
+      this.updateMinimizedText(
+        Math.max(20, this.lastLayoutBounds.boxWidth - 58)
+      );
+    }
     this.updateOverlayVisibility();
   }
 
@@ -1138,27 +1365,65 @@ export class CharacterPanelChatView {
   handleVisibilityChange(visible: boolean) {
     this.visible = visible;
     this.container.setVisible(visible);
-    for (const element of this.elements) {
-      element.setVisible(visible);
-    }
-    if (this.mode === "overlay") {
+    if (this.mode === "overlay" && this.minimized) {
+      for (const element of this.elements) {
+        element.setVisible(false);
+      }
       this.overlayBackground.setVisible(visible);
-      this.headerBackground.setVisible(visible);
       this.talkIcon.setVisible(visible);
-      this.statusDot.setVisible(visible);
-      this.expandButton.setVisible(visible);
-      this.expandIcon.setVisible(visible);
-      this.expandBadge.setVisible(
-        visible && !this.expanded && this.unreadWhileCompact
-      );
-      this.scrollDownButton.setVisible(visible);
-      this.scrollDownIcon.setVisible(visible);
-      this.massiveMultiplayerButton.setVisible(visible);
-      this.massiveMultiplayerIcon.setVisible(visible);
-      this.multiplayerButton.setVisible(visible);
-      this.multiplayerIcon.setVisible(visible);
-      this.singleplayerButton.setVisible(visible);
-      this.singleplayerIcon.setVisible(visible);
+      this.minimizedText.setVisible(visible);
+      this.restoreButton.setVisible(visible);
+      this.restoreIcon.setVisible(visible);
+      this.closeButton.setVisible(false);
+      this.expandButton.setVisible(false);
+      this.expandIcon.setVisible(false);
+      this.expandBadge.setVisible(false);
+      this.headerBackground.setVisible(false);
+      this.statusDot.setVisible(false);
+      this.statusText.setVisible(false);
+      this.scrollDownButton.setVisible(false);
+      this.scrollDownIcon.setVisible(false);
+      this.massiveMultiplayerButton.setVisible(false);
+      this.massiveMultiplayerIcon.setVisible(false);
+      this.multiplayerButton.setVisible(false);
+      this.multiplayerIcon.setVisible(false);
+      this.singleplayerButton.setVisible(false);
+      this.singleplayerIcon.setVisible(false);
+    } else {
+      for (const element of this.elements) {
+        element.setVisible(visible);
+      }
+      if (this.mode === "overlay") {
+        this.overlayBackground.setVisible(visible);
+        this.headerBackground.setVisible(visible);
+        this.talkIcon.setVisible(visible);
+        this.statusDot.setVisible(visible);
+        this.expandButton.setVisible(visible);
+        this.expandIcon.setVisible(visible);
+        this.expandBadge.setVisible(
+          visible && !this.expanded && this.unreadWhileCompact
+        );
+        this.closeButton.setVisible(visible);
+        this.scrollDownButton.setVisible(visible);
+        this.scrollDownIcon.setVisible(visible);
+        this.massiveMultiplayerButton.setVisible(visible);
+        this.massiveMultiplayerIcon.setVisible(visible);
+        this.multiplayerButton.setVisible(visible);
+        this.multiplayerIcon.setVisible(visible);
+        this.singleplayerButton.setVisible(visible);
+        this.singleplayerIcon.setVisible(visible);
+        const showMessages = visible && this.messages.length > 0;
+        this.messagesScrollPanel?.setVisible?.(showMessages);
+        this.messagesText.setVisible(showMessages);
+        this.minimizedText.setVisible(false);
+        this.restoreButton.setVisible(false);
+        this.restoreIcon.setVisible(false);
+      } else {
+        this.closeButton.setVisible(false);
+        this.restoreButton.setVisible(false);
+        this.restoreIcon.setVisible(false);
+        this.minimizedText.setVisible(false);
+      }
     }
     if (!visible) {
       this.blurInput();
@@ -1182,6 +1447,9 @@ export class CharacterPanelChatView {
   focusInput() {
     if (!this.inputEnabled || !this.visible || !this.panelVisible) {
       return;
+    }
+    if (this.mode === "overlay" && this.minimized) {
+      this.setMinimized(false);
     }
     this.inputElement.focus();
   }
@@ -1212,6 +1480,7 @@ export class CharacterPanelChatView {
     if (this.messages.length === 0) {
       this.messagesText.setText("");
       this.messagesText.setVisible(false);
+      this.messagesScrollPanel?.setVisible?.(false);
       this.overlayMessage =
         this.connectionState === "ready"
           ? "Be the first."
@@ -1259,7 +1528,10 @@ export class CharacterPanelChatView {
 
     this.messagesText.setText(formattedGroups.join("\n\n"));
     this.alignMessagesTextToBottom();
-    this.messagesText.setVisible(this.visible);
+    const showMessages =
+      this.visible && !(this.mode === "overlay" && this.minimized);
+    this.messagesText.setVisible(showMessages);
+    this.messagesScrollPanel?.setVisible?.(showMessages);
     this.overlayMessage = "";
     this.updateOverlayVisibility();
   }
@@ -1288,10 +1560,13 @@ export class CharacterPanelChatView {
   }
 
   private updateInputStyles() {
-    this.inputElement.style.display =
-      this.visible && this.panelVisible ? "block" : "none";
+    const showInput =
+      this.visible &&
+      this.panelVisible &&
+      !(this.mode === "overlay" && this.minimized);
+    this.inputElement.style.display = showInput ? "block" : "none";
     this.inputElement.disabled =
-      !this.visible || !this.inputEnabled || !this.panelVisible;
+      !showInput || !this.inputEnabled;
     this.inputBackground.setStrokeStyle(
       1,
       this.inputFocused
@@ -1320,6 +1595,7 @@ export class CharacterPanelChatView {
   private updateOverlayVisibility() {
     const shouldShow =
       this.visible &&
+      !(this.mode === "overlay" && this.minimized) &&
       (this.overlayMessage.trim().length > 0 || this.messages.length === 0);
     this.overlayText.setVisible(shouldShow);
     this.overlayText.setText(

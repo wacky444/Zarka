@@ -1015,7 +1015,11 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.chatView.setPanelVisible(true);
       this.chatView.handleVisibilityChange(true);
       if (this.chatOverlayBounds) {
-        const height = this.chatView.isExpanded() ? 350 : 210;
+        const height = this.chatView.isMinimized()
+          ? 30
+          : this.chatView.isExpanded()
+            ? 350
+            : 210;
         this.chatView.layout({
           mode: "overlay",
           panelX: this.chatOverlayBounds.x,

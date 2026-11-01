@@ -15,9 +15,10 @@ Do not create separate PC and mobile chat classes. Reuse the single `CharacterPa
   - Chat tab is hidden (`CharacterPanelTabs.setTabHidden("chat", true)`). Panel displays remaining 5 tabs.
   - Chat container detached from `CharacterPanel` and added to scene (`cameras.main.ignore`, `depth: 900`).
   - Positioned bottom-left over map (`x: 10`, bottom-anchored above menu button) with semi-transparent frame (`0x0a1020`, alpha 0.68).
-  - Expand button toggles compact (170px) vs expanded (~350px upward).
+  - Expand button toggles compact (210px) vs expanded (~350px upward). Placed to the left of the close button.
+  - Close button (`ModalCloseButton`) minimizes overlay into a single line (30px) showing the last chat message and a restore button (`up.png`).
   - Left-rail down arrow jumps to bottom (`scrollToBottom()`).
-  - `Enter` key focuses input from gameplay; typing `Enter` sends; `Escape` blurs.
+  - `Enter` key focuses input from gameplay (restoring chat if minimized); typing `Enter` sends; `Escape` blurs.
 - **Mobile (`isMobile(width)`)**:
   - Chat tab unhidden; container docked back inside `CharacterPanel`.
   - Visibility tied to active `"chat"` tab.
@@ -35,4 +36,4 @@ Do not create separate PC and mobile chat classes. Reuse the single `CharacterPa
 1. **Map Shielding**: `GameScene.isPointOverUI` must check `characterPanel.isPointOverChat(x, y)` to block map clicks/drags.
 2. **DOM Input Sync**: Native `<input>` style (`left`, `top`, `width`, `height`) computed via `canvas.getBoundingClientRect()` + scale factor.
 3. **Scroll to Bottom**: RexUI panel needs `scrollToBottom()` plus `delayedCall(0)` / `delayedCall(50)` on initial load (`setMessages`) and expand toggle to account for BBCode font layout passes.
-4. **Icons**: Preloaded in `GameScene.preload()` from `assets/images/chat-icons/` (`expand.png`, `collapse.png`, `arrowDown.png`, `talk.png`).
+4. **Icons**: Preloaded in `GameScene.preload()` from `assets/images/chat-icons/` (`expand.png`, `collapse.png`, `arrowDown.png`, `talk.png`, `up.png`).

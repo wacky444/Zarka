@@ -822,6 +822,12 @@ export class GameScene extends Phaser.Scene {
         assetPath("assets/images/chat-icons/collapse.png")
       );
     }
+    if (!this.textures.exists("chat-restore-up")) {
+      this.load.image(
+        "chat-restore-up",
+        assetPath("assets/images/chat-icons/up.png")
+      );
+    }
     if (!this.textures.exists("chat-arrow-up")) {
       this.load.image(
         "chat-arrow-up",
