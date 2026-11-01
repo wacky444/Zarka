@@ -200,7 +200,7 @@ export class CharacterPanelChatView {
 
     this.expandIcon = this.scene.add
       .image(0, 0, "chat-expand")
-      .setDisplaySize(14, 14)
+      .setDisplaySize(20, 20)
       .setOrigin(0.5, 0.5)
       .setVisible(false);
 
@@ -1226,9 +1226,7 @@ export class CharacterPanelChatView {
       const time = formatTime(entry.timestamp);
       const rawName = entry.senderLabel.trim();
       const name = rawName.replace(/\s*\(You\)$/, "").trim();
-      const label = entry.isSystem
-        ? "System"
-        : name || "Unknown";
+      const label = entry.isSystem ? "System" : name || "Unknown";
 
       const senderColor = entry.isSystem
         ? THEME.colors.zarkanGold
