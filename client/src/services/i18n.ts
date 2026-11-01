@@ -660,6 +660,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   used: "usó",
   obtained: "obtuvo",
   "temporary energy": "de esfuerzo temporal",
+  "experience points": "puntos de experiencia",
   "placed a tracker on": "colocó un localizador en",
   "a player at": "un jugador en",
   "placed a trap": "colocó una trampa",
@@ -852,6 +853,11 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Produces: "Produce",
   crafted: "fabricó",
   "leveled up": "subió de nivel",
+  "gains 1 skill point": "gana 1 punto de habilidad",
+  "you dropped": "se te cae",
+  "se te cae": "se te cae",
+  gains: "gana",
+  "skill points": "puntos de habilidad",
   "Experience:": "Experiencia:",
   Level: "Nivel",
   "used Dexterity 3 to craft": "usó Destreza 3 para fabricar",
@@ -1016,6 +1022,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
 
 const ENGLISH_GAME_NAMES: Record<string, string> = {
   "Bienvenido a Zarka": "Welcome to Zarka",
+  "se te cae": "you dropped",
+  "gana 1 punto de habilidad": "gains 1 skill point",
   Enf: "CD",
   "Enf:": "CD:",
   "Has llegado voluntariamente a un pueblo abandonado con un único objetivo: sobrevivir. En este juego de rol y estrategia por turnos, varios equipos se enfrentan a muerte, pero hay un problema: [b]aún no sabes quiénes son tus aliados.[/b]":
@@ -1142,6 +1150,7 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   Concentrarse: "Focus",
   obtuvo: "obtained",
   "de esfuerzo temporal": "temporary energy",
+  "puntos de experiencia": "experience points",
   Entrenar: "Train",
   "Activar cámaras": "Activate cameras",
   "Mirar por la ventana": "Look through window",

@@ -1763,7 +1763,8 @@ export function executeAction(
           )
         : [];
       const actionEvents: ReplayEvent[] = participants.map((participant) => {
-        const extraExperience = (participant.plan.extraExecutions ?? 0) > 0 ? 3 : 0;
+        const extraExecutions = participant.plan.extraExecutions ?? 0;
+        const extraExperience = extraExecutions > 0 ? 3 : 0;
         const awarded = awardExperience(participant.character, 5 + extraExperience);
         applyActionCooldown(
           participant.character,
@@ -1781,6 +1782,7 @@ export function executeAction(
             metadata: {
               experienceGained: awarded.experienceGained,
               levelsGained: awarded.levelsGained,
+              ...(extraExecutions > 0 ? { extraExecutions } : {}),
             },
           },
         };

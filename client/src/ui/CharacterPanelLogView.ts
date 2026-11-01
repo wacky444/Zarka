@@ -128,6 +128,7 @@ export class CharacterPanelLogView {
   private replayEvents: ReplayEvent[] = [];
   private draggingFilter = false;
   private eventsViewportWidth = 0;
+  private currentUserId: string | null = null;
 
   constructor(private readonly options: CharacterPanelLogViewOptions) {
     this.elements = options.elements;
@@ -190,6 +191,10 @@ export class CharacterPanelLogView {
 
   setUsernames(map: Record<string, string>): void {
     this.usernames = { ...map };
+  }
+
+  setCurrentUserId(id: string | null): void {
+    this.currentUserId = id;
   }
 
   setTeams(map: Record<string, string>): void {
@@ -663,7 +668,13 @@ export class CharacterPanelLogView {
           typeof levelsGained === "number" &&
           levelsGained > 0
         ) {
-          lines.push(`${actor} ${t("leveled up")} (+${levelsGained})`);
+          if (levelsGained === 1) {
+            lines.push(`${actor} ${t("gains 1 skill point")}`);
+          } else {
+            lines.push(
+              `${actor} ${t("gains")} ${levelsGained} ${t("skill points")}`
+            );
+          }
         }
         if (actionId === "start_chainsaw") {
           const metadata = event.action.metadata as
@@ -1255,9 +1266,26 @@ export class CharacterPanelLogView {
                 "obtained"
               )} ${energyBonus} ${t("temporary energy")}`
             );
+          } else if (actionId === "train") {
+            const experienceGained =
+              typeof (event.action.metadata as { experienceGained?: unknown })
+                ?.experienceGained === "number"
+                ? (event.action.metadata as { experienceGained: number })
+                    .experienceGained
+                : extraExecutions > 0
+                  ? 8
+                  : 5;
+            lines.push(
+              `${actor} ${t("used")} ${actionName}${extraLabel}, ${t(
+                "obtained"
+              )} ${experienceGained} ${t("experience points")}`
+            );
           } else if (
             actionId === "inject_virus" ||
-            actionId === "inject_vaccine"
+            actionId === "inject_vaccine" ||
+            (actionId === "drop" &&
+              (event.action.metadata as { automatic?: unknown } | undefined)
+                ?.automatic === true)
           ) {
             // Handled specifically below
           } else {
@@ -1552,6 +1580,7 @@ export class CharacterPanelLogView {
                   droppedItems?: unknown;
                   sellInstead?: unknown;
                   zarkansEarned?: unknown;
+                  automatic?: unknown;
                 }
               | undefined;
             const droppedItems = this.extractDroppedItemNames(
@@ -1568,6 +1597,19 @@ export class CharacterPanelLogView {
                     "for"
                   )} ${zarkans} zarkans`
                 );
+              } else if (meta?.automatic === true) {
+                if (
+                  this.currentUserId &&
+                  event.actorId !== this.currentUserId
+                ) {
+                  lines.push(
+                    getLocale() === "es"
+                      ? `a ${actor} se le cae ${droppedItems.join(", ")}`
+                      : `${actor} ${t("dropped")} ${droppedItems.join(", ")}`
+                  );
+                } else {
+                  lines.push(`${t("se te cae")} ${droppedItems.join(", ")}`);
+                }
               } else {
                 lines.push(
                   `${actor} ${t("dropped")} ${droppedItems.join(", ")}`

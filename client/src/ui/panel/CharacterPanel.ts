@@ -1277,6 +1277,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       }
     }
     this.logView.setTeams(teamMap);
+    this.logView.setCurrentUserId(currentUserId);
     this.currentMatch = match ?? null;
     this.currentUserId = currentUserId ?? null;
     this.updatePlayerOptions(match ?? null, userMap, currentUserId);

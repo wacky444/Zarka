@@ -154,3 +154,170 @@ test("formatReplayEvents formats focus action with temporary energy gained", () 
     setLocale(previousLocale);
   }
 });
+
+test("formatReplayEvents formats train action with experience gained", () => {
+  const previousLocale = getLocale();
+  try {
+    const scene = createMockScene();
+    const eventsText = createMockElement(scene);
+    const logView = new CharacterPanelLogView({
+      panel: { add() {} } as any,
+      elements: {
+        prevButton: createMockElement(scene) as any,
+        nextButton: createMockElement(scene) as any,
+        playButton: createMockElement(scene) as any,
+        filterTrack: createMockElement(scene) as any,
+        filterKnob: createMockElement(scene) as any,
+        filterLabel: createMockElement(scene) as any,
+        turnLabel: createMockElement(scene) as any,
+        statusText: createMockElement(scene) as any,
+        eventsBox: createMockElement(scene) as any,
+        eventsText: eventsText as any
+      },
+      onRequestReplay: () => {},
+      onPlay: () => {},
+      formatActionName: (id: string) => id
+    });
+
+    const events: ReplayEvent[] = [
+      {
+        kind: "player",
+        actorId: "player",
+        action: {
+          actionId: "train",
+          metadata: {
+            experienceGained: 5
+          }
+        }
+      }
+    ];
+
+    setLocale("es");
+    logView.setReplay(1, 1, events);
+    assert.equal(eventsText.text, "player usó Entrenar, obtuvo 5 puntos de experiencia");
+
+    setLocale("en");
+    logView.setReplay(1, 1, events);
+    assert.equal(eventsText.text, "player used Train, obtained 5 experience points");
+
+    const eventsWithExtra: ReplayEvent[] = [
+      {
+        kind: "player",
+        actorId: "player",
+        action: {
+          actionId: "train",
+          metadata: {
+            experienceGained: 8,
+            extraExecutions: 1
+          }
+        }
+      }
+    ];
+
+    setLocale("es");
+    logView.setReplay(1, 1, eventsWithExtra);
+    assert.equal(eventsText.text, "player usó Entrenar (+1 extra), obtuvo 8 puntos de experiencia");
+
+    setLocale("en");
+    logView.setReplay(1, 1, eventsWithExtra);
+    assert.equal(eventsText.text, "player used Train (+1 extra), obtained 8 experience points");
+  } finally {
+    setLocale(previousLocale);
+  }
+});
+
+test("formatReplayEvents formats drop action for manual and overweight drops", () => {
+  const previousLocale = getLocale();
+  try {
+    const scene = createMockScene();
+    const eventsText = createMockElement(scene);
+    const logView = new CharacterPanelLogView({
+      panel: { add() {} } as any,
+      elements: {
+        prevButton: createMockElement(scene) as any,
+        nextButton: createMockElement(scene) as any,
+        playButton: createMockElement(scene) as any,
+        filterTrack: createMockElement(scene) as any,
+        filterKnob: createMockElement(scene) as any,
+        filterLabel: createMockElement(scene) as any,
+        turnLabel: createMockElement(scene) as any,
+        statusText: createMockElement(scene) as any,
+        eventsBox: createMockElement(scene) as any,
+        eventsText: eventsText as any
+      },
+      onRequestReplay: () => {},
+      onPlay: () => {},
+      formatActionName: (id: string) => id
+    });
+
+    logView.setUsernames({ player1: "Jugador1", player2: "Jugador2" });
+    logView.setCurrentUserId("player1");
+
+    const manualDropEvent: ReplayEvent[] = [
+      {
+        kind: "player",
+        actorId: "player1",
+        action: {
+          actionId: "drop",
+          metadata: {
+            droppedItems: [{ itemType: "knife" }]
+          }
+        }
+      }
+    ];
+
+    setLocale("es");
+    logView.setReplay(1, 1, manualDropEvent);
+    assert.equal(eventsText.text, "Jugador1 usó Dejar\nJugador1 soltó Cuchillo");
+
+    setLocale("en");
+    logView.setReplay(1, 1, manualDropEvent);
+    assert.equal(eventsText.text, "Jugador1 used Drop\nJugador1 dropped Knife");
+
+    const automaticDropSelf: ReplayEvent[] = [
+      {
+        kind: "player",
+        actorId: "player1",
+        action: {
+          actionId: "drop",
+          metadata: {
+            automatic: true,
+            droppedItems: [{ itemType: "wood" }]
+          }
+        }
+      }
+    ];
+
+    setLocale("es");
+    logView.setReplay(1, 1, automaticDropSelf);
+    assert.equal(eventsText.text, "se te cae Madera");
+
+    setLocale("en");
+    logView.setReplay(1, 1, automaticDropSelf);
+    assert.equal(eventsText.text, "you dropped Wood");
+
+    const automaticDropOther: ReplayEvent[] = [
+      {
+        kind: "player",
+        actorId: "player2",
+        action: {
+          actionId: "drop",
+          metadata: {
+            automatic: true,
+            droppedItems: [{ itemType: "wood" }]
+          }
+        }
+      }
+    ];
+
+    setLocale("es");
+    logView.setReplay(1, 1, automaticDropOther);
+    assert.equal(eventsText.text, "a Jugador2 se le cae Madera");
+
+    setLocale("en");
+    logView.setReplay(1, 1, automaticDropOther);
+    assert.equal(eventsText.text, "Jugador2 dropped Wood");
+  } finally {
+    setLocale(previousLocale);
+  }
+});
