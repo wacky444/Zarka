@@ -17,7 +17,7 @@ export interface CharacterPanelReadyRefreshOptions {
   enabled: boolean;
   isCharacterActive: boolean;
   isStatusActive: boolean;
-  unspentSkillPoints: number;
+  unspentSkillPoints?: number;
   currentTurn: number;
   plannedEnergyCost: number;
   availableEnergy: number;
@@ -35,7 +35,6 @@ export class CharacterPanelReadyView {
   private readonly readyToggle: Phaser.GameObjects.Text;
   private readonly checkMarkText: Phaser.GameObjects.Text;
   private readonly readyHighlightBorder: Phaser.GameObjects.Rectangle;
-  private readonly unspentSkillsWarning: ReadyWarning;
   private readonly energyWarning: ReadyWarning;
   private readonly overweightWarning: ReadyWarning;
   private readonly chainsawOrderWarning: ReadyWarning;
@@ -107,17 +106,6 @@ export class CharacterPanelReadyView {
     parent.add(this.readyHighlightBorder);
     this.updateHighlightBorder();
 
-    this.unspentSkillsWarning = new ReadyWarning({
-      scene,
-      parent,
-      x: x + this.readyToggle.width + 12,
-      y: y + 1,
-      text: "",
-      color: THEME.colors.error,
-      tooltip: () => this.unspentSkillsWarning.getText(),
-      onTooltipRequested: (message, tooltipX, tooltipY) =>
-        this.showWarningTooltip(message, tooltipX, tooltipY)
-    });
     this.energyWarning = new ReadyWarning({
       scene,
       parent,
@@ -193,7 +181,6 @@ export class CharacterPanelReadyView {
       this.readyToggle,
       this.checkMarkText,
       this.readyHighlightBorder,
-      ...this.unspentSkillsWarning.getAllGameObjects(),
       ...this.energyWarning.getAllGameObjects(),
       ...this.overweightWarning.getAllGameObjects(),
       ...this.chainsawOrderWarning.getAllGameObjects()
@@ -253,7 +240,6 @@ export class CharacterPanelReadyView {
       return;
     }
     this.mobile = mobile;
-    this.unspentSkillsWarning.setMobile(mobile);
     this.energyWarning.setMobile(mobile);
     this.overweightWarning.setMobile(mobile);
     this.chainsawOrderWarning.setMobile(mobile);
@@ -264,12 +250,7 @@ export class CharacterPanelReadyView {
       this.setMobile(options.mobile);
     }
     this.lastRefreshOptions = options;
-    const hasUnspentSkillPoints = options.unspentSkillPoints > 0;
-    const mustSpendSkillPoints =
-      !options.tutorialActive &&
-      options.currentTurn === 0 &&
-      hasUnspentSkillPoints;
-    this.readyEnabled = options.enabled && !mustSpendSkillPoints;
+    this.readyEnabled = options.enabled;
 
     const showReady =
       (options.tutorialActive
@@ -294,38 +275,22 @@ export class CharacterPanelReadyView {
       ) {
         this.setReadyState(false, true);
       }
-      if (mustSpendSkillPoints && this.readyState) {
-        this.setReadyState(false, true);
-      }
     }
 
     const warningRowIsActive =
       options.isCharacterActive && options.isStatusActive;
-    const showSkillsWarning = mustSpendSkillPoints && warningRowIsActive;
     const showEnergyWarning =
-      !showSkillsWarning &&
       options.plannedEnergyCost > options.availableEnergy &&
       warningRowIsActive;
     const showOverweightWarning =
-      !showSkillsWarning &&
       !showEnergyWarning &&
       options.willBeOverweight &&
       warningRowIsActive;
     const showChainsawOrderWarning =
-      !showSkillsWarning &&
       !showEnergyWarning &&
       !showOverweightWarning &&
       options.hasChainsawOrderConflict === true &&
       warningRowIsActive;
-
-    if (showSkillsWarning) {
-      this.unspentSkillsWarning.setText(
-        `${t("Unspent points")}: ${options.unspentSkillPoints}`
-      );
-      this.unspentSkillsWarning.setVisible(true);
-    } else {
-      this.unspentSkillsWarning.setVisible(false);
-    }
 
     const previousWarning = this.activeWarning;
     this.energyWarning.setText(t("Insufficient energy"));
@@ -334,15 +299,13 @@ export class CharacterPanelReadyView {
     this.overweightWarning.setVisible(showOverweightWarning);
     this.chainsawOrderWarning.setText(t("Chainsaw order"));
     this.chainsawOrderWarning.setVisible(showChainsawOrderWarning);
-    this.activeWarning = showSkillsWarning
-      ? this.unspentSkillsWarning
-      : showEnergyWarning
-        ? this.energyWarning
-        : showOverweightWarning
-          ? this.overweightWarning
-          : showChainsawOrderWarning
-            ? this.chainsawOrderWarning
-            : null;
+    this.activeWarning = showEnergyWarning
+      ? this.energyWarning
+      : showOverweightWarning
+        ? this.overweightWarning
+        : showChainsawOrderWarning
+          ? this.chainsawOrderWarning
+          : null;
     if (this.activeWarning !== previousWarning || this.activeWarning === null) {
       this.hideWarningTooltip();
     }
@@ -388,7 +351,6 @@ export class CharacterPanelReadyView {
     this.readyToggle.destroy();
     this.checkMarkText.destroy();
     this.readyHighlightBorder.destroy();
-    this.unspentSkillsWarning.destroy();
     this.energyWarning.destroy();
     this.overweightWarning.destroy();
     this.chainsawOrderWarning.destroy();
@@ -443,7 +405,6 @@ export class CharacterPanelReadyView {
 
   private updateWarningPosition(): void {
     const warningX = this.readyToggle.x + this.readyToggle.width + 12;
-    this.unspentSkillsWarning.setPosition(warningX, this.readyToggle.y + 1);
     this.energyWarning.setPosition(
       warningX,
       this.readyToggle.y +
