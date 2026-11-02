@@ -1,9 +1,13 @@
 import {
   ItemLibrary,
+  LocalizationType,
+  SkillLibrary,
+  type HexTileSnapshot,
   type PlayerCharacter,
   type ReplaySnapshot,
   type ReplayEvent
 } from "@shared";
+import { t } from "../services/i18n";
 
 export interface CharacterSkillMultiplier {
   readonly code: string;
@@ -21,6 +25,9 @@ export interface HugoCharacterInput {
   readonly statuses?: { conditions?: string[] };
   readonly coord?: { readonly q: number; readonly r: number };
   readonly position?: { coord: { q: number; r: number } };
+  readonly cellType?: LocalizationType | string;
+  readonly cellTypeName?: string;
+  readonly localizationType?: LocalizationType | string;
   readonly skillPoints?: number;
   readonly progression?: {
     availableSkillPoints?: number;
@@ -72,6 +79,28 @@ const CONDITION_SPANISH: Record<string, string> = {
   protected: "Protegido"
 };
 
+export const formatCellType = (
+  cellType?: LocalizationType | string
+): string => {
+  if (!cellType) {
+    return "";
+  }
+  return t(String(cellType));
+};
+
+export const isZarkanIncomeAction = (action: string): boolean => {
+  if (!action || typeof action !== "string") {
+    return false;
+  }
+  const normalized = action.trim().toLowerCase();
+  return (
+    normalized === "zarkan income" ||
+    normalized === "zarkan_income" ||
+    normalized.includes("daily zarkans") ||
+    normalized.includes("zarkans diarios")
+  );
+};
+
 function axialDist(
   a: { q: number; r: number },
   b: { q: number; r: number }
@@ -84,6 +113,87 @@ function axialDist(
   );
 }
 
+const CODE_TO_NAME: Record<string, string> = {
+  F: "Fuerza",
+  A: "Agilidad",
+  D: "Destreza",
+  R: "Resistencia",
+  S: "Simpatía",
+  P: "Percepción",
+  V: "Vitalidad"
+};
+
+const SHORTHAND_TO_SKILL_ID: Record<string, string> = {
+  F1: "strength1",
+  F2: "strength2",
+  F3: "strength3",
+  F4: "strength4",
+  F5: "strength5",
+  A1: "agility1",
+  A2: "agility2",
+  A3: "agility3",
+  A4: "agility4",
+  D1: "dexterity1",
+  D2: "dexterity2",
+  D3: "dexterity3",
+  D4: "dexterity4",
+  R1: "resilience1",
+  R2: "resilience2",
+  R3: "resilience3",
+  R4: "resilience4",
+  S1: "charisma1",
+  S2: "charisma2",
+  S3: "charisma3",
+  S4: "charisma4",
+  P1: "perception1",
+  P2: "perception2",
+  P3: "perception3",
+  P4: "perception4",
+  P5: "perception5",
+  P6: "perception6",
+  V: "vitality"
+};
+
+const SKILL_NAMES: Record<string, string> = {
+  vitality: "Vitalidad",
+  strength1: "Fuerza 1",
+  strength2: "Fuerza 2",
+  strength3: "Fuerza 3",
+  strength4: "Fuerza 4",
+  strength5: "Fuerza 5",
+  agility1: "Agilidad 1",
+  agility2: "Agilidad 2",
+  agility3: "Agilidad 3",
+  agility4: "Agilidad 4",
+  dexterity1: "Destreza 1",
+  dexterity2: "Destreza 2",
+  dexterity3: "Destreza 3",
+  dexterity4: "Destreza 4",
+  resilience1: "Resistencia 1",
+  resilience2: "Resistencia 2",
+  resilience3: "Resistencia 3",
+  resilience4: "Resistencia 4",
+  charisma1: "Simpatía 1",
+  charisma2: "Simpatía 2",
+  charisma3: "Simpatía 3",
+  charisma4: "Simpatía 4",
+  perception1: "Percepción 1",
+  perception2: "Percepción 2",
+  perception3: "Percepción 3",
+  perception4: "Percepción 4",
+  perception5: "Percepción 5",
+  perception6: "Percepción 6",
+  greedy: "H1 Codicioso",
+  cannibal: "H2 Caníbal",
+  salesman: "H3 Vendedor",
+  pensioner: "H4 Pensionista",
+  undetectable: "H5 Indetectable",
+  brave: "H6 Valiente",
+  vengeful: "H7 Vengativo",
+  charming: "H8 Encantador",
+  coward: "H9 Cobarde"
+};
+
 export const formatAbilityMultipliers = (
   skills?: readonly CharacterSkillMultiplier[] | readonly string[]
 ): string => {
@@ -94,37 +204,49 @@ export const formatAbilityMultipliers = (
   if (typeof first === "object" && first !== null && "code" in first) {
     return (skills as readonly CharacterSkillMultiplier[])
       .map((s) => {
-        const mult = s.multiplier && s.multiplier > 1 ? `x${s.multiplier}` : "";
-        return `${s.code}${s.level}${mult}`;
+        const mult = s.multiplier && s.multiplier > 1 ? `(x${s.multiplier})` : "";
+        const name = CODE_TO_NAME[s.code] ?? s.code;
+        const levelStr =
+          typeof s.level === "number" && s.level > 0 ? ` ${s.level}` : "";
+        return `${name}${levelStr}${mult}`;
       })
-      .join(" ");
+      .join(", ");
   }
 
   const counts = new Map<string, number>();
   for (const item of skills as readonly string[]) {
-    counts.set(item, (counts.get(item) ?? 0) + 1);
+    const key = SHORTHAND_TO_SKILL_ID[item] ?? item;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
   }
-  const prefixes: Record<string, string> = {
-    strength1: "F1",
-    strength2: "F2",
-    strength3: "F3",
-    strength4: "F4",
-    strength5: "F5",
-    agility1: "A1",
-    agility2: "A2",
-    agility3: "A3",
-    agility4: "A4"
-  };
+
   const parts: string[] = [];
-  for (const [key, prefix] of Object.entries(prefixes)) {
+  const handled = new Set<string>();
+
+  for (const [key, name] of Object.entries(SKILL_NAMES)) {
     const count = counts.get(key) ?? 0;
     if (count === 1) {
-      parts.push(prefix);
+      parts.push(name);
+      handled.add(key);
     } else if (count > 1) {
-      parts.push(`${prefix}x${count}`);
+      parts.push(`${name}(x${count})`);
+      handled.add(key);
     }
   }
-  return parts.join(" ");
+
+  for (const [key, count] of counts.entries()) {
+    if (!handled.has(key) && count > 0) {
+      const name =
+        (SkillLibrary as Record<string, { name: string } | undefined>)[key]
+          ?.name ?? key;
+      if (count === 1) {
+        parts.push(name);
+      } else {
+        parts.push(`${name}(x${count})`);
+      }
+    }
+  }
+
+  return parts.join(", ");
 };
 
 type InventoryItemEntry = {
@@ -149,9 +271,9 @@ export const formatInventoryItems = (
   }
   const list: readonly InventoryItemEntry[] = Array.isArray(inventory)
     ? inventory
-    : ("carriedItems" in inventory && Array.isArray(inventory.carriedItems)
+    : "carriedItems" in inventory && Array.isArray(inventory.carriedItems)
       ? inventory.carriedItems
-      : []);
+      : [];
   if (list.length === 0) {
     return "";
   }
@@ -159,7 +281,9 @@ export const formatInventoryItems = (
     .map((item: InventoryItemEntry) => {
       const id = item.itemId ?? item.id ?? "";
       const rawCount = item.quantity ?? item.count ?? 1;
-      const libItem = (ItemLibrary as Record<string, { name: string } | undefined>)[id];
+      const libItem = (
+        ItemLibrary as Record<string, { name: string } | undefined>
+      )[id];
       const name = (libItem?.name ?? id).toLowerCase();
       const count = rawCount > 1 ? `x${rawCount}` : "";
       return `${name}${count}`;
@@ -196,7 +320,7 @@ export const formatHugoCharacterLog = (input: HugoCharacterInput): string => {
   const teamStr = rawTeam
     ? rawTeam.startsWith("Equipo")
       ? rawTeam
-      : `Equipo${rawTeam}`
+      : `Equipo ${rawTeam}`
     : "Sin equipo";
 
   const speed = input.speed ?? input.stats?.speed ?? 0;
@@ -204,9 +328,11 @@ export const formatHugoCharacterLog = (input: HugoCharacterInput): string => {
   const skillPoints =
     input.skillPoints ?? input.progression?.availableSkillPoints ?? 0;
   const xpCurrent = input.xp?.current ?? input.progression?.experience ?? 0;
-  const xpMax = input.xp?.max ?? input.progression?.experienceForNextLevel ?? 10;
+  const xpMax =
+    input.xp?.max ?? input.progression?.experienceForNextLevel ?? 10;
   const zarkans = input.zarkans ?? input.economy?.zarkans ?? 0;
-  const weightCurrent = input.weight?.current ?? input.stats?.load?.current ?? 0;
+  const weightCurrent =
+    input.weight?.current ?? input.stats?.load?.current ?? 0;
   const weightMax = input.weight?.max ?? input.stats?.load?.max ?? 25;
   const hpCurrent = input.hp?.current ?? input.stats?.health?.current ?? 12;
   const hpMax = input.hp?.max ?? input.stats?.health?.max ?? 12;
@@ -214,16 +340,28 @@ export const formatHugoCharacterLog = (input: HugoCharacterInput): string => {
     input.energy?.current ?? input.stats?.energy?.current ?? 20;
   const energyMax = input.energy?.max ?? input.stats?.energy?.max ?? 20;
 
-  const turnActions = input.turnActions ?? [];
+  const turnActions = (input.turnActions ?? []).filter(
+    (action) => !isZarkanIncomeAction(action)
+  );
   const visibleEntities = input.visibleEntities ?? [];
-  const recentHistory = input.recentTurnsHistory ?? [];
+  const recentHistory = (input.recentTurnsHistory ?? []).map((h) => ({
+    turn: h.turn,
+    actions: h.actions.filter((a) => !isZarkanIncomeAction(a))
+  }));
+
+  const cellTypeStr = formatCellType(
+    input.cellType ?? input.cellTypeName ?? input.localizationType
+  );
+  const locationLine = cellTypeStr
+    ? `Localización: (${coord.q},${coord.r}) ${cellTypeStr}`
+    : `Localización: (${coord.q},${coord.r})`;
 
   const lines = [
     headerLine,
     teamStr,
     `Rapidez: ${speed}`,
     `Estado: ${statusStr}`,
-    `Localización: ${coord.q},${coord.r}`,
+    locationLine,
     `Puntos habilidad: ${skillPoints}`,
     `Experiencia: ${xpCurrent}/${xpMax}`,
     `Zarkans: ${zarkans}`,
@@ -261,6 +399,9 @@ export type LogCharacterSource =
       speed?: number;
       coord?: { readonly q: number; readonly r: number };
       status?: readonly string[] | string;
+      cellType?: LocalizationType | string;
+      cellTypeName?: string;
+      localizationType?: LocalizationType | string;
     });
 
 export const formatCharacterTurnLog = (
@@ -272,7 +413,9 @@ export const formatCharacterTurnLog = (
   pastTurnsActions?: readonly {
     readonly turn: number;
     readonly actions: readonly string[];
-  }[]
+  }[],
+  displayName?: string,
+  usernames?: Record<string, string>
 ): string => {
   if (
     teamName === undefined &&
@@ -282,15 +425,33 @@ export const formatCharacterTurnLog = (
     "name" in character &&
     ("turnActions" in character || "skills" in character)
   ) {
-    return formatHugoCharacterLog(character as HugoCharacterInput);
+    const input = displayName
+      ? { ...(character as HugoCharacterInput), name: displayName }
+      : (character as HugoCharacterInput);
+    return formatHugoCharacterLog(input);
   }
 
   const char = character as HugoCharacterInput & Partial<PlayerCharacter>;
+  const charCoord = char.coord ?? char.position?.coord ?? { q: 0, r: 0 };
+  let cellType = char.cellType ?? char.localizationType ?? char.cellTypeName;
+  if (!cellType && snapshot?.map?.tiles) {
+    const tileList: readonly HexTileSnapshot[] = Array.isArray(
+      snapshot.map.tiles
+    )
+      ? snapshot.map.tiles
+      : (Object.values(snapshot.map.tiles) as readonly HexTileSnapshot[]);
+    const tile = tileList.find(
+      (t) => t?.coord && t.coord.q === charCoord.q && t.coord.r === charCoord.r
+    );
+    if (tile?.localizationType) {
+      cellType = tile.localizationType;
+    }
+  }
+
   let visibleEntities: string[] = [];
   if (Array.isArray(char.visibleEntities)) {
     visibleEntities = [...char.visibleEntities];
   } else if (snapshot) {
-    const charCoord = char.coord ?? char.position?.coord ?? { q: 0, r: 0 };
     const viewRange = char.stats?.baseViewRange ?? 3;
     const playersMap = snapshot.playerCharacters ?? {};
     const playerList = Array.isArray(playersMap)
@@ -308,7 +469,14 @@ export const formatCharacterTurnLog = (
       }
       const otherCoord = other.coord ?? other.position?.coord;
       if (otherCoord && axialDist(charCoord, otherCoord) <= viewRange) {
-        visibleEntities.push(other.name ?? other.id ?? "Player");
+        const otherId = other.id ?? "";
+        const otherName =
+          usernames?.[otherId] ??
+          (other.name && other.name !== otherId ? other.name : undefined) ??
+          other.name ??
+          other.id ??
+          "Player";
+        visibleEntities.push(otherName);
       }
     }
     const itemsMap = snapshot.items ?? {};
@@ -329,12 +497,12 @@ export const formatCharacterTurnLog = (
       }
       const itemCoord = raw.coord;
       const isHere =
-        itemCoord &&
-        itemCoord.q === charCoord.q &&
-        itemCoord.r === charCoord.r;
+        itemCoord && itemCoord.q === charCoord.q && itemCoord.r === charCoord.r;
       if (isHere || (raw.id && discoveredItemIds.has(raw.id))) {
         const itemId = raw.itemId ?? "";
-        const libItem = (ItemLibrary as Record<string, { name: string } | undefined>)[itemId];
+        const libItem = (
+          ItemLibrary as Record<string, { name: string } | undefined>
+        )[itemId];
         const itemName = (libItem?.name ?? itemId).toLowerCase();
         if (itemName) {
           visibleEntities.push(itemName);
@@ -345,29 +513,58 @@ export const formatCharacterTurnLog = (
 
   let turnActions: string[] = [];
   if (Array.isArray(events)) {
-    turnActions = events.map((e) =>
-      typeof e === "string" ? e : (((e as unknown as { description?: string })?.description) ?? "")
-    );
+    turnActions = events
+      .filter((e) => {
+        if (typeof e === "object" && e !== null && "action" in e) {
+          const action = (e as { action?: { actionId?: string } }).action;
+          if (action && typeof action === "object" && "actionId" in action) {
+            if (action.actionId === "zarkan_income") {
+              return false;
+            }
+          }
+        }
+        return true;
+      })
+      .map((e) =>
+        typeof e === "string"
+          ? e
+          : ((e as unknown as { description?: string })?.description ?? "")
+      )
+      .filter((a: string) => !isZarkanIncomeAction(a));
   } else if (Array.isArray(char.turnActions)) {
-    turnActions = [...char.turnActions];
+    turnActions = char.turnActions.filter((a: string) => !isZarkanIncomeAction(a));
   }
 
   let recentHistory: Array<{ turn: number; actions: readonly string[] }> = [];
   if (Array.isArray(pastTurnsActions)) {
-    recentHistory = [...pastTurnsActions];
+    recentHistory = pastTurnsActions.map((h) => ({
+      turn: h.turn,
+      actions: h.actions.filter((a: string) => !isZarkanIncomeAction(a))
+    }));
   } else if (Array.isArray(char.recentTurnsHistory)) {
-    recentHistory = [...char.recentTurnsHistory];
+    recentHistory = char.recentTurnsHistory.map((h) => ({
+      turn: h.turn,
+      actions: h.actions.filter((a: string) => !isZarkanIncomeAction(a))
+    }));
   }
 
+  const resolvedName =
+    displayName ??
+    (char.id && char.name && char.name !== char.id ? char.name : undefined) ??
+    (char.id && usernames?.[char.id]) ??
+    char.name ??
+    "Player";
+
   const input: HugoCharacterInput = {
-    name: char.name ?? "Player",
+    name: resolvedName,
     team: teamName ?? char.secretTeamId ?? char.teamId ?? "Sin equipo",
     skills: char.skills,
     abilities: char.abilities,
     speed: char.speed ?? char.stats?.speed,
     status: char.status,
     statuses: char.statuses,
-    coord: char.coord ?? char.position?.coord,
+    coord: charCoord,
+    cellType,
     skillPoints: char.skillPoints ?? char.progression?.availableSkillPoints,
     progression: char.progression,
     xp: char.xp,
@@ -409,7 +606,10 @@ export const formatAllMatchTurnLog = (
         parts.push(`--- Jugador: ${entry.playerName} ---`, entry.log, "");
       }
     } else {
-      parts.push("Acciones:", ...(eventStrings as readonly string[]));
+      const filtered = (eventStrings as readonly string[]).filter(
+        (line) => !isZarkanIncomeAction(line)
+      );
+      parts.push("Acciones:", ...(filtered.length > 0 ? filtered : ["Ninguna"]));
     }
   } else {
     parts.push("Acciones:", "Ninguna");

@@ -29,25 +29,8 @@ type ScrollablePanelInstance = Phaser.GameObjects.GameObject & {
 
 export type CellContentsEntry = CellItemGridEntry;
 
-const CELL_TYPE_LABELS: Record<LocalizationType, string> = {
-  [LocalizationType.House]: "House",
-  [LocalizationType.Pharmacy]: "Pharmacy",
-  [LocalizationType.PoliceStation]: "Police station",
-  [LocalizationType.Hardware]: "Hardware store",
-  [LocalizationType.Factory]: "Factory",
-  [LocalizationType.Hospital]: "Hospital",
-  [LocalizationType.Workshop]: "Workshop",
-  [LocalizationType.Security]: "Security room",
-  [LocalizationType.GasStation]: "Gas station",
-  [LocalizationType.Market]: "Market",
-  [LocalizationType.Restaurant]: "Restaurant",
-  [LocalizationType.Road]: "Road",
-  [LocalizationType.Path]: "Path",
-  [LocalizationType.Alley]: "Alley"
-};
-
 export function getCellTypeLabel(cellType: LocalizationType): string {
-  return t(CELL_TYPE_LABELS[cellType]);
+  return t(cellType);
 }
 
 export class CellContentsPanel {

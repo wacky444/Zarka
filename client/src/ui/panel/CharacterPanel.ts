@@ -1278,6 +1278,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.playerOptions,
         this.currentUserId
       );
+      this.logView.setPlayerOptions(this.playerOptions);
       if (this.currentUserId && userId === this.currentUserId) {
         const characters = this.currentMatch.playerCharacters ?? {};
         const character =

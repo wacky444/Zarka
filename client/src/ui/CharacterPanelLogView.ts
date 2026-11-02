@@ -152,6 +152,7 @@ export class CharacterPanelLogView {
   private matchId = "";
   private currentSnapshot: ReplaySnapshot | null = null;
   private playerCharactersMap: Record<string, PlayerCharacter> = {};
+  private playerOptions: PlayerOption[] = [];
   private turnActionHistory = new Map<string, Map<number, string[]>>();
   private lastBounds?: {
     margin: number;
@@ -542,9 +543,36 @@ export class CharacterPanelLogView {
   }
 
   setPlayerOptions(options: PlayerOption[]): void {
+    this.playerOptions = [...options];
     if (this.elements.characterSelector) {
       this.elements.characterSelector.setOptions(options);
     }
+  }
+
+  private resolveDisplayName(playerId: string): string {
+    const fromOption = this.playerOptions.find((o) => o.id === playerId)?.name;
+    if (fromOption && fromOption.trim().length > 0) {
+      return fromOption;
+    }
+    const fromUsernames = this.usernames[playerId];
+    if (fromUsernames && fromUsernames.trim().length > 0) {
+      return fromUsernames;
+    }
+    const fromChar = this.playerCharactersMap[playerId]?.name;
+    if (fromChar && fromChar !== playerId && fromChar.trim().length > 0) {
+      return fromChar;
+    }
+    return playerId;
+  }
+
+  private getUsernamesMap(): Record<string, string> {
+    const map: Record<string, string> = { ...this.usernames };
+    for (const opt of this.playerOptions) {
+      if (opt.id && opt.name && opt.name.trim().length > 0) {
+        map[opt.id] = opt.name;
+      }
+    }
+    return map;
   }
 
   private readonly handleCharacterSelect = (
@@ -561,9 +589,7 @@ export class CharacterPanelLogView {
     const isAll = !selected || selected.toLowerCase() === "all";
     const playerName = isAll
       ? "All"
-      : this.usernames[selected] ??
-        this.playerCharactersMap[selected]?.name ??
-        selected;
+      : this.resolveDisplayName(selected);
     const bannerMessage = getBannerNotificationText(isAll ? "All" : playerName);
     this.options.onShowNotification?.(bannerMessage);
     this.options.onCopyLog?.(selected);
@@ -606,13 +632,18 @@ export class CharacterPanelLogView {
       character.teamId ??
       "Sin equipo";
 
+    const displayName = this.resolveDisplayName(characterId);
+    const usernamesMap = this.getUsernamesMap();
+
     return formatCharacterTurnLog(
       character,
       team,
       resolvedTurn,
       this.eventStrings,
       this.currentSnapshot,
-      this.getRecentTurnsHistory(characterId, resolvedTurn)
+      this.getRecentTurnsHistory(characterId, resolvedTurn),
+      displayName,
+      usernamesMap
     );
   }
 
@@ -624,6 +655,9 @@ export class CharacterPanelLogView {
       if (e.kind === "player") {
         const actorId = e.actorId;
         const actionId = e.action?.actionId;
+        if ((actionId as string) === "zarkan_income") {
+          continue;
+        }
         if (actorId && actionId) {
           let charMap = this.turnActionHistory.get(actorId);
           if (!charMap) {
@@ -2123,7 +2157,7 @@ export class CharacterPanelLogView {
     if (!playerId) {
       return t("Unknown");
     }
-    return this.usernames[playerId] ?? playerId;
+    return this.resolveDisplayName(playerId);
   }
 
   private extractSearchItemNames(metadata: unknown): string[] {
