@@ -21,9 +21,23 @@ const CLEAR_OPTION_LABEL = "No target";
 const CLEAR_OPTION_DESCRIPTION = "Removes the current priority target.";
 const NO_OPTIONS_PLACEHOLDER = "No available players";
 
+export interface PlayerSelectorOptions {
+  confirmSelection?: boolean;
+  confirmLabel?: string;
+  label?: string;
+  placeholder?: string;
+  includeEmptyOption?: boolean;
+  emptyOptionLabel?: string;
+  emptyOptionDescription?: string;
+  title?: string;
+  subtitle?: string;
+  emitAllSentinel?: boolean;
+}
+
 export class PlayerSelector extends Phaser.GameObjects.Container {
   private readonly label: Phaser.GameObjects.Text;
   private readonly grid: GridSelect;
+  private readonly optionsConfig?: PlayerSelectorOptions;
   private options: PlayerOption[] = [];
   private current: string | null = null;
   private enabled = true;
@@ -37,27 +51,38 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
     x: number,
     y: number,
     width: number,
-    options?: { confirmSelection?: boolean; confirmLabel?: string }
+    options?: PlayerSelectorOptions
   ) {
     super(scene, x, y);
     this.preferredWidth = width;
+    this.optionsConfig = options;
     scene.add.existing(this);
 
+    const labelText =
+      options?.label !== undefined ? options.label : "Target Player";
     this.label = scene.add
-      .text(0, 0, "Target Player", {
+      .text(0, 0, labelText, {
         fontSize: "16px",
         color: "#ffffff",
       })
       .setOrigin(0, 0);
 
+    const showLabel = labelText.length > 0;
+    this.label.setVisible(showLabel);
+
+    const emptyLabel = options?.emptyOptionLabel ?? CLEAR_OPTION_LABEL;
+    const emptyDesc =
+      options?.emptyOptionDescription ?? CLEAR_OPTION_DESCRIPTION;
+    const includeEmpty = options?.includeEmptyOption !== false;
+
     this.grid = new GridSelect(scene, 0, 0, {
       width,
-      title: "Select Target Player",
-      subtitle: "Tap a player to target them",
-      placeholder: SELECT_LABEL,
-      includeEmptyOption: true,
-      emptyOptionLabel: CLEAR_OPTION_LABEL,
-      emptyOptionDescription: CLEAR_OPTION_DESCRIPTION,
+      title: options?.title ?? "Select Target Player",
+      subtitle: options?.subtitle ?? "Tap a player to target them",
+      placeholder: options?.placeholder ?? SELECT_LABEL,
+      includeEmptyOption: includeEmpty,
+      emptyOptionLabel: emptyLabel,
+      emptyOptionDescription: emptyDesc,
       columns: 3,
       desktopMinCellWidth: 160,
       cellHeight: 120,
@@ -66,7 +91,8 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
       confirmSelection: options?.confirmSelection,
       confirmLabel: options?.confirmLabel
     });
-    this.grid.setPosition(0, this.label.height + 6);
+    const gridY = showLabel ? this.label.height + 6 : 0;
+    this.grid.setPosition(0, gridY);
     this.grid.on("change", this.handleSelection);
     this.grid.on("modal-open", this.handleModalOpen);
     this.grid.on("modal-close", this.handleModalClose);
@@ -80,6 +106,10 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
 
   setLabel(label: string): void {
     this.label.setText(label);
+    const showLabel = label.length > 0;
+    this.label.setVisible(showLabel);
+    const gridY = showLabel ? this.label.height + 6 : 0;
+    this.grid.setPosition(0, gridY);
     this.refreshSize();
   }
 
@@ -173,7 +203,11 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
     this.preferredWidth = width;
     this.label.setWordWrapWidth(width, true);
     this.grid.setDisplayWidth(width);
-    this.grid.setPosition(0, this.label.height + 6);
+    const gridY =
+      this.label.visible && this.label.text.length > 0
+        ? this.label.height + 6
+        : 0;
+    this.grid.setPosition(0, gridY);
     this.refreshSize();
   }
 
@@ -230,7 +264,11 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
       return;
     }
     this.current = value ?? null;
-    this.emit("change", this.current);
+    const emitted =
+      this.current === null && this.optionsConfig?.emitAllSentinel
+        ? "all"
+        : this.current;
+    this.emit("change", emitted);
     this.updateState();
   };
 
@@ -258,10 +296,12 @@ export class PlayerSelector extends Phaser.GameObjects.Container {
     const hasSelectable = this.options.some(
       (option) => option.disabled !== true
     );
+    const defaultPlaceholder =
+      this.optionsConfig?.placeholder ?? SELECT_LABEL;
     const placeholder = this.pending
       ? SELECT_PENDING_LABEL
       : hasSelectable
-      ? SELECT_LABEL
+      ? defaultPlaceholder
       : NO_OPTIONS_PLACEHOLDER;
     this.grid.setPlaceholder(placeholder);
     const canInteract = this.enabled && !this.pending && hasSelectable;

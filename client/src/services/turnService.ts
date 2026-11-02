@@ -226,13 +226,15 @@ export class TurnService {
     match_id: string,
     turn?: number,
     viewAll = false,
-    fullReplay = false
+    fullReplay = false,
+    character?: string | null
   ) {
     const payload: {
       match_id: string;
       turn?: number;
       view_all: boolean;
       full_replay: boolean;
+      character?: string;
     } = {
       match_id,
       view_all: viewAll,
@@ -241,8 +243,21 @@ export class TurnService {
     if (typeof turn === "number") {
       payload.turn = turn;
     }
-    const res = await this.client.rpc(this.session, "get_replay", payload);
+    if (typeof character === "string" && character.trim().length > 0) {
+      payload.character = character.trim();
+    }
+    const res = await this.client.rpc(this.session, "get_log", payload);
     return res;
+  }
+
+  async getLog(
+    match_id: string,
+    turn?: number,
+    viewAll = false,
+    fullReplay = false,
+    character?: string | null
+  ) {
+    return this.getReplay(match_id, turn, viewAll, fullReplay, character);
   }
 
   async joinMatch(match_id: string) {

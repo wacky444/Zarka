@@ -91,6 +91,14 @@ export function InitModule(
     );
   }
   try {
+    initializer.registerRpc("get_log", getReplayRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register get_log: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
     initializer.registerRpc("save_chat_message", saveChatMessageRpc);
   } catch (error) {
     logger.error(

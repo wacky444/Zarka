@@ -2,6 +2,7 @@
 
 import {
   DEFAULT_REPLAY_VIEW_DISTANCE,
+  type GetLogPayload,
   type GetReplayPayload,
   type ReplayEvent,
   type ReplaySnapshot,
@@ -99,9 +100,10 @@ export function getReplayRpc(
     throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
   }
   const fullReplayRequested = json.full_replay === true;
-  const hasMatchReport = fullReplayRequested
-    ? storage.getMatchReport(matchId) !== null
-    : false;
+  const requestedCharacter =
+    typeof json.character === "string" ? json.character.trim() : undefined;
+  const hasMatchReport = storage.getMatchReport(matchId) !== null;
+  const isAuthorized = isAdmin || hasMatchReport;
 
   const maxTurn =
     typeof match.current_turn === "number" ? match.current_turn : 0;
@@ -113,8 +115,23 @@ export function getReplayRpc(
     turn = 0;
   }
 
-  const viewAll =
-    (json.view_all === true && isAdmin) || hasMatchReport;
+  let viewAll = false;
+  let targetViewerId = ctx.userId;
+
+  if (isAuthorized) {
+    if (requestedCharacter && requestedCharacter.toLowerCase() === "all") {
+      viewAll = true;
+    } else if (requestedCharacter) {
+      targetViewerId = requestedCharacter;
+      viewAll = false;
+    } else {
+      viewAll = (json.view_all === true && isAdmin) || hasMatchReport;
+    }
+  } else {
+    targetViewerId = ctx.userId;
+    viewAll = false;
+  }
+
   let events: ReplayEvent[] = [];
   let snapshot: ReplaySnapshot | undefined;
   let preTurnSnapshot: ReplaySnapshot | undefined;
@@ -126,7 +143,7 @@ export function getReplayRpc(
       events = Array.isArray(replay.events)
         ? tailorReplayEvents(
             replay.events,
-            ctx.userId,
+            targetViewerId,
             sourceCharacters,
             DEFAULT_REPLAY_VIEW_DISTANCE,
             viewAll,
@@ -135,7 +152,7 @@ export function getReplayRpc(
       if (replay.snapshot) {
         snapshot = tailorReplaySnapshot(
           replay.snapshot,
-          ctx.userId,
+          targetViewerId,
           viewAll,
           turn,
           sourceCharacters
@@ -153,7 +170,7 @@ export function getReplayRpc(
           previousReplay.snapshot.playerCharacters ?? match.playerCharacters;
         preTurnSnapshot = tailorReplaySnapshot(
           previousReplay.snapshot,
-          ctx.userId,
+          targetViewerId,
           viewAll,
           turn - 1,
           previousCharacters
@@ -162,11 +179,14 @@ export function getReplayRpc(
     }
   }
 
-  const response: GetReplayPayload = {
+  const response: GetLogPayload = {
     ok: true,
     match_id: matchId,
     turn,
     max_turn: maxTurn,
+    ...(requestedCharacter !== undefined
+      ? { character: isAuthorized ? requestedCharacter : ctx.userId }
+      : {}),
     events,
     snapshot,
     preTurnSnapshot,

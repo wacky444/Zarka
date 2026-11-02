@@ -119,16 +119,28 @@ export type GetStatePayload = {
   turns?: TurnRecord[];
 };
 
-export type GetReplayPayload = {
+export interface GetLogRequestPayload {
+  match_id: string;
+  turn?: number;
+  character?: string;
+  view_all?: boolean;
+  full_replay?: boolean;
+}
+
+export interface GetReplayPayload {
   ok?: boolean;
   match_id?: string;
   turn?: number;
   max_turn?: number;
+  character?: string;
   events?: ReplayEvent[];
   snapshot?: ReplaySnapshot;
   preTurnSnapshot?: ReplaySnapshot;
   error?: string;
-};
+}
+
+export interface GetLogPayload extends GetReplayPayload {}
+
 
 export type LeaveMatchPayload = {
   ok?: boolean;

@@ -5,6 +5,7 @@ import {
   type MatchRecord,
   type PlayerCharacter,
   type ReplayEvent,
+  type ReplaySnapshot,
   DEFAULT_SKIN,
   type Skin,
   type ShopId,
@@ -45,7 +46,7 @@ import {
   type MainActionSelection,
   type SecondaryActionSelection
 } from "./CharacterPanelActionPlanView";
-import type { PlayerOption } from "../PlayerSelector";
+import { PlayerSelector, type PlayerOption } from "../PlayerSelector";
 import type { ItemPriorityOption } from "../ItemPrioritySelector";
 
 export type { MainActionSelection, SecondaryActionSelection };
@@ -540,6 +541,35 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       })
       .setOrigin(0, 0)
       .setVisible(false);
+    const logCopyButton = scene.add
+      .image(0, logControlY, "replay-copy-log")
+      .setDisplaySize(20, 20)
+      .setTint(THEME.colors.healthAccent)
+      .setOrigin(0, 0)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    const logExportButton = scene.add
+      .image(0, logControlY, "replay-export-turn")
+      .setDisplaySize(20, 20)
+      .setTint(THEME.colors.healthAccent)
+      .setOrigin(0, 0)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    const logPlayerSelector = new PlayerSelector(
+      scene,
+      MARGIN,
+      contentTop + 36,
+      boxWidth,
+      {
+        label: "",
+        placeholder: "[ All Characters ]",
+        includeEmptyOption: true,
+        emptyOptionLabel: "All",
+        emptyOptionDescription: "Full match untailored view"
+      }
+    );
+    logPlayerSelector.setVisible(false);
+
     this.add(logPrevButton);
     this.add(logTurnLabel);
     this.add(logNextButton);
@@ -547,6 +577,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.add(logFilterTrack);
     this.add(logFilterKnob);
     this.add(logFilterLabel);
+    this.add(logCopyButton);
+    this.add(logExportButton);
+    this.add(logPlayerSelector);
     this.add(logEventsBox);
     this.add(logStatusText);
     this.add(logEventsText);
@@ -562,7 +595,10 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         turnLabel: logTurnLabel,
         statusText: logStatusText,
         eventsBox: logEventsBox,
-        eventsText: logEventsText
+        eventsText: logEventsText,
+        copyButton: logCopyButton,
+        exportButton: logExportButton,
+        characterSelector: logPlayerSelector
       },
       onRequestReplay: (turn) => {
         this.emit("log-turn-request", turn);
@@ -571,7 +607,19 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.emit("log-play-manual", turn);
       },
       formatActionName: (id) => formatActionLabel(id),
-      onElimination: this.handleLogElimination
+      onElimination: this.handleLogElimination,
+      onShowNotification: (message) => {
+        this.emit("banner-notification", message);
+      },
+      onSelectCharacter: (characterId) => {
+        this.emit("log-character-select", characterId);
+      },
+      onCopyLog: (characterId) => {
+        this.emit("log-copy", characterId);
+      },
+      onExportTurn: (characterId) => {
+        this.emit("log-export", characterId);
+      }
     });
     this.logView.handleVisibilityChange({ visible: false, forceEnsure: false });
     this.logView.setTurnInfo(0);
@@ -1278,9 +1326,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     this.logView.setTeams(teamMap);
     this.logView.setCurrentUserId(currentUserId);
+    this.logView.setMatchId(match?.match_id ?? "");
+    this.logView.setPlayerCharacters(match?.playerCharacters ?? {});
     this.currentMatch = match ?? null;
     this.currentUserId = currentUserId ?? null;
     this.updatePlayerOptions(match ?? null, userMap, currentUserId);
+    this.logView.setPlayerOptions(this.playerOptions);
     this.playersTabView.update(
       match ?? null,
       this.playerOptions,
@@ -1555,8 +1606,13 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.logView.setImportanceThreshold(threshold);
   }
 
-  setLogReplay(turn: number, maxTurn: number, events: ReplayEvent[]) {
-    this.logView.setReplay(turn, maxTurn, events);
+  setLogReplay(
+    turn: number,
+    maxTurn: number,
+    events: ReplayEvent[],
+    snapshot?: ReplaySnapshot | null
+  ) {
+    this.logView.setReplay(turn, maxTurn, events, snapshot);
   }
 
   appendLogReplay(turn: number, maxTurn: number, events: ReplayEvent[]) {
@@ -1581,6 +1637,30 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
 
   getLogMaxTurn(): number {
     return this.logView.getMaxTurn();
+  }
+
+  getLogSelectedTurn(): number | null {
+    return this.logView.getSelectedTurn();
+  }
+
+  setLogFilterRowVisible(visible: boolean): void {
+    this.logView.setFilterRowVisible(visible);
+  }
+
+  isLogFilterRowVisible(): boolean {
+    return this.logView.isFilterRowVisible();
+  }
+
+  setLogSelectedCharacter(characterId: string | null, emit = true): void {
+    this.logView.setSelectedCharacter(characterId, emit);
+  }
+
+  getLogSelectedCharacter(): string | null {
+    return this.logView.getSelectedCharacter();
+  }
+
+  setLogSnapshot(snapshot: ReplaySnapshot | null): void {
+    this.logView.setSnapshot(snapshot);
   }
 
   beginDetectivePurchase(): void {

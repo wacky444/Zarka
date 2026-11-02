@@ -89,6 +89,10 @@ import { t } from "../services/i18n";
 import { THEME } from "../ui/ColorPalette";
 import { ReplayControls } from "../ui/ReplayControls";
 import { getRandomLoadingTip } from "../ui/LoadingTips";
+import {
+  isCharacterFilterRowVisible,
+  generateReplayCacheKey
+} from "../utils/logFormatter";
 
 type PlayerEliminationBannerEvent = {
   playerId: string;
@@ -154,7 +158,8 @@ export class GameScene extends Phaser.Scene {
   private locationSelectionHoveredTileId: string | null = null;
   private replayQueue: ReplayEvent[][] = [];
   private replayPlaying = false;
-  private logReplayCache = new Map<number, CachedReplay>();
+  private selectedLogCharacterId: string | null = null;
+  private logReplayCache = new Map<string, CachedReplay>();
   private replayView: {
     turn: number;
     snapshot: ReplaySnapshot;
@@ -786,6 +791,30 @@ export class GameScene extends Phaser.Scene {
         assetPath("assets/images/replay-icons/film.png")
       );
     }
+    if (!this.textures.exists("replay-copy-log")) {
+      this.load.image(
+        "replay-copy-log",
+        assetPath("assets/images/replay-icons/card_tap_outline_up.png")
+      );
+    }
+    if (!this.textures.exists("replay-export-turn")) {
+      this.load.image(
+        "replay-export-turn",
+        assetPath("assets/images/replay-icons/export.png")
+      );
+    }
+    if (!this.textures.exists("card_tap_outline_up")) {
+      this.load.image(
+        "card_tap_outline_up",
+        assetPath("assets/images/replay-icons/card_tap_outline_up.png")
+      );
+    }
+    if (!this.textures.exists("export")) {
+      this.load.image(
+        "export",
+        assetPath("assets/images/replay-icons/export.png")
+      );
+    }
     if (!this.textures.exists("tutorial-forward-arrow")) {
       this.load.image(
         "tutorial-forward-arrow",
@@ -1093,6 +1122,16 @@ export class GameScene extends Phaser.Scene {
     this.characterPanel.on(
       "log-play-manual",
       this.handleLogPlayRequestManual,
+      this
+    );
+    this.characterPanel.on(
+      "log-character-select",
+      this.handleLogCharacterSelect,
+      this
+    );
+    this.characterPanel.on(
+      "banner-notification",
+      (text: string) => this.topBanner?.show({ text }),
       this
     );
     this.characterPanel.on("grid-modal-open", this.gridModalOpenHandler);
@@ -2258,7 +2297,7 @@ export class GameScene extends Phaser.Scene {
     );
     const navigationEnabled =
       !this.logFetchRunning && !this.manualReplayPlaying;
-    const cachedReplay = this.logReplayCache.get(turn);
+    const cachedReplay = this.logReplayCache.get(this.getReplayCacheKey(turn));
     this.replayControls?.setState({
       visible: true,
       turn,
@@ -2471,6 +2510,7 @@ export class GameScene extends Phaser.Scene {
         ? this.playerNameMap
         : undefined;
     this.characterPanel.updateFromMatch(match, this.currentUserId, nameMap);
+    this.updateLogFilterVisibility();
     if (!this.replayModeActive && !this.reportReplayMode && !this.replayView) {
       const turns = match?.current_turn ?? 0;
       this.characterPanel.setLogTurnInfo(turns);
@@ -3637,9 +3677,10 @@ export class GameScene extends Phaser.Scene {
         this.updateCharacterPanel(this.currentMatch);
         const turn = this.currentMatch.current_turn ?? 0;
         if (result.event) {
-          const cached = this.logReplayCache.get(turn);
+          const cacheKey = this.getReplayCacheKey(turn);
+          const cached = this.logReplayCache.get(cacheKey);
           const events = [...(cached?.events ?? []), result.event];
-          this.logReplayCache.set(turn, {
+          this.logReplayCache.set(cacheKey, {
             ...(cached ?? {}),
             events
           });
@@ -3859,7 +3900,8 @@ export class GameScene extends Phaser.Scene {
         : (match.current_turn ?? 0);
     this.topBanner?.show({ text: `Turn ${turnNumber}` });
     if (replayEvents.length > 0) {
-      this.logReplayCache.set(turnNumber, { events: replayEvents });
+      this.logReplayCache.set(this.getReplayCacheKey(turnNumber), { events: replayEvents });
+      this.logReplayCache.set(this.getReplayCacheKey(turnNumber, "all"), { events: replayEvents });
       for (const event of replayEvents) {
         if (event.kind === "player") {
           if (event.action.actionId === "status_dead" && event.actorId) {
@@ -3890,7 +3932,8 @@ export class GameScene extends Phaser.Scene {
       if (!this.replayView && !this.replayPlaying) {
         this.renderPlayerCharacters(match);
       }
-      this.logReplayCache.set(turnNumber, { events: [] });
+      this.logReplayCache.set(this.getReplayCacheKey(turnNumber), { events: [] });
+      this.logReplayCache.set(this.getReplayCacheKey(turnNumber, "all"), { events: [] });
     }
 
     this.updateCharacterPanel(match);
@@ -4480,8 +4523,34 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private getReplayCacheKey(turn: number, characterId?: string | null): string {
+    const char = characterId !== undefined ? characterId : this.selectedLogCharacterId;
+    return generateReplayCacheKey(turn, char);
+  }
+
+  private updateLogFilterVisibility(): void {
+    const isEnded = Boolean(
+      this.reportReplayMode ||
+      this.replayModeActive ||
+      (this.currentMatch && (this.currentMatch.started === false || this.currentMatch.removed !== 0))
+    );
+    const visible = isCharacterFilterRowVisible(isEnded, Boolean(this.adminViewEnabled));
+    this.characterPanel?.setLogFilterRowVisible(visible);
+  }
+
+  private handleLogCharacterSelect(characterId: string | null): void {
+    this.selectedLogCharacterId = characterId === "all" ? null : characterId;
+    const currentTurn =
+      this.characterPanel?.getLogSelectedTurn() ??
+      this.replayView?.turn ??
+      this.currentMatch?.current_turn ??
+      0;
+    this.handleLogTurnRequest(currentTurn);
+  }
+
   private handleLogTabOpened() {
     this.logTabActive = true;
+    this.updateLogFilterVisibility();
     this.completeVisibleTutorialSteps();
     if (!this.replayModeActive && !this.reportReplayMode && !this.replayView) {
       const turns = this.currentMatch?.current_turn ?? 0;
@@ -4508,9 +4577,14 @@ export class GameScene extends Phaser.Scene {
     if (targetTurn < 0) {
       targetTurn = maxTurn;
     }
-    const cached = this.logReplayCache.get(targetTurn);
+    const cached = this.logReplayCache.get(this.getReplayCacheKey(targetTurn));
     if (cached !== undefined) {
-      this.characterPanel.setLogReplay(targetTurn, maxTurn, cached.events);
+      this.characterPanel.setLogReplay(
+        targetTurn,
+        maxTurn,
+        cached.events,
+        cached.preTurnSnapshot ?? cached.snapshot
+      );
       this.applyReplaySnapshot(
         targetTurn,
         cached.preTurnSnapshot ?? cached.snapshot
@@ -4541,11 +4615,16 @@ export class GameScene extends Phaser.Scene {
     panel.setLogLoading(true);
     this.updateReplayControls();
     try {
+      const isAll =
+        this.selectedLogCharacterId === null ||
+        this.selectedLogCharacterId === "all";
+      const characterParam = isAll ? "all" : this.selectedLogCharacterId;
       const res = await service.getReplay(
         matchId,
         turn,
-        this.adminViewEnabled,
-        this.reportReplayMode
+        this.adminViewEnabled || isAll,
+        this.reportReplayMode,
+        characterParam
       );
       if (this.sceneShuttingDown) {
         return;
@@ -4572,14 +4651,22 @@ export class GameScene extends Phaser.Scene {
         snapshot: payload.snapshot,
         preTurnSnapshot: payload.preTurnSnapshot
       };
-      this.logReplayCache.set(resolvedTurn, replay);
+      this.logReplayCache.set(
+        this.getReplayCacheKey(resolvedTurn, characterParam),
+        replay
+      );
       if (this.currentMatch) {
         this.currentMatch.current_turn = Math.max(
           this.currentMatch.current_turn ?? 0,
           maxTurn
         );
       }
-      panel.setLogReplay(resolvedTurn, maxTurn, events);
+      panel.setLogReplay(
+        resolvedTurn,
+        maxTurn,
+        events,
+        payload.preTurnSnapshot ?? payload.snapshot
+      );
       this.completeVisibleTutorialSteps();
       this.applyReplaySnapshot(
         resolvedTurn,
@@ -4620,7 +4707,7 @@ export class GameScene extends Phaser.Scene {
     if (this.replayPlaying) {
       return;
     }
-    const replay = this.logReplayCache.get(turn);
+    const replay = this.logReplayCache.get(this.getReplayCacheKey(turn));
     if (!replay || replay.events.length === 0) {
       return;
     }

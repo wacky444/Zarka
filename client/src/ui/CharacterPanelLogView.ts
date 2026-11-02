@@ -13,8 +13,19 @@ import {
   type Axial,
   type ReplayEvent,
   ReplayImportance,
-  type ZarkanDonationRecord
+  type ZarkanDonationRecord,
+  type PlayerCharacter,
+  type ReplaySnapshot
 } from "@shared";
+import { copyTextToClipboard } from "../utils/clipboard";
+import { downloadTextFile } from "../utils/fileDownload";
+import {
+  formatCharacterTurnLog,
+  formatAllMatchTurnLog,
+  getBannerNotificationText,
+  getExportFileName
+} from "../utils/logFormatter";
+import type { PlayerSelector, PlayerOption } from "./PlayerSelector";
 
 const CRITICAL_REPLAY_ACTION_IDS = new Set<string>([
   "axe_attack",
@@ -77,6 +88,9 @@ export interface CharacterPanelLogElements {
   statusText: Phaser.GameObjects.Text;
   eventsBox: Phaser.GameObjects.Rectangle;
   eventsText: Phaser.GameObjects.Text;
+  copyButton?: Phaser.GameObjects.Image;
+  exportButton?: Phaser.GameObjects.Image;
+  characterSelector?: PlayerSelector;
 }
 
 interface CharacterPanelLogViewOptions {
@@ -91,6 +105,10 @@ interface CharacterPanelLogViewOptions {
     turn: number;
     teamId?: string;
   }) => void;
+  onCopyLog?: (characterId: string | null) => void;
+  onExportTurn?: (characterId: string | null) => void;
+  onSelectCharacter?: (characterId: string | null) => void;
+  onShowNotification?: (message: string) => void;
 }
 
 export class CharacterPanelLogView {
@@ -128,7 +146,20 @@ export class CharacterPanelLogView {
   private replayEvents: ReplayEvent[] = [];
   private draggingFilter = false;
   private eventsViewportWidth = 0;
+  private filterRowVisible = false;
+  private selectedCharacterId: string | null = null;
   private currentUserId: string | null = null;
+  private matchId = "";
+  private currentSnapshot: ReplaySnapshot | null = null;
+  private playerCharactersMap: Record<string, PlayerCharacter> = {};
+  private turnActionHistory = new Map<string, Map<number, string[]>>();
+  private lastBounds?: {
+    margin: number;
+    tabHeight: number;
+    contentTop: number;
+    boxWidth: number;
+    panelHeight: number;
+  };
 
   constructor(private readonly options: CharacterPanelLogViewOptions) {
     this.elements = options.elements;
@@ -165,11 +196,17 @@ export class CharacterPanelLogView {
       options.elements.eventsBox,
       this.eventsScrollPanel
     ];
+    if (options.elements.copyButton) {
+      this.allElements.push(options.elements.copyButton);
+    }
+    if (options.elements.exportButton) {
+      this.allElements.push(options.elements.exportButton);
+    }
     this.bindInteractions();
   }
 
   destroy(): void {
-    const { prevButton, nextButton, playButton } = this.elements;
+    const { prevButton, nextButton, playButton, copyButton, exportButton, characterSelector } = this.elements;
     this.eventsScrollPanel.clearMask?.();
     this.eventsMask.destroy();
     this.eventsMaskShape.destroy();
@@ -177,6 +214,15 @@ export class CharacterPanelLogView {
     prevButton.off(Phaser.Input.Events.POINTER_UP, this.handlePrevClick, this);
     nextButton.off(Phaser.Input.Events.POINTER_UP, this.handleNextClick, this);
     playButton.off(Phaser.Input.Events.POINTER_UP, this.handlePlayClick, this);
+    if (copyButton) {
+      copyButton.off(Phaser.Input.Events.POINTER_UP, this.handleCopyLog, this);
+    }
+    if (exportButton) {
+      exportButton.off(Phaser.Input.Events.POINTER_UP, this.handleExportTurn, this);
+    }
+    if (characterSelector) {
+      characterSelector.off("change", this.handleCharacterSelect, this);
+    }
     this.elements.filterTrack.scene.input.off(
       "pointermove",
       this.handleFilterDrag,
@@ -241,8 +287,17 @@ export class CharacterPanelLogView {
     }
   }
 
-  setReplay(turn: number, maxTurn: number, events: ReplayEvent[]): void {
+  setReplay(
+    turn: number,
+    maxTurn: number,
+    events: ReplayEvent[],
+    snapshot?: ReplaySnapshot | null
+  ): void {
+    if (snapshot !== undefined) {
+      this.currentSnapshot = snapshot;
+    }
     const resolvedTurn = Math.max(0, Math.floor(turn));
+    this.recordTurnActions(resolvedTurn, events);
     this.maxTurn = Math.max(this.maxTurn, Math.floor(maxTurn), resolvedTurn);
     this.selectedTurn = resolvedTurn;
     this.displayedTurn = resolvedTurn;
@@ -311,6 +366,11 @@ export class CharacterPanelLogView {
         }
       ).setVisible?.(options.visible);
     }
+    if (this.elements.characterSelector) {
+      this.elements.characterSelector.setVisible(
+        options.visible && this.filterRowVisible
+      );
+    }
     if (options.visible) {
       this.updateButtons();
       this.refreshDisplay();
@@ -319,6 +379,8 @@ export class CharacterPanelLogView {
       this.elements.prevButton.disableInteractive();
       this.elements.nextButton.disableInteractive();
       this.elements.playButton.disableInteractive();
+      this.elements.copyButton?.disableInteractive();
+      this.elements.exportButton?.disableInteractive();
     }
   }
 
@@ -342,6 +404,7 @@ export class CharacterPanelLogView {
     boxWidth: number;
     panelHeight: number;
   }): void {
+    this.lastBounds = bounds;
     const { margin, contentTop, boxWidth, panelHeight } = bounds;
     const controlY = contentTop;
     const baseX = margin + 12;
@@ -364,8 +427,31 @@ export class CharacterPanelLogView {
     this.elements.filterKnob.setY(controlY + 10);
     this.elements.filterLabel.setPosition(filterX + 82, controlY + 2);
     this.updateFilterControls();
-    const logBoxY = contentTop + 48;
-    const logBoxHeight = Math.max(180, panelHeight - logBoxY - margin);
+
+    const buttonSize = 20;
+    const buttonSpacing = 8;
+    const rightEdge = margin + boxWidth - 8;
+    this.elements.exportButton?.setPosition(
+      rightEdge - buttonSize,
+      controlY + 2
+    );
+    this.elements.copyButton?.setPosition(
+      rightEdge - buttonSize * 2 - buttonSpacing,
+      controlY + 2
+    );
+
+    let logBoxY = contentTop + 48;
+    let logBoxHeight = Math.max(180, panelHeight - logBoxY - margin);
+
+    if (this.filterRowVisible && this.elements.characterSelector) {
+      const selectorY = contentTop + 36;
+      this.elements.characterSelector.setPosition(margin, selectorY);
+      this.elements.characterSelector.setSelectorWidth(boxWidth);
+      const selectorHeight = this.elements.characterSelector.height || 44;
+      logBoxY = selectorY + selectorHeight + 8;
+      logBoxHeight = Math.max(120, panelHeight - logBoxY - margin);
+    }
+
     this.elements.eventsBox.setPosition(margin, logBoxY);
     this.elements.eventsBox.setSize(boxWidth, logBoxHeight);
     this.elements.eventsBox.setDisplaySize(boxWidth, logBoxHeight);
@@ -412,11 +498,192 @@ export class CharacterPanelLogView {
     this.refreshDisplay();
   }
 
+  setFilterRowVisible(visible: boolean): void {
+    if (this.filterRowVisible === visible) {
+      return;
+    }
+    this.filterRowVisible = visible;
+    if (this.elements.characterSelector) {
+      this.elements.characterSelector.setVisible(visible && this.visible);
+    }
+    if (this.lastBounds) {
+      this.layout(this.lastBounds);
+    }
+  }
+
+  isFilterRowVisible(): boolean {
+    return this.filterRowVisible;
+  }
+
+  setSelectedCharacter(characterId: string | null, emit = true): void {
+    this.selectedCharacterId = characterId;
+    if (this.elements.characterSelector) {
+      this.elements.characterSelector.setValue(characterId, false);
+    }
+    if (emit) {
+      this.options.onSelectCharacter?.(characterId);
+    }
+  }
+
+  getSelectedCharacter(): string | null {
+    return this.selectedCharacterId;
+  }
+
+  setMatchId(matchId: string): void {
+    this.matchId = matchId;
+  }
+
+  setPlayerCharacters(characters: Record<string, PlayerCharacter>): void {
+    this.playerCharactersMap = { ...characters };
+  }
+
+  setSnapshot(snapshot: ReplaySnapshot | null): void {
+    this.currentSnapshot = snapshot;
+  }
+
+  setPlayerOptions(options: PlayerOption[]): void {
+    if (this.elements.characterSelector) {
+      this.elements.characterSelector.setOptions(options);
+    }
+  }
+
+  private readonly handleCharacterSelect = (
+    characterId: string | null
+  ): void => {
+    this.selectedCharacterId = characterId;
+    this.options.onSelectCharacter?.(characterId);
+  };
+
+  private readonly handleCopyLog = async (): Promise<void> => {
+    const text = this.getFormattedTurnLog();
+    await copyTextToClipboard(text);
+    const selected = this.selectedCharacterId;
+    const isAll = !selected || selected.toLowerCase() === "all";
+    const playerName = isAll
+      ? "All"
+      : this.usernames[selected] ??
+        this.playerCharactersMap[selected]?.name ??
+        selected;
+    const bannerMessage = getBannerNotificationText(isAll ? "All" : playerName);
+    this.options.onShowNotification?.(bannerMessage);
+    this.options.onCopyLog?.(selected);
+  };
+
+  private readonly handleExportTurn = (): void => {
+    const text = this.getFormattedTurnLog();
+    const resolvedTurn = this.selectedTurn ?? 0;
+    const filename = getExportFileName(this.matchId || "match", resolvedTurn);
+    downloadTextFile(filename, text);
+    this.options.onExportTurn?.(this.selectedCharacterId);
+  };
+
+  getFormattedTurnLog(): string {
+    const resolvedTurn = this.selectedTurn ?? 0;
+    const characterId = this.selectedCharacterId;
+    if (!characterId || characterId.toLowerCase() === "all") {
+      return formatAllMatchTurnLog(
+        this.matchId || "match",
+        resolvedTurn,
+        this.eventStrings
+      );
+    }
+
+    const character =
+      this.playerCharactersMap[characterId] ??
+      (this.currentSnapshot?.playerCharacters as Record<string, PlayerCharacter> | undefined)?.[characterId];
+
+    if (!character) {
+      return formatAllMatchTurnLog(
+        this.matchId || "match",
+        resolvedTurn,
+        this.eventStrings
+      );
+    }
+
+    const team =
+      this.teams[characterId] ??
+      character.secretTeamId ??
+      character.teamId ??
+      "Sin equipo";
+
+    return formatCharacterTurnLog(
+      character,
+      team,
+      resolvedTurn,
+      this.eventStrings,
+      this.currentSnapshot,
+      this.getRecentTurnsHistory(characterId, resolvedTurn)
+    );
+  }
+
+  private recordTurnActions(turn: number, events: ReplayEvent[]): void {
+    if (!Array.isArray(events)) {
+      return;
+    }
+    for (const e of events) {
+      if (e.kind === "player") {
+        const actorId = e.actorId;
+        const actionId = e.action?.actionId;
+        if (actorId && actionId) {
+          let charMap = this.turnActionHistory.get(actorId);
+          if (!charMap) {
+            charMap = new Map();
+            this.turnActionHistory.set(actorId, charMap);
+          }
+          let turnList = charMap.get(turn);
+          if (!turnList) {
+            turnList = [];
+            charMap.set(turn, turnList);
+          }
+          const label =
+            ActionLibrary[actionId as ActionId]?.name ??
+            this.options.formatActionName(actionId);
+          if (label && !turnList.includes(label)) {
+            turnList.push(label);
+          }
+        }
+      }
+    }
+  }
+
+  private getRecentTurnsHistory(
+    characterId: string,
+    currentTurn: number
+  ): Array<{ turn: number; actions: string[] }> {
+    const history: Array<{ turn: number; actions: string[] }> = [];
+    const charHistory = this.turnActionHistory.get(characterId);
+    const startTurn = Math.max(1, currentTurn - 2);
+    for (let t = startTurn; t <= currentTurn; t++) {
+      const actions = charHistory?.get(t);
+      if (actions && actions.length > 0) {
+        history.push({ turn: t, actions });
+      }
+    }
+    return history;
+  }
+
   private bindInteractions(): void {
-    const { prevButton, nextButton, playButton } = this.elements;
+    const { prevButton, nextButton, playButton, copyButton, exportButton, characterSelector } = this.elements;
     prevButton.on(Phaser.Input.Events.POINTER_UP, this.handlePrevClick, this);
     nextButton.on(Phaser.Input.Events.POINTER_UP, this.handleNextClick, this);
     playButton.on(Phaser.Input.Events.POINTER_UP, this.handlePlayClick, this);
+    if (copyButton) {
+      copyButton.on(
+        Phaser.Input.Events.POINTER_UP,
+        this.handleCopyLog,
+        this
+      );
+    }
+    if (exportButton) {
+      exportButton.on(
+        Phaser.Input.Events.POINTER_UP,
+        this.handleExportTurn,
+        this
+      );
+    }
+    if (characterSelector) {
+      characterSelector.on("change", this.handleCharacterSelect, this);
+    }
     this.elements.filterTrack.on(
       Phaser.Input.Events.POINTER_DOWN,
       this.handleFilterPointer,
@@ -554,6 +821,12 @@ export class CharacterPanelLogView {
     this.applyButtonState(this.elements.prevButton, canPrev, false);
     this.applyButtonState(this.elements.nextButton, canNext, false);
     this.applyButtonState(this.elements.playButton, canPlay, true);
+    if (this.elements.copyButton) {
+      this.applyButtonState(this.elements.copyButton, !this.loading, false);
+    }
+    if (this.elements.exportButton) {
+      this.applyButtonState(this.elements.exportButton, !this.loading, false);
+    }
   }
 
   private applyButtonState(
