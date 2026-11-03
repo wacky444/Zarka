@@ -143,9 +143,9 @@ export function updateSettingsRpc(
           }
         } else {
           remainingPlayers.push(playerId);
-        }
-      }
-      match.players = remainingPlayers;
+          if (match.gameMasterUserIds.indexOf(playerId) === -1) {
+            match.gameMasterUserIds.push(playerId);
+          }
     }
   } else if (settings.gameMasterMode === false) {
     match.gameMasterMode = false;
@@ -173,6 +173,7 @@ export function updateSettingsRpc(
           started: match.started,
           gameMasterMode: match.gameMasterMode,
           gameMasterUserIds: match.gameMasterUserIds,
+          controlledCharacterRoster: match.controlledCharacterRoster,
         })
       );
     } catch (signalError) {
