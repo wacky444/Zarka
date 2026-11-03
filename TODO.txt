@@ -58,3 +58,5 @@
 - bug, change posion to show items on ground or items in inventory of players registered, all in the same select
 
 - reuse the button style "Copiar parte" and make it main button component
+
+- const "isGM =" can be refactored to reduce dupe
