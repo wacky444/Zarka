@@ -24,7 +24,7 @@ import { sendTutorialBotMessageForTurn } from "../match/TutorialBotChat";
 import { getAliveCharacterIds } from "../match/checkEndGame";
 import { validateTime } from "../utils/validation";
 import { getRuntimeMatchId } from "../utils/matchIds";
-import { isAdminUser } from "../utils/admin";
+import { isAdminUser, isGameMasterUser } from "../utils/admin";
 import { createReplaySnapshot } from "../match/replay/snapshot";
 import {
   createTurnNotificationOutbox,
@@ -91,11 +91,7 @@ export function updateReadyStateRpc(
   }
 
   const match: MatchRecord = read.match;
-  const isGM = Boolean(
-    match.gameMasterMode &&
-    Array.isArray(match.gameMasterUserIds) &&
-    match.gameMasterUserIds.indexOf(ctx.userId) !== -1
-  );
+  const isGM = isGameMasterUser(match, ctx.userId);
   if (match.gameMasterMode) {
     if (!isGM) {
       throw makeNakamaError("Game Master actions are restricted to administrators", nkruntime.Codes.PERMISSION_DENIED);

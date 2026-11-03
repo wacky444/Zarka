@@ -142,6 +142,11 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
         } else {
           state.order = [];
         }
+        if (Array.isArray(msg.gameMasterUserIds)) {
+          state.gameMasterUserIds = msg.gameMasterUserIds.filter(
+            (id: unknown) => typeof id === "string" && id.trim().length > 0
+          );
+        }
         if (typeof msg.size === "number") {
           state.size = msg.size;
         }
@@ -268,6 +273,8 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             for (const [playerId, presence] of entries) {
               const isGM =
                 state.gameMasterMode === true &&
+                Array.isArray(state.order) &&
+                state.order.indexOf(playerId) !== -1 &&
                 Array.isArray(state.gameMasterUserIds) &&
                 state.gameMasterUserIds.indexOf(playerId) !== -1;
               const viewAll = state.adminViewers[playerId] === true || isGM;

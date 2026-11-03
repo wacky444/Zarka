@@ -226,6 +226,7 @@ function joinMatchRpcLocked(
           size: match.size,
           name: match.name,
           started: match.started,
+          gameMasterUserIds: match.gameMasterUserIds,
         })
       );
     } catch (signalError) {

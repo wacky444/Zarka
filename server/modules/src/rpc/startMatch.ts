@@ -3,6 +3,7 @@
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
+import { isGameMasterUser } from "../utils/admin";
 import { MatchRecord } from "../models/types";
 import {
   CellLibrary,
@@ -100,9 +101,7 @@ export function startMatchRpc(
   }
 
   if (match.gameMasterMode) {
-    const isGM =
-      Array.isArray(match.gameMasterUserIds) &&
-      match.gameMasterUserIds.indexOf(ctx.userId) !== -1;
+    const isGM = isGameMasterUser(match, ctx.userId);
     if (!isGM) {
       throw makeNakamaError("not_game_master", nkruntime.Codes.PERMISSION_DENIED);
     }
@@ -142,11 +141,7 @@ export function startMatchRpc(
         throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
       }
     }
-    const isGMViewer = Boolean(
-      match.gameMasterMode &&
-      Array.isArray(match.gameMasterUserIds) &&
-      match.gameMasterUserIds.indexOf(ctx.userId) !== -1
-    );
+    const isGMViewer = isGameMasterUser(match, ctx.userId);
     const viewerCharacter = match.playerCharacters?.[ctx.userId] ?? null;
     const tailored = isGMViewer
       ? match.map

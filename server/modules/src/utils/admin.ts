@@ -27,3 +27,23 @@ export function isAdminUser(
     return false;
   }
 }
+
+
+export function isGameMasterUser(
+  match: {
+    gameMasterMode?: boolean;
+    gameMasterUserIds?: string[];
+    players?: string[];
+  } | null | undefined,
+  userId: string | undefined | null
+): boolean {
+  if (!match || !match.gameMasterMode || !userId) {
+    return false;
+  }
+  const isMember =
+    Array.isArray(match.players) && match.players.indexOf(userId) !== -1;
+  const isGm =
+    Array.isArray(match.gameMasterUserIds) &&
+    match.gameMasterUserIds.indexOf(userId) !== -1;
+  return isMember && isGm;
+}

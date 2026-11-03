@@ -8,7 +8,7 @@ import {
   syncBandolierLoadCapacity
 } from "@shared";
 import { tailorMatchForPlayer } from "../utils/matchView";
-import { isAdminUser } from "../utils/admin";
+import { isAdminUser, isGameMasterUser } from "../utils/admin";
 
 export function getStateRpc(
   ctx: nkruntime.Context,
@@ -45,12 +45,7 @@ export function getStateRpc(
     return JSON.stringify({ error: "not_found" });
   }
   const viewerId = ctx?.userId ?? null;
-  const isGameMaster = Boolean(
-    match.gameMasterMode &&
-    viewerId &&
-    Array.isArray(match.gameMasterUserIds) &&
-    match.gameMasterUserIds.indexOf(viewerId) !== -1
-  );
+  const isGameMaster = isGameMasterUser(match, viewerId);
   const viewAll =
     (json.view_all === true && isAdminUser(nk, viewerId)) || isGameMaster;
   if (

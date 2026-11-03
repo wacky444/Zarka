@@ -13,6 +13,7 @@ import { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
+import { isGameMasterUser } from "../utils/admin";
 import type { ActionSubmission, Axial, PlayerPlannedAction } from "@shared";
 import {
   getActionCooldownRemaining,
@@ -216,9 +217,7 @@ export function updateMainActionRpc(
   const match: MatchRecord = read.match;
   let targetCharId = ctx.userId;
   if (match.gameMasterMode) {
-    const isGM =
-      Array.isArray(match.gameMasterUserIds) &&
-      match.gameMasterUserIds.indexOf(ctx.userId) !== -1;
+    const isGM = isGameMasterUser(match, ctx.userId);
     if (!isGM) {
       throw makeNakamaError("Game Master actions are restricted to administrators", nkruntime.Codes.PERMISSION_DENIED);
     }
