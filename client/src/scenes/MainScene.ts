@@ -455,7 +455,14 @@ export class MainScene extends Phaser.Scene {
         this.lobbyView.setMatchStarted(false);
         this.showView("main");
       });
-      this.turnService.setOnPlayerKicked(() => {
+      this.turnService.setOnPlayerKicked((payload) => {
+        if (
+          !payload?.player_id ||
+          !this.currentUserId ||
+          payload.player_id !== this.currentUserId
+        ) {
+          return;
+        }
         const gameScene = this.scene.get("GameScene") as
           | import("./GameScene").GameScene
           | undefined;
