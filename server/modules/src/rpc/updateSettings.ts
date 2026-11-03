@@ -173,6 +173,7 @@ export function updateSettingsRpc(
           started: match.started,
           gameMasterMode: match.gameMasterMode,
           gameMasterUserIds: match.gameMasterUserIds,
+          controlledCharacterRoster: match.controlledCharacterRoster,
         })
       );
     } catch (signalError) {
