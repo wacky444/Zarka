@@ -207,6 +207,10 @@ export class MainScene extends Phaser.Scene {
       );
       if (this.lobbyView) {
         this.lobbyView.setMatchInfo(matchId, displayName);
+        this.lobbyView.applySettings({
+          gameMasterMode: parsed.gameMasterMode,
+          controlledCharacterRoster: parsed.controlledCharacterRoster
+        });
         if (typeof parsed.started === "boolean") {
           this.lobbyView.setMatchStarted(parsed.started);
         }
