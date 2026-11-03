@@ -1392,6 +1392,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         this.activeControlledCharacterId = firstId;
       }
       this.gmPlayerSelector.setValue(this.activeControlledCharacterId, false);
+      if (this.activeControlledCharacterId) {
+        this.emit("controlled-character-change", this.activeControlledCharacterId);
+      }
     } else {
       this.activeControlledCharacterId = null;
     }
