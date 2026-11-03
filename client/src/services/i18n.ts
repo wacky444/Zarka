@@ -38,6 +38,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
     "El virus no daña al portador, si no te importa estar confinado lejos de tus amigos, puede ser una buena idea chupar viales",
   "When you are overweight, the less valuable items from your inventory will be dropped at the end of the turn":
     "Cuando te pasas de peso, los objetos menos valiosos se caeran de tu inventario al final del turno",
+  "Copiar parte": "Copiar parte",
+  "Export to file": "Export to file",
   "Report unavailable": "Informe no disponible",
   counterattacked: "contraatacó",
   "with a punch": "con un puñetazo",

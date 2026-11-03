@@ -56,3 +56,5 @@
 - autoplay en modo reproducir, al cambiar turno se reproduzca automaticamente
 
 - bug, change posion to show items on ground or items in inventory of players registered, all in the same select
+
+- reuse the button style "Copiar parte" and make it main button component

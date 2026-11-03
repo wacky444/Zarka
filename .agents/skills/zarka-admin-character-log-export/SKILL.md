@@ -22,7 +22,7 @@ description: Architecture, rules, and workflows for Zarka's admin character log 
   - Character filter row is displayed between current turn controls and the log scroll panel.
   - Log panel height is reduced via `calculateLogBoxHeight()` to maintain layout boundaries.
   - Character selector lists all match characters plus `"All"`.
-  - Copy log and export turn buttons are available in the log header.
+  - Copy log and export turn buttons are available in the row under the character selector.
 
 ## Key Files
 

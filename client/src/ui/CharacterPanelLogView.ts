@@ -25,6 +25,7 @@ import {
   getBannerNotificationText,
   getExportFileName
 } from "../utils/logFormatter";
+import { THEME } from "./ColorPalette";
 import type { PlayerSelector, PlayerOption } from "./PlayerSelector";
 
 const CRITICAL_REPLAY_ACTION_IDS = new Set<string>([
@@ -77,6 +78,108 @@ function readAxialMetadata(value: unknown): Axial | null {
   return { q: candidate.q, r: candidate.r };
 }
 
+export interface LogExportButton extends Phaser.GameObjects.Container {
+  background: Phaser.GameObjects.GameObject & {
+    setSize?: (width: number, height: number) => unknown;
+    setDisplaySize?: (width: number, height: number) => unknown;
+    setFillStyle?: (color: number, alpha?: number) => unknown;
+    setStrokeStyle?: (lineWidth: number, color: number, alpha?: number) => unknown;
+    setOrigin?: (x: number, y?: number) => unknown;
+  };
+  label: Phaser.GameObjects.Text;
+  icon: Phaser.GameObjects.Image;
+  hitZone: Phaser.GameObjects.Zone;
+  setButtonSize(width: number, height: number): void;
+}
+
+export function createLogExportButton(
+  scene: Phaser.Scene,
+  labelText: string,
+  iconTextureKey: string
+): LogExportButton {
+  const container = scene.add.container(0, 0) as LogExportButton;
+  const rexUI = (scene as unknown as { rexUI?: { add?: { roundRectangle?: (...args: unknown[]) => unknown } } }).rexUI;
+  const bg = (rexUI?.add?.roundRectangle
+    ? rexUI.add.roundRectangle(0, 0, 100, 28, 4, THEME.colors.cardBackground)
+    : scene.add.rectangle(0, 0, 100, 28, THEME.colors.cardBackground)
+  ) as LogExportButton["background"];
+  bg.setOrigin?.(0, 0);
+  bg.setStrokeStyle?.(1, THEME.colors.headerBorder, 1);
+
+  const label = scene.add
+    .text(0, 0, labelText, {
+      fontSize: "12px",
+      color: "#cbd5f5",
+      fontStyle: "bold"
+    })
+    .setOrigin(0, 0.5);
+
+  const icon = scene.add
+    .image(0, 0, iconTextureKey)
+    .setDisplaySize(16, 16)
+    .setTint(THEME.colors.healthAccent)
+    .setOrigin(0, 0.5);
+
+  const hitZone = scene.add.zone
+    ? scene.add
+        .zone(0, 0, 100, 28)
+        .setOrigin(0, 0)
+        .setInteractive({ useHandCursor: true })
+    : (scene.add.rectangle(0, 0, 100, 28) as unknown as Phaser.GameObjects.Zone);
+
+  container.add([bg as Phaser.GameObjects.GameObject, label, icon, hitZone]);
+  container.background = bg;
+  container.label = label;
+  container.icon = icon;
+  container.hitZone = hitZone;
+  container.setSize(100, 28);
+
+  hitZone.on(Phaser.Input.Events.POINTER_OVER, () => {
+    bg.setFillStyle?.(THEME.colors.cardSelected, 1);
+    bg.setStrokeStyle?.(1, THEME.colors.healthAccent, 1);
+    label.setColor("#ffffff");
+    container.emit(Phaser.Input.Events.POINTER_OVER);
+  });
+  hitZone.on(Phaser.Input.Events.POINTER_OUT, () => {
+    bg.setFillStyle?.(THEME.colors.cardBackground, 1);
+    bg.setStrokeStyle?.(1, THEME.colors.headerBorder, 1);
+    label.setColor("#cbd5f5");
+    container.emit(Phaser.Input.Events.POINTER_OUT);
+  });
+  hitZone.on(Phaser.Input.Events.POINTER_UP, (pointer: Phaser.Input.Pointer) => {
+    container.emit(Phaser.Input.Events.POINTER_UP, pointer);
+  });
+
+  container.disableInteractive = () => {
+    hitZone.disableInteractive();
+    return container;
+  };
+  container.setInteractive = (config?: unknown) => {
+    hitZone.setInteractive(config ?? { useHandCursor: true });
+    return container;
+  };
+
+  container.setButtonSize = (width: number, height: number) => {
+    container.setSize(width, height);
+    bg.setSize?.(width, height);
+    bg.setDisplaySize?.(width, height);
+    hitZone.setSize(width, height);
+    (hitZone.input?.hitArea as Phaser.Geom.Rectangle | undefined)?.setTo?.(
+      0,
+      0,
+      width,
+      height
+    );
+    const contentWidth = label.width + 6 + icon.displayWidth;
+    const startX = Math.max(4, Math.floor((width - contentWidth) / 2));
+    const centerY = Math.floor(height / 2);
+    label.setPosition(startX, centerY);
+    icon.setPosition(startX + label.width + 6, centerY);
+  };
+
+  return container;
+}
+
 export interface CharacterPanelLogElements {
   prevButton: Phaser.GameObjects.Text;
   nextButton: Phaser.GameObjects.Text;
@@ -88,8 +191,8 @@ export interface CharacterPanelLogElements {
   statusText: Phaser.GameObjects.Text;
   eventsBox: Phaser.GameObjects.Rectangle;
   eventsText: Phaser.GameObjects.Text;
-  copyButton?: Phaser.GameObjects.Image;
-  exportButton?: Phaser.GameObjects.Image;
+  copyButton?: LogExportButton;
+  exportButton?: LogExportButton;
   characterSelector?: PlayerSelector;
 }
 
@@ -197,12 +300,6 @@ export class CharacterPanelLogView {
       options.elements.eventsBox,
       this.eventsScrollPanel
     ];
-    if (options.elements.copyButton) {
-      this.allElements.push(options.elements.copyButton);
-    }
-    if (options.elements.exportButton) {
-      this.allElements.push(options.elements.exportButton);
-    }
     this.bindInteractions();
   }
 
@@ -367,10 +464,15 @@ export class CharacterPanelLogView {
         }
       ).setVisible?.(options.visible);
     }
+    const showFilterControls = options.visible && this.filterRowVisible;
     if (this.elements.characterSelector) {
-      this.elements.characterSelector.setVisible(
-        options.visible && this.filterRowVisible
-      );
+      this.elements.characterSelector.setVisible(showFilterControls);
+    }
+    if (this.elements.copyButton) {
+      this.elements.copyButton.setVisible(showFilterControls);
+    }
+    if (this.elements.exportButton) {
+      this.elements.exportButton.setVisible(showFilterControls);
     }
     if (options.visible) {
       this.updateButtons();
@@ -429,27 +531,49 @@ export class CharacterPanelLogView {
     this.elements.filterLabel.setPosition(filterX + 82, controlY + 2);
     this.updateFilterControls();
 
-    const buttonSize = 20;
-    const buttonSpacing = 8;
-    const rightEdge = margin + boxWidth - 8;
-    this.elements.exportButton?.setPosition(
-      rightEdge - buttonSize,
-      controlY + 2
-    );
-    this.elements.copyButton?.setPosition(
-      rightEdge - buttonSize * 2 - buttonSpacing,
-      controlY + 2
-    );
+    const buttonGap = 8;
+    const buttonWidth = Math.floor((boxWidth - buttonGap) / 2);
+    const buttonHeight = 28;
 
     let logBoxY = contentTop + 48;
     let logBoxHeight = Math.max(180, panelHeight - logBoxY - margin);
 
-    if (this.filterRowVisible && this.elements.characterSelector) {
-      const selectorY = contentTop + 36;
-      this.elements.characterSelector.setPosition(margin, selectorY);
-      this.elements.characterSelector.setSelectorWidth(boxWidth);
-      const selectorHeight = this.elements.characterSelector.height || 44;
-      logBoxY = selectorY + selectorHeight + 8;
+    if (this.filterRowVisible) {
+      const copyX = margin;
+      const exportX = margin + buttonWidth + buttonGap;
+      const exportWidth = boxWidth - buttonWidth - buttonGap;
+
+      if (this.elements.characterSelector) {
+        const selectorY = contentTop + 36;
+        this.elements.characterSelector.setPosition(margin, selectorY);
+        this.elements.characterSelector.setSelectorWidth(boxWidth);
+        const selectorHeight = this.elements.characterSelector.height || 44;
+        const exportRowY = selectorY + selectorHeight + 8;
+        this.elements.copyButton?.setPosition(copyX, exportRowY);
+        (this.elements.copyButton as LogExportButton | undefined)?.setButtonSize?.(
+          buttonWidth,
+          buttonHeight
+        );
+        this.elements.exportButton?.setPosition(exportX, exportRowY);
+        (this.elements.exportButton as LogExportButton | undefined)?.setButtonSize?.(
+          exportWidth,
+          buttonHeight
+        );
+        logBoxY = exportRowY + buttonHeight + 8;
+      } else {
+        const exportRowY = contentTop + 36;
+        this.elements.copyButton?.setPosition(copyX, exportRowY);
+        (this.elements.copyButton as LogExportButton | undefined)?.setButtonSize?.(
+          buttonWidth,
+          buttonHeight
+        );
+        this.elements.exportButton?.setPosition(exportX, exportRowY);
+        (this.elements.exportButton as LogExportButton | undefined)?.setButtonSize?.(
+          exportWidth,
+          buttonHeight
+        );
+        logBoxY = exportRowY + buttonHeight + 8;
+      }
       logBoxHeight = Math.max(120, panelHeight - logBoxY - margin);
     }
 
@@ -504,8 +628,15 @@ export class CharacterPanelLogView {
       return;
     }
     this.filterRowVisible = visible;
+    const showFilterControls = visible && this.visible;
     if (this.elements.characterSelector) {
-      this.elements.characterSelector.setVisible(visible && this.visible);
+      this.elements.characterSelector.setVisible(showFilterControls);
+    }
+    if (this.elements.copyButton) {
+      this.elements.copyButton.setVisible(showFilterControls);
+    }
+    if (this.elements.exportButton) {
+      this.elements.exportButton.setVisible(showFilterControls);
     }
     if (this.lastBounds) {
       this.layout(this.lastBounds);
@@ -856,31 +987,39 @@ export class CharacterPanelLogView {
     this.applyButtonState(this.elements.nextButton, canNext, false);
     this.applyButtonState(this.elements.playButton, canPlay, true);
     if (this.elements.copyButton) {
-      this.applyButtonState(this.elements.copyButton, !this.loading, false);
+      this.applyButtonState(
+        this.elements.copyButton,
+        !this.loading && this.filterRowVisible,
+        false
+      );
     }
     if (this.elements.exportButton) {
-      this.applyButtonState(this.elements.exportButton, !this.loading, false);
+      this.applyButtonState(
+        this.elements.exportButton,
+        !this.loading && this.filterRowVisible,
+        false
+      );
     }
   }
 
   private applyButtonState(
-    button: Phaser.GameObjects.Text | Phaser.GameObjects.Image,
+    button: Phaser.GameObjects.GameObject,
     enabled: boolean,
     isPlay: boolean
   ): void {
     if (!enabled) {
-      button.setAlpha(0.4);
+      (button as unknown as Phaser.GameObjects.Components.Alpha).setAlpha?.(0.4);
       if (button instanceof Phaser.GameObjects.Text) {
         button.setColor(isPlay ? "#355e3b" : "#5b678a");
       }
-      button.disableInteractive();
+      button.disableInteractive?.();
       return;
     }
-    button.setAlpha(1);
+    (button as unknown as Phaser.GameObjects.Components.Alpha).setAlpha?.(1);
     if (button instanceof Phaser.GameObjects.Text) {
       button.setColor(isPlay ? "#4ade80" : "#a0b7ff");
     }
-    button.setInteractive({ useHandCursor: true });
+    button.setInteractive?.({ useHandCursor: true });
   }
 
   private updateTurnLabel(): void {

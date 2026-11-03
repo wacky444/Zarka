@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  calculateLogBoxHeight,
   formatAbilityMultipliers,
   formatAllMatchTurnLog,
   formatCharacterTurnLog,
@@ -33,18 +34,28 @@ function createMockScene() {
   const input = { on() { return this; }, off() { return this; } };
   return {
     input,
-    add: { container: gameObject, rectangle: gameObject },
+    add: { container: gameObject, rectangle: gameObject, zone: gameObject, text: gameObject, image: gameObject },
     rexUI: { add: { roundRectangle: gameObject, scrollablePanel: gameObject } }
   };
 }
 
 function createMockElement(scene: ReturnType<typeof createMockScene>) {
   return {
-    setPosition() { return this; },
-    setSize() { return this; },
-    setDisplaySize() { return this; },
-    setVisible() { return this; },
+    setPosition(x?: number, y?: number) {
+      if (typeof x === "number") this.x = x;
+      if (typeof y === "number") this.y = y;
+      return this;
+    },
+    setX(x: number) { this.x = x; return this; },
+    setY(y: number) { this.y = y; return this; },
+    setSize(w: number, h: number) { this.width = w; this.height = h; return this; },
+    setDisplaySize(w: number, h: number) { this.width = w; this.height = h; return this; },
+    setVisible(value: boolean) { this.visible = value; return this; },
+    setSelectorWidth(w: number) { this.width = w; return this; },
+    setValue() { return this; },
     setWordWrapWidth() { return this; },
+    setButtonSize(w: number, h: number) { this.width = w; this.height = h; return this; },
+    getWorldTransformMatrix() { return { tx: 0, ty: 0 }; },
     setInteractive() { return this; },
     disableInteractive() { return this; },
     setAlpha() { return this; },
@@ -54,6 +65,7 @@ function createMockElement(scene: ReturnType<typeof createMockScene>) {
     text: "",
     setText(value: string) { this.text = value; return this; },
     x: 0, y: 0, width: 10, height: 10,
+    visible: true,
     scene
   };
 }
@@ -299,4 +311,96 @@ test("CharacterPanelLogView getFormattedTurnLog outputs display name in first ro
   const firstRow = formatted.split("\n")[0];
   assert.equal(firstRow, "SuperHugo");
   assert.ok(!firstRow.includes("user-abc"));
+});
+
+test("calculateLogBoxHeight correctly reduces height when filter row is enabled", () => {
+  const panelHeight = 500;
+  const baseOffset = 50;
+  assert.equal(calculateLogBoxHeight(panelHeight, baseOffset, false), 450);
+  assert.equal(calculateLogBoxHeight(panelHeight, baseOffset, true), 450 - 76);
+  assert.equal(calculateLogBoxHeight(panelHeight, baseOffset, true, 80), 450 - 80);
+});
+
+test("CharacterPanelLogView layout places export buttons under character selector and lowers log box", () => {
+  const scene = createMockScene();
+  const prevButton = createMockElement(scene);
+  const nextButton = createMockElement(scene);
+  const playButton = createMockElement(scene);
+  const filterTrack = createMockElement(scene);
+  const filterKnob = createMockElement(scene);
+  const filterLabel = createMockElement(scene);
+  const turnLabel = createMockElement(scene);
+  const statusText = createMockElement(scene);
+  const eventsBox = createMockElement(scene);
+  const eventsText = createMockElement(scene);
+  const copyButton = createMockElement(scene);
+  const exportButton = createMockElement(scene);
+  const characterSelector = createMockElement(scene);
+  characterSelector.height = 44;
+
+  const logView = new CharacterPanelLogView({
+    panel: { add() {} } as any,
+    elements: {
+      prevButton: prevButton as any,
+      nextButton: nextButton as any,
+      playButton: playButton as any,
+      filterTrack: filterTrack as any,
+      filterKnob: filterKnob as any,
+      filterLabel: filterLabel as any,
+      turnLabel: turnLabel as any,
+      statusText: statusText as any,
+      eventsBox: eventsBox as any,
+      eventsText: eventsText as any,
+      copyButton: copyButton as any,
+      exportButton: exportButton as any,
+      characterSelector: characterSelector as any
+    },
+    onRequestReplay: () => {},
+    onPlay: () => {},
+    formatActionName: (id: string) => id
+  });
+
+  const bounds = {
+    margin: 16,
+    tabHeight: 40,
+    contentTop: 56,
+    boxWidth: 320,
+    panelHeight: 600
+  };
+
+  logView.layout(bounds);
+  const standardLogBoxY = eventsBox.y;
+  const standardLogBoxHeight = eventsBox.height;
+
+  logView.handleVisibilityChange({ visible: true, forceEnsure: false });
+  assert.equal(copyButton.visible, false);
+  assert.equal(exportButton.visible, false);
+  assert.equal(characterSelector.visible, false);
+
+  logView.setFilterRowVisible(true);
+  assert.equal(copyButton.visible, true);
+  assert.equal(exportButton.visible, true);
+  assert.equal(characterSelector.visible, true);
+
+  const selectorBottom = bounds.contentTop + 36 + characterSelector.height;
+  assert.ok(exportButton.y >= selectorBottom);
+  assert.ok(copyButton.y >= selectorBottom);
+  assert.equal(exportButton.y, copyButton.y);
+
+  const expectedBtnWidth = Math.floor((bounds.boxWidth - 8) / 2);
+  assert.equal(copyButton.x, bounds.margin);
+  assert.equal(copyButton.width, expectedBtnWidth);
+  assert.equal(exportButton.x, bounds.margin + expectedBtnWidth + 8);
+  assert.equal(exportButton.width, bounds.boxWidth - expectedBtnWidth - 8);
+
+  assert.ok(eventsBox.y > exportButton.y);
+  assert.ok(eventsBox.y > standardLogBoxY);
+  assert.ok(eventsBox.height < standardLogBoxHeight);
+
+  logView.setFilterRowVisible(false);
+  assert.equal(copyButton.visible, false);
+  assert.equal(exportButton.visible, false);
+  assert.equal(characterSelector.visible, false);
+  assert.equal(eventsBox.y, standardLogBoxY);
+  assert.equal(eventsBox.height, standardLogBoxHeight);
 });

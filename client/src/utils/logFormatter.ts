@@ -664,7 +664,7 @@ export const calculateLogBoxHeight = (
   panelHeight: number,
   baseOffset: number,
   hasFilterRow: boolean,
-  filterRowHeight: number = 44
+  filterRowHeight: number = 76
 ): number => {
   const available = panelHeight - baseOffset;
   return hasFilterRow ? available - filterRowHeight : available;

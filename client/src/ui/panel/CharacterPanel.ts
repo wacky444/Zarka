@@ -18,7 +18,8 @@ import {
   type TabKey
 } from "../CharacterPanelTabs";
 import { THEME } from "../ColorPalette";
-import { CharacterPanelLogView } from "../CharacterPanelLogView";
+import { CharacterPanelLogView, createLogExportButton } from "../CharacterPanelLogView";
+import { t } from "../../services/i18n";
 import {
   CharacterPanelChatView,
   type ChatConnectionState,
@@ -541,20 +542,18 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       })
       .setOrigin(0, 0)
       .setVisible(false);
-    const logCopyButton = scene.add
-      .image(0, logControlY, "replay-copy-log")
-      .setDisplaySize(20, 20)
-      .setTint(THEME.colors.healthAccent)
-      .setOrigin(0, 0)
-      .setVisible(false)
-      .setInteractive({ useHandCursor: true });
-    const logExportButton = scene.add
-      .image(0, logControlY, "replay-export-turn")
-      .setDisplaySize(20, 20)
-      .setTint(THEME.colors.healthAccent)
-      .setOrigin(0, 0)
-      .setVisible(false)
-      .setInteractive({ useHandCursor: true });
+    const logCopyButton = createLogExportButton(
+      scene,
+      t("Copiar parte"),
+      "replay-copy-log"
+    );
+    logCopyButton.setVisible(false);
+    const logExportButton = createLogExportButton(
+      scene,
+      t("Export to file"),
+      "replay-export-turn"
+    );
+    logExportButton.setVisible(false);
     const logPlayerSelector = new PlayerSelector(
       scene,
       MARGIN,
