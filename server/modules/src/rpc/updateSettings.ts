@@ -143,9 +143,9 @@ export function updateSettingsRpc(
           }
         } else {
           remainingPlayers.push(playerId);
-        }
-      }
-      match.players = remainingPlayers;
+          if (match.gameMasterUserIds.indexOf(playerId) === -1) {
+            match.gameMasterUserIds.push(playerId);
+          }
     }
   } else if (settings.gameMasterMode === false) {
     match.gameMasterMode = false;
