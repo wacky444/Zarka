@@ -14,6 +14,8 @@ import {
   type RankedMatchMetadata
 } from "./ranked";
 
+import type { Skin } from "./UserAccount";
+
 export interface MatchMetadata {
   [TUTORIAL_MATCH_METADATA_KEY]?: TutorialMatchMetadata;
   [RANKED_MATCH_METADATA_KEY]?: RankedMatchMetadata;
@@ -107,6 +109,9 @@ export interface MatchRecord {
   lastAutoAdvanceAt?: number;
   reportProgress?: MatchReportProgress;
   metadata?: MatchMetadata;
+  gameMasterMode?: boolean;
+  gameMasterUserIds?: string[];
+  controlledCharacterRoster?: Array<{ id: string; name: string; skin: Skin }>;
 }
 
 export interface TurnRecord {
