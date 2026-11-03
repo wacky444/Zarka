@@ -293,7 +293,7 @@ export function finalizeMatchIfEnded(
     );
   }
 
-  if (!isRanked && participants.length > 0) {
+  if (!isRanked && !match.gameMasterMode && participants.length > 0) {
     const characters = match.playerCharacters ?? {};
     const firstAlive = outcome.aliveCharacterIds[0];
     const winningCharacter = firstAlive ? characters[firstAlive] : undefined;

@@ -25,6 +25,7 @@ import { tailorPlayerCharactersForViewer } from "../utils/matchView";
 import { parseAxial } from "../utils/location";
 import { sendTutorialBotMessage } from "../match/TutorialBotChat";
 import { canCharacterDetectFire } from "../utils/fireVisibility";
+import { getRuntimeMatchId } from "../utils/matchIds";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -139,7 +140,8 @@ export function buyShopItemRpc(
     );
   }
 
-  const storage = new StorageService(createNakamaWrapper(nk));
+  const nkWrapper = createNakamaWrapper(nk);
+  const storage = new StorageService(nkWrapper);
   const read = storage.getMatch(matchId);
   if (!read) {
     throw makeNakamaError("not_found", nkruntime.Codes.NOT_FOUND);
@@ -527,6 +529,25 @@ export function buyShopItemRpc(
     targetTeamId
   ) {
     sendTutorialBotMessage(match, "detective_result", nk, logger);
+  }
+
+  if (match.gameMasterMode) {
+    try {
+      nkWrapper.matchSignal(
+        getRuntimeMatchId(match),
+        JSON.stringify({
+          type: "gm_action_sync",
+          match_id: matchId,
+          target_character_id: actorId,
+          action_type: "shop",
+          actor_user_id: ctx.userId,
+          character: actor,
+          playerCharacters: match.playerCharacters
+        })
+      );
+    } catch (e) {
+      logger.debug("gm_action_sync signal failed: %s", (e as Error).message);
+    }
   }
 
   const response: BuyShopItemPayload = {

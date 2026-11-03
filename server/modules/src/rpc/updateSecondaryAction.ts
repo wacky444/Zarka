@@ -27,6 +27,7 @@ import {
 } from "../match/actions/utils";
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
 import { parseAxial } from "../utils/location";
+import { getRuntimeMatchId } from "../utils/matchIds";
 
 export function updateSecondaryActionRpc(
   ctx: nkruntime.Context,
@@ -420,6 +421,26 @@ export function updateSecondaryActionRpc(
     character.actionPlan[planKey] = nextPlan;
   }
   storage.writeMatch(match, read.version);
+
+  if (match.gameMasterMode) {
+    try {
+      nkWrapper.matchSignal(
+        getRuntimeMatchId(match),
+        JSON.stringify({
+          type: "gm_action_sync",
+          match_id: matchId,
+          target_character_id: targetCharId,
+          action_type: "secondary",
+          actor_user_id: ctx.userId,
+          character,
+          playerCharacters: match.playerCharacters
+        })
+      );
+    } catch (e) {
+      _logger.debug("gm_action_sync signal failed: %s", (e as Error).message);
+    }
+  }
+
   const response: import("@shared").UpdateSecondaryActionPayload = {
     ok: true,
     match_id: matchId,

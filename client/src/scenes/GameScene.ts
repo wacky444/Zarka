@@ -59,6 +59,7 @@ import {
   type BuyShopItemPayload,
   type DonateZarkansPayload,
   type ZarkansDonatedMessagePayload,
+  type GmActionSyncPayload,
   type ShopId,
   type Dexterity3ProductId
 } from "@shared";
@@ -452,6 +453,11 @@ export class GameScene extends Phaser.Scene {
     payload: ZarkansDonatedMessagePayload
   ) => {
     void this.handleZarkansDonatedMessage(payload);
+  };
+  private readonly gmActionSyncHandler = (
+    payload: GmActionSyncPayload
+  ) => {
+    this.handleGmActionSync(payload);
   };
   private readonly pointerDownHandler = (pointer: Phaser.Input.Pointer) => {
     this.tutorialPanDistance = 0;
@@ -985,6 +991,7 @@ export class GameScene extends Phaser.Scene {
       this.turnService.setOnMatchEnded(this.matchEndedHandler);
       this.turnService.setOnReadyStateUpdate(this.readyStateUpdateHandler);
       this.turnService.setOnZarkansDonated(this.zarkansDonatedHandler);
+      this.turnService.setOnGmActionSync(this.gmActionSyncHandler);
       this.accountService = this.registry.get(
         "accountService"
       ) as AccountService | null;
@@ -1542,6 +1549,7 @@ export class GameScene extends Phaser.Scene {
         this.turnService.setOnMatchEnded();
         this.turnService.setOnReadyStateUpdate();
         this.turnService.setOnZarkansDonated();
+        this.turnService.setOnGmActionSync();
       }
       this.topBanner?.destroy();
       this.topBanner = null;
@@ -3873,6 +3881,36 @@ export class GameScene extends Phaser.Scene {
     // Ready-state broadcasts affect the readiness indicators only. Avoid a
     // full character-panel update because it rebuilds the skills state.
     this.characterPanel?.updateReadyStates(match.readyStates);
+  }
+
+  private handleGmActionSync(payload: GmActionSyncPayload) {
+    if (!payload || typeof payload.match_id !== "string") {
+      return;
+    }
+    const matchId = this.registry.get("currentMatchId") as string | null;
+    if (!matchId || payload.match_id !== matchId) {
+      return;
+    }
+    const match = this.currentMatch;
+    if (!match || !match.gameMasterMode) {
+      return;
+    }
+    if (payload.playerCharacters) {
+      match.playerCharacters = payload.playerCharacters;
+    } else if (payload.character && payload.target_character_id) {
+      match.playerCharacters = match.playerCharacters ?? {};
+      match.playerCharacters[payload.target_character_id] = payload.character;
+    }
+    if (payload.readyStates) {
+      match.readyStates = payload.readyStates;
+    }
+    const activeCharId = this.characterPanel?.getActiveControlledCharacterId();
+    if (activeCharId && activeCharId === payload.target_character_id) {
+      this.updateCharacterPanel(match);
+    } else {
+      this.characterPanel?.updateReadyStates(match.readyStates);
+    }
+    this.renderPlayerCharacters(match);
   }
 
   private handleTurnAdvancedUpdate(payload: TurnAdvancedMessagePayload) {

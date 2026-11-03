@@ -7,6 +7,7 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { isCharacterDead } from "../utils/playerCharacter";
 import { applySkillToCharacter } from "../match/afkSkills";
+import { getRuntimeMatchId } from "../utils/matchIds";
 
 export function upgradeSkillRpc(
   ctx: nkruntime.Context,
@@ -149,6 +150,25 @@ export function upgradeSkillRpc(
   }
 
   storage.writeMatch(match, read.version);
+
+  if (match.gameMasterMode) {
+    try {
+      nkWrapper.matchSignal(
+        getRuntimeMatchId(match),
+        JSON.stringify({
+          type: "gm_action_sync",
+          match_id: matchId,
+          target_character_id: targetCharId,
+          action_type: "skill",
+          actor_user_id: ctx.userId,
+          character,
+          playerCharacters: match.playerCharacters
+        })
+      );
+    } catch (e) {
+      _logger.debug("gm_action_sync signal failed: %s", (e as Error).message);
+    }
+  }
 
   const response: UpgradeSkillPayload = {
     ok: true,

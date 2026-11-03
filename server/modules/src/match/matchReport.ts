@@ -497,6 +497,7 @@ export function buildMatchReport(
     ended_at: endedAt,
     turns: resolvedTurn,
     reason,
+    ...(match.gameMasterMode ? { game_master_mode: true } : {}),
     ...(winningTeamId ? { winning_team_id: winningTeamId } : {}),
     winning_character_ids: winningCharacterIds,
     teams,

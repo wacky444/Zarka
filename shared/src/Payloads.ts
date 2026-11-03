@@ -26,6 +26,17 @@ export const OPCODE_MATCH_ENDED = 103;
 export const OPCODE_READY_STATE_UPDATE = 104;
 export const OPCODE_ZARKANS_DONATED = 105;
 export const OPCODE_PLAYER_KICKED = 106;
+export const OPCODE_GM_ACTION_SYNC = 107;
+
+export interface GmActionSyncPayload {
+  match_id: string;
+  target_character_id: string;
+  action_type: "main" | "secondary" | "skill" | "shop" | "ready";
+  actor_user_id: string;
+  character?: PlayerCharacter;
+  playerCharacters?: Record<string, PlayerCharacter>;
+  readyStates?: Record<string, boolean>;
+}
 
 export type CreateTutorialMatchPayload = {
   ok?: boolean;

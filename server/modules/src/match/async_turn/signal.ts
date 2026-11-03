@@ -11,6 +11,7 @@ import {
   OPCODE_TURN_ADVANCED,
   OPCODE_ZARKANS_DONATED,
   OPCODE_PLAYER_KICKED,
+  OPCODE_GM_ACTION_SYNC,
   type PlayerCharacter,
 } from "@shared";
 import { AsyncTurnState } from "../../models/types";
@@ -447,6 +448,36 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             null,
             true,
           );
+        } catch {}
+      } else if (msg && msg.type === "gm_action_sync") {
+        try {
+          const gmPresences: nkruntime.Presence[] = [];
+          if (Array.isArray(state.gameMasterUserIds)) {
+            for (const gmId of state.gameMasterUserIds) {
+              const p = state.players[gmId];
+              if (p) {
+                gmPresences.push(p);
+              }
+            }
+          }
+          if (gmPresences.length > 0) {
+            const payload = JSON.stringify({
+              match_id: msg.match_id ?? state.game_id,
+              target_character_id: msg.target_character_id,
+              action_type: msg.action_type,
+              actor_user_id: msg.actor_user_id,
+              character: msg.character,
+              playerCharacters: msg.playerCharacters,
+              readyStates: msg.readyStates,
+            });
+            dispatcher.broadcastMessage(
+              OPCODE_GM_ACTION_SYNC,
+              payload,
+              gmPresences,
+              null,
+              true,
+            );
+          }
         } catch {}
       }
     } catch (e) {

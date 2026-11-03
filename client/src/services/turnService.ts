@@ -10,6 +10,8 @@ import {
   OPCODE_TURN_ADVANCED,
   OPCODE_ZARKANS_DONATED,
   OPCODE_PLAYER_KICKED,
+  OPCODE_GM_ACTION_SYNC,
+  type GmActionSyncPayload,
   type DonateZarkansRequest,
   type ZarkansDonatedMessagePayload,
   type InMatchSettings,
@@ -68,6 +70,7 @@ export class TurnService {
   ) => void;
   private onZarkansDonated?: (payload: ZarkansDonatedMessagePayload) => void;
   private onPlayerKicked?: (payload: { match_id?: string; kicked_reason?: string; player_id?: string }) => void;
+  private onGmActionSync?: (payload: GmActionSyncPayload) => void;
   private usernameCache = new Map<string, string>([["Ranked", "Ranked"]]);
   private lastRankedPresenceTouchAt = 0;
   private rankedPresenceTouch: Promise<void> | null = null;
@@ -603,6 +606,17 @@ export class TurnService {
           } catch (e) {
             console.warn("Failed to parse player kicked message", e);
           }
+        } else if (m.op_code === OPCODE_GM_ACTION_SYNC) {
+          try {
+            const payload = JSON.parse(
+              new TextDecoder().decode(m.data)
+            ) as GmActionSyncPayload;
+            if (this.onGmActionSync) {
+              this.onGmActionSync(payload);
+            }
+          } catch (e) {
+            console.warn("Failed to parse GM action sync message", e);
+          }
         }
       };
     }
@@ -701,6 +715,12 @@ export class TurnService {
     this.onPlayerKicked = cb;
   }
 
+  setOnGmActionSync(
+    cb?: (payload: GmActionSyncPayload) => void
+  ) {
+    this.onGmActionSync = cb;
+  }
+
   // Optionally allow callers to pre-connect the socket
   async connectSocket(): Promise<void> {
     await this.ensureSocketConnected();
@@ -722,6 +742,8 @@ export class TurnService {
     this.onTurnAdvanced = undefined;
     this.onReadyStateUpdate = undefined;
     this.onZarkansDonated = undefined;
+    this.onPlayerKicked = undefined;
+    this.onGmActionSync = undefined;
   }
 
   // Getters for client and session (used in MainScene)

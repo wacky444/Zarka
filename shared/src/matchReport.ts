@@ -54,6 +54,7 @@ export interface MatchReport {
   ended_at: number;
   turns: number;
   reason: MatchReportReason;
+  game_master_mode?: boolean;
   winning_team_id?: string;
   winning_character_ids: string[];
   teams: MatchReportTeam[];
