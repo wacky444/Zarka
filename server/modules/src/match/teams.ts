@@ -193,23 +193,29 @@ export function distributeTeams(
   logger?: nkruntime.Logger
 ): TeamAssignmentResult {
   const characters = match.playerCharacters ?? {};
-  const humanPlayers = Array.isArray(match.players) ? [...match.players] : [];
-  const totalBots =
-    typeof match.botPlayers === "number" ? Math.max(0, match.botPlayers) : 0;
-  const botPlayers: string[] = [];
-  for (let i = 1; i <= totalBots; i += 1) {
-    botPlayers.push(`bot${i}`);
-  }
+  let orderedRoster: string[] = [];
 
-  const orderedRoster: string[] = [...humanPlayers];
-  for (const botId of botPlayers) {
-    if (orderedRoster.indexOf(botId) === -1) {
-      orderedRoster.push(botId);
+  if (match.gameMasterMode) {
+    orderedRoster = Object.keys(characters);
+  } else {
+    const humanPlayers = Array.isArray(match.players) ? [...match.players] : [];
+    const totalBots =
+      typeof match.botPlayers === "number" ? Math.max(0, match.botPlayers) : 0;
+    const botPlayers: string[] = [];
+    for (let i = 1; i <= totalBots; i += 1) {
+      botPlayers.push(`bot${i}`);
     }
-  }
-  for (const charId of Object.keys(characters)) {
-    if (orderedRoster.indexOf(charId) === -1) {
-      orderedRoster.push(charId);
+
+    orderedRoster = [...humanPlayers];
+    for (const botId of botPlayers) {
+      if (orderedRoster.indexOf(botId) === -1) {
+        orderedRoster.push(botId);
+      }
+    }
+    for (const charId of Object.keys(characters)) {
+      if (orderedRoster.indexOf(charId) === -1) {
+        orderedRoster.push(charId);
+      }
     }
   }
 

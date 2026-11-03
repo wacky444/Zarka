@@ -171,6 +171,8 @@ export function updateSettingsRpc(
           turnsToBeAt1Tile: match.turnsToBeAt1Tile,
           name: match.name,
           started: match.started,
+          gameMasterMode: match.gameMasterMode,
+          gameMasterUserIds: match.gameMasterUserIds,
         })
       );
     } catch (signalError) {

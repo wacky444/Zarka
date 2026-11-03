@@ -107,7 +107,9 @@ function createMatchRpcLocked(
     roundTime,
     autoSkip: String(autoSkip),
     turnsToBeAt1Tile: String(turnsToBeAt1Tile),
-    game_id: gameId
+    game_id: gameId,
+    gameMasterMode: String(gameMasterMode),
+    gameMasterUserIds: gameMasterMode ? JSON.stringify([ctx.userId]) : ""
   };
 
   const runtimeMatchId = nkWrapper.matchCreate("async_turn", params);

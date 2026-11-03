@@ -83,6 +83,9 @@ export function ensurePlayerCharacter(
 }
 
 export function ensureAllPlayerCharacters(match: MatchRecord): boolean {
+  if (match.gameMasterMode) {
+    return false;
+  }
   let mutated = false;
   if (!match.playerCharacters) {
     match.playerCharacters = {};
@@ -337,6 +340,9 @@ function buildSpawnPool(
 }
 
 function getSpawnRoster(match: MatchRecord): string[] {
+  if (match.gameMasterMode) {
+    return Object.keys(match.playerCharacters ?? {});
+  }
   const totalBots =
     typeof match.botPlayers === "number" ? Math.max(0, match.botPlayers) : 0;
   const roster = [...match.players];

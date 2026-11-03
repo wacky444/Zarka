@@ -15,7 +15,7 @@ import { tailorMapForCharacter } from "../utils/matchView";
 import { createReplaySnapshot } from "../match/replay/snapshot";
 import { getRuntimeMatchId } from "../utils/matchIds";
 import { startMatchRecord } from "../match/startMatchRecord";
-import { hasEnoughSpawnTiles } from "../utils/playerCharacter";
+import { hasEnoughSpawnTiles, createDefaultCharacter } from "../utils/playerCharacter";
 
 export function startMatchRpc(
   ctx: nkruntime.Context,
@@ -99,8 +99,39 @@ export function startMatchRpc(
     match.items = [];
   }
 
-  if (!match.creator || match.creator !== ctx.userId) {
-    throw makeNakamaError("not_creator", nkruntime.Codes.PERMISSION_DENIED);
+  if (match.gameMasterMode) {
+    const isGM =
+      Array.isArray(match.gameMasterUserIds) &&
+      match.gameMasterUserIds.indexOf(ctx.userId) !== -1;
+    if (!isGM) {
+      throw makeNakamaError("not_game_master", nkruntime.Codes.PERMISSION_DENIED);
+    }
+  } else {
+    if (!match.creator || match.creator !== ctx.userId) {
+      throw makeNakamaError("not_creator", nkruntime.Codes.PERMISSION_DENIED);
+    }
+  }
+
+  if (match.gameMasterMode) {
+    if (
+      !Array.isArray(match.controlledCharacterRoster) ||
+      match.controlledCharacterRoster.length < 2
+    ) {
+      throw makeNakamaError(
+        "insufficient_controlled_characters",
+        nkruntime.Codes.FAILED_PRECONDITION
+      );
+    }
+    match.playerCharacters = {};
+    match.readyStates = {};
+    for (const entry of match.controlledCharacterRoster) {
+      const char = createDefaultCharacter(entry.id);
+      char.name = entry.name;
+      char.skin = entry.skin;
+      match.playerCharacters[entry.id] = char;
+      match.readyStates[entry.id] = false;
+    }
+    match.autoSkip = false;
   }
 
   if (match.started) {
@@ -111,8 +142,15 @@ export function startMatchRpc(
         throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
       }
     }
+    const isGMViewer = Boolean(
+      match.gameMasterMode &&
+      Array.isArray(match.gameMasterUserIds) &&
+      match.gameMasterUserIds.indexOf(ctx.userId) !== -1
+    );
     const viewerCharacter = match.playerCharacters?.[ctx.userId] ?? null;
-    const tailored = tailorMapForCharacter(match.map, viewerCharacter);
+    const tailored = isGMViewer
+      ? match.map
+      : tailorMapForCharacter(match.map, viewerCharacter);
     const already: import("@shared").StartMatchPayload = {
       ok: true,
       match_id: matchId,
@@ -162,8 +200,15 @@ export function startMatchRpc(
     logger.warn("start_match: matchSignal failed: %s", (e as Error).message);
   }
 
+  const isGMViewer = Boolean(
+    match.gameMasterMode &&
+    Array.isArray(match.gameMasterUserIds) &&
+    match.gameMasterUserIds.indexOf(ctx.userId) !== -1
+  );
   const viewerCharacter = match.playerCharacters?.[ctx.userId] ?? null;
-  const tailored = tailorMapForCharacter(match.map, viewerCharacter);
+  const tailored = isGMViewer
+    ? match.map
+    : tailorMapForCharacter(match.map, viewerCharacter);
   const response: import("@shared").StartMatchPayload = {
     ok: true,
     match_id: matchId,

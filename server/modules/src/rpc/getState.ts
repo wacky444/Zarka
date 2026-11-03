@@ -45,7 +45,14 @@ export function getStateRpc(
     return JSON.stringify({ error: "not_found" });
   }
   const viewerId = ctx?.userId ?? null;
-  const viewAll = json.view_all === true && isAdminUser(nk, viewerId);
+  const isGameMaster = Boolean(
+    match.gameMasterMode &&
+    viewerId &&
+    Array.isArray(match.gameMasterUserIds) &&
+    match.gameMasterUserIds.indexOf(viewerId) !== -1
+  );
+  const viewAll =
+    (json.view_all === true && isAdminUser(nk, viewerId)) || isGameMaster;
   if (
     match.metadata?.[RANKED_MATCH_METADATA_KEY] &&
     (!viewerId ||

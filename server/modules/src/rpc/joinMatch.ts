@@ -194,6 +194,8 @@ function joinMatchRpcLocked(
       restore: "true",
       ranked: String(isRanked),
       players: JSON.stringify(match.players),
+      gameMasterMode: String(match.gameMasterMode === true),
+      gameMasterUserIds: JSON.stringify(match.gameMasterUserIds ?? []),
     };
     try {
       const runtimeMatchId = nkWrapper.matchCreate("async_turn", params);

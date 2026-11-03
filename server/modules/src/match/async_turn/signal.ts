@@ -51,6 +51,8 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
         if (typeof nas === "boolean") state.autoSkip = nas;
         if (typeof nbp === "number") state.botPlayers = nbp;
         if (typeof nn === "string") state.name = nn;
+        if (typeof msg.gameMasterMode === "boolean") state.gameMasterMode = msg.gameMasterMode;
+        if (Array.isArray(msg.gameMasterUserIds)) state.gameMasterUserIds = msg.gameMasterUserIds;
 
         try {
           const label = buildMatchLabel({
@@ -263,7 +265,11 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             );
           } else {
             for (const [playerId, presence] of entries) {
-              const viewAll = state.adminViewers[playerId] === true;
+              const isGM =
+                state.gameMasterMode === true &&
+                Array.isArray(state.gameMasterUserIds) &&
+                state.gameMasterUserIds.indexOf(playerId) !== -1;
+              const viewAll = state.adminViewers[playerId] === true || isGM;
               const tailored = tailorReplayEvents(
                 events,
                 playerId,
