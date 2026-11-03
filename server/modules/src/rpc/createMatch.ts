@@ -45,47 +45,51 @@ function createMatchRpcLocked(
   let turnsToBeAt1Tile = 30;
   let gameMasterMode = false;
 
+  let json: any = null;
   if (payload && payload !== "") {
     try {
-      const json = JSON.parse(payload);
-      const requestedSize = clampNumber(
-        json?.size,
-        2,
-        MAX_NORMAL_MATCH_SIZE
-      );
-      if (typeof requestedSize === "number") {
-        size = requestedSize;
-      }
-      if (json && typeof json.name === "string") {
-        name = normalizeMatchName(json.name);
-      }
-      if (json && typeof json.roundTime === "string") {
-        const valid = validateTime(json.roundTime);
-        if (valid) {
-          roundTime = valid;
-        }
-      }
-      if (json && typeof json.autoSkip === "boolean") {
-        autoSkip = json.autoSkip;
-      }
-      if (json && typeof json.turnsToBeAt1Tile === "number") {
-        turnsToBeAt1Tile = Math.max(1, Math.floor(json.turnsToBeAt1Tile));
-      }
-      if (json && json.gameMasterMode === true) {
-        if (!isAdminUser(nk, ctx.userId)) {
-          throw makeNakamaError(
-            "Game Master matches are restricted to administrators",
-            nkruntime.Codes.PERMISSION_DENIED
-          );
-        }
-        gameMasterMode = true;
-        autoSkip = false;
-      }
+      json = JSON.parse(payload);
     } catch (err) {
       logger.debug(
         "create_match payload parse failed: %s",
         (err as Error).message
       );
+    }
+  }
+
+  if (json) {
+    const requestedSize = clampNumber(
+      json?.size,
+      2,
+      MAX_NORMAL_MATCH_SIZE
+    );
+    if (typeof requestedSize === "number") {
+      size = requestedSize;
+    }
+    if (typeof json.name === "string") {
+      name = normalizeMatchName(json.name);
+    }
+    if (typeof json.roundTime === "string") {
+      const valid = validateTime(json.roundTime);
+      if (valid) {
+        roundTime = valid;
+      }
+    }
+    if (typeof json.autoSkip === "boolean") {
+      autoSkip = json.autoSkip;
+    }
+    if (typeof json.turnsToBeAt1Tile === "number") {
+      turnsToBeAt1Tile = Math.max(1, Math.floor(json.turnsToBeAt1Tile));
+    }
+    if (json.gameMasterMode === true) {
+      if (!isAdminUser(nk, ctx.userId)) {
+        throw makeNakamaError(
+          "Game Master matches are restricted to administrators",
+          nkruntime.Codes.PERMISSION_DENIED
+        );
+      }
+      gameMasterMode = true;
+      autoSkip = false;
     }
   }
 

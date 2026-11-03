@@ -468,3 +468,35 @@ test("ranked match join attempt accepts assigned users only and get_state hides 
   ) as { error?: string };
   assert.equal(outsideState.error, "forbidden");
 });
+
+test("createMatchRpc rejects gameMasterMode requests from non-admin users and allows admin", () => {
+  const harness = createHarness(["nonAdmin", "adminUser"]);
+  const nonAdminCtx = { userId: "nonAdmin" } as nkruntime.Context;
+  const adminCtx = { userId: "adminUser" } as nkruntime.Context;
+
+  const admin = harness.users.get("adminUser");
+  assert.ok(admin);
+  admin.metadata = { admin: true, zarka: { tutorialCompleted: true } };
+
+  assert.throws(
+    () =>
+      createMatchRpc(
+        nonAdminCtx,
+        harness.logger,
+        harness.nakama,
+        JSON.stringify({ gameMasterMode: true })
+      ),
+    { message: "Game Master matches are restricted to administrators" }
+  );
+
+  const createdAdminMatch = JSON.parse(
+    createMatchRpc(
+      adminCtx,
+      harness.logger,
+      harness.nakama,
+      JSON.stringify({ gameMasterMode: true })
+    )
+  ) as { match_id: string; gameMasterMode?: boolean };
+  assert.ok(createdAdminMatch.match_id);
+  assert.equal(createdAdminMatch.gameMasterMode, true);
+});
