@@ -10,6 +10,7 @@ import { normalizeMatchName } from "../utils/normalize";
 import { getRandomColorMatchName } from "../match/teams";
 import { assertCanAddMembership, createMembershipStorage, withMatchMembershipLocks } from "../services/matchMembershipLimit";
 import { clampNumber, validateTime } from "../utils/validation";
+import { isAdminUser } from "../utils/admin";
 import {
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
@@ -42,6 +43,7 @@ function createMatchRpcLocked(
   let roundTime = "23:00";
   let autoSkip = true;
   let turnsToBeAt1Tile = 30;
+  let gameMasterMode = false;
 
   if (payload && payload !== "") {
     try {
@@ -68,6 +70,16 @@ function createMatchRpcLocked(
       }
       if (json && typeof json.turnsToBeAt1Tile === "number") {
         turnsToBeAt1Tile = Math.max(1, Math.floor(json.turnsToBeAt1Tile));
+      }
+      if (json && json.gameMasterMode === true) {
+        if (!isAdminUser(nk, ctx.userId)) {
+          throw makeNakamaError(
+            "Game Master matches are restricted to administrators",
+            nkruntime.Codes.PERMISSION_DENIED
+          );
+        }
+        gameMasterMode = true;
+        autoSkip = false;
       }
     } catch (err) {
       logger.debug(
@@ -118,7 +130,9 @@ function createMatchRpcLocked(
     creator: ctx.userId,
     name,
     started: false,
-    removed: 0
+    removed: 0,
+    gameMasterMode: gameMasterMode ? true : undefined,
+    gameMasterUserIds: gameMasterMode ? [ctx.userId] : undefined
   };
 
   storage.writeMatch(record);
@@ -129,7 +143,8 @@ function createMatchRpcLocked(
     size,
     turnsToBeAt1Tile,
     name,
-    started: false
+    started: false,
+    gameMasterMode: gameMasterMode ? true : undefined
   };
 
   return JSON.stringify(response);

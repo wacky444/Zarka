@@ -10,6 +10,7 @@ import {
   OPCODE_SETTINGS_UPDATE,
   OPCODE_TURN_ADVANCED,
   OPCODE_ZARKANS_DONATED,
+  OPCODE_PLAYER_KICKED,
   type PlayerCharacter,
 } from "@shared";
 import { AsyncTurnState } from "../../models/types";
@@ -391,6 +392,34 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
           );
         } catch {}
         state.matchRemoved = true;
+      } else if (msg && msg.type === "player_kicked") {
+        try {
+          const kickedPlayerId = typeof msg.player_id === "string" ? msg.player_id : undefined;
+          const kickedReason = typeof msg.kicked_reason === "string" ? msg.kicked_reason : "gm_mode_enabled";
+          const payload = JSON.stringify({
+            match_id: state.game_id,
+            kicked_reason: kickedReason,
+            player_id: kickedPlayerId,
+          });
+          const targetPresence = kickedPlayerId ? state.players[kickedPlayerId] : undefined;
+          if (targetPresence) {
+            dispatcher.broadcastMessage(
+              OPCODE_PLAYER_KICKED,
+              payload,
+              [targetPresence],
+              null,
+              true,
+            );
+          } else {
+            dispatcher.broadcastMessage(
+              OPCODE_PLAYER_KICKED,
+              payload,
+              null,
+              null,
+              true,
+            );
+          }
+        } catch {}
       } else if (msg && msg.type === "match_ended") {
         try {
           const payload = JSON.stringify({
