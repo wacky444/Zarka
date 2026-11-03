@@ -455,6 +455,40 @@ export class MainScene extends Phaser.Scene {
         this.lobbyView.setMatchStarted(false);
         this.showView("main");
       });
+      this.turnService.setOnPlayerKicked(() => {
+        const gameScene = this.scene.get("GameScene") as
+          | import("./GameScene").GameScene
+          | undefined;
+        if (gameScene && gameScene.isVictoryOverlayActive()) {
+          return;
+        }
+        this.statusText.setText(
+          "You were kicked from the match because Game Master mode was enabled."
+        );
+        if (
+          this.scene.isActive("GameScene") ||
+          this.scene.isSleeping("GameScene")
+        ) {
+          this.scene.stop("GameScene");
+        }
+        if (this.scene.isSleeping("MainScene")) {
+          this.scene.wake("MainScene");
+        }
+        const runtimeMatchId = this.getCurrentRuntimeMatchId();
+        if (runtimeMatchId && this.turnService) {
+          this.turnService
+            .leaveRealtimeMatch(runtimeMatchId)
+            .catch((e) => console.warn("Failed to leave realtime match", e));
+        }
+        this.setCurrentMatchId(null);
+        this.currentMatchName = null;
+        this.currentMatchCreator = undefined;
+        this.lobbyView.setPlayers([]);
+        this.lobbyView.setCreator(undefined, false);
+        this.lobbyView.setMatchInfo();
+        this.lobbyView.setMatchStarted(false);
+        this.showView("main");
+      });
       this.statusText.setText("Authenticated. Use the buttons below.");
 
       // Instantiate Matches List view (hidden by default)
@@ -953,9 +987,11 @@ export class MainScene extends Phaser.Scene {
     }
 
     let completed = false;
+    let isAdmin = false;
     try {
       const account = await accountService.getAccount(userId);
       completed = account?.tutorialCompleted === true;
+      isAdmin = account?.isAdmin === true;
     } catch (error) {
       console.warn("Failed to load tutorial profile state", error);
     }
@@ -964,6 +1000,9 @@ export class MainScene extends Phaser.Scene {
     }
     this.tutorialCompleted = completed;
     this.applyTutorialGate();
+    if (this.lobbyView) {
+      this.lobbyView.setIsAdmin(isAdmin);
+    }
   }
 
   private applyTutorialGate(): void {

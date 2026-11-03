@@ -9,6 +9,7 @@ import {
   OPCODE_SETTINGS_UPDATE,
   OPCODE_TURN_ADVANCED,
   OPCODE_ZARKANS_DONATED,
+  OPCODE_PLAYER_KICKED,
   type DonateZarkansRequest,
   type ZarkansDonatedMessagePayload,
   type InMatchSettings,
@@ -23,9 +24,7 @@ import {
   type ListMatchCardsRequest,
   type Skin,
   type SkillId,
-  type UpgradeSkillRequest,
   type UpdateTestamentRequest,
-  type BuyShopItemRequest,
   type ShopId,
   type Axial
 } from "@shared";
@@ -68,6 +67,7 @@ export class TurnService {
     payload: ReadyStateUpdateMessagePayload
   ) => void;
   private onZarkansDonated?: (payload: ZarkansDonatedMessagePayload) => void;
+  private onPlayerKicked?: (payload: { match_id?: string; kicked_reason?: string; player_id?: string }) => void;
   private usernameCache = new Map<string, string>([["Ranked", "Ranked"]]);
   private lastRankedPresenceTouchAt = 0;
   private rankedPresenceTouch: Promise<void> | null = null;
@@ -281,11 +281,13 @@ export class TurnService {
 
   async updateMainAction(
     match_id: string,
-    submission: ActionSubmission | null
+    submission: ActionSubmission | null,
+    target_character_id?: string
   ) {
     const res = await this.client.rpc(this.session, "update_main_action", {
       match_id,
-      submission
+      submission,
+      ...(target_character_id ? { target_character_id } : {})
     });
     return res;
   }
@@ -303,12 +305,14 @@ export class TurnService {
   async updateSecondaryAction(
     match_id: string,
     submission: ActionSubmission | null,
-    slot: "secondary" | "extra_secondary" = "secondary"
+    slot: "secondary" | "extra_secondary" = "secondary",
+    target_character_id?: string
   ) {
     const res = await this.client.rpc(this.session, "update_secondary_action", {
       match_id,
       submission,
-      slot
+      slot,
+      ...(target_character_id ? { target_character_id } : {})
     });
     return res;
   }
@@ -316,12 +320,14 @@ export class TurnService {
   async updateReadyState(
     match_id: string,
     ready: boolean,
-    viewAll = false
+    viewAll = false,
+    target_character_id?: string
   ) {
     const res = await this.client.rpc(this.session, "update_ready_state", {
       match_id,
       ready,
-      view_all: viewAll
+      view_all: viewAll,
+      ...(target_character_id ? { target_character_id } : {})
     });
     return res;
   }
@@ -334,19 +340,21 @@ export class TurnService {
     return res;
   }
 
-  async upgradeSkill(match_id: string, skill_id: SkillId) {
+  async upgradeSkill(match_id: string, skill_id: SkillId, target_character_id?: string) {
     const res = await this.client.rpc(this.session, "upgrade_skill", {
       match_id,
-      skill_id
-    } satisfies UpgradeSkillRequest);
+      skill_id,
+      ...(target_character_id ? { target_character_id } : {})
+    });
     return res;
   }
 
-  async upgradeSkills(match_id: string, skill_ids: SkillId[]) {
+  async upgradeSkills(match_id: string, skill_ids: SkillId[], target_character_id?: string) {
     const res = await this.client.rpc(this.session, "upgrade_skill", {
       match_id,
-      skill_ids
-    } satisfies UpgradeSkillRequest);
+      skill_ids,
+      ...(target_character_id ? { target_character_id } : {})
+    });
     return res;
   }
 
@@ -392,14 +400,16 @@ export class TurnService {
     match_id: string,
     shop_id: ShopId,
     target_player_id?: string,
-    target_location?: Axial
+    target_location?: Axial,
+    target_character_id?: string
   ) {
     const res = await this.client.rpc(this.session, "buy_shop_item", {
       match_id,
       shop_id,
       ...(target_player_id ? { target_player_id } : {}),
-      ...(target_location ? { target_location } : {})
-    } satisfies BuyShopItemRequest);
+      ...(target_location ? { target_location } : {}),
+      ...(target_character_id ? { target_character_id } : {})
+    });
     return res;
   }
 
@@ -582,6 +592,17 @@ export class TurnService {
           } catch (e) {
             console.warn("Failed to parse zarkans donation message", e);
           }
+        } else if (m.op_code === OPCODE_PLAYER_KICKED) {
+          try {
+            const payload = JSON.parse(
+              new TextDecoder().decode(m.data)
+            ) as { match_id?: string; kicked_reason?: string; player_id?: string };
+            if (this.onPlayerKicked) {
+              this.onPlayerKicked(payload);
+            }
+          } catch (e) {
+            console.warn("Failed to parse player kicked message", e);
+          }
         }
       };
     }
@@ -672,6 +693,12 @@ export class TurnService {
     cb?: (payload: ZarkansDonatedMessagePayload) => void
   ) {
     this.onZarkansDonated = cb;
+  }
+
+  setOnPlayerKicked(
+    cb?: (payload: { match_id?: string; kicked_reason?: string; player_id?: string }) => void
+  ) {
+    this.onPlayerKicked = cb;
   }
 
   // Optionally allow callers to pre-connect the socket
