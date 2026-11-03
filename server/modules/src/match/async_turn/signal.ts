@@ -417,14 +417,6 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
               null,
               true,
             );
-          } else {
-            dispatcher.broadcastMessage(
-              OPCODE_PLAYER_KICKED,
-              payload,
-              null,
-              null,
-              true,
-            );
           }
         } catch {}
       } else if (msg && msg.type === "match_ended") {
