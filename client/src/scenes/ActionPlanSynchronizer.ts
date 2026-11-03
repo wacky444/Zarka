@@ -34,6 +34,16 @@ export interface ActionPlanSynchronizerContext {
 export class ActionPlanSynchronizer {
   private readonly context: ActionPlanSynchronizerContext;
 
+  private activeControlledCharacterId: string | null = null;
+  private actionBuffersByCharacter = new Map<
+    string,
+    {
+      main?: MainActionSelection | null;
+      secondary?: SecondaryActionSelection | null;
+      extraSecondary?: SecondaryActionSelection | null;
+    }
+  >();
+
   private mainActionUpdateRunning = false;
   private pendingMainActionSelection: MainActionSelection | undefined;
   private mainActionDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -65,6 +75,58 @@ export class ActionPlanSynchronizer {
 
   constructor(context: ActionPlanSynchronizerContext) {
     this.context = context;
+  }
+
+  getActiveControlledCharacterId(): string | null {
+    return this.activeControlledCharacterId;
+  }
+
+  private getEffectiveCharacterId(): string | null {
+    return this.activeControlledCharacterId ?? this.context.getCurrentUserId();
+  }
+
+  async setActiveControlledCharacterId(characterId: string | null): Promise<void> {
+    if (this.activeControlledCharacterId === characterId) {
+      return;
+    }
+    await this.flushPendingSubmissions();
+    this.activeControlledCharacterId = characterId;
+  }
+
+  async flushPendingSubmissions(): Promise<void> {
+    if (this.mainActionDebounceTimer !== null) {
+      clearTimeout(this.mainActionDebounceTimer);
+      this.mainActionDebounceTimer = null;
+    }
+    if (this.secondaryActionDebounceTimer !== null) {
+      clearTimeout(this.secondaryActionDebounceTimer);
+      this.secondaryActionDebounceTimer = null;
+    }
+    if (this.extraSecondaryActionDebounceTimer !== null) {
+      clearTimeout(this.extraSecondaryActionDebounceTimer);
+      this.extraSecondaryActionDebounceTimer = null;
+    }
+
+    const pendingPromises: Promise<void>[] = [];
+    if (this.queuedMainActionSelection !== undefined) {
+      const next = this.queuedMainActionSelection;
+      this.queuedMainActionSelection = undefined;
+      pendingPromises.push(this.handleMainActionSelection(next));
+    }
+    if (this.queuedSecondaryActionSelection !== undefined) {
+      const next = this.queuedSecondaryActionSelection;
+      this.queuedSecondaryActionSelection = undefined;
+      pendingPromises.push(this.handleSecondaryActionSelection(next));
+    }
+    if (this.queuedExtraSecondaryActionSelection !== undefined) {
+      const next = this.queuedExtraSecondaryActionSelection;
+      this.queuedExtraSecondaryActionSelection = undefined;
+      pendingPromises.push(this.handleExtraSecondaryActionSelection(next));
+    }
+
+    if (pendingPromises.length > 0) {
+      await Promise.all(pendingPromises);
+    }
   }
 
   destroy(): void {
@@ -147,9 +209,9 @@ export class ActionPlanSynchronizer {
   ): Promise<void> {
     this.context.cancelMainActionLocationPick();
     const turnService = this.context.getTurnService();
-    const currentUserId = this.context.getCurrentUserId();
+    const effectiveCharacterId = this.getEffectiveCharacterId();
     const matchId = this.context.getCurrentMatchId();
-    if (!turnService || !currentUserId || !matchId) {
+    if (!turnService || !effectiveCharacterId || !matchId) {
       return;
     }
 
@@ -180,7 +242,7 @@ export class ActionPlanSynchronizer {
           : undefined,
     };
     const character =
-      this.context.getCurrentMatch()?.playerCharacters?.[currentUserId] ?? null;
+      this.context.getCurrentMatch()?.playerCharacters?.[effectiveCharacterId] ?? null;
     const previousPlan = character?.actionPlan?.main ?? null;
     const previousActionId = previousPlan?.actionId ?? null;
     const previousTarget = normalizeAxial(previousPlan?.targetLocationId);
@@ -244,7 +306,12 @@ export class ActionPlanSynchronizer {
             normalizedSelection.extraExecutions,
           )
         : null;
-      const response = await turnService.updateMainAction(matchId, submission);
+      const targetCharId = this.activeControlledCharacterId ?? undefined;
+      const response = await turnService.updateMainAction(
+        matchId,
+        submission,
+        targetCharId
+      );
       const payload = this.context.parseRpcPayload<UpdateMainActionPayload>(
         response,
       );
@@ -255,7 +322,7 @@ export class ActionPlanSynchronizer {
       if (!match) {
         return;
       }
-      const target = match.playerCharacters?.[currentUserId] ?? null;
+      const target = match.playerCharacters?.[effectiveCharacterId] ?? null;
       if (!target) {
         return;
       }
@@ -342,9 +409,9 @@ export class ActionPlanSynchronizer {
     selection: SecondaryActionSelection | null | undefined,
   ): Promise<void> {
     const turnService = this.context.getTurnService();
-    const currentUserId = this.context.getCurrentUserId();
+    const effectiveCharacterId = this.getEffectiveCharacterId();
     const matchId = this.context.getCurrentMatchId();
-    if (!turnService || !currentUserId || !matchId) {
+    if (!turnService || !effectiveCharacterId || !matchId) {
       return;
     }
     const normalizedPlayers = this.normalizeTargetPlayers(
@@ -373,7 +440,7 @@ export class ActionPlanSynchronizer {
       }))
     };
     const character =
-      this.context.getCurrentMatch()?.playerCharacters?.[currentUserId] ?? null;
+      this.context.getCurrentMatch()?.playerCharacters?.[effectiveCharacterId] ?? null;
     const previousPlan = character?.actionPlan?.secondary ?? null;
     const previousActionId = previousPlan?.actionId ?? null;
     const previousTarget = normalizeAxial(
@@ -434,9 +501,12 @@ export class ActionPlanSynchronizer {
             normalizedSelection.manipulateOperations
           )
         : null;
+      const targetCharId = this.activeControlledCharacterId ?? undefined;
       const response = await turnService.updateSecondaryAction(
         matchId,
         submission,
+        "secondary",
+        targetCharId,
       );
       const payload =
         this.context.parseRpcPayload<UpdateSecondaryActionPayload>(response);
@@ -447,7 +517,7 @@ export class ActionPlanSynchronizer {
       if (!match) {
         return;
       }
-      const target = match.playerCharacters?.[currentUserId] ?? null;
+      const target = match.playerCharacters?.[effectiveCharacterId] ?? null;
       if (!target) {
         return;
       }
@@ -548,9 +618,9 @@ export class ActionPlanSynchronizer {
     selection: SecondaryActionSelection | null | undefined,
   ): Promise<void> {
     const turnService = this.context.getTurnService();
-    const currentUserId = this.context.getCurrentUserId();
+    const effectiveCharacterId = this.getEffectiveCharacterId();
     const matchId = this.context.getCurrentMatchId();
-    if (!turnService || !currentUserId || !matchId) {
+    if (!turnService || !effectiveCharacterId || !matchId) {
       return;
     }
     const normalizedSelection: SecondaryActionSelection = {
@@ -576,7 +646,7 @@ export class ActionPlanSynchronizer {
       }))
     };
     const character =
-      this.context.getCurrentMatch()?.playerCharacters?.[currentUserId] ?? null;
+      this.context.getCurrentMatch()?.playerCharacters?.[effectiveCharacterId] ?? null;
     const previousPlan = character?.actionPlan?.extraSecondary ?? null;
     if (
       normalizedSelection.actionId === (previousPlan?.actionId ?? null) &&
@@ -628,10 +698,12 @@ export class ActionPlanSynchronizer {
             normalizedSelection.manipulateOperations
           )
         : null;
+      const targetCharId = this.activeControlledCharacterId ?? undefined;
       const response = await turnService.updateSecondaryAction(
         matchId,
         submission,
         "extra_secondary",
+        targetCharId,
       );
       const payload =
         this.context.parseRpcPayload<UpdateSecondaryActionPayload>(response);
@@ -642,7 +714,7 @@ export class ActionPlanSynchronizer {
       if (!match) {
         return;
       }
-      const target = match.playerCharacters?.[currentUserId] ?? null;
+      const target = match.playerCharacters?.[effectiveCharacterId] ?? null;
       if (!target) {
         return;
       }

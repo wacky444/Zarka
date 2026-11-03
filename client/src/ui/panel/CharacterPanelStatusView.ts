@@ -19,6 +19,8 @@ export interface CharacterPanelStatusViewLayout {
 
 export class CharacterPanelStatusView {
   private readonly portrait: SkinContainer;
+  private readonly portraitHitZone: Phaser.GameObjects.Zone;
+  private readonly portraitHighlight: Phaser.GameObjects.Rectangle;
   private readonly nameText: Phaser.GameObjects.Text;
   private readonly healthLabel: Phaser.GameObjects.Text;
   private readonly energyLabel: Phaser.GameObjects.Text;
@@ -26,6 +28,8 @@ export class CharacterPanelStatusView {
   private readonly energyBar: ProgressBar;
   private readonly elements: Phaser.GameObjects.GameObject[];
   private currentLayout: CharacterPanelStatusViewLayout;
+  private onPortraitClickCallback?: () => void;
+  private isGmMode = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -35,6 +39,19 @@ export class CharacterPanelStatusView {
     this.currentLayout = layout;
     const portraitScale = layout.portraitSize / 16;
     const barX = layout.margin * 2 + layout.portraitSize;
+
+    this.portraitHighlight = scene.add
+      .rectangle(
+        layout.margin + layout.portraitSize / 2,
+        layout.contentTop + layout.portraitSize / 2,
+        layout.portraitSize + 4,
+        layout.portraitSize + 4,
+        0x5c8fff,
+        0
+      )
+      .setStrokeStyle(2, 0x7aa5ff, 0);
+    parent.add(this.portraitHighlight);
+
     this.portrait = createSkinContainer(
       scene,
       layout.margin + layout.portraitSize / 2,
@@ -43,6 +60,37 @@ export class CharacterPanelStatusView {
       portraitScale
     );
     parent.add(this.portrait);
+
+    this.portraitHitZone = scene.add
+      .zone(
+        layout.margin + layout.portraitSize / 2,
+        layout.contentTop + layout.portraitSize / 2,
+        layout.portraitSize,
+        layout.portraitSize
+      )
+      .setOrigin(0.5, 0.5);
+    parent.add(this.portraitHitZone);
+
+    this.portraitHitZone.on("pointerover", () => {
+      if (this.isGmMode) {
+        this.portraitHighlight.setAlpha(0.25);
+        this.portraitHighlight.setStrokeStyle(2, 0x7aa5ff, 1);
+        this.portrait.setTint(0xddedff);
+      }
+    });
+    this.portraitHitZone.on("pointerout", () => {
+      if (this.isGmMode) {
+        this.portraitHighlight.setAlpha(0);
+        this.portraitHighlight.setStrokeStyle(2, 0x7aa5ff, 0);
+        this.portrait.clearTint();
+      }
+    });
+    this.portraitHitZone.on("pointerdown", () => {
+      if (this.isGmMode && this.onPortraitClickCallback) {
+        this.onPortraitClickCallback();
+      }
+    });
+
     this.nameText = scene.add
       .text(layout.margin, layout.contentTop - 14, "", {
         fontSize: "18px",
@@ -84,13 +132,28 @@ export class CharacterPanelStatusView {
     );
     parent.add(this.energyBar);
     this.elements = [
+      this.portraitHighlight,
       this.portrait,
+      this.portraitHitZone,
       this.nameText,
       this.healthLabel,
       this.energyLabel,
       this.healthBar,
       this.energyBar
     ];
+  }
+
+  setGameMasterMode(enabled: boolean, onPortraitClick?: () => void): void {
+    this.isGmMode = enabled;
+    this.onPortraitClickCallback = onPortraitClick;
+    if (enabled) {
+      this.portraitHitZone.setInteractive({ useHandCursor: true });
+    } else {
+      this.portraitHitZone.disableInteractive();
+      this.portraitHighlight.setAlpha(0);
+      this.portraitHighlight.setStrokeStyle(2, 0x7aa5ff, 0);
+      this.portrait.clearTint();
+    }
   }
 
   getElements(): Phaser.GameObjects.GameObject[] {
@@ -134,9 +197,25 @@ export class CharacterPanelStatusView {
   layout(layout: CharacterPanelStatusViewLayout): void {
     this.currentLayout = layout;
     const barX = layout.margin * 2 + layout.portraitSize;
+    this.portraitHighlight.setPosition(
+      layout.margin + layout.portraitSize / 2,
+      layout.contentTop + layout.portraitSize / 2
+    );
+    this.portraitHighlight.setSize(
+      layout.portraitSize + 4,
+      layout.portraitSize + 4
+    );
     this.portrait.setPosition(
       layout.margin + layout.portraitSize / 2,
       layout.contentTop + layout.portraitSize / 2
+    );
+    this.portraitHitZone.setPosition(
+      layout.margin + layout.portraitSize / 2,
+      layout.contentTop + layout.portraitSize / 2
+    );
+    this.portraitHitZone.setSize(
+      layout.portraitSize,
+      layout.portraitSize
     );
     this.nameText.setPosition(layout.margin, layout.contentTop - 14);
     this.fitNameText();
@@ -158,6 +237,8 @@ export class CharacterPanelStatusView {
   }
 
   destroy(): void {
+    this.portraitHitZone.destroy();
+    this.portraitHighlight.destroy();
     this.portrait.destroy(true);
     this.nameText.destroy();
     this.healthLabel.destroy();
