@@ -145,11 +145,26 @@ export function buyShopItemRpc(
     throw makeNakamaError("not_found", nkruntime.Codes.NOT_FOUND);
   }
   const match: MatchRecord = read.match;
-  if (
-    !Array.isArray(match.players) ||
-    match.players.indexOf(ctx.userId) === -1
-  ) {
-    throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
+  let actorId = ctx.userId;
+  if (match.gameMasterMode) {
+    const isGM =
+      Array.isArray(match.gameMasterUserIds) &&
+      match.gameMasterUserIds.indexOf(ctx.userId) !== -1;
+    if (!isGM) {
+      throw makeNakamaError("Game Master actions are restricted to administrators", nkruntime.Codes.PERMISSION_DENIED);
+    }
+    const requestedCharId = typeof parsed.target_character_id === "string" ? parsed.target_character_id.trim() : "";
+    if (!requestedCharId) {
+      throw makeNakamaError("target_character_id required", nkruntime.Codes.INVALID_ARGUMENT);
+    }
+    actorId = requestedCharId;
+  } else {
+    if (
+      !Array.isArray(match.players) ||
+      match.players.indexOf(ctx.userId) === -1
+    ) {
+      throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
+    }
   }
   if (match.started !== true || match.removed !== 0) {
     throw makeNakamaError(
@@ -158,7 +173,7 @@ export function buyShopItemRpc(
     );
   }
 
-  let actor = match.playerCharacters?.[ctx.userId];
+  let actor = match.playerCharacters?.[actorId];
   if (!actor) {
     throw makeNakamaError("character_not_found", nkruntime.Codes.NOT_FOUND);
   }
@@ -518,6 +533,7 @@ export function buyShopItemRpc(
     ok: true,
     match_id: matchId,
     user_id: ctx.userId,
+    target_character_id: match.gameMasterMode ? actorId : undefined,
     shop_id: resolvedShopId,
     ...(targetPlayerId ? { target_player_id: targetPlayerId } : {}),
     ...(targetTeamId ? { target_team_id: targetTeamId } : {}),
@@ -527,7 +543,7 @@ export function buyShopItemRpc(
     playerCharacters: tailorPlayerCharactersForViewer(
       match.playerCharacters,
       ctx.userId,
-      false,
+      match.gameMasterMode ? true : false,
       match.current_turn,
     ),
     event,

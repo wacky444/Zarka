@@ -77,14 +77,29 @@ export function upgradeSkillRpc(
     throw makeNakamaError("not_found", nkruntime.Codes.NOT_FOUND);
   }
   const match: MatchRecord = read.match;
-  if (
-    !Array.isArray(match.players) ||
-    match.players.indexOf(ctx.userId) === -1
-  ) {
-    throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
+  let targetCharId = ctx.userId;
+  if (match.gameMasterMode) {
+    const isGM =
+      Array.isArray(match.gameMasterUserIds) &&
+      match.gameMasterUserIds.indexOf(ctx.userId) !== -1;
+    if (!isGM) {
+      throw makeNakamaError("Game Master actions are restricted to administrators", nkruntime.Codes.PERMISSION_DENIED);
+    }
+    const requestedCharId = json.target_character_id;
+    if (!requestedCharId || typeof requestedCharId !== "string") {
+      throw makeNakamaError("target_character_id required", nkruntime.Codes.INVALID_ARGUMENT);
+    }
+    targetCharId = requestedCharId;
+  } else {
+    if (
+      !Array.isArray(match.players) ||
+      match.players.indexOf(ctx.userId) === -1
+    ) {
+      throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
+    }
   }
 
-  const character = match.playerCharacters?.[ctx.userId];
+  const character = match.playerCharacters?.[targetCharId];
   if (!character) {
     throw makeNakamaError("character_not_found", nkruntime.Codes.NOT_FOUND);
   }
@@ -139,6 +154,7 @@ export function upgradeSkillRpc(
     ok: true,
     match_id: matchId,
     user_id: ctx.userId,
+    target_character_id: match.gameMasterMode ? targetCharId : undefined,
     skill_id: skillIds.length === 1 ? skillIds[0] : undefined,
     skill_ids: skillIds,
     character

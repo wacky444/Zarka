@@ -270,8 +270,23 @@ export function updateSecondaryActionRpc(
     throw makeNakamaError("not_found", 5);
   }
   const match: MatchRecord = read.match;
-  if (!match.players || match.players.indexOf(ctx.userId) === -1) {
-    throw makeNakamaError("not_in_match", 7);
+  let targetCharId = ctx.userId;
+  if (match.gameMasterMode) {
+    const isGM =
+      Array.isArray(match.gameMasterUserIds) &&
+      match.gameMasterUserIds.indexOf(ctx.userId) !== -1;
+    if (!isGM) {
+      throw makeNakamaError("Game Master actions are restricted to administrators", nkruntime.Codes.PERMISSION_DENIED);
+    }
+    const requestedCharId = json.target_character_id || json.submission?.target_character_id;
+    if (!requestedCharId || typeof requestedCharId !== "string") {
+      throw makeNakamaError("target_character_id required", 3);
+    }
+    targetCharId = requestedCharId;
+  } else {
+    if (!match.players || match.players.indexOf(ctx.userId) === -1) {
+      throw makeNakamaError("not_in_match", 7);
+    }
   }
   if (match.removed && match.removed !== 0) {
     throw makeNakamaError(
@@ -282,9 +297,9 @@ export function updateSecondaryActionRpc(
   if (!match.playerCharacters) {
     throw makeNakamaError("no_character", 9);
   }
-  const character = match.playerCharacters[ctx.userId];
+  const character = match.playerCharacters[targetCharId];
   if (!character) {
-    throw makeNakamaError("no_character", 9);
+    throw makeNakamaError("no_character", match.gameMasterMode ? 5 : 9);
   }
   if (
     planKey === "extraSecondary" &&
@@ -409,6 +424,7 @@ export function updateSecondaryActionRpc(
     ok: true,
     match_id: matchId,
     user_id: ctx.userId,
+    target_character_id: match.gameMasterMode ? targetCharId : undefined,
     action_id: clearAction ? undefined : actionId,
     targetLocationId: clearAction ? undefined : targetLocation,
     targetPlayerIds:
