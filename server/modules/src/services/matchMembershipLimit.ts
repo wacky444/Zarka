@@ -1,6 +1,7 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
 import { normalizeMaxCurrentMatches, TUTORIAL_MATCH_METADATA_KEY } from "@shared";
+import { isAdminUser } from "../utils/admin";
 import { acquireAccountMetadataLock, releaseAccountMetadataLock } from "./accountMetadata";
 import { StorageService } from "./storageService";
 import { createNakamaWrapper } from "./nakamaWrapper";
@@ -16,7 +17,8 @@ export function countActiveMemberships(storage: StorageService, userId: string):
   }, 0);
 }
 
-export function getMaxCurrentMatches(nk: nkruntime.Nakama, userId: string): number {
+export function getMaxCurrentMatches(nk: nkruntime.Nakama, userId: string): number | null {
+  if (isAdminUser(nk, userId)) return null;
   const account = nk.usersGetId([userId])?.[0] as unknown as AccountRecord | undefined;
   const metadata = account?.metadata && typeof account.metadata === "object" && !Array.isArray(account.metadata)
     ? account.metadata as Record<string, unknown>
@@ -52,6 +54,7 @@ export function assertCanAddMembership(
   userId: string
 ): void {
   const maximum = getMaxCurrentMatches(nk, userId);
+  if (maximum === null) return;
   const current = countActiveMemberships(storage, userId);
   if (current >= maximum) throw new Error("max_current_matches_reached");
 }

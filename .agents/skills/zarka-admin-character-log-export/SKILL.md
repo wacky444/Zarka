@@ -10,7 +10,7 @@ description: Architecture, rules, and workflows for Zarka's admin character log 
 1. **Conditional Display**: The character selector row and character-tailored filtering are visible only when the match has ended (full replay mode) or when the caller has admin view enabled (`isAdminViewEnabled()`).
 2. **Server-Side Enforcement**: Log filtering and fog-of-war tailoring are strictly enforced by the server (`get_log` / `get_replay` RPC). Regular players in ongoing matches cannot query other players' logs or snapshots.
 3. **Single Component Reuse**: Reuse the existing `PlayerSelector` component (with the `"All"` option enabled) rather than building a custom dropdown.
-4. **POV Synchronization**: Selecting a character in the log panel simultaneously tailors the replay event log and shifts the game map (tiles, items, players) to that character's point of view.
+4. **POV Synchronization**: Selecting a character in the log panel simultaneously tailors the replay event log and shifts the game map (tiles, items, players) to that character's point of view. In Game Master mode, selecting a character in the log panel also switches the controlled character, while selecting "All" preserves the currently controlled character.
 
 ## Modes & Visibility
 

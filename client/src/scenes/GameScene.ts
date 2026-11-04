@@ -1179,6 +1179,18 @@ export class GameScene extends Phaser.Scene {
       "controlled-character-change",
       (characterId: string) => {
         void this.actionPlanSynchronizer?.setActiveControlledCharacterId(characterId);
+        if (this.selectedLogCharacterId !== characterId) {
+          this.selectedLogCharacterId = characterId;
+          this.characterPanel?.setLogSelectedCharacter(characterId, false);
+          if (this.logTabActive) {
+            const currentTurn =
+              this.characterPanel?.getLogSelectedTurn() ??
+              this.replayView?.turn ??
+              this.currentMatch?.current_turn ??
+              0;
+            this.handleLogTurnRequest(currentTurn);
+          }
+        }
       }
     );
     this.characterPanel.on("chat-send", this.handleChatSend, this);
@@ -4638,7 +4650,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleLogCharacterSelect(characterId: string | null): void {
-    this.selectedLogCharacterId = characterId === "all" ? null : characterId;
+    const isAll = characterId === null || characterId.toLowerCase() === "all";
+    this.selectedLogCharacterId = isAll ? null : characterId;
+    if (this.currentMatch?.gameMasterMode && !isAll && characterId) {
+      this.characterPanel?.setActiveControlledCharacter(characterId);
+    }
     const currentTurn =
       this.characterPanel?.getLogSelectedTurn() ??
       this.replayView?.turn ??

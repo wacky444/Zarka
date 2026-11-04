@@ -241,7 +241,7 @@ export interface MyMatchCardSummary extends MatchCardSummary {
 
 export type ListMyMatchesPayload = {
   ok?: boolean;
-  maxCurrentMatches?: number;
+  maxCurrentMatches?: number | null;
   matches?: MyMatchCardSummary[];
   error?: string;
 };

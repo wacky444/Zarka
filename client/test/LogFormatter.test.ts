@@ -404,3 +404,44 @@ test("CharacterPanelLogView layout places export buttons under character selecto
   assert.equal(eventsBox.y, standardLogBoxY);
   assert.equal(eventsBox.height, standardLogBoxHeight);
 });
+
+test("CharacterPanelLogView setSelectedCharacter updates selector value and triggers callback when emit is true", () => {
+  const scene = createMockScene();
+  const characterSelector = createMockElement(scene);
+  let selectedValue: string | null = null;
+  characterSelector.setValue = function(val: string | null) {
+    selectedValue = val;
+    return this;
+  };
+  let callbackValue: string | null | undefined;
+
+  const logView = new CharacterPanelLogView({
+    panel: { add() {}, emit() {} } as any,
+    elements: {
+      prevButton: createMockElement(scene) as any,
+      nextButton: createMockElement(scene) as any,
+      playButton: createMockElement(scene) as any,
+      filterTrack: createMockElement(scene) as any,
+      filterKnob: createMockElement(scene) as any,
+      filterLabel: createMockElement(scene) as any,
+      turnLabel: createMockElement(scene) as any,
+      statusText: createMockElement(scene) as any,
+      eventsBox: createMockElement(scene) as any,
+      eventsText: createMockElement(scene) as any,
+      characterSelector: characterSelector as any
+    },
+    onSelectCharacter: (charId) => {
+      callbackValue = charId;
+    }
+  });
+
+  logView.setSelectedCharacter("char_1", false);
+  assert.equal(selectedValue, "char_1");
+  assert.equal(logView.getSelectedCharacter(), "char_1");
+  assert.equal(callbackValue, undefined);
+
+  logView.setSelectedCharacter("char_2", true);
+  assert.equal(selectedValue, "char_2");
+  assert.equal(logView.getSelectedCharacter(), "char_2");
+  assert.equal(callbackValue, "char_2");
+});

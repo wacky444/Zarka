@@ -72,7 +72,7 @@ export type UserAccount = {
   readonly cosmetics: UserCosmetics;
   // Present only on the self account RPC; public profile lookups omit it.
   readonly rankedMatchSlots?: number;
-  readonly maxCurrentMatches?: number;
+  readonly maxCurrentMatches?: number | null;
   readonly tutorialCompleted?: boolean;
 
   // Optional timestamps (epoch milliseconds).

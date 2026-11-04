@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { MAX_MAX_CURRENT_MATCHES, MIN_MAX_CURRENT_MATCHES, normalizeMaxCurrentMatches, TUTORIAL_MATCH_METADATA_KEY } from "@shared";
-import { assertCanAddMembership, countActiveMemberships } from "../src/services/matchMembershipLimit";
+import { assertCanAddMembership, countActiveMemberships, getMaxCurrentMatches } from "../src/services/matchMembershipLimit";
 import type { MatchRecord } from "../src/models/types";
 
 function fakeStorage(matches: MatchRecord[]) {
@@ -44,4 +44,22 @@ test("membership cap rejects new membership but allows cap values to be read fro
   const nk = { usersGetId: () => [{ metadata: { zarka: { maxCurrentMatches: 1 } } }] } as unknown as nkruntime.Nakama;
   assert.throws(() => assertCanAddMembership(nk, fakeStorage([match({ match_id: "active", players: ["user"] })]), "user"), /max_current_matches_reached/);
   assert.doesNotThrow(() => assertCanAddMembership(nk, fakeStorage([]), "user"));
+});
+
+test("admins have unlimited active and created matches", () => {
+  const adminNk = {
+    usersGetId: () => [{ metadata: { admin: true } }]
+  } as unknown as nkruntime.Nakama;
+  assert.equal(getMaxCurrentMatches(adminNk, "admin"), null);
+
+  const manyMatches = Array.from({ length: 50 }, (_, i) =>
+    match({ match_id: `m-${i}`, players: ["admin"], creator: "admin" })
+  );
+  assert.doesNotThrow(() => assertCanAddMembership(adminNk, fakeStorage(manyMatches), "admin"));
+
+  const zarkaAdminNk = {
+    usersGetId: () => [{ metadata: { zarka: { admin: true, maxCurrentMatches: 1 } } }]
+  } as unknown as nkruntime.Nakama;
+  assert.equal(getMaxCurrentMatches(zarkaAdminNk, "admin"), null);
+  assert.doesNotThrow(() => assertCanAddMembership(zarkaAdminNk, fakeStorage(manyMatches), "admin"));
 });

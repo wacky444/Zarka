@@ -13,7 +13,7 @@ description: Architecture, rules, RPC contracts, and workflows for Zarka's admin
 4. **Disabled Autoskip**: `autoSkip` is strictly locked to `false`. Rounds never advance on timer expiration. Turns advance only when all alive, non-incapacitated controlled characters are marked ready.
 5. **Omniscient Visibility**: Game Masters have persistent omniscient visibility (`view_all = true`). Fog of war is lifted, and all traps, items, and concealments are visible across the entire map.
 6. **Character-Scoped RPCs**: All action submissions, skill allocations, shop purchases, and readiness updates use `target_character_id` to route commands to the active controlled character.
-7. **Portrait-Driven Switching**: Character selection is primarily driven by clicking the character portrait in the `CharacterPanelStatusView`, which opens the `PlayerSelector` modal grid.
+7. **Portrait-Driven Switching & Log Synchronization**: Character selection is driven by clicking the character portrait in `CharacterPanelStatusView`, hotkeys, or the character selector in the character log view. Switching the active controlled character automatically updates the filtering character in the character log view (`CharacterPanelLogView`). Vice-versa, selecting a character in the log view switches the controlled character, while selecting "All" in the log view leaves the controlled character unchanged.
 
 ## Key Files
 

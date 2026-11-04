@@ -133,7 +133,7 @@ export class MyMatchesListView {
   private readonly finishedCardList: MatchCardList<MyMatchCardSummary>;
   private onlineMatches: MyMatchCardSummary[] = [];
   private finishedMatches: MyMatchCardSummary[] = [];
-  private maxCurrentMatches = 10;
+  private maxCurrentMatches: number | null = 10;
 
   private collapseState: SectionCollapseState = {
     onlineCollapsed: false,

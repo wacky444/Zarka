@@ -71,6 +71,7 @@ test("groupMyMatches defaults maxCurrentMatches to 10 on invalid or missing pref
   assert.equal(groupMyMatches(matches, undefined).maxCurrentMatches, 10);
   assert.equal(groupMyMatches(matches, -5).maxCurrentMatches, 10);
   assert.equal(groupMyMatches(matches, "not-a-number").maxCurrentMatches, 10);
+  assert.equal(groupMyMatches(matches, null).maxCurrentMatches, null);
 });
 
 test("groupMyMatches limits finished matches to the latest 10", () => {
@@ -261,6 +262,8 @@ test("createSelectMatchHandler emits matchId, status, and summary without naviga
 
 test("section headers format counts correctly", () => {
   assert.equal(formatOnlineHeading(3, 10).includes("3/10"), true);
+  assert.equal(formatOnlineHeading(3, null).includes("3/"), false);
+  assert.equal(formatOnlineHeading(3, null).includes("3"), true);
   assert.equal(formatFinishedHeading(5).includes("5"), true);
 });
 

@@ -5,32 +5,14 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { SERVER_USER_ID } from "../constants";
 import {
-  normalizeMaxCurrentMatches,
   RANKED_MATCH_METADATA_KEY,
   TUTORIAL_MATCH_METADATA_KEY,
   type ListMyMatchesPayload
 } from "@shared";
 import { buildMyMatchCardSummary } from "../services/matchCardSummary";
+import { getMaxCurrentMatches } from "../services/matchMembershipLimit";
 
 type MatchListEntry = NonNullable<ListMyMatchesPayload["matches"]>[number];
-type UnknownRecord = Record<string, unknown>;
-
-function asRecord(value: unknown): UnknownRecord | undefined {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return undefined;
-  }
-  return value as UnknownRecord;
-}
-
-function getMaxCurrentMatches(nk: nkruntime.Nakama, userId: string): number {
-  const user = nk.usersGetId([userId])?.[0] as
-    | (nkruntime.User & { metadata?: unknown })
-    | undefined;
-  const metadata = asRecord(user?.metadata);
-  const zarka = asRecord(metadata?.zarka);
-  return normalizeMaxCurrentMatches(zarka?.maxCurrentMatches);
-}
-
 export function listMyMatchesRpc(
   ctx: nkruntime.Context,
   logger: nkruntime.Logger,

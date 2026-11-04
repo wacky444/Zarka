@@ -16,7 +16,7 @@ export interface SectionCollapseState {
 export interface MyMatchesGroupResult {
   onlineMatches: MyMatchCardSummary[];
   finishedMatches: MyMatchCardSummary[];
-  maxCurrentMatches: number;
+  maxCurrentMatches: number | null;
 }
 
 export function sortMyActiveMatches(
@@ -88,12 +88,20 @@ export function groupMyMatches(
 
   const onlineMatches = sortMyActiveMatches(onlineRaw, nowMs);
   const finishedMatches = sortMyFinishedMatches(finishedRaw).slice(0, 10);
-  const normalizedMax = normalizeMaxCurrentMatches(maxCurrentMatches);
+  const normalizedMax =
+    maxCurrentMatches === null
+      ? null
+      : normalizeMaxCurrentMatches(maxCurrentMatches);
 
   return {
     onlineMatches,
     finishedMatches,
-    maxCurrentMatches: normalizedMax > 0 ? normalizedMax : DEFAULT_MAX_CURRENT_MATCHES
+    maxCurrentMatches:
+      normalizedMax === null
+        ? null
+        : normalizedMax > 0
+          ? normalizedMax
+          : DEFAULT_MAX_CURRENT_MATCHES
   };
 }
 
@@ -106,7 +114,10 @@ export function toggleSectionCollapse(
     : { ...state, finishedCollapsed: !state.finishedCollapsed };
 }
 
-export function formatOnlineHeading(count: number, max: number): string {
+export function formatOnlineHeading(count: number, max?: number | null): string {
+  if (max === null || max === undefined) {
+    return `${count} ${t("Online matches")}`;
+  }
   return `${count}/${max} ${t("Online matches")}`;
 }
 

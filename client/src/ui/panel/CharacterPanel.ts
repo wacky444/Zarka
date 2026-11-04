@@ -1383,15 +1383,20 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
         };
       });
       this.gmPlayerSelector.setOptions(controlledOptions);
+      let controlledCharChanged = false;
       if (
         !this.activeControlledCharacterId ||
         !match?.playerCharacters?.[this.activeControlledCharacterId]
       ) {
         const firstId = Object.keys(match?.playerCharacters ?? {})[0] ?? null;
-        this.activeControlledCharacterId = firstId;
+        if (this.activeControlledCharacterId !== firstId) {
+          this.activeControlledCharacterId = firstId;
+          controlledCharChanged = true;
+        }
       }
       this.gmPlayerSelector.setValue(this.activeControlledCharacterId, false);
-      if (this.activeControlledCharacterId) {
+      if (this.activeControlledCharacterId && controlledCharChanged) {
+        this.setLogSelectedCharacter(this.activeControlledCharacterId, false);
         this.emit("controlled-character-change", this.activeControlledCharacterId);
       }
     } else {
@@ -1443,6 +1448,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     this.activeControlledCharacterId = characterId;
     this.gmPlayerSelector.setValue(characterId, false);
+    this.setLogSelectedCharacter(characterId, false);
 
     const currentAccount = this.playerAccounts.get(characterId);
     const accountDisplayName =
