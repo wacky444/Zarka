@@ -11,6 +11,9 @@ export function startMatchRecord(
   logger: nkruntime.Logger,
   startedAtMs: number
 ): ReplayEvent[] {
+  if (match.gameMasterMode) {
+    match.autoSkip = false;
+  }
   assignSpawnPositions(match, logger);
   distributeTeams(match, logger);
 

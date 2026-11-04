@@ -12,4 +12,6 @@ export type InMatchSettings = {
   turnsToBeAt1Tile?: number; // Total turns to shrink map to 1 tile, default 30
   name: string;
   seed?: string; // Map generation seed
+  gameMasterMode?: boolean;
+  controlledCharacterRoster?: Array<{ id: string; name: string; skin: import("./UserAccount").Skin }>;
 };

@@ -55,10 +55,18 @@ export function leaveMatchRpc(
     );
   }
   const idx = match.players.indexOf(ctx.userId);
-  const wasInMatch = idx !== -1;
+  const gmIdx = Array.isArray(match.gameMasterUserIds)
+    ? match.gameMasterUserIds.indexOf(ctx.userId)
+    : -1;
+  const wasInMatch = idx !== -1 || gmIdx !== -1;
 
   if (wasInMatch) {
-    match.players.splice(idx, 1);
+    if (idx !== -1) {
+      match.players.splice(idx, 1);
+    }
+    if (gmIdx !== -1 && Array.isArray(match.gameMasterUserIds)) {
+      match.gameMasterUserIds.splice(gmIdx, 1);
+    }
     if (
       match.readyStates &&
       Object.prototype.hasOwnProperty.call(match.readyStates, ctx.userId)
@@ -117,6 +125,7 @@ export function leaveMatchRpc(
                     size: match.size,
                     name: match.name,
                     started: match.started,
+                    gameMasterUserIds: match.gameMasterUserIds,
                   }
             )
           );

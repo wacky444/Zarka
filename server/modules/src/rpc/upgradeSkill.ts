@@ -5,8 +5,10 @@ import { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
+import { isGameMasterUser } from "../utils/admin";
 import { isCharacterDead } from "../utils/playerCharacter";
 import { applySkillToCharacter } from "../match/afkSkills";
+import { getRuntimeMatchId } from "../utils/matchIds";
 
 export function upgradeSkillRpc(
   ctx: nkruntime.Context,
@@ -77,14 +79,27 @@ export function upgradeSkillRpc(
     throw makeNakamaError("not_found", nkruntime.Codes.NOT_FOUND);
   }
   const match: MatchRecord = read.match;
-  if (
-    !Array.isArray(match.players) ||
-    match.players.indexOf(ctx.userId) === -1
-  ) {
-    throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
+  let targetCharId = ctx.userId;
+  if (match.gameMasterMode) {
+    const isGM = isGameMasterUser(match, ctx.userId);
+    if (!isGM) {
+      throw makeNakamaError("Game Master actions are restricted to administrators", nkruntime.Codes.PERMISSION_DENIED);
+    }
+    const requestedCharId = json.target_character_id;
+    if (!requestedCharId || typeof requestedCharId !== "string") {
+      throw makeNakamaError("target_character_id required", nkruntime.Codes.INVALID_ARGUMENT);
+    }
+    targetCharId = requestedCharId;
+  } else {
+    if (
+      !Array.isArray(match.players) ||
+      match.players.indexOf(ctx.userId) === -1
+    ) {
+      throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
+    }
   }
 
-  const character = match.playerCharacters?.[ctx.userId];
+  const character = match.playerCharacters?.[targetCharId];
   if (!character) {
     throw makeNakamaError("character_not_found", nkruntime.Codes.NOT_FOUND);
   }
@@ -135,10 +150,30 @@ export function upgradeSkillRpc(
 
   storage.writeMatch(match, read.version);
 
+  if (match.gameMasterMode) {
+    try {
+      nkWrapper.matchSignal(
+        getRuntimeMatchId(match),
+        JSON.stringify({
+          type: "gm_action_sync",
+          match_id: matchId,
+          target_character_id: targetCharId,
+          action_type: "skill",
+          actor_user_id: ctx.userId,
+          character,
+          playerCharacters: match.playerCharacters
+        })
+      );
+    } catch (e) {
+      _logger.debug("gm_action_sync signal failed: %s", (e as Error).message);
+    }
+  }
+
   const response: UpgradeSkillPayload = {
     ok: true,
     match_id: matchId,
     user_id: ctx.userId,
+    target_character_id: match.gameMasterMode ? targetCharId : undefined,
     skill_id: skillIds.length === 1 ? skillIds[0] : undefined,
     skill_ids: skillIds,
     character

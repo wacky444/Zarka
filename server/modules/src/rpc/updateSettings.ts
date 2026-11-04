@@ -9,6 +9,7 @@ import { makeNakamaError } from "../utils/errors";
 import { normalizeMatchName } from "../utils/normalize";
 import { clampNumber, validateTime } from "../utils/validation";
 import { ensureAllPlayerCharacters } from "../utils/playerCharacter";
+import { isAdminUser } from "../utils/admin";
 import {
   MAX_BOT_PLAYERS,
   MAX_NORMAL_MATCH_SIZE,
@@ -105,6 +106,58 @@ export function updateSettingsRpc(
   }
   if (typeof newName === "string") match.name = newName;
 
+  const kickedNonAdminIds: string[] = [];
+  if (settings.gameMasterMode === true) {
+    if (!isAdminUser(nk, ctx.userId)) {
+      throw makeNakamaError(
+        "Game Master matches are restricted to administrators",
+        nkruntime.Codes.PERMISSION_DENIED
+      );
+    }
+    match.gameMasterMode = true;
+    match.autoSkip = false;
+    if (Array.isArray(settings.controlledCharacterRoster)) {
+      match.controlledCharacterRoster = settings.controlledCharacterRoster;
+    }
+    match.gameMasterUserIds = Array.isArray(match.gameMasterUserIds)
+      ? match.gameMasterUserIds
+      : [];
+    if (match.gameMasterUserIds.indexOf(ctx.userId) === -1) {
+      match.gameMasterUserIds.push(ctx.userId);
+    }
+
+    // Purge non-admins from lobby
+    if (Array.isArray(match.players)) {
+      const remainingPlayers: string[] = [];
+      for (const playerId of match.players) {
+        if (!isAdminUser(nk, playerId)) {
+          kickedNonAdminIds.push(playerId);
+          if (match.readyStates) {
+            delete match.readyStates[playerId];
+          }
+          if (match.playerCharacters && !match.started) {
+            delete match.playerCharacters[playerId];
+          }
+          if (match.playerList && !match.started) {
+            delete match.playerList[playerId];
+          }
+        } else {
+          remainingPlayers.push(playerId);
+          if (match.gameMasterUserIds.indexOf(playerId) === -1) {
+            match.gameMasterUserIds.push(playerId);
+          }
+        }
+      }
+      match.players = remainingPlayers;
+    }
+  } else if (settings.gameMasterMode === false) {
+    match.gameMasterMode = false;
+  }
+
+  if (Array.isArray(settings.controlledCharacterRoster) && match.gameMasterMode) {
+    match.controlledCharacterRoster = settings.controlledCharacterRoster;
+  }
+
   try {
     storage.writeMatch(match, read.version);
     try {
@@ -121,6 +174,9 @@ export function updateSettingsRpc(
           turnsToBeAt1Tile: match.turnsToBeAt1Tile,
           name: match.name,
           started: match.started,
+          gameMasterMode: match.gameMasterMode,
+          gameMasterUserIds: match.gameMasterUserIds,
+          controlledCharacterRoster: match.controlledCharacterRoster,
         })
       );
     } catch (signalError) {
@@ -128,6 +184,37 @@ export function updateSettingsRpc(
         "update_settings: matchSignal failed: %s",
         (signalError as Error).message
       );
+    }
+    if (kickedNonAdminIds.length > 0) {
+      for (const kickedId of kickedNonAdminIds) {
+        try {
+          nkWrapper.matchSignal(
+            getRuntimeMatchId(match),
+            JSON.stringify({
+              type: "player_kicked",
+              player_id: kickedId,
+              kicked_reason: "gm_mode_enabled",
+            })
+          );
+        } catch (kickSignalError) {
+          logger.debug(
+            "update_settings: kick matchSignal failed: %s",
+            (kickSignalError as Error).message
+          );
+        }
+      }
+      try {
+        nkWrapper.matchSignal(
+          getRuntimeMatchId(match),
+          JSON.stringify({
+            type: "sync_players",
+            players: match.players,
+            size: match.size,
+            name: match.name,
+            started: match.started,
+          })
+        );
+      } catch {}
     }
   } catch (e) {
     throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
@@ -145,6 +232,8 @@ export function updateSettingsRpc(
     turnsToBeAt1Tile: match.turnsToBeAt1Tile,
     name: match.name,
     started: match.started,
+    gameMasterMode: match.gameMasterMode,
+    controlledCharacterRoster: match.controlledCharacterRoster,
   };
 
   return JSON.stringify(response);

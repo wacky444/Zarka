@@ -207,6 +207,10 @@ export class MainScene extends Phaser.Scene {
       );
       if (this.lobbyView) {
         this.lobbyView.setMatchInfo(matchId, displayName);
+        this.lobbyView.applySettings({
+          gameMasterMode: parsed.gameMasterMode,
+          controlledCharacterRoster: parsed.controlledCharacterRoster
+        });
         if (typeof parsed.started === "boolean") {
           this.lobbyView.setMatchStarted(parsed.started);
         }
@@ -440,6 +444,47 @@ export class MainScene extends Phaser.Scene {
           this.currentUserId,
           this.currentMatchId ?? undefined
         );
+        const runtimeMatchId = this.getCurrentRuntimeMatchId();
+        if (runtimeMatchId && this.turnService) {
+          this.turnService
+            .leaveRealtimeMatch(runtimeMatchId)
+            .catch((e) => console.warn("Failed to leave realtime match", e));
+        }
+        this.setCurrentMatchId(null);
+        this.currentMatchName = null;
+        this.currentMatchCreator = undefined;
+        this.lobbyView.setPlayers([]);
+        this.lobbyView.setCreator(undefined, false);
+        this.lobbyView.setMatchInfo();
+        this.lobbyView.setMatchStarted(false);
+        this.showView("main");
+      });
+      this.turnService.setOnPlayerKicked((payload) => {
+        if (
+          !payload?.player_id ||
+          !this.currentUserId ||
+          payload.player_id !== this.currentUserId
+        ) {
+          return;
+        }
+        const gameScene = this.scene.get("GameScene") as
+          | import("./GameScene").GameScene
+          | undefined;
+        if (gameScene && gameScene.isVictoryOverlayActive()) {
+          return;
+        }
+        this.statusText.setText(
+          "You were kicked from the match because Game Master mode was enabled."
+        );
+        if (
+          this.scene.isActive("GameScene") ||
+          this.scene.isSleeping("GameScene")
+        ) {
+          this.scene.stop("GameScene");
+        }
+        if (this.scene.isSleeping("MainScene")) {
+          this.scene.wake("MainScene");
+        }
         const runtimeMatchId = this.getCurrentRuntimeMatchId();
         if (runtimeMatchId && this.turnService) {
           this.turnService
@@ -953,9 +998,11 @@ export class MainScene extends Phaser.Scene {
     }
 
     let completed = false;
+    let isAdmin = false;
     try {
       const account = await accountService.getAccount(userId);
       completed = account?.tutorialCompleted === true;
+      isAdmin = account?.isAdmin === true;
     } catch (error) {
       console.warn("Failed to load tutorial profile state", error);
     }
@@ -964,6 +1011,9 @@ export class MainScene extends Phaser.Scene {
     }
     this.tutorialCompleted = completed;
     this.applyTutorialGate();
+    if (this.lobbyView) {
+      this.lobbyView.setIsAdmin(isAdmin);
+    }
   }
 
   private applyTutorialGate(): void {

@@ -17,6 +17,7 @@ import {
   ensureAllPlayerCharacters,
   ensurePlayerCharacter,
 } from "../utils/playerCharacter";
+import { isAdminUser } from "../utils/admin";
 import { getRuntimeMatchId } from "../utils/matchIds";
 import { assertCanAddMembership, withMatchMembershipLocks } from "../services/matchMembershipLimit";
 
@@ -60,6 +61,14 @@ function joinMatchRpcLocked(
   const match: MatchRecord = read.match;
   if (match.removed) {
     throw makeNakamaError("not_found", nkruntime.Codes.NOT_FOUND);
+  }
+  if (match.gameMasterMode) {
+    if (!isAdminUser(nk, ctx.userId)) {
+      throw makeNakamaError(
+        "Game Master matches are restricted to administrators",
+        nkruntime.Codes.PERMISSION_DENIED
+      );
+    }
   }
   if (
     match.metadata?.[RANKED_MATCH_METADATA_KEY] &&
@@ -127,22 +136,42 @@ function joinMatchRpcLocked(
   };
 
   if (match.players.indexOf(ctx.userId) === -1) {
-    assertCanAddMembership(nk, storage, ctx.userId);
-    const current = match.players.length;
-    if (current >= (match.size || 2)) {
-      throw makeNakamaError("match_full", nkruntime.Codes.FAILED_PRECONDITION);
+    if (match.gameMasterMode) {
+      match.players.push(ctx.userId);
+      match.gameMasterUserIds = Array.isArray(match.gameMasterUserIds)
+        ? match.gameMasterUserIds
+        : [];
+      if (match.gameMasterUserIds.indexOf(ctx.userId) === -1) {
+        match.gameMasterUserIds.push(ctx.userId);
+      }
+      joinedNow = true;
+      shouldWrite = true;
+    } else {
+      assertCanAddMembership(nk, storage, ctx.userId);
+      const current = match.players.length;
+      if (current >= (match.size || 2)) {
+        throw makeNakamaError("match_full", nkruntime.Codes.FAILED_PRECONDITION);
+      }
+      match.players.push(ctx.userId);
+      joinedNow = true;
+      shouldWrite = true;
+      if (!match.playerCharacters[ctx.userId]) {
+        ensurePlayerCharacter(match, ctx.userId);
+        shouldWrite = true;
+      }
+      match.readyStates[ctx.userId] = false;
     }
-    match.players.push(ctx.userId);
-    joinedNow = true;
-    shouldWrite = true;
-    if (!match.playerCharacters[ctx.userId]) {
-      ensurePlayerCharacter(match, ctx.userId);
+  } else if (match.gameMasterMode) {
+    match.gameMasterUserIds = Array.isArray(match.gameMasterUserIds)
+      ? match.gameMasterUserIds
+      : [];
+    if (match.gameMasterUserIds.indexOf(ctx.userId) === -1) {
+      match.gameMasterUserIds.push(ctx.userId);
       shouldWrite = true;
     }
-    match.readyStates[ctx.userId] = false;
   }
 
-  if (!Object.prototype.hasOwnProperty.call(match.readyStates, ctx.userId)) {
+  if (!match.gameMasterMode && !Object.prototype.hasOwnProperty.call(match.readyStates, ctx.userId)) {
     match.readyStates[ctx.userId] = false;
     shouldWrite = true;
   }
@@ -165,6 +194,8 @@ function joinMatchRpcLocked(
       restore: "true",
       ranked: String(isRanked),
       players: JSON.stringify(match.players),
+      gameMasterMode: String(match.gameMasterMode === true),
+      gameMasterUserIds: JSON.stringify(match.gameMasterUserIds ?? []),
     };
     try {
       const runtimeMatchId = nkWrapper.matchCreate("async_turn", params);
@@ -195,6 +226,7 @@ function joinMatchRpcLocked(
           size: match.size,
           name: match.name,
           started: match.started,
+          gameMasterUserIds: match.gameMasterUserIds,
         })
       );
     } catch (signalError) {
@@ -214,6 +246,8 @@ function joinMatchRpcLocked(
     joined: joinedNow,
     name: match.name,
     started: match.started,
+    gameMasterMode: match.gameMasterMode,
+    controlledCharacterRoster: match.controlledCharacterRoster,
   };
 
   return JSON.stringify(response);

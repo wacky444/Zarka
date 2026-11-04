@@ -81,3 +81,16 @@ export function isValidSkin(skin: unknown): skin is Skin {
   }
   return true;
 }
+
+export function generateRandomSkinWithoutHat(): Skin {
+  const randomPick = (options: readonly SkinId[]): SkinId =>
+    options[Math.floor(Math.random() * options.length)];
+
+  return {
+    body: randomPick(BODY_OPTIONS),
+    shoes: randomPick(SHOES_OPTIONS),
+    shirt: randomPick(SHIRT_OPTIONS),
+    hair: randomPick(HAIR_OPTIONS),
+    hat: ""
+  };
+}

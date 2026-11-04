@@ -18,13 +18,13 @@ import {
   tailorPlayerCharactersForViewer,
   tailorTrapsForViewer,
 } from "../utils/matchView";
-import { isCharacterIncapacitated } from "../utils/playerCharacter";
+import { isCharacterIncapacitated, isCharacterDead } from "../utils/playerCharacter";
 import { resolveTurnForMatch } from "../match/turnResolution";
 import { sendTutorialBotMessageForTurn } from "../match/TutorialBotChat";
 import { getAliveCharacterIds } from "../match/checkEndGame";
 import { validateTime } from "../utils/validation";
 import { getRuntimeMatchId } from "../utils/matchIds";
-import { isAdminUser } from "../utils/admin";
+import { isAdminUser, isGameMasterUser } from "../utils/admin";
 import { createReplaySnapshot } from "../match/replay/snapshot";
 import {
   createTurnNotificationOutbox,
@@ -81,7 +81,6 @@ export function updateReadyStateRpc(
   }
 
   const requestedReady = json.ready === true;
-  const viewAll = json.view_all === true && isAdminUser(nk, ctx.userId);
 
   const nkWrapper = createNakamaWrapper(nk);
   const storage = new StorageService(nkWrapper);
@@ -92,75 +91,118 @@ export function updateReadyStateRpc(
   }
 
   const match: MatchRecord = read.match;
-  if (
-    !Array.isArray(match.players) ||
-    match.players.indexOf(ctx.userId) === -1
-  ) {
-    throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
+  const isGM = isGameMasterUser(match, ctx.userId);
+  if (match.gameMasterMode) {
+    if (!isGM) {
+      throw makeNakamaError("Game Master actions are restricted to administrators", nkruntime.Codes.PERMISSION_DENIED);
+    }
+  } else {
+    if (
+      !Array.isArray(match.players) ||
+      match.players.indexOf(ctx.userId) === -1
+    ) {
+      throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
+    }
   }
+  const viewAll =
+    (json.view_all === true && isAdminUser(nk, ctx.userId)) || isGM;
   if (match.removed && match.removed !== 0) {
     throw makeNakamaError("match_ended", nkruntime.Codes.FAILED_PRECONDITION);
   }
-  const viewerCharacter = match.playerCharacters?.[ctx.userId] ?? null;
-  const viewerIsIncapadited = isCharacterIncapacitated(viewerCharacter);
-  if (viewerIsIncapadited) {
-    // throw makeNakamaError("character_incapacitated", 9); TODO uncomment when the turn advances automatically when only bots remain
-  }
 
-  if (
-    match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] &&
-    requestedReady &&
-    match.current_turn === 4 &&
-    viewerCharacter
-  ) {
-    const mainPlan = viewerCharacter.actionPlan?.main;
-    const isMoveToStart =
-      mainPlan?.actionId === "move" &&
-      mainPlan.targetLocationId?.q === TUTORIAL_CELL_COORDS.playerStart.q &&
-      mainPlan.targetLocationId?.r === TUTORIAL_CELL_COORDS.playerStart.r;
-    if (!isMoveToStart) {
-      throw makeNakamaError(
-        "tutorial_must_move_to_bot",
-        nkruntime.Codes.FAILED_PRECONDITION,
-      );
+  let effectiveReady = requestedReady;
+  let targetCharId = ctx.userId;
+  if (match.gameMasterMode) {
+    targetCharId = typeof json.target_character_id === "string" ? json.target_character_id.trim() : "";
+    if (!targetCharId) {
+      throw makeNakamaError("target_character_id required", nkruntime.Codes.INVALID_ARGUMENT);
     }
-  }
-
-  if (
-    match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] &&
-    requestedReady &&
-    match.current_turn === 5 &&
-    viewerCharacter
-  ) {
-    const mainPlan = viewerCharacter.actionPlan?.main;
-    const isScareToDoomed =
-      mainPlan?.actionId === "scare" &&
-      (mainPlan.extraExecutions ?? 0) >= 1 &&
-      mainPlan.targetLocationId?.q === TUTORIAL_CELL_COORDS.doomed.q &&
-      mainPlan.targetLocationId?.r === TUTORIAL_CELL_COORDS.doomed.r;
-    if (!isScareToDoomed) {
-      throw makeNakamaError(
-        "tutorial_must_scare_to_doomed_cell",
-        nkruntime.Codes.FAILED_PRECONDITION,
-      );
+    const targetChar = match.playerCharacters?.[targetCharId];
+    if (!targetChar) {
+      throw makeNakamaError("character_not_found", nkruntime.Codes.NOT_FOUND);
     }
-  }
+    const targetIncapacitated = isCharacterIncapacitated(targetChar) || isCharacterDead(targetChar);
+    effectiveReady = targetIncapacitated ? true : requestedReady;
+    match.readyStates = match.readyStates ?? {};
+    match.readyStates[targetCharId] = effectiveReady;
+  } else {
+    const viewerCharacter = match.playerCharacters?.[ctx.userId] ?? null;
+    const viewerIsIncapadited = isCharacterIncapacitated(viewerCharacter);
+    if (viewerIsIncapadited) {
+      // throw makeNakamaError("character_incapacitated", 9); TODO uncomment when the turn advances automatically when only bots remain
+    }
 
-  const effectiveReady = viewerIsIncapadited ? true : requestedReady;
-  match.readyStates = match.readyStates ?? {};
-  match.readyStates[ctx.userId] = effectiveReady;
+    if (
+      match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] &&
+      requestedReady &&
+      match.current_turn === 4 &&
+      viewerCharacter
+    ) {
+      const mainPlan = viewerCharacter.actionPlan?.main;
+      const isMoveToStart =
+        mainPlan?.actionId === "move" &&
+        mainPlan.targetLocationId?.q === TUTORIAL_CELL_COORDS.playerStart.q &&
+        mainPlan.targetLocationId?.r === TUTORIAL_CELL_COORDS.playerStart.r;
+      if (!isMoveToStart) {
+        throw makeNakamaError(
+          "tutorial_must_move_to_bot",
+          nkruntime.Codes.FAILED_PRECONDITION,
+        );
+      }
+    }
+
+    if (
+      match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] &&
+      requestedReady &&
+      match.current_turn === 5 &&
+      viewerCharacter
+    ) {
+      const mainPlan = viewerCharacter.actionPlan?.main;
+      const isScareToDoomed =
+        mainPlan?.actionId === "scare" &&
+        (mainPlan.extraExecutions ?? 0) >= 1 &&
+        mainPlan.targetLocationId?.q === TUTORIAL_CELL_COORDS.doomed.q &&
+        mainPlan.targetLocationId?.r === TUTORIAL_CELL_COORDS.doomed.r;
+      if (!isScareToDoomed) {
+        throw makeNakamaError(
+          "tutorial_must_scare_to_doomed_cell",
+          nkruntime.Codes.FAILED_PRECONDITION,
+        );
+      }
+    }
+
+    effectiveReady = viewerIsIncapadited ? true : requestedReady;
+    match.readyStates = match.readyStates ?? {};
+    match.readyStates[ctx.userId] = effectiveReady;
+  }
 
   let advanced = false;
   const trapsBeforeTurn = match.traps?.length ?? 0;
-  const players = Array.isArray(match.players) ? match.players : [];
-  const allReady =
-    players.length > 0 &&
-    players.every(
-      (playerId) =>
-        match.readyStates !== undefined &&
-        (isCharacterIncapacitated(match.playerCharacters?.[playerId]) ||
-          match.readyStates[playerId] === true),
-    );
+  let allReady = false;
+
+  if (match.gameMasterMode) {
+    const charIds = Object.keys(match.playerCharacters ?? {});
+    allReady =
+      charIds.length > 0 &&
+      charIds.every((charId) => {
+        const char = match.playerCharacters[charId];
+        return (
+          isCharacterIncapacitated(char) ||
+          isCharacterDead(char) ||
+          match.readyStates?.[charId] === true
+        );
+      });
+  } else {
+    const players = Array.isArray(match.players) ? match.players : [];
+    allReady =
+      players.length > 0 &&
+      players.every(
+        (playerId) =>
+          match.readyStates !== undefined &&
+          (isCharacterIncapacitated(match.playerCharacters?.[playerId]) ||
+            match.readyStates[playerId] === true),
+      );
+  }
   let advanceResult: AdvanceTurnResult | null = null;
   let resolvedTurnNumber: number | null = null;
 
@@ -388,6 +430,7 @@ export function updateReadyStateRpc(
   const response: import("@shared").UpdateReadyStatePayload = {
     ok: true,
     match_id: matchId,
+    target_character_id: match.gameMasterMode ? targetCharId : undefined,
     ready: advanced ? false : effectiveReady,
     all_ready: allReady,
     turn: match.current_turn,

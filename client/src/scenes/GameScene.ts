@@ -59,6 +59,7 @@ import {
   type BuyShopItemPayload,
   type DonateZarkansPayload,
   type ZarkansDonatedMessagePayload,
+  type GmActionSyncPayload,
   type ShopId,
   type Dexterity3ProductId
 } from "@shared";
@@ -453,6 +454,11 @@ export class GameScene extends Phaser.Scene {
   ) => {
     void this.handleZarkansDonatedMessage(payload);
   };
+  private readonly gmActionSyncHandler = (
+    payload: GmActionSyncPayload
+  ) => {
+    this.handleGmActionSync(payload);
+  };
   private readonly pointerDownHandler = (pointer: Phaser.Input.Pointer) => {
     this.tutorialPanDistance = 0;
     const overUI = this.isPointerOverUI(pointer);
@@ -510,6 +516,33 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.characterPanel?.focusChat();
+  };
+  private readonly gmCycleKeyHandler = (event: KeyboardEvent) => {
+    if (!this.currentMatch?.gameMasterMode || !this.characterPanel) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+      return;
+    }
+    const characters = this.currentMatch.playerCharacters ?? {};
+    const characterIds = Object.keys(characters);
+    if (characterIds.length === 0) {
+      return;
+    }
+    if (event.key === "Tab") {
+      event.preventDefault();
+      const currentActive = this.characterPanel.getActiveControlledCharacterId();
+      const currentIndex = currentActive ? characterIds.indexOf(currentActive) : -1;
+      const nextIndex = (currentIndex + 1) % characterIds.length;
+      this.characterPanel.setActiveControlledCharacter(characterIds[nextIndex]);
+      return;
+    }
+    const num = parseInt(event.key, 10);
+    if (!Number.isNaN(num) && num >= 1 && num <= characterIds.length) {
+      event.preventDefault();
+      this.characterPanel.setActiveControlledCharacter(characterIds[num - 1]);
+    }
   };
   private readonly browserBackHandler = () => {
     this.handleBackNavigation(true);
@@ -958,6 +991,7 @@ export class GameScene extends Phaser.Scene {
       this.turnService.setOnMatchEnded(this.matchEndedHandler);
       this.turnService.setOnReadyStateUpdate(this.readyStateUpdateHandler);
       this.turnService.setOnZarkansDonated(this.zarkansDonatedHandler);
+      this.turnService.setOnGmActionSync(this.gmActionSyncHandler);
       this.accountService = this.registry.get(
         "accountService"
       ) as AccountService | null;
@@ -1141,6 +1175,12 @@ export class GameScene extends Phaser.Scene {
       this.handlePlayerEliminated,
       this
     );
+    this.characterPanel.on(
+      "controlled-character-change",
+      (characterId: string) => {
+        void this.actionPlanSynchronizer?.setActiveControlledCharacterId(characterId);
+      }
+    );
     this.characterPanel.on("chat-send", this.handleChatSend, this);
     this.characterPanel.on("chat-tab-opened", this.handleChatTabOpened, this);
     this.characterPanel.on("chat-tab-closed", this.handleChatTabClosed, this);
@@ -1154,6 +1194,7 @@ export class GameScene extends Phaser.Scene {
     this.characterPanel.on("donate-zarkans", this.handleZarkansDonation, this);
     this.input.keyboard?.on("keydown", this.escapeKeyHandler);
     this.input.keyboard?.on("keydown", this.enterKeyHandler);
+    this.input.keyboard?.on("keydown", this.gmCycleKeyHandler);
     this.installBrowserHistoryGuard();
 
     if (this.turnService) {
@@ -1279,6 +1320,9 @@ export class GameScene extends Phaser.Scene {
 
     const match = await this.fetchMatchFromServer();
     this.currentMatch = match;
+    if (match?.gameMasterMode) {
+      this.adminViewEnabled = true;
+    }
     this.initializeTutorialController(this.reportReplayMode ? null : match);
     this.logReplayCache.clear();
     if (this.characterPanel) {
@@ -1498,12 +1542,14 @@ export class GameScene extends Phaser.Scene {
       this.hoverTooltip = null;
       this.input.keyboard?.off("keydown", this.escapeKeyHandler);
       this.input.keyboard?.off("keydown", this.enterKeyHandler);
+      this.input.keyboard?.off("keydown", this.gmCycleKeyHandler);
       this.removeBrowserHistoryGuard();
       if (this.turnService) {
         this.turnService.setOnTurnAdvanced();
         this.turnService.setOnMatchEnded();
         this.turnService.setOnReadyStateUpdate();
         this.turnService.setOnZarkansDonated();
+        this.turnService.setOnGmActionSync();
       }
       this.topBanner?.destroy();
       this.topBanner = null;
@@ -3367,8 +3413,14 @@ export class GameScene extends Phaser.Scene {
     if (!this.turnService || !this.currentUserId || !matchId) {
       return;
     }
+    const isGm = this.currentMatch?.gameMasterMode === true;
+    const targetCharId = isGm
+      ? this.characterPanel?.getActiveControlledCharacterId() ?? undefined
+      : undefined;
+    const effectiveTargetId = targetCharId ?? this.currentUserId;
+
     const serverReady =
-      this.currentMatch?.readyStates?.[this.currentUserId] ?? false;
+      this.currentMatch?.readyStates?.[effectiveTargetId] ?? false;
     if (ready === serverReady) {
       this.characterPanel?.setReadyState(ready, false);
       return;
@@ -3384,13 +3436,14 @@ export class GameScene extends Phaser.Scene {
     this.readyUpdateRunning = true;
     this.pendingReadyState = undefined;
     const previous =
-      this.currentMatch?.readyStates?.[this.currentUserId] ?? false;
+      this.currentMatch?.readyStates?.[effectiveTargetId] ?? false;
     const previousTurn = this.currentMatch?.current_turn;
     try {
       const res = await this.turnService.updateReadyState(
         matchId,
         ready,
-        this.adminViewEnabled
+        this.adminViewEnabled,
+        targetCharId
       );
       const payload = this.parseRpcPayload<UpdateReadyStatePayload>(res);
       if (payload.error) {
@@ -3406,7 +3459,7 @@ export class GameScene extends Phaser.Scene {
         } else {
           this.currentMatch.readyStates = this.currentMatch.readyStates ?? {};
           if (typeof payload.ready === "boolean") {
-            this.currentMatch.readyStates[this.currentUserId] = payload.ready;
+            this.currentMatch.readyStates[effectiveTargetId] = payload.ready;
           }
         }
         if (typeof payload.turn === "number") {
@@ -3447,8 +3500,8 @@ export class GameScene extends Phaser.Scene {
         }
       }
       const appliedReady =
-        (nextStates && this.currentUserId
-          ? nextStates[this.currentUserId]
+        (nextStates && effectiveTargetId
+          ? nextStates[effectiveTargetId]
           : undefined) ??
         payload.ready ??
         ready;
@@ -3469,7 +3522,7 @@ export class GameScene extends Phaser.Scene {
       this.characterPanel?.setReadyState(previous, false);
       if (this.currentMatch) {
         this.currentMatch.readyStates = this.currentMatch.readyStates ?? {};
-        this.currentMatch.readyStates[this.currentUserId] = previous;
+        this.currentMatch.readyStates[effectiveTargetId] = previous;
       }
       if (this.tutorialController && this.mobileLayout && !previous) {
         this.panelButtonHighlighted = false;
@@ -3633,12 +3686,18 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.isBuyingShopItem = true;
+    const isGm = this.currentMatch?.gameMasterMode === true;
+    const targetCharId = isGm
+      ? this.characterPanel?.getActiveControlledCharacterId() ?? undefined
+      : undefined;
+    const effectiveCharId = targetCharId ?? currentUserId;
     try {
       const response = await this.turnService.buyShopItem(
         matchId,
         payload.shopId,
         payload.targetPlayerId,
-        payload.targetLocation
+        payload.targetLocation,
+        targetCharId
       );
       const result = this.parseRpcPayload<BuyShopItemPayload>(response);
       if (result.error) {
@@ -3650,7 +3709,7 @@ export class GameScene extends Phaser.Scene {
         } else {
           this.currentMatch.playerCharacters =
             this.currentMatch.playerCharacters ?? {};
-          this.currentMatch.playerCharacters[currentUserId] = result.character;
+          this.currentMatch.playerCharacters[effectiveCharId] = result.character;
         }
         if (result.target_player_id && result.target_team_id) {
           this.currentMatch.revealedTeamsByPlayerId = {
@@ -3766,9 +3825,19 @@ export class GameScene extends Phaser.Scene {
     ) {
       return;
     }
+    const isGm = this.currentMatch?.gameMasterMode === true;
+    const targetCharId = isGm
+      ? this.characterPanel?.getActiveControlledCharacterId() ?? undefined
+      : undefined;
+    const effectiveCharId = targetCharId ?? this.currentUserId;
+
     this.isUpgradingSkill = true;
     try {
-      const res = await this.turnService.upgradeSkills(matchId, skillIds);
+      const res = await this.turnService.upgradeSkills(
+        matchId,
+        skillIds,
+        targetCharId
+      );
       const payload = this.parseRpcPayload<UpgradeSkillPayload>(res);
       if (payload.error) {
         throw new Error(payload.error);
@@ -3776,7 +3845,7 @@ export class GameScene extends Phaser.Scene {
       if (payload.character && this.currentMatch) {
         this.currentMatch.playerCharacters =
           this.currentMatch.playerCharacters ?? {};
-        this.currentMatch.playerCharacters[this.currentUserId] =
+        this.currentMatch.playerCharacters[effectiveCharId] =
           payload.character;
         this.updateCharacterPanel(this.currentMatch);
       }
@@ -3812,6 +3881,36 @@ export class GameScene extends Phaser.Scene {
     // Ready-state broadcasts affect the readiness indicators only. Avoid a
     // full character-panel update because it rebuilds the skills state.
     this.characterPanel?.updateReadyStates(match.readyStates);
+  }
+
+  private handleGmActionSync(payload: GmActionSyncPayload) {
+    if (!payload || typeof payload.match_id !== "string") {
+      return;
+    }
+    const matchId = this.registry.get("currentMatchId") as string | null;
+    if (!matchId || payload.match_id !== matchId) {
+      return;
+    }
+    const match = this.currentMatch;
+    if (!match || !match.gameMasterMode) {
+      return;
+    }
+    if (payload.playerCharacters) {
+      match.playerCharacters = payload.playerCharacters;
+    } else if (payload.character && payload.target_character_id) {
+      match.playerCharacters = match.playerCharacters ?? {};
+      match.playerCharacters[payload.target_character_id] = payload.character;
+    }
+    if (payload.readyStates) {
+      match.readyStates = payload.readyStates;
+    }
+    const activeCharId = this.characterPanel?.getActiveControlledCharacterId();
+    if (activeCharId && activeCharId === payload.target_character_id) {
+      this.updateCharacterPanel(match);
+    } else {
+      this.characterPanel?.updateReadyStates(match.readyStates);
+    }
+    this.renderPlayerCharacters(match);
   }
 
   private handleTurnAdvancedUpdate(payload: TurnAdvancedMessagePayload) {

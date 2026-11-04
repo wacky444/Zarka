@@ -10,6 +10,8 @@ import {
   OPCODE_SETTINGS_UPDATE,
   OPCODE_TURN_ADVANCED,
   OPCODE_ZARKANS_DONATED,
+  OPCODE_PLAYER_KICKED,
+  OPCODE_GM_ACTION_SYNC,
   type PlayerCharacter,
 } from "@shared";
 import { AsyncTurnState } from "../../models/types";
@@ -50,6 +52,8 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
         if (typeof nas === "boolean") state.autoSkip = nas;
         if (typeof nbp === "number") state.botPlayers = nbp;
         if (typeof nn === "string") state.name = nn;
+        if (typeof msg.gameMasterMode === "boolean") state.gameMasterMode = msg.gameMasterMode;
+        if (Array.isArray(msg.gameMasterUserIds)) state.gameMasterUserIds = msg.gameMasterUserIds;
 
         try {
           const label = buildMatchLabel({
@@ -137,6 +141,11 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
           state.order = nextOrder;
         } else {
           state.order = [];
+        }
+        if (Array.isArray(msg.gameMasterUserIds)) {
+          state.gameMasterUserIds = msg.gameMasterUserIds.filter(
+            (id: unknown) => typeof id === "string" && id.trim().length > 0
+          );
         }
         if (typeof msg.size === "number") {
           state.size = msg.size;
@@ -262,7 +271,13 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             );
           } else {
             for (const [playerId, presence] of entries) {
-              const viewAll = state.adminViewers[playerId] === true;
+              const isGM =
+                state.gameMasterMode === true &&
+                Array.isArray(state.order) &&
+                state.order.indexOf(playerId) !== -1 &&
+                Array.isArray(state.gameMasterUserIds) &&
+                state.gameMasterUserIds.indexOf(playerId) !== -1;
+              const viewAll = state.adminViewers[playerId] === true || isGM;
               const tailored = tailorReplayEvents(
                 events,
                 playerId,
@@ -391,6 +406,26 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
           );
         } catch {}
         state.matchRemoved = true;
+      } else if (msg && msg.type === "player_kicked") {
+        try {
+          const kickedPlayerId = typeof msg.player_id === "string" ? msg.player_id : undefined;
+          const kickedReason = typeof msg.kicked_reason === "string" ? msg.kicked_reason : "gm_mode_enabled";
+          const payload = JSON.stringify({
+            match_id: state.game_id,
+            kicked_reason: kickedReason,
+            player_id: kickedPlayerId,
+          });
+          const targetPresence = kickedPlayerId ? state.players[kickedPlayerId] : undefined;
+          if (targetPresence) {
+            dispatcher.broadcastMessage(
+              OPCODE_PLAYER_KICKED,
+              payload,
+              [targetPresence],
+              null,
+              true,
+            );
+          }
+        } catch {}
       } else if (msg && msg.type === "match_ended") {
         try {
           const payload = JSON.stringify({
@@ -412,6 +447,36 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             null,
             true,
           );
+        } catch {}
+      } else if (msg && msg.type === "gm_action_sync") {
+        try {
+          const gmPresences: nkruntime.Presence[] = [];
+          if (Array.isArray(state.gameMasterUserIds)) {
+            for (const gmId of state.gameMasterUserIds) {
+              const p = state.players[gmId];
+              if (p) {
+                gmPresences.push(p);
+              }
+            }
+          }
+          if (gmPresences.length > 0) {
+            const payload = JSON.stringify({
+              match_id: msg.match_id ?? state.game_id,
+              target_character_id: msg.target_character_id,
+              action_type: msg.action_type,
+              actor_user_id: msg.actor_user_id,
+              character: msg.character,
+              playerCharacters: msg.playerCharacters,
+              readyStates: msg.readyStates,
+            });
+            dispatcher.broadcastMessage(
+              OPCODE_GM_ACTION_SYNC,
+              payload,
+              gmPresences,
+              null,
+              true,
+            );
+          }
         } catch {}
       }
     } catch (e) {

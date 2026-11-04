@@ -149,6 +149,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
   private currentPlayerSkin: Skin | null = null;
   private playerAccounts = new Map<string, UserAccount>();
   private lastUserMap: Record<string, string> = {};
+  private isGameMasterMode = false;
+  private activeControlledCharacterId: string | null = null;
+  private gmPlayerSelector!: PlayerSelector;
 
   private readonly handleTestamentChange = (recipientId: string | null) => {
     this.emit("testament-change", recipientId);
@@ -373,6 +376,23 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       contentTop: statusContentTop,
       barHeight: BAR_HEIGHT
     });
+
+    this.gmPlayerSelector = new PlayerSelector(scene, MARGIN, statusContentTop, width - MARGIN * 2, {
+      title: "Select Controlled Character",
+      subtitle: "Choose a character to inspect and control",
+      label: "",
+      includeEmptyOption: false
+    });
+    this.gmPlayerSelector.setVisible(false);
+    this.gmPlayerSelector.on("modal-open", this.handleActionModalOpen);
+    this.gmPlayerSelector.on("modal-close", this.handleActionModalClose);
+    this.gmPlayerSelector.on("change", (characterId: string | null) => {
+      if (characterId) {
+        this.setActiveControlledCharacter(characterId);
+      }
+    });
+    this.add(this.gmPlayerSelector);
+
     const readyY = statusContentTop + 80;
     this.readyView = new CharacterPanelReadyView({
       scene,
@@ -779,6 +799,9 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.chatView?.destroy();
     this.playerOptionSkinCache?.dispose();
     this.statusView?.destroy();
+    this.gmPlayerSelector?.off("modal-open", this.handleActionModalOpen);
+    this.gmPlayerSelector?.off("modal-close", this.handleActionModalClose);
+    this.gmPlayerSelector?.destroy();
     this.inventoryView?.destroy();
     super.destroy(fromScene);
   }
@@ -1158,6 +1181,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       contentTop: statusContentTop,
       barHeight: BAR_HEIGHT
     });
+    this.gmPlayerSelector?.setSelectorWidth(width - MARGIN * 2);
+    this.gmPlayerSelector?.setPosition(MARGIN, statusContentTop);
     if (this.readyView) {
       this.readyView.setPosition(barX, statusContentTop + 80);
     }
@@ -1339,7 +1364,41 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     );
     this.updateItemOptions(match ?? null, currentUserId);
     this.shopView.update(match ?? null, currentUserId, this.playerOptions);
-    if (!match || !currentUserId) {
+    this.isGameMasterMode = match?.gameMasterMode === true;
+    this.statusView.setGameMasterMode(this.isGameMasterMode, () => {
+      this.gmPlayerSelector?.showDropdown();
+    });
+
+    if (this.isGameMasterMode) {
+      const controlledOptions = this.playerOptions.map((opt) => {
+        const char = match?.playerCharacters?.[opt.id];
+        const health = char?.stats?.health;
+        const hpDesc = health ? `HP: ${health.current}/${health.max}` : "";
+        const readyState = match?.readyStates?.[opt.id] === true;
+        const readyDesc = readyState ? "Ready" : "Not ready";
+        return {
+          ...opt,
+          description: hpDesc ? `${hpDesc} • ${readyDesc}` : readyDesc,
+          warning: readyState ? "READY" : undefined
+        };
+      });
+      this.gmPlayerSelector.setOptions(controlledOptions);
+      if (
+        !this.activeControlledCharacterId ||
+        !match?.playerCharacters?.[this.activeControlledCharacterId]
+      ) {
+        const firstId = Object.keys(match?.playerCharacters ?? {})[0] ?? null;
+        this.activeControlledCharacterId = firstId;
+      }
+      this.gmPlayerSelector.setValue(this.activeControlledCharacterId, false);
+      if (this.activeControlledCharacterId) {
+        this.emit("controlled-character-change", this.activeControlledCharacterId);
+      }
+    } else {
+      this.activeControlledCharacterId = null;
+    }
+
+    if (!match || (!currentUserId && !this.isGameMasterMode)) {
       this.currentTurn = 0;
       this.applyCharacter(null, null, false);
       this.actionPlanView?.applyTutorialActionEditingState();
@@ -1347,17 +1406,66 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     }
     this.currentTurn = match.current_turn ?? 0;
     const characters = match.playerCharacters ?? {};
+    const effectiveCharId = this.isGameMasterMode
+      ? this.activeControlledCharacterId
+      : currentUserId;
     // Current character is always received as PlayerCharacter type
-    const character = (characters[currentUserId] as PlayerCharacter) ?? null;
-    const currentAccount = this.playerAccounts.get(currentUserId);
+    const character = effectiveCharId
+      ? ((characters[effectiveCharId] as PlayerCharacter) ?? null)
+      : null;
+    const currentAccount = effectiveCharId ? this.playerAccounts.get(effectiveCharId) : null;
     const accountDisplayName =
       typeof currentAccount?.displayName === "string" &&
       currentAccount.displayName.trim().length > 0
         ? currentAccount.displayName.trim()
         : null;
-    const name = accountDisplayName ?? userMap[currentUserId] ?? null;
-    const ready = match.readyStates?.[currentUserId] ?? false;
+    const name = effectiveCharId
+      ? (accountDisplayName ?? userMap[effectiveCharId] ?? character?.name ?? null)
+      : null;
+    const ready = effectiveCharId
+      ? (match.readyStates?.[effectiveCharId] ?? false)
+      : false;
     this.applyCharacter(character, name, ready);
+  }
+
+  getActiveControlledCharacterId(): string | null {
+    return this.activeControlledCharacterId;
+  }
+
+  setActiveControlledCharacter(characterId: string): void {
+    if (!this.isGameMasterMode || !this.currentMatch) {
+      return;
+    }
+    const characters = this.currentMatch.playerCharacters ?? {};
+    const character = characters[characterId];
+    if (!character) {
+      return;
+    }
+    this.activeControlledCharacterId = characterId;
+    this.gmPlayerSelector.setValue(characterId, false);
+
+    const currentAccount = this.playerAccounts.get(characterId);
+    const accountDisplayName =
+      typeof currentAccount?.displayName === "string" &&
+      currentAccount.displayName.trim().length > 0
+        ? currentAccount.displayName.trim()
+        : null;
+    const name =
+      accountDisplayName ??
+      this.lastUserMap[characterId] ??
+      character.name ??
+      characterId;
+    const ready = this.currentMatch.readyStates?.[characterId] ?? false;
+
+    // Skin resolution
+    const charSkin =
+      (character as { skin?: Skin }).skin ??
+      currentAccount?.cosmetics.selectedSkinId ??
+      DEFAULT_SKIN;
+    this.statusView.setSkin(charSkin, this.scene.textures);
+
+    this.applyCharacter(character, name, ready);
+    this.emit("controlled-character-change", characterId);
   }
 
   private applyCharacter(
@@ -1404,8 +1512,26 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     if (this.currentMatch) {
       this.currentMatch.readyStates = readyStates ?? {};
     }
-    if (this.currentUserId) {
-      this.setReadyState(readyStates?.[this.currentUserId] ?? false, false);
+    const targetId = this.isGameMasterMode
+      ? this.activeControlledCharacterId
+      : this.currentUserId;
+    if (targetId) {
+      this.setReadyState(readyStates?.[targetId] ?? false, false);
+    }
+    if (this.isGameMasterMode && this.gmPlayerSelector) {
+      const controlledOptions = this.playerOptions.map((opt) => {
+        const char = this.currentMatch?.playerCharacters?.[opt.id];
+        const health = char?.stats?.health;
+        const hpDesc = health ? `HP: ${health.current}/${health.max}` : "";
+        const readyState = this.currentMatch?.readyStates?.[opt.id] === true;
+        const readyDesc = readyState ? "Ready" : "Not ready";
+        return {
+          ...opt,
+          description: hpDesc ? `${hpDesc} • ${readyDesc}` : readyDesc,
+          warning: readyState ? "READY" : undefined
+        };
+      });
+      this.gmPlayerSelector.setOptions(controlledOptions);
     }
     this.playersTabView.refresh();
   }

@@ -4,6 +4,11 @@ import { OPCODE_MATCH_REMOVED } from "@shared";
 import { asyncTurnMatchSignal } from "../src/match/async_turn/signal";
 import { asyncTurnMatchLoop } from "../src/match/async_turn/loop";
 import { removeMatchRpc } from "../src/rpc/removeMatch";
+import { leaveMatchRpc } from "../src/rpc/leaveMatch";
+import { updateReadyStateRpc } from "../src/rpc/updateReadyState";
+import { StorageService } from "../src/services/storageService";
+import { createNakamaWrapper } from "../src/services/nakamaWrapper";
+import { isGameMasterUser } from "../src/utils/admin";
 import { joinMatchRpc } from "../src/rpc/joinMatch";
 import { getStateRpc } from "../src/rpc/getState";
 import { createMatchRpc } from "../src/rpc/createMatch";
@@ -84,6 +89,7 @@ function createMockHarness() {
     logger,
     nk: fakeNakama as unknown as nkruntime.Nakama,
     signals,
+    users,
   };
 }
 
@@ -189,4 +195,88 @@ test("removeMatch marks match removed and join/getState reject removed match", (
       return (err as { message?: string }).message === "not_found";
     }
   );
+});
+
+test("leaveMatch revokes gameMasterUserIds and requires active membership for GM actions", () => {
+  const harness = createMockHarness();
+  const hostCtx = { userId: "host-user" } as nkruntime.Context;
+  const guestCtx = { userId: "guest-user" } as nkruntime.Context;
+
+  // Set both as admins
+  (harness.users.get("host-user") as { admin?: boolean }).admin = true;
+  (harness.users.get("guest-user") as { admin?: boolean }).admin = true;
+
+  // Host creates GM match
+  const createRes = JSON.parse(
+    createMatchRpc(hostCtx, harness.logger, harness.nk, JSON.stringify({ gameMasterMode: true }))
+  ) as { match_id: string; gameMasterMode?: boolean };
+  const matchId = createRes.match_id;
+
+  // Host joins
+  joinMatchRpc(hostCtx, harness.logger, harness.nk, JSON.stringify({ match_id: matchId }));
+  // Guest joins
+  joinMatchRpc(guestCtx, harness.logger, harness.nk, JSON.stringify({ match_id: matchId }));
+
+  const storageService = new StorageService(createNakamaWrapper(harness.nk));
+  const storedRecord = () => storageService.getMatch(matchId)?.match as { players: string[]; gameMasterUserIds: string[]; gameMasterMode?: boolean };
+
+  let record = storedRecord();
+  assert.equal(record.players.includes("guest-user"), true);
+  assert.equal(record.gameMasterUserIds.includes("guest-user"), true);
+  assert.equal(isGameMasterUser(record, "guest-user"), true);
+
+  // Guest leaves
+  const leaveRes = JSON.parse(
+    leaveMatchRpc(guestCtx, harness.logger, harness.nk, JSON.stringify({ match_id: matchId }))
+  ) as { ok: boolean; left: boolean };
+  assert.equal(leaveRes.ok, true);
+  assert.equal(leaveRes.left, true);
+
+  record = storedRecord();
+  assert.equal(record.players.includes("guest-user"), false);
+  assert.equal(record.gameMasterUserIds.includes("guest-user"), false);
+  assert.equal(isGameMasterUser(record, "guest-user"), false);
+
+  // Guest attempts GM action after leaving -> rejected
+  assert.throws(
+    () => {
+      updateReadyStateRpc(
+        guestCtx,
+        harness.logger,
+        harness.nk,
+        JSON.stringify({ match_id: matchId, ready: true, target_character_id: "c1" })
+      );
+    },
+    { message: "Game Master actions are restricted to administrators" }
+  );
+
+  // Verify sync_players signal revoked GM in realtime state
+  const syncSignals = harness.signals.filter((s) => {
+    try {
+      return JSON.parse(s.data).type === "sync_players";
+    } catch {
+      return false;
+    }
+  });
+  const syncSignal = syncSignals[syncSignals.length - 1];
+  assert.ok(syncSignal);
+  const parsedSignal = JSON.parse(syncSignal.data);
+  assert.equal(parsedSignal.gameMasterUserIds.includes("guest-user"), false);
+
+  const mockState = {
+    game_id: matchId,
+    gameMasterMode: true,
+    gameMasterUserIds: ["host-user", "guest-user"],
+    order: ["host-user", "guest-user"],
+  } as unknown as AsyncTurnState;
+  asyncTurnMatchSignal(
+    hostCtx,
+    harness.logger,
+    harness.nk,
+    {} as any,
+    0,
+    mockState,
+    syncSignal.data
+  );
+  assert.equal(mockState.gameMasterUserIds.includes("guest-user"), false);
 });

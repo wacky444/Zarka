@@ -193,7 +193,10 @@ export class EndGameReportScene extends Phaser.Scene {
     let title: string;
     let titleColor: string;
 
-    if (isDraw) {
+    if (report.game_master_mode) {
+      title = t("Game Master Sandbox Summary");
+      titleColor = "#a78bfa";
+    } else if (isDraw) {
       title = t("Match Draw");
       titleColor = "#38bdf8";
     } else if (isParticipant) {
@@ -229,8 +232,9 @@ export class EndGameReportScene extends Phaser.Scene {
     y += 48;
 
     const matchName = report.name ? `${report.name} · ` : "";
+    const modeTag = report.game_master_mode ? `[${t("Game Master Mode")}] · ` : "";
     const summary = this.add
-      .text(width / 2, y, `${matchName}${t("Turns")}: ${report.turns}`, {
+      .text(width / 2, y, `${modeTag}${matchName}${t("Turns")}: ${report.turns}`, {
         color: "#cbd5e1",
         fontSize: "16px"
       })

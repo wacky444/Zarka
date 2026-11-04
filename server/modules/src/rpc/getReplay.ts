@@ -118,7 +118,9 @@ export function getReplayRpc(
   let viewAll = false;
   let targetViewerId = ctx.userId;
 
-  if (isAuthorized) {
+  if (match.gameMasterMode) {
+    viewAll = true;
+  } else if (isAuthorized) {
     if (requestedCharacter && requestedCharacter.toLowerCase() === "all") {
       viewAll = true;
     } else if (requestedCharacter) {

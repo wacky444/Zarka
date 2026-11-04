@@ -16,6 +16,7 @@ import type { MatchRecord } from "../models/types";
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
+import { isGameMasterUser } from "../utils/admin";
 import {
   applyHealthDelta,
   getInventoryDamageReduction,
@@ -25,6 +26,7 @@ import { tailorPlayerCharactersForViewer } from "../utils/matchView";
 import { parseAxial } from "../utils/location";
 import { sendTutorialBotMessage } from "../match/TutorialBotChat";
 import { canCharacterDetectFire } from "../utils/fireVisibility";
+import { getRuntimeMatchId } from "../utils/matchIds";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -139,17 +141,31 @@ export function buyShopItemRpc(
     );
   }
 
-  const storage = new StorageService(createNakamaWrapper(nk));
+  const nkWrapper = createNakamaWrapper(nk);
+  const storage = new StorageService(nkWrapper);
   const read = storage.getMatch(matchId);
   if (!read) {
     throw makeNakamaError("not_found", nkruntime.Codes.NOT_FOUND);
   }
   const match: MatchRecord = read.match;
-  if (
-    !Array.isArray(match.players) ||
-    match.players.indexOf(ctx.userId) === -1
-  ) {
-    throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
+  let actorId = ctx.userId;
+  if (match.gameMasterMode) {
+    const isGM = isGameMasterUser(match, ctx.userId);
+    if (!isGM) {
+      throw makeNakamaError("Game Master actions are restricted to administrators", nkruntime.Codes.PERMISSION_DENIED);
+    }
+    const requestedCharId = typeof parsed.target_character_id === "string" ? parsed.target_character_id.trim() : "";
+    if (!requestedCharId) {
+      throw makeNakamaError("target_character_id required", nkruntime.Codes.INVALID_ARGUMENT);
+    }
+    actorId = requestedCharId;
+  } else {
+    if (
+      !Array.isArray(match.players) ||
+      match.players.indexOf(ctx.userId) === -1
+    ) {
+      throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
+    }
   }
   if (match.started !== true || match.removed !== 0) {
     throw makeNakamaError(
@@ -158,7 +174,7 @@ export function buyShopItemRpc(
     );
   }
 
-  let actor = match.playerCharacters?.[ctx.userId];
+  let actor = match.playerCharacters?.[actorId];
   if (!actor) {
     throw makeNakamaError("character_not_found", nkruntime.Codes.NOT_FOUND);
   }
@@ -514,10 +530,30 @@ export function buyShopItemRpc(
     sendTutorialBotMessage(match, "detective_result", nk, logger);
   }
 
+  if (match.gameMasterMode) {
+    try {
+      nkWrapper.matchSignal(
+        getRuntimeMatchId(match),
+        JSON.stringify({
+          type: "gm_action_sync",
+          match_id: matchId,
+          target_character_id: actorId,
+          action_type: "shop",
+          actor_user_id: ctx.userId,
+          character: actor,
+          playerCharacters: match.playerCharacters
+        })
+      );
+    } catch (e) {
+      logger.debug("gm_action_sync signal failed: %s", (e as Error).message);
+    }
+  }
+
   const response: BuyShopItemPayload = {
     ok: true,
     match_id: matchId,
     user_id: ctx.userId,
+    target_character_id: match.gameMasterMode ? actorId : undefined,
     shop_id: resolvedShopId,
     ...(targetPlayerId ? { target_player_id: targetPlayerId } : {}),
     ...(targetTeamId ? { target_team_id: targetTeamId } : {}),
@@ -527,7 +563,7 @@ export function buyShopItemRpc(
     playerCharacters: tailorPlayerCharactersForViewer(
       match.playerCharacters,
       ctx.userId,
-      false,
+      match.gameMasterMode ? true : false,
       match.current_turn,
     ),
     event,

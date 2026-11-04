@@ -55,6 +55,16 @@ export const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
         params && params["lastAutoAdvanceAt"]
           ? parseInt(params["lastAutoAdvanceAt"], 10)
           : undefined,
+      gameMasterMode: params && params["gameMasterMode"] === "true",
+      gameMasterUserIds: (() => {
+        if (!params || !params["gameMasterUserIds"]) return undefined;
+        try {
+          const parsed = JSON.parse(params["gameMasterUserIds"]);
+          return Array.isArray(parsed) ? parsed : undefined;
+        } catch {
+          return undefined;
+        }
+      })(),
     };
 
     if ((isRestore || isRanked) && params && params["players"]) {

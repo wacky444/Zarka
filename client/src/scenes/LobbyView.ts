@@ -14,13 +14,16 @@ import {
   DEFAULT_SKIN,
   MAX_BOT_PLAYERS,
   MAX_NORMAL_MATCH_SIZE,
-  type InMatchSettings
+  generateRandomSkinWithoutHat,
+  type InMatchSettings,
+  type Skin
 } from "@shared";
 import { t } from "../services/i18n";
 import {
   LobbyPlayerCard,
   type LobbyPlayerData
 } from "../ui/LobbyPlayerCard";
+import { ControlledCharacterRow } from "../ui/ControlledCharacterRow";
 
 type FixWidthSizerInstance = Phaser.GameObjects.GameObject & {
   width: number;
@@ -79,6 +82,12 @@ export class LobbyView {
   private matchName = LobbyView.DEFAULT_MATCH_NAME;
   private maxPlayers = DEFAULT_NORMAL_MATCH_SIZE;
   private isHost = false;
+  private isAdmin = false;
+  private gameMasterMode = false;
+  private controlledCharacters: Array<{ id: string; name: string; skin: Skin }> = [];
+  private controlledRows: ControlledCharacterRow[] = [];
+  private addCharacterButton?: UIButton;
+  private gameMasterToggle?: ToggleHandle;
   private creatorId?: string;
   private creatorName?: string;
   private lastContentWidth?: number;
@@ -400,6 +409,44 @@ export class LobbyView {
       this.isHost
     );
 
+    this.gameMasterToggle = addLabeledToggle(
+      this.scene,
+      this.contentRoot,
+      0,
+      0,
+      "Game Master",
+      () => this.gameMasterMode,
+      (v) => {
+        this.gameMasterMode = v;
+        if (this.gameMasterMode) {
+          this.autoSkip = false;
+          this.autoSkipToggle?.setDisplayValue(false);
+          this.autoSkipToggle?.setEnabled(false);
+          if (this.controlledCharacters.length === 0) {
+            this.controlledCharacters = [
+              {
+                id: "char_1",
+                name: "Character 1",
+                skin: generateRandomSkinWithoutHat()
+              },
+              {
+                id: "char_2",
+                name: "Character 2",
+                skin: generateRandomSkinWithoutHat()
+              }
+            ];
+          }
+        } else {
+          this.autoSkipToggle?.setEnabled(this.isHost);
+        }
+        this.updateControlVisibilities();
+        this.refreshPlayerList();
+        this.emitSettings();
+      },
+      true,
+      this.isHost && this.isAdmin
+    );
+
     const settingsControls = [
       this.playersStepper.container,
       this.colsStepper.container,
@@ -407,7 +454,8 @@ export class LobbyView {
       this.roundTimeInput.container,
       this.autoSkipToggle.container,
       this.botPlayersStepper.container,
-      this.turnsToBeAt1TileStepper.container
+      this.turnsToBeAt1TileStepper.container,
+      this.gameMasterToggle.container
     ];
     for (const control of settingsControls) {
       this.contentRoot.remove(control, false);
@@ -446,6 +494,27 @@ export class LobbyView {
     });
     this.spawnWarningText.setVisible(false);
     this.contentRoot.add(this.spawnWarningText);
+
+    this.addCharacterButton = makeButton(
+      scene,
+      0,
+      0,
+      `+ ${t("Add Character")}`,
+      () => {
+        const nextIdx = this.controlledCharacters.length + 1;
+        const newChar = {
+          id: `char_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+          name: `Character ${nextIdx}`,
+          skin: generateRandomSkinWithoutHat()
+        };
+        this.controlledCharacters.push(newChar);
+        this.refreshPlayerList();
+        this.emitSettings();
+      },
+      ["inMatch"]
+    );
+    this.addCharacterButton.setVisible(false);
+    this.contentRoot.add(this.addCharacterButton);
 
     this.refreshPlayerList();
     this.updateStartButtonState();
@@ -550,19 +619,33 @@ export class LobbyView {
     this.playerListTitle.setPosition(contentLeft, cursorY);
     cursorY += this.playerListTitle.height + 8;
 
-    if (this.playerCards.length === 0) {
-      this.emptyPlayerListText.setWordWrapWidth(contentWidth, true);
-      this.emptyPlayerListText.setPosition(contentLeft, cursorY);
-      this.emptyPlayerListText.setVisible(true);
-      cursorY += this.emptyPlayerListText.height + 16;
-    } else {
+    if (this.gameMasterMode) {
       this.emptyPlayerListText.setVisible(false);
-      for (const card of this.playerCards) {
-        card.setPosition(contentLeft, cursorY);
-        card.updateWidth(contentWidth);
-        cursorY += card.cardHeight + 8;
+      for (const row of this.controlledRows) {
+        row.setPosition(contentLeft, cursorY);
+        row.updateWidth(contentWidth);
+        cursorY += row.rowHeight + 8;
       }
       cursorY += 8;
+      if (this.addCharacterButton?.visible) {
+        this.addCharacterButton.setPosition(contentLeft, cursorY);
+        cursorY += this.addCharacterButton.height + 16;
+      }
+    } else {
+      if (this.playerCards.length === 0) {
+        this.emptyPlayerListText.setWordWrapWidth(contentWidth, true);
+        this.emptyPlayerListText.setPosition(contentLeft, cursorY);
+        this.emptyPlayerListText.setVisible(true);
+        cursorY += this.emptyPlayerListText.height + 16;
+      } else {
+        this.emptyPlayerListText.setVisible(false);
+        for (const card of this.playerCards) {
+          card.setPosition(contentLeft, cursorY);
+          card.updateWidth(contentWidth);
+          cursorY += card.cardHeight + 8;
+        }
+        cursorY += 8;
+      }
     }
 
     const buttonHeight = Math.max(
@@ -669,15 +752,17 @@ export class LobbyView {
     this.creatorText.setText(`Creator: ${label}`);
     this.isHost = !!isSelf;
     const enabled = this.isHost;
-    this.playersStepper?.setEnabled(enabled);
+    this.playersStepper?.setEnabled(enabled && !this.gameMasterMode);
     this.colsStepper?.setEnabled(enabled);
     this.rowsStepper?.setEnabled(enabled);
     this.roundTimeInput?.setEnabled(enabled);
-    this.autoSkipToggle?.setEnabled(enabled);
-    this.botPlayersStepper?.setEnabled(enabled);
+    this.autoSkipToggle?.setEnabled(enabled && !this.gameMasterMode);
+    this.botPlayersStepper?.setEnabled(enabled && !this.gameMasterMode);
     this.turnsToBeAt1TileStepper?.setEnabled(enabled);
+    this.gameMasterToggle?.setEnabled(enabled && this.isAdmin);
     this.setRenameEnabled(enabled);
     this.setRemoveMatchEnabled(enabled);
+    this.updateControlVisibilities();
     this.updateStartButtonState();
 
     if (this.playersData.length > 0) {
@@ -703,6 +788,8 @@ export class LobbyView {
     turnsToBeAt1Tile?: number;
     name?: string;
     started?: boolean;
+    gameMasterMode?: boolean;
+    controlledCharacterRoster?: Array<{ id: string; name: string; skin: Skin }>;
   }) {
     if (typeof partial.size === "number") {
       this.players = Phaser.Math.Clamp(
@@ -751,6 +838,21 @@ export class LobbyView {
     if (typeof partial.started === "boolean") {
       this.setMatchStarted(partial.started);
     }
+    if (typeof partial.gameMasterMode === "boolean") {
+      this.gameMasterMode = partial.gameMasterMode;
+      this.gameMasterToggle?.setDisplayValue(this.gameMasterMode);
+      if (this.gameMasterMode) {
+        this.autoSkip = false;
+        this.autoSkipToggle?.setDisplayValue(false);
+        this.autoSkipToggle?.setEnabled(false);
+      } else {
+        this.autoSkipToggle?.setEnabled(this.isHost);
+      }
+      this.updateControlVisibilities();
+    }
+    if (Array.isArray(partial.controlledCharacterRoster)) {
+      this.controlledCharacters = partial.controlledCharacterRoster;
+    }
     this.refreshPlayerList();
   }
 
@@ -781,7 +883,9 @@ export class LobbyView {
       autoSkip: this.autoSkip,
       botPlayers: this.botPlayers,
       turnsToBeAt1Tile: this.turnsToBeAt1Tile,
-      name: this.matchName
+      name: this.matchName,
+      gameMasterMode: this.gameMasterMode,
+      controlledCharacterRoster: this.gameMasterMode ? this.controlledCharacters : undefined
     };
   }
 
@@ -902,6 +1006,69 @@ export class LobbyView {
   private refreshPlayerList() {
     if (!this.playerListTitle || !this.emptyPlayerListText) return;
     this.serverSpawnWarning = false;
+
+    if (this.gameMasterMode) {
+      const charCount = this.controlledCharacters.length;
+      this.playerListTitle.setText(`Controlled Characters (${charCount})`);
+
+      for (const card of this.playerCards) {
+        this.contentRoot.remove(card, true);
+      }
+      this.playerCards = [];
+
+      for (const row of this.controlledRows) {
+        this.contentRoot.remove(row, true);
+      }
+      this.controlledRows = [];
+
+      this.emptyPlayerListText.setVisible(false);
+      const rowWidth = this.lastContentWidth ?? 300;
+
+      for (let idx = 0; idx < this.controlledCharacters.length; idx++) {
+        const char = this.controlledCharacters[idx];
+        const row = new ControlledCharacterRow(
+          this.scene,
+          0,
+          0,
+          rowWidth,
+          {
+            id: char.id,
+            name: char.name,
+            skin: char.skin,
+            index: idx + 1,
+            canDelete: this.controlledCharacters.length > 2 && this.isHost,
+            onRename: (id) => {
+              const current = this.controlledCharacters.find((c) => c.id === id);
+              const input = window.prompt(t("Character name"), current?.name ?? "");
+              if (input && input.trim()) {
+                if (current) current.name = input.trim();
+                this.refreshPlayerList();
+                this.emitSettings();
+              }
+            },
+            onDelete: (id) => {
+              if (this.controlledCharacters.length <= 2) return;
+              this.controlledCharacters = this.controlledCharacters.filter((c) => c.id !== id);
+              this.refreshPlayerList();
+              this.emitSettings();
+            }
+          }
+        );
+        this.contentRoot.add(row);
+        this.controlledRows.push(row);
+      }
+      this.updateSpawnWarning();
+      this.updateStartButtonState();
+      this.layout();
+      return;
+    }
+
+    // Normal mode: clean up any controlled rows
+    for (const row of this.controlledRows) {
+      this.contentRoot.remove(row, true);
+    }
+    this.controlledRows = [];
+
     const playerCount = this.playersData.length;
     const capacity = Math.max(this.maxPlayers, 1);
     this.playerListTitle.setText(`Players (${playerCount}/${capacity})`);
@@ -935,6 +1102,9 @@ export class LobbyView {
   }
 
   private hasEnoughSpawnTiles(): boolean {
+    if (this.gameMasterMode) {
+      return this.controlledCharacters.length <= this.cols * this.rows;
+    }
     return this.playersData.length + this.botPlayers <= this.cols * this.rows;
   }
 
@@ -949,6 +1119,36 @@ export class LobbyView {
     this.spawnWarningText.setVisible(showWarning);
   }
 
+  setIsAdmin(isAdmin: boolean) {
+    this.isAdmin = isAdmin;
+    this.updateControlVisibilities();
+  }
+
+  private updateControlVisibilities() {
+    const showGM = this.isAdmin && this.isHost;
+    if (this.gameMasterToggle?.container) {
+      this.gameMasterToggle.container.setVisible(showGM);
+    }
+
+    const isGMActive = this.gameMasterMode;
+    if (isGMActive) {
+      this.autoSkipToggle?.setDisplayValue(false);
+      this.autoSkipToggle?.setEnabled(false);
+      this.playersStepper?.container.setVisible(false);
+      this.botPlayersStepper?.container.setVisible(false);
+    } else {
+      this.playersStepper?.container.setVisible(true);
+      this.botPlayersStepper?.container.setVisible(true);
+      this.autoSkipToggle?.setEnabled(this.isHost);
+    }
+
+    if (this.addCharacterButton) {
+      this.addCharacterButton.setVisible(isGMActive && this.isHost);
+    }
+
+    this.settingsSizer?.layout();
+  }
+
   private updateStartButtonState() {
     if (!this.startMatchButton) return;
     const canStart =
@@ -956,7 +1156,8 @@ export class LobbyView {
       !this.started &&
       !this.startMatchBusy &&
       !this.serverSpawnWarning &&
-      this.hasEnoughSpawnTiles();
+      this.hasEnoughSpawnTiles() &&
+      (!this.gameMasterMode || this.controlledCharacters.length >= 2);
     if (canStart) {
       this.startMatchButton.setAlpha(1);
       this.startMatchButton.setText(
