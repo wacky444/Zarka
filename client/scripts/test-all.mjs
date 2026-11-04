@@ -68,6 +68,10 @@ const suites = [
     name: "lobby-player-card",
     entryPoint: "test/LobbyPlayerCard.test.ts",
     alias: { phaser: phaserShim, phaser3spectorjs: phaserShim }
+  },
+  {
+    name: "gm-location-selector",
+    entryPoint: "test/GmLocationSelector.test.ts"
   }
 ];
 

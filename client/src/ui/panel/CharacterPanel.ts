@@ -1501,7 +1501,7 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       character,
       match: this.currentMatch,
       currentTurn: this.currentTurn,
-      currentUserId: this.currentUserId,
+      currentUserId: effectiveCharId,
       playerOptions: this.playerOptions,
       itemOptions: this.itemOptions,
       stealItemOptions: this.stealItemOptions,

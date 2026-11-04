@@ -1008,6 +1008,7 @@ export class GameScene extends Phaser.Scene {
         getCurrentMatch: () => this.currentMatch,
         getReplayView: () => this.replayView,
         getCurrentUserId: () => this.currentUserId,
+        getCurrentCharacterId: () => this.getEffectiveCharacterId(),
         isAdminViewEnabled: () => this.adminViewEnabled,
         getPlayerSkin: (playerId) =>
           this.currentMatch?.playerCharacters?.[playerId]?.skin ??
@@ -1179,6 +1180,9 @@ export class GameScene extends Phaser.Scene {
       "controlled-character-change",
       (characterId: string) => {
         void this.actionPlanSynchronizer?.setActiveControlledCharacterId(characterId);
+        if (this.locationSelectionActive) {
+          this.cancelMainActionLocationPick();
+        }
         if (this.selectedLogCharacterId !== characterId) {
           this.selectedLogCharacterId = characterId;
           this.characterPanel?.setLogSelectedCharacter(characterId, false);
@@ -1191,6 +1195,7 @@ export class GameScene extends Phaser.Scene {
             this.handleLogTurnRequest(currentTurn);
           }
         }
+        this.boardRenderer?.refreshAllTileTints();
       }
     );
     this.characterPanel.on("chat-send", this.handleChatSend, this);
@@ -4308,7 +4313,25 @@ export class GameScene extends Phaser.Scene {
     this.characterPanel.openPlayerCard(playerId);
   }
 
+  private getEffectiveCharacterId(): string | null {
+    if (this.currentMatch?.gameMasterMode) {
+      return (
+        this.characterPanel?.getActiveControlledCharacterId() ??
+        Object.keys(this.currentMatch?.playerCharacters ?? {})[0] ??
+        null
+      );
+    }
+    return this.currentUserId;
+  }
+
   private getCurrentPlayerCoord(): Axial | null {
+    const effectiveCharId = this.getEffectiveCharacterId();
+    if (
+      effectiveCharId &&
+      this.currentMatch?.playerCharacters?.[effectiveCharId]?.position?.coord
+    ) {
+      return this.currentMatch.playerCharacters[effectiveCharId].position.coord;
+    }
     return this.boardRenderer?.getCurrentPlayerCoord() ?? null;
   }
 
@@ -4341,10 +4364,11 @@ export class GameScene extends Phaser.Scene {
     target: Axial,
     extraExecutions = 0
   ): boolean {
+    const effectiveCharId = this.getEffectiveCharacterId();
     if (actionId === "detonate_c4") {
       return (this.currentMatch?.c4s ?? []).some(
         (charge) =>
-          charge.ownerId === this.currentUserId &&
+          charge.ownerId === effectiveCharId &&
           charge.coord.q === target.q &&
           charge.coord.r === target.r
       );
@@ -4397,8 +4421,8 @@ export class GameScene extends Phaser.Scene {
       return false;
     }
     if (actionId === "create_fire") {
-      const character = this.currentUserId
-        ? this.currentMatch?.playerCharacters?.[this.currentUserId]
+      const character = effectiveCharId
+        ? this.currentMatch?.playerCharacters?.[effectiveCharId]
         : null;
       const fuelQuantity = (character?.inventory?.carriedItems ?? []).reduce(
         (total, stack) =>

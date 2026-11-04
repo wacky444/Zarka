@@ -63,6 +63,7 @@ export interface GameBoardRendererCallbacks {
   getCurrentMatch(): MatchRecord | null;
   getReplayView(): BoardReplayView | null;
   getCurrentUserId(): string | null;
+  getCurrentCharacterId?: () => string | null;
   isAdminViewEnabled(): boolean;
   getPlayerSkin(playerId: string): Skin | undefined;
   getPlayerName(playerId: string): string;
@@ -88,6 +89,14 @@ export class GameBoardRenderer {
   private readonly cellContentsPanel: CellContentsPanel;
   private readonly hoverTooltip: HoverTooltip;
   private readonly callbacks: GameBoardRendererCallbacks;
+
+  private getEffectiveCharacterId(): string | null {
+    const charId = this.callbacks.getCurrentCharacterId?.();
+    if (charId) {
+      return charId;
+    }
+    return this.callbacks.getCurrentUserId();
+  }
 
   private tilePositions: Record<string, { x: number; y: number }> = {};
   private mapTileSprites: Array<{
@@ -652,9 +661,13 @@ export class GameBoardRenderer {
     const matchItems = Array.isArray(matchItemsRaw) ? matchItemsRaw : [];
     const itemTypeById = new Map<string, ItemId>();
     const poisonedItemIds = new Set<string>();
-    const currentUserId = this.callbacks.getCurrentUserId();
+    const effectiveCharId = this.getEffectiveCharacterId();
     const canSeePoison = (item: (typeof matchItems)[number]) =>
-      Boolean(item.poisonedBy && (item.poisonedBy === currentUserId || this.callbacks.isAdminViewEnabled()));
+      Boolean(
+        item.poisonedBy &&
+          ((effectiveCharId !== null && item.poisonedBy === effectiveCharId) ||
+            this.callbacks.isAdminViewEnabled())
+      );
     for (const entry of matchItems) {
       if (!entry || typeof entry.item_id !== "string") {
         continue;
@@ -930,10 +943,12 @@ export class GameBoardRenderer {
 
   renderTraps(traps: TrapRecord[] | undefined): void {
     this.clearTrapVisuals();
-    const currentUserId = this.callbacks.getCurrentUserId();
+    const effectiveCharId = this.getEffectiveCharacterId();
     const canSeeAllTraps = this.callbacks.isAdminViewEnabled();
     const visibleTraps = (traps ?? []).filter(
-      (trap) => canSeeAllTraps || trap.ownerId === currentUserId,
+      (trap) =>
+        canSeeAllTraps ||
+        (effectiveCharId !== null && trap.ownerId === effectiveCharId),
     );
     const trapsByEdge = new Map<
       string,
@@ -1026,18 +1041,18 @@ export class GameBoardRenderer {
 
   renderC4s(c4s: C4Record[] | undefined): void {
     this.clearC4Visuals();
-    const currentUserId = this.callbacks.getCurrentUserId();
+    const effectiveCharId = this.getEffectiveCharacterId();
     const canSeeAllC4 = this.callbacks.isAdminViewEnabled();
     const discoveredC4Ids = new Set(
       this.callbacks
         .getCurrentMatch()
-        ?.playerCharacters?.[currentUserId ?? ""]?.discoveredC4Ids ?? []
+        ?.playerCharacters?.[effectiveCharId ?? ""]?.discoveredC4Ids ?? []
     );
     const chargesByTile = new Map<string, C4Record[]>();
     for (const charge of c4s ?? []) {
       if (
         !canSeeAllC4 &&
-        charge.ownerId !== currentUserId &&
+        charge.ownerId !== effectiveCharId &&
         !discoveredC4Ids.has(charge.id)
       ) {
         continue;
@@ -1290,11 +1305,11 @@ export class GameBoardRenderer {
 
   getCurrentPlayerCoord(): Axial | null {
     const match = this.getDisplayedMatch();
-    const currentUserId = this.callbacks.getCurrentUserId();
-    if (!match || !currentUserId) {
+    const effectiveCharId = this.getEffectiveCharacterId();
+    if (!match || !effectiveCharId) {
       return null;
     }
-    return match.playerCharacters?.[currentUserId]?.position?.coord ?? null;
+    return match.playerCharacters?.[effectiveCharId]?.position?.coord ?? null;
   }
 
   axialToWorld(coord: Axial): { x: number; y: number } {
@@ -1307,11 +1322,11 @@ export class GameBoardRenderer {
 
   private getCurrentPlayerViewRange(): number {
     const match = this.getDisplayedMatch();
-    const currentUserId = this.callbacks.getCurrentUserId();
-    if (!match || !currentUserId) {
+    const effectiveCharId = this.getEffectiveCharacterId();
+    if (!match || !effectiveCharId) {
       return 0;
     }
-    const viewRange = match.playerCharacters?.[currentUserId]?.stats?.baseViewRange;
+    const viewRange = match.playerCharacters?.[effectiveCharId]?.stats?.baseViewRange;
     return typeof viewRange === "number" && isFinite(viewRange)
       ? Math.max(0, Math.floor(viewRange))
       : 0;
@@ -1319,12 +1334,12 @@ export class GameBoardRenderer {
 
   private getCurrentTrackerViews() {
     const match = this.getDisplayedMatch();
-    const currentUserId = this.callbacks.getCurrentUserId();
-    if (!match || !currentUserId) {
+    const effectiveCharId = this.getEffectiveCharacterId();
+    if (!match || !effectiveCharId) {
       return [];
     }
     const currentTurn = this.getCurrentTurn();
-    return (match.playerCharacters?.[currentUserId]?.trackerViews ?? []).filter(
+    return (match.playerCharacters?.[effectiveCharId]?.trackerViews ?? []).filter(
       (view) =>
         Number.isFinite(view.coord?.q) &&
         Number.isFinite(view.coord?.r) &&
@@ -1334,8 +1349,8 @@ export class GameBoardRenderer {
   }
 
   private renderTrackerMarkers(match: MatchRecord): void {
-    const currentUserId = this.callbacks.getCurrentUserId();
-    if (!currentUserId) {
+    const effectiveCharId = this.getEffectiveCharacterId();
+    if (!effectiveCharId) {
       console.info("[tracker] marker render skipped", {
         reason: "missing_viewer_id",
         matchTurn: match.current_turn ?? 0,
@@ -1343,7 +1358,7 @@ export class GameBoardRenderer {
       return;
     }
     const currentTurn = this.getCurrentTurn();
-    const views = match.playerCharacters?.[currentUserId]?.trackerViews ?? [];
+    const views = match.playerCharacters?.[effectiveCharId]?.trackerViews ?? [];
     const markersByCoord = new Map<
       string,
       { coord: Axial; targetIds: Set<string> }
@@ -1369,7 +1384,7 @@ export class GameBoardRenderer {
     }
 
     console.info("[tracker] map marker render", {
-      viewerId: currentUserId,
+      viewerId: effectiveCharId,
       matchTurn: match.current_turn ?? 0,
       renderTurn: currentTurn,
       replayView: this.callbacks.getReplayView() !== null,
@@ -1434,11 +1449,11 @@ export class GameBoardRenderer {
   private getCurrentRemoteViewCoord(): Axial | null {
     const replayView = this.callbacks.getReplayView();
     const match = this.callbacks.getCurrentMatch();
-    const currentUserId = this.callbacks.getCurrentUserId();
-    if (replayView || !match || !currentUserId) {
+    const effectiveCharId = this.getEffectiveCharacterId();
+    if (replayView || !match || !effectiveCharId) {
       return null;
     }
-    const character = match.playerCharacters?.[currentUserId];
+    const character = match.playerCharacters?.[effectiveCharId];
     const currentTurn = match.current_turn ?? 0;
     const remoteView = character?.remoteView;
     if (!remoteView || remoteView.turn !== currentTurn) {
@@ -1460,6 +1475,9 @@ export class GameBoardRenderer {
   }
 
   private isOutOfViewRange(coord: Axial): boolean {
+    if (this.callbacks.isAdminViewEnabled()) {
+      return false;
+    }
     const remoteView = this.getCurrentRemoteViewCoord();
     if (remoteView && remoteView.q === coord.q && remoteView.r === coord.r) {
       return false;
