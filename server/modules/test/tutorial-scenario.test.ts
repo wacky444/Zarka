@@ -8,6 +8,7 @@ import {
   ShopLibrary,
   TUTORIAL_BOT_ID,
   TUTORIAL_BOT_MESSAGES,
+  TUTORIAL_BOT_SKIN,
   TUTORIAL_MATCH_METADATA_KEY,
   type MatchChatMessage
 } from "@shared";
@@ -152,6 +153,14 @@ test("tutorial fixture and scripted bot plans are deterministic", () => {
   assert.equal(
     first.playerCharacters[TUTORIAL_BOT_ID]?.name,
     TUTORIAL_BOT_NAME
+  );
+  assert.deepEqual(
+    first.playerCharacters[TUTORIAL_BOT_ID]?.skin,
+    TUTORIAL_BOT_SKIN
+  );
+  assert.deepEqual(
+    first.playerList[TUTORIAL_BOT_ID]?.skin,
+    TUTORIAL_BOT_SKIN
   );
   assert.notEqual(
     first.playerCharacters[first.players[0]]?.teamId,

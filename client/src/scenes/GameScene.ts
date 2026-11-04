@@ -49,6 +49,7 @@ import {
   ShopLibrary,
   TUTORIAL_BOT_ID,
   TUTORIAL_BOT_MESSAGES,
+  TUTORIAL_BOT_SKIN,
   TUTORIAL_CELL_COORDS,
   TUTORIAL_MATCH_METADATA_KEY,
   TUTORIAL_STEP_IDS,
@@ -3049,6 +3050,16 @@ export class GameScene extends Phaser.Scene {
     this.playerSkinMap.clear();
     if (this.currentUserId && this.currentPlayerSkin) {
       this.playerSkinMap.set(this.currentUserId, this.currentPlayerSkin);
+    }
+    if (match?.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
+      this.playerSkinMap.set(TUTORIAL_BOT_ID, TUTORIAL_BOT_SKIN);
+    }
+    if (match?.playerCharacters) {
+      for (const [charId, char] of Object.entries(match.playerCharacters)) {
+        if (char.skin) {
+          this.playerSkinMap.set(charId, char.skin);
+        }
+      }
     }
     if (!match || !this.turnService) {
       return;

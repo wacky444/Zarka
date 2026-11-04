@@ -5,6 +5,7 @@ import {
   ShopLibrary,
   TUTORIAL_BOT_ID,
   TUTORIAL_BOT_NAME,
+  TUTORIAL_BOT_SKIN,
   TUTORIAL_CELL_COORDS,
   TUTORIAL_MATCH_METADATA_KEY,
   type Axial,
@@ -13,12 +14,18 @@ import {
   type MatchItemRecord,
   type PlayerCharacter,
   type PlayerPlannedAction,
+  type Skin,
   type TutorialStepId
 } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { createDefaultCharacter } from "../utils/playerCharacter";
 
-export { TUTORIAL_BOT_ID, TUTORIAL_BOT_NAME, TUTORIAL_CELL_COORDS };
+export {
+  TUTORIAL_BOT_ID,
+  TUTORIAL_BOT_NAME,
+  TUTORIAL_BOT_SKIN,
+  TUTORIAL_CELL_COORDS
+};
 
 const PLAYER_TEAM_ID = "tutorial-player";
 const BOT_TEAM_ID = "tutorial-bot";
@@ -113,11 +120,15 @@ function createTutorialCharacter(
   teamId: string,
   coord: Axial,
   zarkans: number,
-  skillPoints: number
+  skillPoints: number,
+  skin?: Skin
 ): PlayerCharacter {
   const character = createDefaultCharacter(playerId);
   character.name = name;
   character.teamId = teamId;
+  if (skin) {
+    character.skin = { ...skin };
+  }
   character.stats.health = {
     current: TUTORIAL_STARTING_HEALTH,
     max: TUTORIAL_STARTING_HEALTH,
@@ -175,7 +186,8 @@ export function createTutorialMatch({
     BOT_TEAM_ID,
     TUTORIAL_CELL_COORDS.botStart,
     0,
-    0
+    0,
+    TUTORIAL_BOT_SKIN
   );
   const { map, items } = createTutorialMap(matchId);
 
@@ -189,7 +201,11 @@ export function createTutorialMatch({
     },
     playerList: {
       [playerId]: { id: playerId, name: player.name },
-      [TUTORIAL_BOT_ID]: { id: TUTORIAL_BOT_ID, name: bot.name }
+      [TUTORIAL_BOT_ID]: {
+        id: TUTORIAL_BOT_ID,
+        name: bot.name,
+        skin: { ...TUTORIAL_BOT_SKIN }
+      }
     },
     readyStates: { [playerId]: false },
     size: 2,

@@ -1,6 +1,12 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import { BOT_LIBRARY } from "@shared";
+import {
+  BOT_LIBRARY,
+  TUTORIAL_BOT_ID,
+  TUTORIAL_BOT_NAME,
+  TUTORIAL_BOT_SKIN,
+  TUTORIAL_MATCH_METADATA_KEY
+} from "@shared";
 import type {
   MatchRecord,
   PlayerCharacter,
@@ -78,6 +84,10 @@ export function ensurePlayerCharacter(
     return existing;
   }
   const created = createDefaultCharacter(userId);
+  if (match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] && userId === TUTORIAL_BOT_ID) {
+    created.name = TUTORIAL_BOT_NAME;
+    created.skin = { ...TUTORIAL_BOT_SKIN };
+  }
   match.playerCharacters[userId] = created;
   return created;
 }
@@ -98,6 +108,21 @@ export function ensureAllPlayerCharacters(match: MatchRecord): boolean {
       character = createDefaultCharacter(playerId);
       match.playerCharacters[playerId] = character;
       mutated = true;
+    }
+    if (match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] && playerId === TUTORIAL_BOT_ID) {
+      if (
+        character.name !== TUTORIAL_BOT_NAME ||
+        character.skin?.body !== TUTORIAL_BOT_SKIN.body ||
+        character.skin?.shoes !== TUTORIAL_BOT_SKIN.shoes ||
+        character.skin?.shirt !== TUTORIAL_BOT_SKIN.shirt ||
+        character.skin?.hair !== TUTORIAL_BOT_SKIN.hair ||
+        character.skin?.hat !== TUTORIAL_BOT_SKIN.hat
+      ) {
+        character.name = TUTORIAL_BOT_NAME;
+        character.skin = { ...TUTORIAL_BOT_SKIN };
+        mutated = true;
+      }
+      return;
     }
     const botMatch = /^bot(\d+)$/i.exec(playerId);
     const isLibraryProfile = BOT_LIBRARY.some(

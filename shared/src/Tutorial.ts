@@ -1,9 +1,17 @@
 import { NAKAMA_SYSTEM_USER_ID } from "./chat";
+import type { Skin } from "./UserAccount";
 
 export const TUTORIAL_MATCH_METADATA_KEY = "tutorial" as const;
 export const TUTORIAL_BOT_ID = "bot1" as const;
 export const TUTORIAL_BOT_NAME = "Tutorial Bot" as const;
 export const TUTORIAL_BOT_SYSTEM_SENDER_ID = NAKAMA_SYSTEM_USER_ID;
+export const TUTORIAL_BOT_SKIN: Skin = {
+  body: "body_human_white.png",
+  shoes: "shoe_03.png",
+  shirt: "shirt_002.png",
+  hair: "hair_012.png",
+  hat: ""
+};
 
 export const TUTORIAL_BOT_MESSAGE_KEYS = [
   "bot_claim",
