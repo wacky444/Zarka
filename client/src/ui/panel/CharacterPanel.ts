@@ -1335,8 +1335,12 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     this.lastUserMap = userMap;
     this.logView.setUsernames(userMap);
     this.logView.setDonations(match?.zarkanDonations ?? []);
+    const viewer = currentUserId
+      ? match?.playerCharacters?.[currentUserId]
+      : undefined;
     const teamMap: Record<string, string> = {
-      ...(match?.revealedTeamsByPlayerId ?? {})
+      ...(match?.revealedTeamsByPlayerId ?? {}),
+      ...(viewer?.revealedTeamIdsByPlayerId ?? {})
     };
     for (const [playerId, character] of Object.entries(
       match?.playerCharacters ?? {}
@@ -1362,8 +1366,6 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       this.playerOptions,
       currentUserId
     );
-    this.updateItemOptions(match ?? null, currentUserId);
-    this.shopView.update(match ?? null, currentUserId, this.playerOptions);
     this.isGameMasterMode = match?.gameMasterMode === true;
     this.statusView.setGameMasterMode(this.isGameMasterMode, () => {
       this.gmPlayerSelector?.showDropdown();
@@ -1480,6 +1482,17 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
     ready: boolean
   ) {
     this.currentCharacter = character;
+    const effectiveCharId =
+      character?.id ??
+      (this.isGameMasterMode
+        ? this.activeControlledCharacterId
+        : this.currentUserId);
+    this.updateItemOptions(this.currentMatch, effectiveCharId);
+    this.shopView.update(
+      this.currentMatch,
+      effectiveCharId,
+      this.playerOptions
+    );
     this.statusView.update(character, name);
     this.skillsView.update(character);
     this.updateCharacterSubtabs();
