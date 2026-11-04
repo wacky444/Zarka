@@ -16,6 +16,7 @@ These instructions are automatically included in every Copilot conversation for 
 - Run or describe the smallest useful validation (build, lint, targeted test) after code changes. Only promise checks you actually execute.
 - Prefer PowerShell-compatible commands (Windows host). Present commands in fenced `powershell` blocks and note that long-running tasks must finish—never cancel them early.
 - Avoid writting code comments and don't remove existing ones.
+- When editing code based on a skill, update the skill to reflect the new changes.
 
 ## Workspace orientation
 
