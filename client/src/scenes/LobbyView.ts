@@ -10,6 +10,8 @@ import {
   UIButton
 } from "../ui/button";
 import {
+  DEFAULT_MAP_COLS,
+  DEFAULT_MAP_ROWS,
   DEFAULT_NORMAL_MATCH_SIZE,
   DEFAULT_SKIN,
   MAX_BOT_PLAYERS,
@@ -74,8 +76,8 @@ export class LobbyView {
   private settingsSizer!: FixWidthSizerInstance;
 
   private players = DEFAULT_NORMAL_MATCH_SIZE;
-  private cols = 5;
-  private rows = 4;
+  private cols = DEFAULT_MAP_COLS;
+  private rows = DEFAULT_MAP_ROWS;
   private roundTime = "23:00";
   private autoSkip = true;
   private botPlayers = 5;
@@ -855,8 +857,64 @@ export class LobbyView {
     }
     if (Array.isArray(partial.controlledCharacterRoster)) {
       this.controlledCharacters = partial.controlledCharacterRoster;
+    } else if (partial.gameMasterMode === false) {
+      this.controlledCharacters = [];
     }
     this.refreshPlayerList();
+  }
+
+  resetToDefaults(): void {
+    if (this.settingsDebounceTimer !== null) {
+      clearTimeout(this.settingsDebounceTimer);
+      this.settingsDebounceTimer = null;
+    }
+
+    this.players = DEFAULT_NORMAL_MATCH_SIZE;
+    this.maxPlayers = DEFAULT_NORMAL_MATCH_SIZE;
+    this.playersStepper?.setDisplayValue(this.players);
+
+    this.cols = DEFAULT_MAP_COLS;
+    this.colsStepper?.setDisplayValue(this.cols);
+
+    this.rows = DEFAULT_MAP_ROWS;
+    this.rowsStepper?.setDisplayValue(this.rows);
+
+    this.roundTime = "23:00";
+    this.roundTimeInput?.setDisplayValue(this.roundTime);
+
+    this.autoSkip = true;
+    this.autoSkipToggle?.setDisplayValue(this.autoSkip);
+
+    this.botPlayers = 5;
+    this.botPlayersStepper?.setDisplayValue(this.botPlayers);
+
+    this.turnsToBeAt1Tile = 30;
+    this.turnsToBeAt1TileStepper?.setDisplayValue(this.turnsToBeAt1Tile);
+
+    this.applyMatchName(LobbyView.DEFAULT_MATCH_NAME);
+
+    this.gameMasterMode = false;
+    this.gameMasterToggle?.setDisplayValue(false);
+
+    for (const row of this.controlledRows) {
+      this.contentRoot.remove(row, true);
+    }
+    this.controlledRows = [];
+    this.controlledCharacters = [];
+
+    this.serverSpawnWarning = false;
+    if (this.spawnWarningText) {
+      this.spawnWarningText.setText("");
+      this.spawnWarningText.setVisible(false);
+    }
+
+    this.started = false;
+    this.startMatchBusy = false;
+
+    this.updateControlVisibilities();
+    this.refreshPlayerList();
+    this.updateStartButtonState();
+    this.layout();
   }
 
   show() {

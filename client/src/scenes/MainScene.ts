@@ -29,7 +29,8 @@ import {
   type MatchCardStatus,
   type MatchCardSummary,
   type ListMyMatchesPayload,
-  type UserAccount
+  type UserAccount,
+  type Skin
 } from "@shared";
 import type { LobbyPlayerData } from "../ui/LobbyPlayerCard";
 import { resolveMyMatchRoute } from "./MyMatchesListModel";
@@ -233,6 +234,15 @@ export class MainScene extends Phaser.Scene {
                   name?: string;
                   players?: string[];
                   started?: boolean;
+                  size?: number;
+                  cols?: number;
+                  rows?: number;
+                  roundTime?: string;
+                  autoSkip?: boolean;
+                  botPlayers?: number;
+                  turnsToBeAt1Tile?: number;
+                  gameMasterMode?: boolean;
+                  controlledCharacterRoster?: Array<{ id: string; name: string; skin: Skin }>;
                 })
               : undefined;
           const creator: string | undefined = matchObj?.creator;
@@ -247,6 +257,21 @@ export class MainScene extends Phaser.Scene {
           this.lobbyView.setCreator(creator, isSelf, creatorDisplay);
           if (Array.isArray(matchObj?.players) && matchObj.players.length > 0) {
             await this.updateLobbyPlayers(matchObj.players, creator);
+          }
+          if (matchObj) {
+            this.lobbyView.applySettings({
+              size: matchObj.size,
+              cols: matchObj.cols,
+              rows: matchObj.rows,
+              roundTime: matchObj.roundTime,
+              autoSkip: matchObj.autoSkip,
+              botPlayers: matchObj.botPlayers,
+              turnsToBeAt1Tile: matchObj.turnsToBeAt1Tile,
+              name: matchObj.name,
+              started: matchObj.started,
+              gameMasterMode: matchObj.gameMasterMode ?? false,
+              controlledCharacterRoster: matchObj.controlledCharacterRoster
+            });
           }
           if (matchObj?.name) {
             this.lobbyView.setMatchName(matchObj.name);
@@ -446,6 +471,7 @@ export class MainScene extends Phaser.Scene {
             this.setCurrentMatchId(null);
             this.currentMatchName = null;
             this.currentMatchCreator = undefined;
+            this.lobbyView.resetToDefaults();
             this.lobbyView.setPlayers([]);
             this.lobbyView.setCreator(undefined, false);
             this.lobbyView.setMatchInfo();
@@ -492,6 +518,7 @@ export class MainScene extends Phaser.Scene {
           this.setCurrentMatchId(null);
           this.currentMatchName = null;
           this.currentMatchCreator = undefined;
+          this.lobbyView.resetToDefaults();
           this.lobbyView.setPlayers([]);
           this.lobbyView.setCreator(undefined, false);
           this.lobbyView.setMatchInfo();
@@ -566,6 +593,7 @@ export class MainScene extends Phaser.Scene {
             this.setCurrentMatchId(null);
             this.currentMatchName = null;
             this.currentMatchCreator = undefined;
+            this.lobbyView.resetToDefaults();
             this.lobbyView.setPlayers([]);
             this.lobbyView.setCreator(undefined, false);
             this.lobbyView.setMatchInfo();
@@ -652,6 +680,7 @@ export class MainScene extends Phaser.Scene {
         this.setCurrentMatchId(null);
         this.currentMatchName = null;
         this.currentMatchCreator = undefined;
+        this.lobbyView.resetToDefaults();
         this.lobbyView.setPlayers([]);
         this.lobbyView.setCreator(undefined, false);
         this.lobbyView.setMatchInfo();
@@ -693,6 +722,7 @@ export class MainScene extends Phaser.Scene {
         this.setCurrentMatchId(null);
         this.currentMatchName = null;
         this.currentMatchCreator = undefined;
+        this.lobbyView.resetToDefaults();
         this.lobbyView.setPlayers([]);
         this.lobbyView.setCreator(undefined, false);
         this.lobbyView.setMatchInfo();
@@ -1138,6 +1168,13 @@ export class MainScene extends Phaser.Scene {
       async () => {
         if (!this.turnService) throw new Error("No service");
         try {
+          if (this.lobbyView) {
+            this.lobbyView.resetToDefaults();
+            this.lobbyView.setPlayers([]);
+            this.lobbyView.setCreator(undefined, false);
+            this.lobbyView.setMatchInfo();
+            this.lobbyView.setMatchStarted(false);
+          }
           const createRes = await this.turnService.createMatch();
           const parsed = this.parseRpcPayload<CreateMatchPayload>(createRes);
           if (!parsed || !parsed.match_id)

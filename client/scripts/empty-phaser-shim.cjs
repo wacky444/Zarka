@@ -16,6 +16,36 @@ module.exports = {
         return this;
       }
     },
-    GameObject: class GameObject {}
+    GameObject: class GameObject {},
+    Container: class Container {
+      setSize() {
+        return this;
+      }
+      add() {
+        return this;
+      }
+      setPosition() {
+        return this;
+      }
+      setOrigin() {
+        return this;
+      }
+      setVisible() {
+        return this;
+      }
+      destroy() {}
+    },
+    Image: class Image {}
+  },
+  Scale: {
+    Events: {
+      RESIZE: "resize"
+    }
+  },
+  Scenes: {
+    Events: {
+      WAKE: "wake",
+      SHUTDOWN: "shutdown"
+    }
   }
 };
