@@ -86,6 +86,7 @@ import { VictoryOverlay } from "../ui/VictoryOverlay";
 import { startVictoryDance } from "../animation/VictoryDance";
 import { TutorialInstructionView } from "../ui/TutorialInstructionView";
 import { TutorialWelcomeModal } from "../ui/TutorialWelcomeModal";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { isAdminViewEnabled } from "../services/adminView";
 import { t } from "../services/i18n";
 import { THEME } from "../ui/ColorPalette";
@@ -201,6 +202,7 @@ export class GameScene extends Phaser.Scene {
   private tutorialArrowContainer: Phaser.GameObjects.Container | null = null;
   private tutorialArrow: Phaser.GameObjects.Image | null = null;
   private tutorialWelcomeModal: TutorialWelcomeModal | null = null;
+  private confirmDialog: ConfirmDialog | null = null;
   private tutorialWelcomeActive = false;
   private reportTransitionStarted = false;
   private reportReplayMode = false;
@@ -1308,6 +1310,11 @@ export class GameScene extends Phaser.Scene {
         this.updateTutorialGuidance();
       }
     );
+    this.confirmDialog = new ConfirmDialog(this);
+    this.confirmDialog.setCallbacks(
+      () => this.gridModalOpenHandler(),
+      () => this.gridModalCloseHandler()
+    );
     if (this.uiCam) {
       this.victoryOverlay.ignoreCamera(this.cam);
     }
@@ -1452,6 +1459,8 @@ export class GameScene extends Phaser.Scene {
       this.actionPlanSynchronizer = null;
       this.tutorialWelcomeModal?.destroy();
       this.tutorialWelcomeModal = null;
+      this.confirmDialog?.destroy();
+      this.confirmDialog = null;
       this.tutorialWelcomeActive = false;
       this.tutorialController = null;
       this.tutorialVictoryDelayTimer?.remove(false);
@@ -3429,7 +3438,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (ready && this.isLastPlayerNeededToReady()) {
-      const confirmed = window.confirm(
+      const confirmed = await this.confirmDialog?.confirm(
         t("All other players are ready. Ready now to advance the turn?")
       );
       if (!confirmed) {
@@ -3703,11 +3712,10 @@ export class GameScene extends Phaser.Scene {
     const shopDefinition = ShopLibrary[payload.shopId];
     const purchaseCost =
       shopDefinition.costLabel ?? `${shopDefinition.cost} Zarkans`;
-    if (
-      !window.confirm(
-        `${t("Confirm this purchase?")}\n${shopDefinition.name} — ${purchaseCost}`
-      )
-    ) {
+    const confirmed = await this.confirmDialog?.confirm(
+      `${t("Confirm this purchase?")}\n${shopDefinition.name} — ${purchaseCost}`
+    );
+    if (!confirmed) {
       if (payload.shopId === "pyromaniac") {
         this.characterPanel?.beginPyromaniacPurchase();
       }
@@ -4275,6 +4283,7 @@ export class GameScene extends Phaser.Scene {
 
   private isPointOverUI(x: number, y: number): boolean {
     if (
+      this.confirmDialog?.isOpen() ||
       this.tutorialWelcomeModal?.isOpen() ||
       this.tutorialInstructionView?.containsPoint(x, y) ||
       this.cellContentsPanel?.isOpen

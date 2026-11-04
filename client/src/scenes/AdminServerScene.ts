@@ -7,6 +7,7 @@ import {
   requestServerUpdate,
 } from "../services/adminServer";
 import { makeButton, type UIButton } from "../ui/button";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 
 interface AdminServerSceneData {
   client: Client;
@@ -258,7 +259,11 @@ export class AdminServerScene extends Phaser.Scene {
     if (!this.adminPassword || this.busy) {
       return;
     }
-    if (!window.confirm(t("Pull changes and rebuild Nakama?"))) {
+    const confirmed = await ConfirmDialog.confirm(
+      this,
+      t("Pull changes and rebuild Nakama?")
+    );
+    if (!confirmed) {
       return;
     }
     this.busy = true;

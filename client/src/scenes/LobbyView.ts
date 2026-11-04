@@ -24,6 +24,7 @@ import {
   type LobbyPlayerData
 } from "../ui/LobbyPlayerCard";
 import { ControlledCharacterRow } from "../ui/ControlledCharacterRow";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 
 type FixWidthSizerInstance = Phaser.GameObjects.GameObject & {
   width: number;
@@ -243,7 +244,8 @@ export class LobbyView {
           return;
         }
         if (!this.onStartMatch) return;
-        const confirmed = window.confirm(
+        const confirmed = await ConfirmDialog.confirm(
+          this.scene,
           t(
             "Are you sure you want to start the match? Players will no longer be able to join."
           )
@@ -267,11 +269,12 @@ export class LobbyView {
       "Remove Match",
       async () => {
         if (!this.onRemoveMatch) return;
-        const confirmed = window.confirm(
-          t(
+        const confirmed = await ConfirmDialog.confirm(this.scene, {
+          message: t(
             "Are you sure you want to remove this match? This action cannot be undone."
-          )
-        );
+          ),
+          isDanger: true
+        });
         if (confirmed) {
           await this.onRemoveMatch();
         }
