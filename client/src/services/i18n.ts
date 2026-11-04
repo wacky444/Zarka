@@ -1592,6 +1592,13 @@ export function installPhaserLocalization(): void {
   originalSetText = Phaser.GameObjects.Text.prototype.setText;
   const setText = originalSetText;
   Phaser.GameObjects.Text.prototype.setText = function (value: TextValue) {
+    if (
+      !this.scene ||
+      !this.scene.sys ||
+      !(this as unknown as { context?: CanvasRenderingContext2D | null }).context
+    ) {
+      return this;
+    }
     sourceTexts.set(this, value);
     localizedTexts.add(this);
     if (!hookedTexts.has(this)) {
@@ -1611,7 +1618,12 @@ function refreshLocalizedTexts(): void {
   }
   for (const text of localizedTexts) {
     const source = sourceTexts.get(text);
-    if (!source || !text.scene) {
+    if (
+      !source ||
+      !text.scene ||
+      !text.scene.sys ||
+      !(text as unknown as { context?: CanvasRenderingContext2D | null }).context
+    ) {
       localizedTexts.delete(text);
       continue;
     }

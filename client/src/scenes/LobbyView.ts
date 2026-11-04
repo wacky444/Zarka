@@ -934,7 +934,13 @@ export class LobbyView {
   }
 
   private setRenameEnabled(enabled: boolean) {
-    if (!this.renameButton) return;
+    if (
+      !this.renameButton ||
+      !this.renameButton.scene ||
+      !this.renameButton.scene.sys
+    ) {
+      return;
+    }
     if (enabled) {
       this.renameButton.setAlpha(1);
       this.renameButton.setInteractive({ useHandCursor: true });
@@ -946,7 +952,13 @@ export class LobbyView {
   }
 
   private setRemoveMatchEnabled(enabled: boolean) {
-    if (!this.removeMatchButton) return;
+    if (
+      !this.removeMatchButton ||
+      !this.removeMatchButton.scene ||
+      !this.removeMatchButton.scene.sys
+    ) {
+      return;
+    }
     if (enabled) {
       this.removeMatchButton.setAlpha(1);
       this.removeMatchButton.setInteractive({ useHandCursor: true });
@@ -1150,7 +1162,13 @@ export class LobbyView {
   }
 
   private updateStartButtonState() {
-    if (!this.startMatchButton) return;
+    if (
+      !this.startMatchButton ||
+      !this.startMatchButton.scene ||
+      !this.startMatchButton.scene.sys
+    ) {
+      return;
+    }
     const canStart =
       this.isHost &&
       !this.started &&

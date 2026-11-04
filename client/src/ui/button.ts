@@ -150,6 +150,9 @@ export function addLabeledStepper(
 
   // Helper to toggle interactivity/appearance
   const applyEnabled = (btn: UIButton, enabled: boolean) => {
+    if (!btn || !btn.scene || !btn.scene.sys) {
+      return;
+    }
     if (enabled) {
       btn.setAlpha(1);
       btn.setInteractive({ useHandCursor: true });
@@ -234,6 +237,9 @@ export function addLabeledToggle(
 
   // Helper to toggle interactivity/appearance
   const applyEnabled = (btn: UIButton, enabled: boolean) => {
+    if (!btn || !btn.scene || !btn.scene.sys) {
+      return;
+    }
     if (enabled) {
       btn.setAlpha(1);
       btn.setInteractive({ useHandCursor: true });
@@ -320,6 +326,9 @@ export function addLabeledTimeInput(
 
   // Helper to toggle interactivity/appearance
   const applyEnabled = (btn: UIButton, enabled: boolean) => {
+    if (!btn || !btn.scene || !btn.scene.sys) {
+      return;
+    }
     if (enabled) {
       btn.setAlpha(1);
       btn.setInteractive({ useHandCursor: true });

@@ -295,7 +295,28 @@ export class MainScene extends Phaser.Scene {
     preloadMenuMusic(this);
   }
 
+  init() {
+    this.buttons = [];
+    this.mainButtons = [];
+    this.normalMatchButtons = [];
+    this.matchesListView = null as unknown as MatchesListView;
+    this.myMatchesListView = null as unknown as MyMatchesListView;
+    this.lobbyView = null as unknown as LobbyView;
+    this.turnService = null;
+    this.accountService = null;
+    this.currentMatchId = null;
+    this.currentRuntimeMatchId = null;
+    this.currentMatchName = null;
+    this.currentMatchCreator = undefined;
+    this.activeView = "main";
+    this.tutorialProfileRequestId = 0;
+    this.tutorialLaunchInProgress = false;
+  }
+
   async create(data?: { client?: Client; session?: Session }) {
+    this.buttons = [];
+    this.mainButtons = [];
+    this.normalMatchButtons = [];
     applyStoredVolume(this);
     this.menuAshEffect = new MenuAshEffect(this);
     this.mainRoot = this.add.container(0, 0);
@@ -337,6 +358,14 @@ export class MainScene extends Phaser.Scene {
       this.menuAshEffect?.destroy();
       this.menuAshEffect = null;
       cleanupMenuMusic(this);
+      this.buttons = [];
+      this.mainButtons = [];
+      this.normalMatchButtons = [];
+      this.matchesListView = null as unknown as MatchesListView;
+      this.myMatchesListView = null as unknown as MyMatchesListView;
+      this.lobbyView = null as unknown as LobbyView;
+      this.turnService = null;
+      this.accountService = null;
     });
     if (this.sound.locked) {
       this.sound.once(Phaser.Sound.Events.UNLOCKED, () => {
@@ -371,136 +400,12 @@ export class MainScene extends Phaser.Scene {
           this.rankedPresenceForegroundHandler
         );
       }
-      void this.turnService.touchRankedPresence();
-      void this.refreshRankedQueueAndMatches();
-      void bindExistingPushSubscription(this.turnService).catch((error: unknown) => {
-        console.warn("Failed to bind push subscription to current account:", error);
-      });
       this.registry.set("turnService", this.turnService);
       this.accountService = new AccountService(client, session);
       this.registry.set("accountService", this.accountService);
       this.setCurrentMatchId(this.currentMatchId);
       this.currentUserId = session.user_id ?? null;
       this.registry.set("currentUserId", this.currentUserId);
-      await this.refreshTutorialGate(false);
-      // Pre-connect the realtime socket so join calls don't race the connection
-      await this.turnService.connectSocket();
-      // Real-time settings updates from server
-      this.turnService.setOnSettingsUpdate((p) => {
-        const s = [
-          p.name ? `name="${p.name}"` : null,
-          p.size !== undefined ? `players=${p.size}` : null,
-          p.cols !== undefined && p.rows !== undefined
-            ? `${p.cols}x${p.rows}`
-            : null,
-          p.started !== undefined ? (p.started ? "started" : "waiting") : null
-        ]
-          .filter(Boolean)
-          .join(", ");
-        if (s) this.statusText.setText(`Settings sync: ${s}`);
-        const view = this.lobbyView;
-        if (!view) return;
-        view.applySettings(p);
-        if (Array.isArray(p.players)) {
-          const players = [...p.players];
-          if (players.length === 0) {
-            view.setPlayers([]);
-          } else {
-            this.updateLobbyPlayers(players, this.currentMatchCreator).catch(
-              (e) => {
-                console.warn("Failed to update lobby players from settings", e);
-              }
-            );
-          }
-        }
-        if (p.started && this.activeView === "inMatch") {
-          this.launchGameScene(this.currentMatchId ?? undefined);
-        }
-      });
-      this.turnService.setOnMatchRemoved(() => {
-        if (this.scene.isActive("EndGameReportScene")) {
-          return;
-        }
-        const gameScene = this.scene.get("GameScene") as
-          | import("./GameScene").GameScene
-          | undefined;
-        if (gameScene && gameScene.isVictoryOverlayActive()) {
-          return;
-        }
-        this.statusText.setText(
-          "Match has been removed by the host. Returning to main menu."
-        );
-        if (
-          this.scene.isActive("GameScene") ||
-          this.scene.isSleeping("GameScene")
-        ) {
-          this.scene.stop("GameScene");
-        }
-        if (this.scene.isSleeping("MainScene")) {
-          this.scene.wake("MainScene");
-        }
-        clearActiveTutorialMatchId(
-          this.getTutorialMatchStorage(),
-          this.currentUserId,
-          this.currentMatchId ?? undefined
-        );
-        const runtimeMatchId = this.getCurrentRuntimeMatchId();
-        if (runtimeMatchId && this.turnService) {
-          this.turnService
-            .leaveRealtimeMatch(runtimeMatchId)
-            .catch((e) => console.warn("Failed to leave realtime match", e));
-        }
-        this.setCurrentMatchId(null);
-        this.currentMatchName = null;
-        this.currentMatchCreator = undefined;
-        this.lobbyView.setPlayers([]);
-        this.lobbyView.setCreator(undefined, false);
-        this.lobbyView.setMatchInfo();
-        this.lobbyView.setMatchStarted(false);
-        this.showView("main");
-      });
-      this.turnService.setOnPlayerKicked((payload) => {
-        if (
-          !payload?.player_id ||
-          !this.currentUserId ||
-          payload.player_id !== this.currentUserId
-        ) {
-          return;
-        }
-        const gameScene = this.scene.get("GameScene") as
-          | import("./GameScene").GameScene
-          | undefined;
-        if (gameScene && gameScene.isVictoryOverlayActive()) {
-          return;
-        }
-        this.statusText.setText(
-          "You were kicked from the match because Game Master mode was enabled."
-        );
-        if (
-          this.scene.isActive("GameScene") ||
-          this.scene.isSleeping("GameScene")
-        ) {
-          this.scene.stop("GameScene");
-        }
-        if (this.scene.isSleeping("MainScene")) {
-          this.scene.wake("MainScene");
-        }
-        const runtimeMatchId = this.getCurrentRuntimeMatchId();
-        if (runtimeMatchId && this.turnService) {
-          this.turnService
-            .leaveRealtimeMatch(runtimeMatchId)
-            .catch((e) => console.warn("Failed to leave realtime match", e));
-        }
-        this.setCurrentMatchId(null);
-        this.currentMatchName = null;
-        this.currentMatchCreator = undefined;
-        this.lobbyView.setPlayers([]);
-        this.lobbyView.setCreator(undefined, false);
-        this.lobbyView.setMatchInfo();
-        this.lobbyView.setMatchStarted(false);
-        this.showView("main");
-      });
-      this.statusText.setText("Authenticated. Use the buttons below.");
 
       // Instantiate Matches List view (hidden by default)
       this.matchesListView = new MatchesListView(this);
@@ -677,6 +582,133 @@ export class MainScene extends Phaser.Scene {
         }
       });
 
+      
+
+      // Real-time settings updates from server
+      this.turnService.setOnSettingsUpdate((p) => {
+        const s = [
+          p.name ? `name="${p.name}"` : null,
+          p.size !== undefined ? `players=${p.size}` : null,
+          p.cols !== undefined && p.rows !== undefined
+            ? `${p.cols}x${p.rows}`
+            : null,
+          p.started !== undefined ? (p.started ? "started" : "waiting") : null
+        ]
+          .filter(Boolean)
+          .join(", ");
+        if (s) this.statusText.setText(`Settings sync: ${s}`);
+        const view = this.lobbyView;
+        if (!view) return;
+        view.applySettings(p);
+        if (Array.isArray(p.players)) {
+          const players = [...p.players];
+          if (players.length === 0) {
+            view.setPlayers([]);
+          } else {
+            this.updateLobbyPlayers(players, this.currentMatchCreator).catch(
+              (e) => {
+                console.warn("Failed to update lobby players from settings", e);
+              }
+            );
+          }
+        }
+        if (p.started && this.activeView === "inMatch") {
+          this.launchGameScene(this.currentMatchId ?? undefined);
+        }
+      });
+      this.turnService.setOnMatchRemoved(() => {
+        if (this.scene.isActive("EndGameReportScene")) {
+          return;
+        }
+        const gameScene = this.scene.get("GameScene") as
+          | import("./GameScene").GameScene
+          | undefined;
+        if (gameScene && gameScene.isVictoryOverlayActive()) {
+          return;
+        }
+        this.statusText.setText(
+          "Match has been removed by the host. Returning to main menu."
+        );
+        if (
+          this.scene.isActive("GameScene") ||
+          this.scene.isSleeping("GameScene")
+        ) {
+          this.scene.stop("GameScene");
+        }
+        if (this.scene.isSleeping("MainScene")) {
+          this.scene.wake("MainScene");
+        }
+        clearActiveTutorialMatchId(
+          this.getTutorialMatchStorage(),
+          this.currentUserId,
+          this.currentMatchId ?? undefined
+        );
+        const runtimeMatchId = this.getCurrentRuntimeMatchId();
+        if (runtimeMatchId && this.turnService) {
+          this.turnService
+            .leaveRealtimeMatch(runtimeMatchId)
+            .catch((e) => console.warn("Failed to leave realtime match", e));
+        }
+        this.setCurrentMatchId(null);
+        this.currentMatchName = null;
+        this.currentMatchCreator = undefined;
+        this.lobbyView.setPlayers([]);
+        this.lobbyView.setCreator(undefined, false);
+        this.lobbyView.setMatchInfo();
+        this.lobbyView.setMatchStarted(false);
+        this.showView("main");
+      });
+      this.turnService.setOnPlayerKicked((payload) => {
+        if (
+          !payload?.player_id ||
+          !this.currentUserId ||
+          payload.player_id !== this.currentUserId
+        ) {
+          return;
+        }
+        const gameScene = this.scene.get("GameScene") as
+          | import("./GameScene").GameScene
+          | undefined;
+        if (gameScene && gameScene.isVictoryOverlayActive()) {
+          return;
+        }
+        this.statusText.setText(
+          "You were kicked from the match because Game Master mode was enabled."
+        );
+        if (
+          this.scene.isActive("GameScene") ||
+          this.scene.isSleeping("GameScene")
+        ) {
+          this.scene.stop("GameScene");
+        }
+        if (this.scene.isSleeping("MainScene")) {
+          this.scene.wake("MainScene");
+        }
+        const runtimeMatchId = this.getCurrentRuntimeMatchId();
+        if (runtimeMatchId && this.turnService) {
+          this.turnService
+            .leaveRealtimeMatch(runtimeMatchId)
+            .catch((e) => console.warn("Failed to leave realtime match", e));
+        }
+        this.setCurrentMatchId(null);
+        this.currentMatchName = null;
+        this.currentMatchCreator = undefined;
+        this.lobbyView.setPlayers([]);
+        this.lobbyView.setCreator(undefined, false);
+        this.lobbyView.setMatchInfo();
+        this.lobbyView.setMatchStarted(false);
+        this.showView("main");
+      });
+      this.statusText.setText("Authenticated. Use the buttons below.");
+
+      await this.refreshTutorialGate(false);
+      void this.turnService.touchRankedPresence();
+      void this.refreshRankedQueueAndMatches();
+      void bindExistingPushSubscription(this.turnService).catch((error: unknown) => {
+        console.warn("Failed to bind push subscription to current account:", error);
+      });
+      await this.turnService.connectSocket();
+      
       // Initialize in main view
       this.applyViewVisibility();
       const currentUrl = new URL(window.location.href);
@@ -1018,6 +1050,9 @@ export class MainScene extends Phaser.Scene {
 
   private applyTutorialGate(): void {
     for (const button of this.normalMatchButtons) {
+      if (!button || !button.scene || !button.scene.sys) {
+        continue;
+      }
       if (this.tutorialCompleted) {
         button.setAlpha(1);
         button.setInteractive({ useHandCursor: true });
