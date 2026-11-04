@@ -18,7 +18,11 @@ export function resolveTurnForMatch(
   nk: nkruntime.Nakama
 ): TurnResolutionResult {
   const players = Array.isArray(match.players) ? match.players : [];
-  if (players.length === 0) {
+  if (
+    players.length === 0 &&
+    (!match.gameMasterMode ||
+      Object.keys(match.playerCharacters ?? {}).length === 0)
+  ) {
     return { advanced: false, events: [] };
   }
 
@@ -32,9 +36,19 @@ export function resolveTurnForMatch(
   const { events } = advanceTurn(match, resolvedTurn, logger, nk);
 
   const resetStates: Record<string, boolean> = {};
-  for (const playerId of players) {
-    const character = match.playerCharacters?.[playerId] ?? null;
-    resetStates[playerId] = isCharacterIncapacitated(character) ? true : false;
+  if (match.gameMasterMode) {
+    for (const charId in match.playerCharacters) {
+      if (!Object.prototype.hasOwnProperty.call(match.playerCharacters, charId)) {
+        continue;
+      }
+      const character = match.playerCharacters[charId];
+      resetStates[charId] = isCharacterIncapacitated(character) ? true : false;
+    }
+  } else {
+    for (const playerId of players) {
+      const character = match.playerCharacters?.[playerId] ?? null;
+      resetStates[playerId] = isCharacterIncapacitated(character) ? true : false;
+    }
   }
   match.current_turn = resolvedTurn;
   match.readyStates = resetStates;

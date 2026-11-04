@@ -11,8 +11,12 @@ const afkActions: readonly ActionId[] = [
 
 export function assignAfkActions(match: MatchRecord): void {
   const currentTurn = match.current_turn ?? 0;
-  for (const playerId of match.players ?? []) {
-    const character = match.playerCharacters?.[playerId];
+  const characterIds = match.gameMasterMode
+    ? Object.keys(match.playerCharacters ?? {})
+    : (match.players ?? []);
+
+  for (const characterId of characterIds) {
+    const character = match.playerCharacters?.[characterId];
     if (
       !character ||
       isCharacterIncapacitated(character) ||
