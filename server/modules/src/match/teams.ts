@@ -370,6 +370,10 @@ export function distributeTeams(
         alliances: [],
         representatives: []
       };
+      charA.revealedTeamIdsByPlayerId = {
+        ...(charA.revealedTeamIdsByPlayerId ?? {}),
+        [twinBId]: "Gemelos"
+      };
 
       charB.secretTeamId = "Gemelos";
       charB.progression = {
@@ -391,6 +395,10 @@ export function distributeTeams(
         confirmedTeammates: [twinAId],
         alliances: [],
         representatives: []
+      };
+      charB.revealedTeamIdsByPlayerId = {
+        ...(charB.revealedTeamIdsByPlayerId ?? {}),
+        [twinAId]: "Gemelos"
       };
       result.teams["Gemelos"] = [twinAId, twinBId];
     }

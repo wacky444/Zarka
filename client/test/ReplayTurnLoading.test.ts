@@ -321,3 +321,146 @@ test("formatReplayEvents formats drop action for manual and overweight drops", (
     setLocale(previousLocale);
   }
 });
+
+test("formatReplayEvents formats use_binoculars when nobody is seen and when characters are seen", () => {
+  const scene = createMockScene();
+  const eventsText = createMockElement(scene);
+
+  const logView = new CharacterPanelLogView({
+    panel: { add() {} } as any,
+    elements: {
+      prevButton: createMockElement(scene) as any,
+      nextButton: createMockElement(scene) as any,
+      playButton: createMockElement(scene) as any,
+      filterTrack: createMockElement(scene) as any,
+      filterKnob: createMockElement(scene) as any,
+      filterLabel: createMockElement(scene) as any,
+      turnLabel: createMockElement(scene) as any,
+      statusText: createMockElement(scene) as any,
+      eventsBox: createMockElement(scene) as any,
+      eventsText: eventsText as any
+    },
+    onRequestReplay: () => {},
+    onPlay: () => {},
+    formatActionName: (id: string) => id
+  });
+
+  logView.setCurrentUserId("player1");
+  logView.setUsernames({
+    player1: "Jugador"
+  });
+
+  const binocularsEmptyEvent: ReplayEvent[] = [
+    {
+      kind: "player",
+      actorId: "player1",
+      action: {
+        actionId: "use_binoculars",
+        targetLocation: { q: 1, r: 0 },
+        metadata: {
+          observed: true,
+          observedCount: 0,
+          observedPlayerIds: []
+        }
+      }
+    }
+  ];
+
+  const binocularsOccupiedEvent: ReplayEvent[] = [
+    {
+      kind: "player",
+      actorId: "player1",
+      action: {
+        actionId: "use_binoculars",
+        targetLocation: { q: 1, r: 0 },
+        metadata: {
+          observed: true,
+          observedCount: 1,
+          observedPlayerIds: ["player2"]
+        }
+      }
+    }
+  ];
+
+  const previousLocale = getLocale();
+  try {
+    setLocale("es");
+    logView.setReplay(1, 1, binocularsEmptyEvent);
+    assert.equal(
+      eventsText.text,
+      "Jugador usó prismáticos en (1, 0)\nJugador no ve a nadie con los prismáticos"
+    );
+
+    setLocale("en");
+    logView.setReplay(1, 1, binocularsEmptyEvent);
+    assert.equal(
+      eventsText.text,
+      "Jugador used binoculars at (1, 0)\nJugador does not see anyone with binoculars"
+    );
+
+    setLocale("es");
+    logView.setReplay(1, 1, binocularsOccupiedEvent);
+    assert.equal(eventsText.text, "Jugador usó prismáticos en (1, 0)");
+  } finally {
+    setLocale(previousLocale);
+  }
+});
+
+
+test("formatReplayEvents formats team_assigned with partnerPlayerId for twins", () => {
+  const scene = createMockScene();
+  const eventsText = createMockElement(scene);
+
+  const logView = new CharacterPanelLogView({
+    panel: { add() {} } as any,
+    elements: {
+      prevButton: createMockElement(scene) as any,
+      nextButton: createMockElement(scene) as any,
+      playButton: createMockElement(scene) as any,
+      filterTrack: createMockElement(scene) as any,
+      filterKnob: createMockElement(scene) as any,
+      filterLabel: createMockElement(scene) as any,
+      turnLabel: createMockElement(scene) as any,
+      statusText: createMockElement(scene) as any,
+      eventsBox: createMockElement(scene) as any,
+      eventsText: eventsText as any
+    },
+    onRequestReplay: () => {},
+    onPlay: () => {},
+    formatActionName: (id: string) => id
+  });
+
+  logView.setCurrentUserId("player1");
+  logView.setUsernames({
+    player1: "Jugador1",
+    player2: "Jugador2"
+  });
+
+  const twinTeamAssignedEvent: ReplayEvent[] = [
+    {
+      kind: "player",
+      actorId: "player1",
+      action: {
+        actionId: "team_assigned",
+        metadata: {
+          teamId: "Gemelos",
+          coverTeamId: "Alfa",
+          partnerPlayerId: "player2"
+        }
+      }
+    }
+  ];
+
+  const previousLocale = getLocale();
+  try {
+    setLocale("es");
+    logView.setReplay(0, 0, twinTeamAssignedEvent);
+    assert.equal(eventsText.text, "Jugador1 pertenece al equipo Gemelos con Jugador2");
+
+    setLocale("en");
+    logView.setReplay(0, 0, twinTeamAssignedEvent);
+    assert.equal(eventsText.text, "Jugador1 belongs to the team Twins with Jugador2");
+  } finally {
+    setLocale(previousLocale);
+  }
+});

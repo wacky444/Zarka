@@ -275,6 +275,12 @@ export function tailorPlayerCharactersForViewer(
       } else if (publicDeadTeamId) {
         sanitized.teamId = publicDeadTeamId;
       } else if (
+        isConfirmedTeammate &&
+        candidate.secretTeamId &&
+        candidate.secretTeamId === viewer.secretTeamId
+      ) {
+        sanitized.teamId = candidate.secretTeamId;
+      } else if (
         !isConfirmedTeammate &&
         candidate.teamId !== undefined
       ) {

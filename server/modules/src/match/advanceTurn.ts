@@ -373,6 +373,10 @@ export function advanceTurn(
       const character = characters[playerId];
       const effectiveTeam = character?.secretTeamId || character?.teamId;
       if (character && effectiveTeam) {
+        const partnerPlayerId =
+          character.secretTeamId === "Gemelos"
+            ? character.relationships?.confirmedTeammates?.[0]
+            : undefined;
         replayEvents.push({
           kind: "player",
           importance: 1,
@@ -381,7 +385,8 @@ export function advanceTurn(
             actionId: "team_assigned",
             metadata: {
               teamId: effectiveTeam,
-              coverTeamId: character.secretTeamId ? character.teamId : undefined
+              coverTeamId: character.secretTeamId ? character.teamId : undefined,
+              ...(partnerPlayerId ? { partnerPlayerId } : {})
             }
           },
           visibility: {

@@ -1142,11 +1142,17 @@ export class CharacterPanelLogView {
         }
         if (actionId === "team_assigned") {
           const meta = event.action.metadata as
-            | { teamId?: string; coverTeamId?: string }
+            | { teamId?: string; coverTeamId?: string; partnerPlayerId?: string }
             | undefined;
           const team = meta?.teamId;
           const cover = meta?.coverTeamId;
-          if (team && cover) {
+          const partnerPlayerId = meta?.partnerPlayerId;
+          if (partnerPlayerId) {
+            const partner = this.resolvePlayerName(partnerPlayerId);
+            lines.push(
+              `${actor} ${t("belongs to the team")} ${t(team ?? "")} ${t("with")} ${partner}`
+            );
+          } else if (team && cover) {
             lines.push(
               `${actor} ${t("belongs to the team")} ${t(team)} (${t(
                 "infiltrated in team"
@@ -1551,6 +1557,23 @@ export class CharacterPanelLogView {
             );
           } else {
             lines.push(`${actor} ${t("used binoculars")}${extraLabel}`);
+          }
+          const metadata = event.action.metadata as
+            | {
+                observed?: unknown;
+                observedCount?: unknown;
+                observedPlayerIds?: unknown;
+              }
+            | undefined;
+          const wasObserved = metadata?.observed !== false;
+          const observedCount =
+            typeof metadata?.observedCount === "number"
+              ? metadata.observedCount
+              : Array.isArray(metadata?.observedPlayerIds)
+                ? metadata.observedPlayerIds.length
+                : 0;
+          if (wasObserved && observedCount === 0) {
+            lines.push(`${actor} ${t("does not see anyone with binoculars")}`);
           }
           continue;
         }

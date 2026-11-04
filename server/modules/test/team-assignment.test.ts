@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MatchRecord } from "../src/models/types";
 import { distributeTeams } from "../src/match/teams";
+import { startMatchRecord } from "../src/match/startMatchRecord";
 import { createDefaultCharacter } from "../src/utils/playerCharacter";
 
 function createMatch(humanCount: number, botCount: number): MatchRecord {
@@ -61,6 +62,26 @@ test("Twin pair is selected across teams and may include a bot", () => {
   assert.deepEqual(assignment.twinPlayerIds, ["player4", "bot2"]);
   assert.equal(match.playerCharacters.player4.secretTeamId, "Gemelos");
   assert.equal(match.playerCharacters.bot2.secretTeamId, "Gemelos");
+  assert.deepEqual(match.playerCharacters.player4.revealedTeamIdsByPlayerId, { bot2: "Gemelos" });
+  assert.deepEqual(match.playerCharacters.bot2.revealedTeamIdsByPlayerId, { player4: "Gemelos" });
+});
+
+test("startMatchRecord includes partnerPlayerId in team_assigned metadata for twins", () => {
+  let callIndex = 0;
+  const match = createMatch(6, 2);
+  const logger = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} } as any;
+  const turn0Events = withRandom(() => {
+    const currentCall = callIndex;
+    callIndex += 1;
+    return currentCall === 27 ? 0.5 : 0.999999;
+  }, () => startMatchRecord(match, logger, 1000));
+
+  const p4Event = turn0Events.find((e) => e.actorId === "player4");
+  const bot2Event = turn0Events.find((e) => e.actorId === "bot2");
+  assert.equal(p4Event?.action?.metadata?.teamId, "Gemelos");
+  assert.equal(p4Event?.action?.metadata?.partnerPlayerId, "bot2");
+  assert.equal(bot2Event?.action?.metadata?.teamId, "Gemelos");
+  assert.equal(bot2Event?.action?.metadata?.partnerPlayerId, "player4");
 });
 
 test("matches with six or fewer participants keep existing no-special-role rule", () => {

@@ -815,11 +815,15 @@ export class CharacterPanelPlayerListView {
       }
     }
 
+    const viewer = this.currentUserId
+      ? match.playerCharacters?.[this.currentUserId]
+      : undefined;
     let allPlayerTeamsKnown = list.length > 0;
     for (const option of list) {
       const character = match.playerCharacters?.[option.id];
       const teamId =
         match.revealedTeamsByPlayerId?.[option.id]?.trim() ||
+        viewer?.revealedTeamIdsByPlayerId?.[option.id]?.trim() ||
         character?.secretTeamId?.trim() ||
         character?.teamId?.trim();
       if (!teamId) {
@@ -842,6 +846,7 @@ export class CharacterPanelPlayerListView {
         if (isDead) continue;
         const teamId =
           match.revealedTeamsByPlayerId?.[option.id]?.trim() ||
+          viewer?.revealedTeamIdsByPlayerId?.[option.id]?.trim() ||
           character?.secretTeamId?.trim() ||
           character?.teamId?.trim();
         if (teamId) {
@@ -1105,14 +1110,16 @@ export class CharacterPanelPlayerListView {
     const option = this.playerOptions.find((entry) => entry.id === selectedId);
     const displayName = option?.name ?? option?.label ?? selectedId;
     this.playersTabCardName.setText(displayName);
-    const teamId =
-      match.revealedTeamsByPlayerId?.[selectedId]?.trim() ||
-      character?.teamId?.trim() ||
-      UNKNOWN_TEAM_LABEL;
-    this.playersTabCardTeam.setText(`${t("Team")}: ${t(teamId)}`);
     const viewer = this.currentUserId
       ? match.playerCharacters?.[this.currentUserId]
       : undefined;
+    const teamId =
+      match.revealedTeamsByPlayerId?.[selectedId]?.trim() ||
+      viewer?.revealedTeamIdsByPlayerId?.[selectedId]?.trim() ||
+      character?.secretTeamId?.trim() ||
+      character?.teamId?.trim() ||
+      UNKNOWN_TEAM_LABEL;
+    this.playersTabCardTeam.setText(`${t("Team")}: ${t(teamId)}`);
     const details = formatPlayerPerceptionDetails(
       viewer,
       character,

@@ -703,6 +703,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "looked through the window": "miró por la ventana",
   "used binoculars at": "usó prismáticos en",
   "used binoculars": "usó prismáticos",
+  "does not see anyone with binoculars": "no ve a nadie con los prismáticos",
   "used the security camera app and saw":
     "usó la aplicación de cámaras de seguridad y vio",
   "There are": "Hay",
@@ -1030,6 +1031,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
 const ENGLISH_GAME_NAMES: Record<string, string> = {
   "Bienvenido a Zarka": "Welcome to Zarka",
   "se te cae": "you dropped",
+  "no ve a nadie con los prismáticos": "does not see anyone with binoculars",
   "Ya tienes una habilidad para detectar": "You already have a skill to detect",
   "gana 1 punto de habilidad": "gains 1 skill point",
   Enf: "CD",

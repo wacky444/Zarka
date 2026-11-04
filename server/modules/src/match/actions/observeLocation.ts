@@ -3,6 +3,8 @@ import {
   ActionLibrary,
   ExtraExecutionEffect,
   LocalizationType,
+  canSeeHiddenCharacter,
+  isCharacterHidden,
   type ActionId,
   type Axial,
   type HexTileSnapshot,
@@ -11,6 +13,7 @@ import {
 } from "@shared";
 import { axialDistance } from "../../utils/location";
 import { getUsableExtraExecutions } from "../../utils/energy";
+import { isCharacterDead } from "../../utils/playerCharacter";
 import { type PlannedActionParticipant } from "./utils";
 import { BaseAction } from "./classes/BaseAction";
 
@@ -108,6 +111,29 @@ export class ObserveLocationAction extends BaseAction {
         delete participant.character.remoteView;
       }
 
+      const characters = match.playerCharacters ?? {};
+      const observedPlayerIds: string[] = [];
+      if (validTarget && target) {
+        for (const candidateId in characters) {
+          if (!Object.prototype.hasOwnProperty.call(characters, candidateId)) {
+            continue;
+          }
+          if (candidateId === participant.playerId) {
+            continue;
+          }
+          const candidate = characters[candidateId];
+          if (
+            candidate &&
+            !isCharacterDead(candidate) &&
+            isSameCoord(candidate.position?.coord, target) &&
+            (!isCharacterHidden(candidate, match.current_turn) ||
+              canSeeHiddenCharacter(participant.character, candidate))
+          ) {
+            observedPlayerIds.push(candidateId);
+          }
+        }
+      }
+
       const action: ReplayActionDone = {
         actionId,
         originLocation: origin,
@@ -117,6 +143,8 @@ export class ObserveLocationAction extends BaseAction {
           observedLocation: validTarget ? target : undefined,
           distance,
           extraExecutions,
+          observedCount: observedPlayerIds.length,
+          observedPlayerIds,
         },
       };
       this.clearPlan(participant);
