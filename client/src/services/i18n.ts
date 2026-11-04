@@ -50,6 +50,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   turns: "turnos",
   "a chainsaw": "una motosierra",
   "Chainsaw is not running": "La motosierra no está arrancada",
+  "You already have a skill to detect": "Ya tienes una habilidad para detectar",
   "The chainsaw attack order goes first, it won't be started, it requires two turns, first start then attack":
     "El ataque con motosierra va primero, no estará arrancada, requiere dos turnos, primero arrancar y luego atacar",
   "Chainsaw order": "Orden de motosierra",
@@ -1029,6 +1030,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
 const ENGLISH_GAME_NAMES: Record<string, string> = {
   "Bienvenido a Zarka": "Welcome to Zarka",
   "se te cae": "you dropped",
+  "Ya tienes una habilidad para detectar": "You already have a skill to detect",
   "gana 1 punto de habilidad": "gains 1 skill point",
   Enf: "CD",
   PoliceStation: "Police station",

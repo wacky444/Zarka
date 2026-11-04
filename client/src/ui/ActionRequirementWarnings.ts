@@ -146,6 +146,13 @@ export function getMissingRequirement(
     }
   }
 
+  if (
+    definition.id === "detect" &&
+    getSkillRank(character, "perception4") > 0
+  ) {
+    return t("You already have a skill to detect");
+  }
+
   if (!definition.requiredItems || definition.requiredItems.length === 0) {
     return null;
   }

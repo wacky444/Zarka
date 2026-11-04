@@ -52,6 +52,10 @@ const suites = [
     name: "chainsaw-action-warnings",
     entryPoint: "test/ChainsawActionWarnings.test.ts"
   },
+  {
+    name: "detect-action-warnings",
+    entryPoint: "test/DetectActionWarnings.test.ts"
+  },
   { name: "ranked-matchmaking", entryPoint: "test/RankedMatchmaking.test.ts" },
   { name: "loading-tips", entryPoint: "test/LoadingTips.test.ts" },
   { name: "replay-turn-loading", entryPoint: "test/ReplayTurnLoading.test.ts", alias: { phaser: phaserShim, phaser3spectorjs: phaserShim } },
