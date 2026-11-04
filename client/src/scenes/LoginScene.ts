@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { Client, Session } from "@heroiclabs/nakama-js";
 import { makeButton, type UIButton } from "../ui/button";
-import { getEnv, healthProbe } from "../services/nakama";
+import { getEnv, healthProbe, ensureGuestDisplayName } from "../services/nakama";
 import { SessionManager } from "../services/sessionManager";
 import { FacebookService } from "../services/facebookService";
 import { GoogleService } from "../services/googleService";
@@ -87,6 +87,7 @@ export class LoginScene extends Phaser.Scene {
       if (!this.initialMessage && SessionManager.hasValidSession()) {
         const restored = await SessionManager.restoreSession();
         if (restored) {
+          await ensureGuestDisplayName(restored.client, restored.session);
           // Navigate directly and stop this scene to avoid UI overlap
           this.scene.stop();
           this.scene.start("MainScene", {
@@ -851,6 +852,7 @@ export class LoginScene extends Phaser.Scene {
       // Use device authentication as guest login
       const deviceId = this.getOrCreateDeviceId();
       const session = await this.client.authenticateDevice(deviceId, true);
+      await ensureGuestDisplayName(this.client, session);
       this.proceedToGame(session);
     } catch (error) {
       console.error("Guest login error:", error);

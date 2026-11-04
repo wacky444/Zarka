@@ -2,6 +2,13 @@ export const DEFAULT_MAX_CURRENT_MATCHES = 10;
 export const MIN_MAX_CURRENT_MATCHES = 1;
 export const MAX_MAX_CURRENT_MATCHES = 20;
 
+export function generateGuestDisplayName(
+  randomFn: () => number = Math.random
+): string {
+  const random4 = Math.floor(1000 + randomFn() * 9000);
+  return `Player_${random4}`;
+}
+
 export function normalizeMaxCurrentMatches(value: unknown): number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= MIN_MAX_CURRENT_MATCHES && value <= MAX_MAX_CURRENT_MATCHES
     ? value

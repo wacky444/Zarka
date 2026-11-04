@@ -1,4 +1,5 @@
 import { Client, Session } from "@heroiclabs/nakama-js";
+import { generateGuestDisplayName } from "@shared";
 
 export async function healthProbe(
   host: string,
@@ -49,6 +50,31 @@ export function getOrCreateDeviceId(): string {
   return existing;
 }
 
+export async function ensureGuestDisplayName(
+  client: Client,
+  session: Session
+): Promise<void> {
+  try {
+    const account = await client.getAccount(session);
+    if (
+      account.user?.display_name &&
+      account.user.display_name.trim().length > 0
+    ) {
+      return;
+    }
+    if (account.email && account.email.trim().length > 0) {
+      return;
+    }
+
+    const guestDisplayName = generateGuestDisplayName();
+    await client.updateAccount(session, {
+      display_name: guestDisplayName
+    });
+  } catch (error) {
+    console.warn("Failed to ensure guest display name:", error);
+  }
+}
+
 export async function initNakama(): Promise<{
   client: Client;
   session: Session;
@@ -58,5 +84,6 @@ export async function initNakama(): Promise<{
   await healthProbe(host, parseInt(port, 10), useSSL);
   const deviceId = getOrCreateDeviceId();
   const session = await client.authenticateDevice(deviceId, true);
+  await ensureGuestDisplayName(client, session);
   return { client, session };
 }

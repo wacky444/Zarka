@@ -43,6 +43,7 @@ import {
   type RankedQueueCoordinatorState
 } from "./matchmaking/coordinator";
 import { restoreMatchesFromStorage } from "./services/matchRestoration";
+import { afterAuthenticateDevice } from "./hooks/afterAuthenticateDevice";
 
 export function InitModule(
   ctx: nkruntime.Context,
@@ -332,6 +333,14 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register unregister_push_subscription: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerAfterAuthenticateDevice(afterAuthenticateDevice);
+  } catch (error) {
+    logger.error(
+      "Failed to register afterAuthenticateDevice: %s",
       (error && (error as Error).message) || String(error)
     );
   }

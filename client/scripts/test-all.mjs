@@ -72,6 +72,11 @@ const suites = [
   {
     name: "gm-location-selector",
     entryPoint: "test/GmLocationSelector.test.ts"
+  },
+  {
+    name: "guest-display-name",
+    entryPoint: "test/GuestDisplayName.test.ts",
+    alias: { phaser: phaserShim, phaser3spectorjs: phaserShim }
   }
 ];
 
