@@ -7,11 +7,14 @@ import { isCharacterDead, isCharacterIncapacitated } from "../utils/playerCharac
 import { assignAfkActions } from "./afkActions";
 import { assignAfkSkillPoints } from "./afkSkills";
 import { incrementAutoAdvanceAfkCounters } from "../utils/activityClock";
+import { checkAndProcessRankedAfkForfeits } from "./rankedAfkForfeit";
+import type { EndGameOutcome } from "./checkEndGame";
 
 export interface TurnResolutionResult {
   advanced: boolean;
   resolvedTurn?: number;
   events: ReplayEvent[];
+  outcome?: EndGameOutcome;
 }
 
 export function resolveTurnForMatch(
@@ -41,6 +44,20 @@ export function resolveTurnForMatch(
   }
   assignAfkActions(match);
   const { events } = advanceTurn(match, resolvedTurn, logger, nk);
+
+  let endGameOutcome: EndGameOutcome | undefined;
+  if ((!match.removed || match.removed === 0) && nk) {
+    const forfeitResult = checkAndProcessRankedAfkForfeits(
+      match,
+      nk,
+      logger,
+      events,
+      resolvedTurn
+    );
+    if (forfeitResult.matchEnded && forfeitResult.outcome) {
+      endGameOutcome = forfeitResult.outcome;
+    }
+  }
 
   const resetStates: Record<string, boolean> = {};
   if (match.gameMasterMode) {
@@ -77,5 +94,5 @@ export function resolveTurnForMatch(
   }
   match.deadCharacters = deadCharacters;
 
-  return { advanced: true, resolvedTurn, events };
+  return { advanced: true, resolvedTurn, events, outcome: endGameOutcome };
 }
