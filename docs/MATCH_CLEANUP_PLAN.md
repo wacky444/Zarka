@@ -30,6 +30,7 @@ Use a server-side scheduled cleanup worker (or equivalent periodic Nakama job) o
 - Activity clock: creation time initially; reset only on successful human join or leave that changes roster. Repeated list/read/presence refreshes do not reset it.
 - At 14 days without roster activity: remove/close the lobby and exclude it from both match lists. Preserve an audit reason/timestamp if supported, but no match report is required.
 - If creator leaves and an empty lobby remains, consider immediate removal; otherwise the 14-day rule applies. Make join-versus-expiry atomic so a join at the deadline cannot be lost.
+- Empty lobbies are cleaned 24h after they are created if nobody are in it.
 
 ### C. Ranked matches: 3-AFK-turn kick, bot replacement, and single remaining human win
 
