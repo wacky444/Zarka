@@ -6,6 +6,8 @@ import { buildMatchLabel } from "../../utils/label";
 import { normalizeMatchName } from "../../utils/normalize";
 import {
   DEFAULT_NORMAL_MATCH_SIZE,
+  MAX_MAP_COLS,
+  MAX_MAP_ROWS,
   MAX_NORMAL_MATCH_SIZE
 } from "@shared";
 
@@ -38,8 +40,14 @@ export const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
       players: {},
       order: [],
       size,
-      cols: params && params["cols"] ? parseInt(params["cols"], 10) : undefined,
-      rows: params && params["rows"] ? parseInt(params["rows"], 10) : undefined,
+      cols:
+        params && params["cols"]
+          ? Math.max(1, Math.min(MAX_MAP_COLS, parseInt(params["cols"], 10)))
+          : undefined,
+      rows:
+        params && params["rows"]
+          ? Math.max(1, Math.min(MAX_MAP_ROWS, parseInt(params["rows"], 10)))
+          : undefined,
       roundTime: params && params["roundTime"] ? params["roundTime"] : "23:00",
       autoSkip: params && params["autoSkip"] === "true",
       botPlayers:

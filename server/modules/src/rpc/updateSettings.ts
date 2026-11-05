@@ -12,6 +12,8 @@ import { ensureAllPlayerCharacters } from "../utils/playerCharacter";
 import { isAdminUser } from "../utils/admin";
 import {
   MAX_BOT_PLAYERS,
+  MAX_MAP_COLS,
+  MAX_MAP_ROWS,
   MAX_NORMAL_MATCH_SIZE,
   RANKED_MATCH_METADATA_KEY,
   assignShrinkScheduleToMap
@@ -73,8 +75,8 @@ export function updateSettingsRpc(
   }
 
   const newSize = clampNumber(settings.players, 2, MAX_NORMAL_MATCH_SIZE);
-  const newCols = clampNumber(settings.cols, 1, 100);
-  const newRows = clampNumber(settings.rows, 1, 100);
+  const newCols = clampNumber(settings.cols, 1, MAX_MAP_COLS);
+  const newRows = clampNumber(settings.rows, 1, MAX_MAP_ROWS);
   const newRoundTime = validateTime(settings.roundTime);
   const newAutoSkip =
     typeof settings.autoSkip === "boolean" ? settings.autoSkip : undefined;

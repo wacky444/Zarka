@@ -14,11 +14,20 @@ import type { MatchItemRecord } from "./match";
 
 export const DEFAULT_MAP_COLS = 5;
 export const DEFAULT_MAP_ROWS = 4;
+export const MIN_MAP_COLS = 1;
+export const MIN_MAP_ROWS = 1;
+export const MAX_MAP_COLS = 20;
+export const MAX_MAP_ROWS = 20;
 
-function toDimension(value: number, fallback: number): number {
+function toDimension(
+  value: number,
+  fallback: number,
+  max: number = MAX_MAP_COLS
+): number {
   if (typeof value !== "number" || !isFinite(value)) return fallback;
   const int = Math.floor(value);
-  return int > 0 ? int : fallback;
+  if (int <= 0) return fallback;
+  return Math.min(int, max);
 }
 
 function hashSeed(seed: string): number {
@@ -197,8 +206,8 @@ export function generateGameMap(
   seed?: string,
   turnsToBeAt1Tile: number = 30
 ): GeneratedGameMap {
-  const width = toDimension(cols, DEFAULT_MAP_COLS);
-  const height = toDimension(rows, DEFAULT_MAP_ROWS);
+  const width = toDimension(cols, DEFAULT_MAP_COLS, MAX_MAP_COLS);
+  const height = toDimension(rows, DEFAULT_MAP_ROWS, MAX_MAP_ROWS);
   const total = width * height;
   const finalSeed = seed && seed.length > 0 ? seed : Date.now().toString(36);
   const rng = createRng(finalSeed);

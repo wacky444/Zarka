@@ -4,7 +4,7 @@ export const RANKED_HIGH_POPULATION_DAILY_CUTOFF = 16;
 export const RANKED_WAIT_STEP_SECONDS = 90 * 60;
 export const RANKED_BASE_ELO_RANGE = 200;
 export const RANKED_ELO_RANGE_STEP = 50;
-export const MAX_RANKED_MAP_DIMENSION = 100;
+export const MAX_RANKED_MAP_DIMENSION = 20;
 
 type RankedMatchmakingMode = "low_population" | "high_population";
 

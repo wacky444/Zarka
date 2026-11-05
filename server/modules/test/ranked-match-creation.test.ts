@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  CellLibrary,
   DEFAULT_NORMAL_MATCH_SIZE,
+  MAX_MAP_COLS,
+  MAX_MAP_ROWS,
   MAX_NORMAL_MATCH_SIZE,
   RANKED_MATCH_METADATA_KEY,
+  generateGameMap,
   type RankedQueueMode
 } from "@shared";
 import { asyncTurnMatchInit } from "../src/match/async_turn/init";
@@ -407,6 +411,46 @@ test("ranked matches lock roster, settings, and client-controlled starts", () =>
     { size: "100" }
   ).state;
   assert.equal(maxNormalState.size, MAX_NORMAL_MATCH_SIZE);
+  const maxMapState = asyncTurnMatchInit(
+    {} as nkruntime.Context,
+    created.logger,
+    created.nakama,
+    { cols: "100", rows: "100" }
+  ).state;
+  assert.equal(maxMapState.cols, MAX_MAP_COLS);
+  assert.equal(maxMapState.rows, MAX_MAP_ROWS);
+});
+
+test("updateSettings and generateGameMap clamp map columns and rows to 20", () => {
+  const harness = createHarness(["creator-user"]);
+  const ctx = { userId: "creator-user" } as nkruntime.Context;
+  const createdJson = JSON.parse(
+    createMatchRpc(ctx, harness.logger, harness.nakama, JSON.stringify({}))
+  ) as { match_id: string };
+
+  const updatedJson = JSON.parse(
+    updateSettingsRpc(
+      ctx,
+      harness.logger,
+      harness.nakama,
+      JSON.stringify({
+        match_id: createdJson.match_id,
+        settings: { cols: 50, rows: 100 }
+      })
+    )
+  ) as { cols: number; rows: number };
+
+  assert.equal(updatedJson.cols, MAX_MAP_COLS);
+  assert.equal(updatedJson.rows, MAX_MAP_ROWS);
+  assert.equal(updatedJson.cols, 20);
+  assert.equal(updatedJson.rows, 20);
+
+  const generated = generateGameMap(50, 100, CellLibrary, "test-map-limit");
+  assert.equal(generated.map.cols, MAX_MAP_COLS);
+  assert.equal(generated.map.rows, MAX_MAP_ROWS);
+  assert.equal(generated.map.cols, 20);
+  assert.equal(generated.map.rows, 20);
+  assert.equal(generated.map.tiles.length, 400);
 });
 
 test("ranked match join attempt accepts assigned users only and get_state hides snapshots", () => {

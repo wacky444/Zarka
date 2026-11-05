@@ -9,6 +9,8 @@ import {
   CellLibrary,
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
+  MAX_MAP_COLS,
+  MAX_MAP_ROWS,
   generateGameMap,
   RANKED_MATCH_METADATA_KEY,
   TUTORIAL_MATCH_METADATA_KEY
@@ -109,8 +111,14 @@ function joinMatchRpcLocked(
   }
 
   const ensureMap = (): boolean => {
-    const cols = match.cols && match.cols > 0 ? match.cols : DEFAULT_MAP_COLS;
-    const rows = match.rows && match.rows > 0 ? match.rows : DEFAULT_MAP_ROWS;
+    const cols = Math.min(
+      MAX_MAP_COLS,
+      match.cols && match.cols > 0 ? match.cols : DEFAULT_MAP_COLS
+    );
+    const rows = Math.min(
+      MAX_MAP_ROWS,
+      match.rows && match.rows > 0 ? match.rows : DEFAULT_MAP_ROWS
+    );
     const existing = match.map;
     const needsMap =
       !existing || existing.cols !== cols || existing.rows !== rows;

@@ -4,7 +4,11 @@ import {
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
   DEFAULT_NORMAL_MATCH_SIZE,
-  DEFAULT_SKIN
+  DEFAULT_SKIN,
+  MAX_MAP_COLS,
+  MAX_MAP_ROWS,
+  MIN_MAP_COLS,
+  MIN_MAP_ROWS
 } from "@shared";
 import { LobbyView } from "../src/scenes/LobbyView";
 
@@ -165,4 +169,31 @@ test("LobbyView.resetToDefaults resets modified match fields back to initial mat
   assert.equal(reset.name, "Zarka game");
   assert.equal(reset.gameMasterMode, false);
   assert.equal(reset.controlledCharacterRoster, undefined);
+});
+
+test("LobbyView clamps map columns and rows to valid bounds (1 to 20)", () => {
+  const scene = createMockScene();
+  const lobby = new LobbyView(scene);
+
+  lobby.applySettings({
+    cols: 50,
+    rows: 100
+  });
+
+  const clampedMax = lobby.getSettings();
+  assert.equal(clampedMax.cols, MAX_MAP_COLS);
+  assert.equal(clampedMax.rows, MAX_MAP_ROWS);
+  assert.equal(clampedMax.cols, 20);
+  assert.equal(clampedMax.rows, 20);
+
+  lobby.applySettings({
+    cols: 0,
+    rows: -5
+  });
+
+  const clampedMin = lobby.getSettings();
+  assert.equal(clampedMin.cols, MIN_MAP_COLS);
+  assert.equal(clampedMin.rows, MIN_MAP_ROWS);
+  assert.equal(clampedMin.cols, 1);
+  assert.equal(clampedMin.rows, 1);
 });

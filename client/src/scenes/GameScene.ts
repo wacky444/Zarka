@@ -27,6 +27,10 @@ import {
   CellLibrary,
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
+  MAX_MAP_COLS,
+  MAX_MAP_ROWS,
+  MIN_MAP_COLS,
+  MIN_MAP_ROWS,
   HexTile,
   type ActionId,
   type Axial,
@@ -1806,8 +1810,16 @@ export class GameScene extends Phaser.Scene {
       return match.map;
     }
 
-    const cols = match?.cols && match.cols > 0 ? match.cols : DEFAULT_MAP_COLS;
-    const rows = match?.rows && match.rows > 0 ? match.rows : DEFAULT_MAP_ROWS;
+    const cols = Phaser.Math.Clamp(
+      match?.cols && match.cols > 0 ? match.cols : DEFAULT_MAP_COLS,
+      MIN_MAP_COLS,
+      MAX_MAP_COLS
+    );
+    const rows = Phaser.Math.Clamp(
+      match?.rows && match.rows > 0 ? match.rows : DEFAULT_MAP_ROWS,
+      MIN_MAP_ROWS,
+      MAX_MAP_ROWS
+    );
     const seed = match?.map?.seed;
     const generated = generateGameMap(cols, rows, CellLibrary, seed);
     return generated.map;

@@ -9,6 +9,8 @@ import {
   CellLibrary,
   DEFAULT_MAP_COLS,
   DEFAULT_MAP_ROWS,
+  MAX_MAP_COLS,
+  MAX_MAP_ROWS,
   generateGameMap,
   RANKED_MATCH_METADATA_KEY
 } from "@shared";
@@ -69,10 +71,14 @@ export function startMatchRpc(
     match.started = false;
   }
 
-  const targetCols =
-    match.cols && match.cols > 0 ? match.cols : DEFAULT_MAP_COLS;
-  const targetRows =
-    match.rows && match.rows > 0 ? match.rows : DEFAULT_MAP_ROWS;
+  const targetCols = Math.min(
+    MAX_MAP_COLS,
+    match.cols && match.cols > 0 ? match.cols : DEFAULT_MAP_COLS
+  );
+  const targetRows = Math.min(
+    MAX_MAP_ROWS,
+    match.rows && match.rows > 0 ? match.rows : DEFAULT_MAP_ROWS
+  );
   const existingMap = match.map;
   const mapMismatch =
     !existingMap ||

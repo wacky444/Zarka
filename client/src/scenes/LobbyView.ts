@@ -15,7 +15,11 @@ import {
   DEFAULT_NORMAL_MATCH_SIZE,
   DEFAULT_SKIN,
   MAX_BOT_PLAYERS,
+  MAX_MAP_COLS,
+  MAX_MAP_ROWS,
   MAX_NORMAL_MATCH_SIZE,
+  MIN_MAP_COLS,
+  MIN_MAP_ROWS,
   generateRandomSkinWithoutHat,
   type InMatchSettings,
   type Skin
@@ -319,11 +323,11 @@ export class LobbyView {
       0,
       0,
       "Columns",
-      1,
-      100,
+      MIN_MAP_COLS,
+      MAX_MAP_COLS,
       () => this.cols,
       (v) => {
-        this.cols = Phaser.Math.Clamp(v, 1, 100);
+        this.cols = Phaser.Math.Clamp(v, MIN_MAP_COLS, MAX_MAP_COLS);
         this.refreshPlayerList();
         this.emitSettings();
       },
@@ -337,11 +341,11 @@ export class LobbyView {
       0,
       0,
       "Rows",
-      1,
-      100,
+      MIN_MAP_ROWS,
+      MAX_MAP_ROWS,
       () => this.rows,
       (v) => {
-        this.rows = Phaser.Math.Clamp(v, 1, 100);
+        this.rows = Phaser.Math.Clamp(v, MIN_MAP_ROWS, MAX_MAP_ROWS);
         this.refreshPlayerList();
         this.emitSettings();
       },
@@ -806,11 +810,11 @@ export class LobbyView {
       this.playersStepper?.setDisplayValue(this.players);
     }
     if (typeof partial.cols === "number") {
-      this.cols = Phaser.Math.Clamp(partial.cols, 1, 100);
+      this.cols = Phaser.Math.Clamp(partial.cols, MIN_MAP_COLS, MAX_MAP_COLS);
       this.colsStepper?.setDisplayValue(this.cols);
     }
     if (typeof partial.rows === "number") {
-      this.rows = Phaser.Math.Clamp(partial.rows, 1, 100);
+      this.rows = Phaser.Math.Clamp(partial.rows, MIN_MAP_ROWS, MAX_MAP_ROWS);
       this.rowsStepper?.setDisplayValue(this.rows);
     }
     if (typeof partial.roundTime === "string") {

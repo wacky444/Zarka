@@ -94,7 +94,7 @@ test("card includes energy, focus energy, states and carried items, without stas
   target.inventory.stash = [{ itemId: "knife", quantity: 5, weight: 15 }];
   const before = JSON.stringify({ viewer, target });
   assert.equal(formatPlayerPerceptionDetails(viewer, target), [
-    "Energía: 7",
+    "Esfuerzo: 7",
     "Extra energy (remaining): 2",
     "Extra energy (next turn): 6",
     "Estado: Desmayado, Herido, Intoxicado, Protegido",
@@ -110,7 +110,7 @@ test("empty inventory and no conditions are explicit", () => {
   const { viewer, target } = createCharacters();
   target.inventory.carriedItems = [];
   assert.equal(formatPlayerPerceptionDetails(viewer, target), [
-    "Energía: 10", "Estado: Normal", "Objetos transportados:", "Ninguno"
+    "Esfuerzo: 10", "Estado: Normal", "Objetos transportados:", "Ninguno"
   ].join("\n"));
 });
 
