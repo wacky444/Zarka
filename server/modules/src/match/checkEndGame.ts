@@ -116,7 +116,7 @@ export type EndGameOutcome =
   | { ended: false; reason: "not_started" | "already_removed" | "not_ended" }
   | {
       ended: true;
-      reason: "last_alive" | "all_dead";
+      reason: "last_alive" | "all_dead" | "inactivity_timeout";
       winnerId?: string;
       aliveCharacterIds: string[];
     };
