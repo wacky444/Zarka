@@ -847,6 +847,7 @@ export class MainScene extends Phaser.Scene {
   private getPublicJoinFailureMessage(reason: unknown): string {
     const message = reason instanceof Error ? reason.message : String(reason ?? "");
     const normalized = message.toLowerCase();
+    if (normalized.includes("already_started") || normalized.includes("match_already_started")) return t("Match was already started.");
     if (normalized.includes("match_full")) return t("Match is full.");
     if (normalized.includes("ranked_roster_locked")) return t("Ranked match roster is locked.");
     if (normalized.includes("tutorial_incomplete")) return t("Complete the tutorial before joining matches.");
@@ -859,9 +860,15 @@ export class MainScene extends Phaser.Scene {
     matchId: string,
     status: MatchCardStatus
   ): Promise<void> {
+    if (status === "in_progress") {
+      return;
+    }
     const route = resolveMyMatchRoute(status);
     if (route === "report") {
       this.openMatchReport(matchId);
+      return;
+    }
+    if (route === "none") {
       return;
     }
     await this.joinMatch(matchId);

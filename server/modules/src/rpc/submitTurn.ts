@@ -59,6 +59,9 @@ export function submitTurnRpc(
   }
 
   if (match.players.indexOf(ctx.userId) === -1) {
+    if (wasStarted) {
+      throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
+    }
     match.players.push(ctx.userId);
   }
 

@@ -97,6 +97,12 @@ function joinMatchRpcLocked(
   if (typeof match.started !== "boolean") {
     match.started = false;
   }
+  if (!match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] && match.started) {
+    throw makeNakamaError(
+      "match_already_started",
+      nkruntime.Codes.FAILED_PRECONDITION
+    );
+  }
 
   let joinedNow = false;
   let shouldWrite = false;

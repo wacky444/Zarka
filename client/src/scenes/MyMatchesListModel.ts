@@ -125,6 +125,13 @@ export function formatFinishedHeading(count: number): string {
   return `${count} ${t("Finished matches")}`;
 }
 
+export function isMyMatchClickable(match: {
+  status?: MatchCardStatus;
+  started?: boolean;
+}): boolean {
+  return match.status !== "in_progress" && match.started !== true;
+}
+
 export function createSelectMatchHandler(
   match: MyMatchCardSummary,
   onSelect?: (
@@ -134,11 +141,14 @@ export function createSelectMatchHandler(
   ) => void
 ): () => void {
   return () => {
+    if (!isMyMatchClickable(match)) {
+      return;
+    }
     onSelect?.(match.match_id, match.status, match);
   };
 }
 
-export type MyMatchRouteTarget = "lobby" | "game" | "report";
+export type MyMatchRouteTarget = "lobby" | "game" | "report" | "none";
 
 export function resolveMyMatchRoute(
   status: MatchCardStatus
@@ -147,7 +157,7 @@ export function resolveMyMatchRoute(
     return "report";
   }
   if (status === "in_progress") {
-    return "game";
+    return "none";
   }
   return "lobby";
 }
@@ -157,7 +167,7 @@ export async function dispatchMyMatchSelection(
   status: MatchCardStatus,
   handlers: {
     openLobby: (matchId: string) => void | Promise<void>;
-    openGame: (matchId: string) => void | Promise<void>;
+    openGame?: (matchId: string) => void | Promise<void>;
     openReport: (matchId: string) => void | Promise<void>;
   }
 ): Promise<MyMatchRouteTarget> {
@@ -167,10 +177,12 @@ export async function dispatchMyMatchSelection(
       await handlers.openReport(matchId);
       break;
     case "game":
-      await handlers.openGame(matchId);
+      await handlers.openGame?.(matchId);
       break;
     case "lobby":
       await handlers.openLobby(matchId);
+      break;
+    case "none":
       break;
   }
   return target;

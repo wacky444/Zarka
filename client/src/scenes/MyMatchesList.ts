@@ -19,6 +19,7 @@ import {
   formatFinishedHeading,
   formatOnlineHeading,
   groupMyMatches,
+  isMyMatchClickable,
   toggleSectionCollapse,
   type MyMatchesGroupResult,
   type SectionCollapseState,
@@ -409,6 +410,9 @@ export class MyMatchesListView {
   }
 
   private handleCardSelect(match: MyMatchCardSummary): void {
+    if (!isMyMatchClickable(match)) {
+      return;
+    }
     this.onSelectMatch?.(match.match_id, match.status, match);
   }
 

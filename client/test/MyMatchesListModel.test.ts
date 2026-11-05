@@ -9,6 +9,7 @@ import {
   sortMyFinishedMatches,
   toggleSectionCollapse,
   createSelectMatchHandler,
+  isMyMatchClickable,
   resolveMyMatchRoute,
   dispatchMyMatchSelection
 } from "../src/scenes/MyMatchesListModel";
@@ -243,7 +244,7 @@ test("readiness indicators: play overlay when not ready, waiting state when read
 });
 
 test("createSelectMatchHandler emits matchId, status, and summary without navigation", () => {
-  const match = createMyMatch("in_progress", { match_id: "m-99" });
+  const match = createMyMatch("waiting", { match_id: "m-99", started: false });
   let emittedId = "";
   let emittedStatus = "";
   let emittedMatch: MyMatchCardSummary | null = null;
@@ -256,7 +257,7 @@ test("createSelectMatchHandler emits matchId, status, and summary without naviga
 
   handler();
   assert.equal(emittedId, "m-99");
-  assert.equal(emittedStatus, "in_progress");
+  assert.equal(emittedStatus, "waiting");
   assert.equal(emittedMatch, match);
 });
 
@@ -269,8 +270,16 @@ test("section headers format counts correctly", () => {
 
 test("resolveMyMatchRoute correctly maps match statuses to view targets", () => {
   assert.equal(resolveMyMatchRoute("waiting"), "lobby");
-  assert.equal(resolveMyMatchRoute("in_progress"), "game");
+  assert.equal(resolveMyMatchRoute("in_progress"), "none");
   assert.equal(resolveMyMatchRoute("finished"), "report");
+});
+
+test("isMyMatchClickable permits waiting and finished matches, rejects started", () => {
+  assert.equal(isMyMatchClickable({ status: "waiting", started: false }), true);
+  assert.equal(isMyMatchClickable({ status: "in_progress", started: true }), false);
+  assert.equal(isMyMatchClickable({ status: "in_progress", started: false }), false);
+  assert.equal(isMyMatchClickable({ status: "waiting", started: true }), false);
+  assert.equal(isMyMatchClickable({ status: "finished", started: false }), true);
 });
 
 test("dispatchMyMatchSelection routes waiting match to lobby", async () => {
@@ -292,7 +301,7 @@ test("dispatchMyMatchSelection routes waiting match to lobby", async () => {
   assert.deepEqual(calls, ["lobby:match-lobby-1"]);
 });
 
-test("dispatchMyMatchSelection routes in_progress match to game/resume", async () => {
+test("dispatchMyMatchSelection routes in_progress match to none without calling handlers", async () => {
   const calls: string[] = [];
   const handlers = {
     openLobby: (id: string) => {
@@ -307,8 +316,8 @@ test("dispatchMyMatchSelection routes in_progress match to game/resume", async (
   };
 
   const target = await dispatchMyMatchSelection("match-running-1", "in_progress", handlers);
-  assert.equal(target, "game");
-  assert.deepEqual(calls, ["game:match-running-1"]);
+  assert.equal(target, "none");
+  assert.deepEqual(calls, []);
 });
 
 test("dispatchMyMatchSelection routes finished match with or without report to report view", async () => {
@@ -340,18 +349,19 @@ test("dispatchMyMatchSelection routes finished match with or without report to r
 });
 
 test("clicking card never modifies readiness or triggers turn submission", () => {
-  const match = createMyMatch("in_progress", {
+  const match = createMyMatch("waiting", {
     match_id: "match-play-1",
     currentUserReady: false,
-    currentTurn: 3
+    currentTurn: 0,
+    started: false
   });
   let routeCalled = false;
   const onSelect = (matchId: string, status: string, m: MyMatchCardSummary) => {
     routeCalled = true;
     assert.equal(matchId, "match-play-1");
-    assert.equal(status, "in_progress");
+    assert.equal(status, "waiting");
     assert.equal(m.currentUserReady, false);
-    assert.equal(m.currentTurn, 3);
+    assert.equal(m.currentTurn, 0);
   };
 
   const handler = createSelectMatchHandler(match, onSelect);
@@ -359,6 +369,19 @@ test("clicking card never modifies readiness or triggers turn submission", () =>
   assert.equal(routeCalled, true);
   // Match state remains immutable upon selection
   assert.equal(match.currentUserReady, false);
-  assert.equal(match.currentTurn, 3);
+  assert.equal(match.currentTurn, 0);
+});
+
+test("clicking started match does nothing", () => {
+  const match = createMyMatch("in_progress", {
+    match_id: "match-play-started",
+    started: true
+  });
+  let routeCalled = false;
+  const handler = createSelectMatchHandler(match, () => {
+    routeCalled = true;
+  });
+  handler();
+  assert.equal(routeCalled, false);
 });
 
