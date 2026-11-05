@@ -19,6 +19,7 @@ export function startMatchRecord(
 
   match.started = true;
   match.started_at = Math.floor(startedAtMs / 1000);
+  match.last_human_action_at = match.started_at;
   if (match.autoSkip !== false) {
     const initialAutoAdvanceAt = getInitialAutoAdvanceAt(
       match.roundTime,

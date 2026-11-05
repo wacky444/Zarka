@@ -5,6 +5,7 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { MatchRecord } from "../models/types";
 import { getRuntimeMatchId } from "../utils/matchIds";
+import { recordRosterActivity } from "../utils/activityClock";
 import {
   RANKED_MATCH_METADATA_KEY,
   TUTORIAL_MATCH_METADATA_KEY
@@ -110,6 +111,8 @@ export function leaveMatchRpc(
       if (empty) {
         match.removed = 1;
         match.started = false;
+      } else {
+        recordRosterActivity(match);
       }
       try {
         storage.writeMatch(match, read.version);

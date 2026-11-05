@@ -5,6 +5,8 @@ import { processBotActions } from "./botAI";
 import { planTutorialBotActions } from "./TutorialBotPlanner";
 import { isCharacterDead, isCharacterIncapacitated } from "../utils/playerCharacter";
 import { assignAfkActions } from "./afkActions";
+import { assignAfkSkillPoints } from "./afkSkills";
+import { incrementAutoAdvanceAfkCounters } from "../utils/activityClock";
 
 export interface TurnResolutionResult {
   advanced: boolean;
@@ -15,7 +17,8 @@ export interface TurnResolutionResult {
 export function resolveTurnForMatch(
   match: MatchRecord,
   logger: nkruntime.Logger,
-  nk: nkruntime.Nakama
+  nk: nkruntime.Nakama,
+  options?: { isAutoAdvance?: boolean }
 ): TurnResolutionResult {
   const players = Array.isArray(match.players) ? match.players : [];
   if (
@@ -31,6 +34,10 @@ export function resolveTurnForMatch(
     planTutorialBotActions(match);
   } else {
     processBotActions(match, logger);
+  }
+  if (options?.isAutoAdvance === true) {
+    incrementAutoAdvanceAfkCounters(match);
+    assignAfkSkillPoints(match);
   }
   assignAfkActions(match);
   const { events } = advanceTurn(match, resolvedTurn, logger, nk);

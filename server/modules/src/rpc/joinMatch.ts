@@ -20,6 +20,7 @@ import {
   ensurePlayerCharacter,
 } from "../utils/playerCharacter";
 import { isAdminUser } from "../utils/admin";
+import { recordRosterActivity } from "../utils/activityClock";
 import { getRuntimeMatchId } from "../utils/matchIds";
 import { assertCanAddMembership, withMatchMembershipLocks } from "../services/matchMembershipLimit";
 
@@ -227,6 +228,10 @@ function joinMatchRpcLocked(
         (createErr as Error).message || String(createErr)
       );
     }
+  }
+
+  if (joinedNow) {
+    recordRosterActivity(match);
   }
 
   if (shouldWrite) {

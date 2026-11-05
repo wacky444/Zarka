@@ -7,6 +7,7 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { isCharacterDead } from "../utils/playerCharacter";
 import { isBotId } from "../match/botAI";
+import { recordHumanGameplayActivity } from "../utils/activityClock";
 
 export function updateTestamentRpc(
   ctx: nkruntime.Context,
@@ -88,6 +89,7 @@ export function updateTestamentRpc(
   }
 
   character.testamentRecipientId = recipientId ?? undefined;
+  recordHumanGameplayActivity(match, ctx.userId);
   storage.writeMatch(match, read.version);
 
   const response: UpdateTestamentPayload = {

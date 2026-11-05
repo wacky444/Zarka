@@ -210,6 +210,8 @@ export function createRankedMatch(
     botPlayers: request.botCount,
     turnsToBeAt1Tile: 30,
     created_at: Math.floor(nowMs / 1000),
+    last_roster_activity_at: Math.floor(nowMs / 1000),
+    last_human_action_at: Math.floor(nowMs / 1000),
     current_turn: 0,
     creator: "Ranked",
     name: matchName,

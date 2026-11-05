@@ -216,6 +216,7 @@ export function createTutorialMatch({
     botPlayers: 1,
     turnsToBeAt1Tile: TUTORIAL_TURNS_TO_BE_AT_1_TILE,
     created_at: createdAt,
+    last_roster_activity_at: createdAt,
     current_turn: 0,
     creator: playerId,
     name: "Tutorial",

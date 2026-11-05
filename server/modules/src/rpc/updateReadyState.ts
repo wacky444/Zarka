@@ -25,6 +25,7 @@ import { getAliveCharacterIds } from "../match/checkEndGame";
 import { validateTime } from "../utils/validation";
 import { getRuntimeMatchId } from "../utils/matchIds";
 import { isAdminUser, isGameMasterUser } from "../utils/admin";
+import { recordHumanGameplayActivity } from "../utils/activityClock";
 import { createReplaySnapshot } from "../match/replay/snapshot";
 import {
   createTurnNotificationOutbox,
@@ -174,6 +175,10 @@ export function updateReadyStateRpc(
     effectiveReady = viewerIsIncapadited ? true : requestedReady;
     match.readyStates = match.readyStates ?? {};
     match.readyStates[ctx.userId] = effectiveReady;
+  }
+
+  if (requestedReady) {
+    recordHumanGameplayActivity(match, ctx.userId);
   }
 
   let advanced = false;

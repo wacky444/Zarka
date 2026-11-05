@@ -7,6 +7,7 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { getRuntimeMatchId } from "../utils/matchIds";
 import { isCharacterDead } from "../utils/playerCharacter";
+import { recordHumanGameplayActivity } from "../utils/activityClock";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -142,6 +143,7 @@ export function donateZarkansRpc(
   ];
 
   try {
+    recordHumanGameplayActivity(match, ctx.userId);
     storage.writeMatch(match, read.version);
   } catch {
     throw makeNakamaError("match_update_conflict", nkruntime.Codes.ABORTED);
