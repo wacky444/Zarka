@@ -545,7 +545,9 @@ function buildMatchSettlementEntries(
       won:
         outcome.reason === "last_alive" &&
         Boolean(winningTeamId && effectiveTeamId(match, userId) === winningTeamId),
-      draw: outcome.reason === "all_dead"
+      draw:
+        outcome.reason === "all_dead" ||
+        outcome.reason === "inactivity_timeout"
     }));
 }
 

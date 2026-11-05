@@ -440,7 +440,10 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
                     typeof playerId === "string",
                 )
               : undefined,
-            reason: msg.reason === "all_dead" ? "all_dead" : "last_alive",
+            reason:
+              msg.reason === "all_dead" || msg.reason === "inactivity_timeout"
+                ? msg.reason
+                : "last_alive",
           });
           dispatcher.broadcastMessage(
             OPCODE_MATCH_ENDED,

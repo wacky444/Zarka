@@ -362,6 +362,11 @@ export function buildMatchReport(
     }
   }
 
+  if (reason === "inactivity_timeout") {
+    winningTeamId = undefined;
+    winningCharacterIds = [];
+  }
+
   const teamLookup: Record<string, MatchReportTeam> = {};
   for (const player of aggregatePlayers) {
     const team =
@@ -379,7 +384,9 @@ export function buildMatchReport(
     team.total_damage_dealt += player.damage_dealt;
     team.total_damage_received += player.damage_received;
     team.kills += player.players_killed;
-    team.won = player.effectiveTeamId === winningTeamId;
+    team.won =
+      reason !== "inactivity_timeout" &&
+      Boolean(winningTeamId && player.effectiveTeamId === winningTeamId);
     teamLookup[player.effectiveTeamId] = team;
   }
   const teams: MatchReportTeam[] = [];

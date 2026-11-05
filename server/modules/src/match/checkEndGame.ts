@@ -201,13 +201,13 @@ export function finalizeMatchWithOutcome(
   logger: nkruntime.Logger,
   currentTurnEvents: ReplayEvent[] = [],
   resolvedTurn = match.current_turn,
+  nowMs = Date.now(),
 ): EndGameOutcome {
   if (!outcome.ended) {
     return outcome;
   }
 
   finalizeRankedTeamPlacements(match, resolvedTurn);
-  const nowMs = Date.now();
   const rankedMetadata = match.metadata?.[RANKED_MATCH_METADATA_KEY];
   const isRanked = Boolean(rankedMetadata);
   if (rankedMetadata) {
@@ -305,7 +305,8 @@ export function finalizeMatchWithOutcome(
       const isWinner =
         outcome.reason === "last_alive" &&
         Boolean(winningTeamId && playerTeamId === winningTeamId);
-      const isDraw = outcome.reason === "all_dead";
+      const isDraw =
+        outcome.reason === "all_dead" || outcome.reason === "inactivity_timeout";
 
       try {
         const status = updateAccountMetadata(nk, playerId, (metadata) => {
@@ -400,28 +401,32 @@ export function emitMatchEndedSignal(
     const alive = endedOutcome?.aliveCharacterIds ?? getAliveCharacterIds(match);
 
     let winnerId = endedOutcome?.winnerId;
-    if (!winnerId) {
-      const ranked = match.metadata?.[RANKED_MATCH_METADATA_KEY];
-      const winningPlacement = ranked?.placements?.find(
-        (p) => p.place === 1 && !p.eliminated,
-      );
-      if (winningPlacement) {
-        const winningTeamId = winningPlacement.teamId;
-        const memberOnTeam = (match.players ?? []).find((pId) => {
-          const char = characters[pId];
-          const team =
-            char?.secretTeamId?.trim() ||
-            char?.teamId?.trim() ||
-            `solo_${pId}`;
-          return team === winningTeamId;
-        });
-        if (memberOnTeam) {
-          winnerId = memberOnTeam;
+    if (endedOutcome?.reason === "inactivity_timeout") {
+      winnerId = undefined;
+    } else {
+      if (!winnerId) {
+        const ranked = match.metadata?.[RANKED_MATCH_METADATA_KEY];
+        const winningPlacement = ranked?.placements?.find(
+          (p) => p.place === 1 && !p.eliminated,
+        );
+        if (winningPlacement) {
+          const winningTeamId = winningPlacement.teamId;
+          const memberOnTeam = (match.players ?? []).find((pId) => {
+            const char = characters[pId];
+            const team =
+              char?.secretTeamId?.trim() ||
+              char?.teamId?.trim() ||
+              `solo_${pId}`;
+            return team === winningTeamId;
+          });
+          if (memberOnTeam) {
+            winnerId = memberOnTeam;
+          }
         }
       }
-    }
-    if (!winnerId) {
-      winnerId = alive.length > 0 ? alive[0] : undefined;
+      if (!winnerId) {
+        winnerId = alive.length > 0 ? alive[0] : undefined;
+      }
     }
 
     const reason =
@@ -433,16 +438,19 @@ export function emitMatchEndedSignal(
         `solo_${winnerId}`
       : undefined;
 
-    const winnerIds = winningTeamId
-      ? (match.players ?? []).filter((pId) => {
-          const char = characters[pId];
-          const team =
-            char?.secretTeamId?.trim() ||
-            char?.teamId?.trim() ||
-            `solo_${pId}`;
-          return team === winningTeamId;
-        })
-      : alive;
+    const winnerIds =
+      reason === "inactivity_timeout"
+        ? []
+        : winningTeamId
+        ? (match.players ?? []).filter((pId) => {
+            const char = characters[pId];
+            const team =
+              char?.secretTeamId?.trim() ||
+              char?.teamId?.trim() ||
+              `solo_${pId}`;
+            return team === winningTeamId;
+          })
+        : alive;
 
     nkWrapper.matchSignal(
       getRuntimeMatchId(match),
