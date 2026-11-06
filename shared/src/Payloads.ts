@@ -217,6 +217,7 @@ export interface MatchCardSummary {
   nextAdvanceAtMs: number | null;
   timeStatus: MatchCardTimeStatus;
   mapPreviewCells: MatchPreviewCell[];
+  terminalReason?: MatchReportReason;
 }
 
 export interface MyMatchCardSummary extends MatchCardSummary {

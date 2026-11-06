@@ -252,6 +252,8 @@ export class MatchCard extends Phaser.GameObjects.Container {
   }
 
   private getLocalizedTime(value: string): string {
-    return value === "Manual" || value === "Waiting" ? t(value) : value;
+    return value === "Manual" || value === "Waiting" || value === "Inactivity Draw"
+      ? t(value)
+      : value;
   }
 }

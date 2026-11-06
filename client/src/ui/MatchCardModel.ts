@@ -45,7 +45,9 @@ export function getMatchCardPresentation(
         : `${match.totalPlayers}`;
   const timeLeft =
     match.timeStatus === "finished"
-      ? "—"
+      ? match.terminalReason === "inactivity_timeout"
+        ? "Inactivity Draw"
+        : "—"
       : match.timeStatus === "manual"
         ? "Manual"
         : match.timeStatus === "not_started"

@@ -6,6 +6,11 @@ import {
   type MatchRecord,
   type PlayerCharacter
 } from "@shared";
+import {
+  MATCH_REPORT_COLLECTION,
+  MATCH_REPORT_KEY_PREFIX,
+  SERVER_USER_ID
+} from "../src/constants";
 import { listMatchCardsRpc } from "../src/rpc/listMatchCards";
 import { listMyMatchesRpc } from "../src/rpc/listMyMatches";
 import {
@@ -109,7 +114,11 @@ function match(overrides: Partial<MatchRecord> = {}): MatchRecord {
   };
 }
 
-function fakeNakama(matches: MatchRecord[], metadata: unknown = {}) {
+function fakeNakama(
+  matches: MatchRecord[],
+  metadata: unknown = {},
+  storageRecords: Record<string, unknown> = {}
+) {
   const objects = matches.map((value, index) => ({
     key: `match:${index}`,
     value,
@@ -117,7 +126,11 @@ function fakeNakama(matches: MatchRecord[], metadata: unknown = {}) {
     permissionRead: 0
   }));
   return {
-    storageRead: () => [],
+    storageRead: (reads: Array<{ collection: string; key: string; userId: string }>) =>
+      reads.flatMap((r) => {
+        const item = storageRecords[`${r.collection}:${r.key}:${r.userId}`];
+        return item !== undefined ? [{ value: item, version: "1" }] : [];
+      }),
     storageWrite: () => {},
     storageList: (_userId: string, _collection: string, _limit: number, cursor: string) =>
       cursor ? { objects: [], cursor: "" } : { objects, cursor: "" },
@@ -273,4 +286,93 @@ test("list_my_matches includes user limit and sanitized card summary", () => {
   assert.equal(response.matches[0].joinedPlayers, 2);
   assert.equal("readyStates" in response.matches[0], false);
   assert.equal("playerCharacters" in response.matches[0], false);
+});
+
+test("buildMatchCardSummary and buildMyMatchCardSummary pass through terminalReason", () => {
+  const summaryWithReason = buildMatchCardSummary(
+    match(),
+    Date.now(),
+    "inactivity_timeout"
+  );
+  assert.equal(summaryWithReason.terminalReason, "inactivity_timeout");
+
+  const summaryWithoutReason = buildMatchCardSummary(match(), Date.now());
+  assert.equal("terminalReason" in summaryWithoutReason, false);
+
+  const mySummaryWithReason = buildMyMatchCardSummary(
+    match(),
+    "user-1",
+    Date.now(),
+    "inactivity_timeout"
+  );
+  assert.equal(mySummaryWithReason.terminalReason, "inactivity_timeout");
+
+  const mySummaryWithoutReason = buildMyMatchCardSummary(
+    match(),
+    "user-1",
+    Date.now()
+  );
+  assert.equal("terminalReason" in mySummaryWithoutReason, false);
+});
+
+test("list_my_matches filters out removed unstarted lobbies with no report and turn 0", () => {
+  const removedLobby = match({
+    match_id: "removed-lobby",
+    removed: 1,
+    started: false,
+    current_turn: 0
+  });
+
+  const response = JSON.parse(
+    listMyMatchesRpc(
+      { userId: "user-1" } as nkruntime.Context,
+      {} as nkruntime.Logger,
+      fakeNakama([removedLobby]),
+      ""
+    )
+  ) as {
+    ok: boolean;
+    matches: Array<Record<string, unknown>>;
+  };
+
+  assert.equal(response.ok, true);
+  assert.equal(response.matches.length, 0);
+});
+
+test("list_my_matches passes terminalReason for finished match with report", () => {
+  const finishedMatch = match({
+    match_id: "match-with-report",
+    removed: 1,
+    started: false,
+    current_turn: 3
+  });
+  const report = {
+    match_id: "match-with-report",
+    reason: "inactivity_timeout",
+    winning_team_id: null,
+    winning_character_ids: [],
+    turns: 3,
+    created_at: 1000,
+    ended_at: 2000,
+    players: [{ player_id: "user-1", team_id: "team-1", character_id: "char-1" }],
+    teams: []
+  };
+
+  const storageKey = `${MATCH_REPORT_COLLECTION}:${MATCH_REPORT_KEY_PREFIX}match-with-report:${SERVER_USER_ID}`;
+  const response = JSON.parse(
+    listMyMatchesRpc(
+      { userId: "user-1" } as nkruntime.Context,
+      {} as nkruntime.Logger,
+      fakeNakama([finishedMatch], {}, { [storageKey]: report }),
+      ""
+    )
+  ) as {
+    ok: boolean;
+    matches: Array<Record<string, unknown>>;
+  };
+
+  assert.equal(response.ok, true);
+  assert.equal(response.matches.length, 1);
+  assert.equal(response.matches[0].terminalReason, "inactivity_timeout");
+  assert.equal(response.matches[0].has_report, true);
 });
