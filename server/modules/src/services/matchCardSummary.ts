@@ -4,7 +4,8 @@ import {
   type MatchCardSummary,
   type MatchRecord,
   type MatchPreviewCell,
-  type MyMatchCardSummary
+  type MyMatchCardSummary,
+  type MatchReportReason
 } from "@shared";
 import { getNextAutoAdvanceAtMs } from "../utils/autoSkip";
 import { isCharacterDead } from "../utils/playerCharacter";
@@ -81,7 +82,8 @@ function getAlivePlayerCount(
 
 export function buildMatchCardSummary(
   match: MatchRecord,
-  nowMs = Date.now()
+  nowMs = Date.now(),
+  terminalReason?: MatchReportReason
 ): MatchCardSummary {
   const currentTurn =
     typeof match.current_turn === "number" && Number.isFinite(match.current_turn)
@@ -138,17 +140,19 @@ export function buildMatchCardSummary(
     currentTurn,
     nextAdvanceAtMs,
     timeStatus,
-    mapPreviewCells: getMapPreviewCells(match, currentTurn)
+    mapPreviewCells: getMapPreviewCells(match, currentTurn),
+    ...(terminalReason ? { terminalReason } : {})
   };
 }
 
 export function buildMyMatchCardSummary(
   match: MatchRecord,
   currentUserId: string,
-  nowMs = Date.now()
+  nowMs = Date.now(),
+  terminalReason?: MatchReportReason
 ): MyMatchCardSummary {
   return {
-    ...buildMatchCardSummary(match, nowMs),
+    ...buildMatchCardSummary(match, nowMs, terminalReason),
     players: Array.isArray(match.players) ? [...match.players] : [],
     current_turn:
       typeof match.current_turn === "number" && Number.isFinite(match.current_turn)

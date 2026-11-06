@@ -196,6 +196,9 @@ export class EndGameReportScene extends Phaser.Scene {
     if (report.game_master_mode) {
       title = t("Game Master Sandbox Summary");
       titleColor = "#a78bfa";
+    } else if (report.reason === "inactivity_timeout") {
+      title = t("Inactivity Draw");
+      titleColor = "#38bdf8";
     } else if (isDraw) {
       title = t("Match Draw");
       titleColor = "#38bdf8";

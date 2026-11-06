@@ -29,6 +29,7 @@ import {
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
 import { parseAxial } from "../utils/location";
 import { getRuntimeMatchId } from "../utils/matchIds";
+import { recordHumanGameplayActivity } from "../utils/activityClock";
 
 export function updateSecondaryActionRpc(
   ctx: nkruntime.Context,
@@ -419,6 +420,7 @@ export function updateSecondaryActionRpc(
     }
     character.actionPlan[planKey] = nextPlan;
   }
+  recordHumanGameplayActivity(match, ctx.userId);
   storage.writeMatch(match, read.version);
 
   if (match.gameMasterMode) {

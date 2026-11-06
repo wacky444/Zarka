@@ -85,6 +85,10 @@ export interface MatchRecord {
   roundTime?: string;
   autoSkip?: boolean;
   started_at?: number;
+  last_human_action_at?: number;
+  last_roster_activity_at?: number;
+  consecutive_afk_turns?: Record<string, number>;
+  forfeited_players?: Record<string, boolean>;
   botPlayers?: number;
   turnsToBeAt1Tile?: number;
   created_at: number;

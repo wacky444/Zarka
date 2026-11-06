@@ -19,6 +19,7 @@ import {
   type SkillCategory
 } from "@shared";
 import { MatchRecord } from "../models/types";
+import { isBotControlled } from "../utils/activityClock";
 import { hasFeedConsumable } from "./actions/feed";
 import {
   isActionOnCooldown,
@@ -239,7 +240,7 @@ export function processBotActions(match: MatchRecord, logger: any): void {
     ) {
       continue;
     }
-    if (!isBotId(playerId)) {
+    if (!isBotControlled(match, playerId)) {
       continue;
     }
 

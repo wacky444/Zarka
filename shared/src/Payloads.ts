@@ -13,7 +13,7 @@ import type {
 import type { ReplayEvent, ReplaySnapshot } from "./Replay";
 import type { MatchChatMessage } from "./chat";
 import type { Skin, UserAccount } from "./UserAccount";
-import type { MatchReport } from "./matchReport";
+import type { MatchReport, MatchReportReason } from "./matchReport";
 import type { SkillId } from "./skills/Skill";
 import type { ShopId } from "./Shop";
 import type { ItemId } from "./Item";
@@ -217,6 +217,7 @@ export interface MatchCardSummary {
   nextAdvanceAtMs: number | null;
   timeStatus: MatchCardTimeStatus;
   mapPreviewCells: MatchPreviewCell[];
+  terminalReason?: MatchReportReason;
 }
 
 export interface MyMatchCardSummary extends MatchCardSummary {
@@ -300,7 +301,7 @@ export type MatchEndedMessagePayload = {
   match_id: string;
   winnerId?: string;
   winnerIds?: string[];
-  reason: "last_alive" | "all_dead";
+  reason: MatchReportReason;
 };
 
 export type ReadyStateUpdateMessagePayload = {

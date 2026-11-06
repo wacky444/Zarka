@@ -1,6 +1,9 @@
 import type { Skin } from "./UserAccount";
 
-export type MatchReportReason = "last_alive" | "all_dead";
+export type MatchReportReason =
+  | "last_alive"
+  | "all_dead"
+  | "inactivity_timeout";
 
 export interface MatchReportProgressEntry {
   aliveTurns: number;

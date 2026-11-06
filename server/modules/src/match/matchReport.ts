@@ -249,6 +249,7 @@ export function buildMatchReport(
   resolvedTurn: number,
   currentTurnEvents: ReplayEvent[],
   users: nkruntime.User[] = [],
+  winnerCharacterIdOverride?: string,
 ): MatchReport {
   const userMap: UserLookup = {};
   for (const user of users) {
@@ -327,17 +328,44 @@ export function buildMatchReport(
   const uniqueAliveTeams = new Set(
     alivePlayers.map((player) => player.effectiveTeamId),
   );
-  const winningTeamId =
+  let winningTeamId =
     reason === "last_alive" &&
     alivePlayers.length > 0 &&
     uniqueAliveTeams.size === 1
       ? alivePlayers[0].effectiveTeamId
       : undefined;
-  const winningCharacterIds = winningTeamId
+
+  if (reason === "last_alive" && winnerCharacterIdOverride) {
+    const winnerPlayer = aggregatePlayers.find(
+      (player) =>
+        player.character_id === winnerCharacterIdOverride ||
+        player.player_id === winnerCharacterIdOverride,
+    );
+    if (winnerPlayer) {
+      winningTeamId = winnerPlayer.effectiveTeamId;
+    }
+  }
+
+  let winningCharacterIds = winningTeamId
     ? alivePlayers
         .filter((player) => player.effectiveTeamId === winningTeamId)
         .map((player) => player.character_id)
     : [];
+  if (winningTeamId && winningCharacterIds.length === 0 && winnerCharacterIdOverride) {
+    const winnerPlayer = aggregatePlayers.find(
+      (player) =>
+        player.character_id === winnerCharacterIdOverride ||
+        player.player_id === winnerCharacterIdOverride,
+    );
+    if (winnerPlayer) {
+      winningCharacterIds = [winnerPlayer.character_id];
+    }
+  }
+
+  if (reason === "inactivity_timeout") {
+    winningTeamId = undefined;
+    winningCharacterIds = [];
+  }
 
   const teamLookup: Record<string, MatchReportTeam> = {};
   for (const player of aggregatePlayers) {
@@ -356,7 +384,9 @@ export function buildMatchReport(
     team.total_damage_dealt += player.damage_dealt;
     team.total_damage_received += player.damage_received;
     team.kills += player.players_killed;
-    team.won = player.effectiveTeamId === winningTeamId;
+    team.won =
+      reason !== "inactivity_timeout" &&
+      Boolean(winningTeamId && player.effectiveTeamId === winningTeamId);
     teamLookup[player.effectiveTeamId] = team;
   }
   const teams: MatchReportTeam[] = [];

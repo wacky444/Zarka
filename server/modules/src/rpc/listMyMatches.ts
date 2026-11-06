@@ -62,6 +62,9 @@ export function listMyMatchesRpc(
 
       const report = storage.getMatchReport(match.match_id);
       if (!report) {
+        if ((match.current_turn ?? 0) === 0) {
+          continue;
+        }
         finishedMatches.push({
           ...buildMyMatchCardSummary(match, ctx.userId),
           creator,
@@ -86,7 +89,7 @@ export function listMyMatchesRpc(
           player?.team_id === report.winning_team_id,
       );
       finishedMatches.push({
-        ...buildMyMatchCardSummary(match, ctx.userId),
+        ...buildMyMatchCardSummary(match, ctx.userId, Date.now(), report.reason),
         creator,
         cols: match.cols,
         rows: match.rows,
@@ -102,7 +105,8 @@ export function listMyMatchesRpc(
           (report.ended_at - report.created_at) * 1000,
         ),
         player_team_won: playerTeamWon,
-        has_report: true
+        has_report: true,
+        terminalReason: report.reason
       });
     }
 

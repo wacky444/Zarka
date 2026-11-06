@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MatchCardSummary } from "@shared";
+import { getLocale, setLocale, t } from "../src/services/i18n";
 import { isPointerTap } from "../src/ui/pointerInput";
 import {
   MATCH_PREVIEW_COLORS,
@@ -155,4 +156,39 @@ test("card click callback receives selected summary", () => {
     selected = match;
   })();
   assert.equal(selected, summary);
+});
+
+test("finished matches show Inactivity Draw when terminalReason is inactivity_timeout", () => {
+  const timeoutMatch = createMatch("finished", {
+    terminalReason: "inactivity_timeout"
+  });
+  const normalFinishedMatch = createMatch("finished");
+  const winnerFinishedMatch = createMatch("finished", {
+    terminalReason: "winner_team"
+  });
+
+  assert.equal(
+    getMatchCardPresentation(timeoutMatch, 0, { isMyMatch: true }).timeLeft,
+    "Inactivity Draw"
+  );
+  assert.equal(
+    getMatchCardPresentation(normalFinishedMatch, 0, { isMyMatch: true }).timeLeft,
+    "—"
+  );
+  assert.equal(
+    getMatchCardPresentation(winnerFinishedMatch, 0, { isMyMatch: true }).timeLeft,
+    "—"
+  );
+});
+
+test("Inactivity Draw translates correctly in Spanish and English", () => {
+  const previousLocale = getLocale();
+  try {
+    setLocale("es");
+    assert.equal(t("Inactivity Draw"), "Empate por inactividad");
+    setLocale("en");
+    assert.equal(t("Inactivity Draw"), "Inactivity Draw");
+  } finally {
+    setLocale(previousLocale);
+  }
 });

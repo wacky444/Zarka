@@ -27,6 +27,7 @@ import { parseAxial } from "../utils/location";
 import { sendTutorialBotMessage } from "../match/TutorialBotChat";
 import { canCharacterDetectFire } from "../utils/fireVisibility";
 import { getRuntimeMatchId } from "../utils/matchIds";
+import { recordHumanGameplayActivity } from "../utils/activityClock";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -496,6 +497,7 @@ export function buyShopItemRpc(
         : { scope: "limited", playerIds: [ctx.userId] },
   };
 
+  recordHumanGameplayActivity(match, ctx.userId);
   storage.writeMatch(match, read.version);
   const turn = Math.max(0, Math.floor(match.current_turn ?? 0));
   const existingReplay = storage.readReplay(matchId, turn);

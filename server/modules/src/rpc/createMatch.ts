@@ -132,6 +132,7 @@ function createMatchRpcLocked(
     autoSkip,
     turnsToBeAt1Tile,
     created_at: Math.floor(Date.now() / 1000),
+    last_roster_activity_at: Math.floor(Date.now() / 1000),
     current_turn: 0,
     creator: ctx.userId,
     name,

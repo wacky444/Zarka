@@ -4,18 +4,18 @@ import { DEFAULT_REPLAY_VIEW_DISTANCE } from "@shared";
 import { AsyncTurnState, MatchRecord } from "../../models/types";
 import { createNakamaWrapper } from "../../services/nakamaWrapper";
 import { StorageService } from "../../services/storageService";
-import { assignAfkActions } from "../afkActions";
-import { assignAfkSkillPoints } from "../afkSkills";
+
+
 import { resolveTurnForMatch } from "../turnResolution";
 import { sendTutorialBotMessageForTurn } from "../TutorialBotChat";
-import { isBotId } from "../botAI";
+import { isBotControlled } from "../../utils/activityClock";
 import { getNextAutoAdvanceAtMs } from "../../utils/autoSkip";
 import { getEliminatedTeamsByPlayerId } from "../../utils/matchView";
 import {
   isCharacterDead,
   isCharacterIncapacitated,
 } from "../../utils/playerCharacter";
-import { getAliveCharacterIds } from "../checkEndGame";
+import { emitMatchEndedSignal } from "../checkEndGame";
 import { createReplaySnapshot } from "../replay/snapshot";
 import {
   checkAndSendTurnExpiringNotification,
@@ -40,7 +40,7 @@ function areOnlyBotsAlive(match: MatchRecord): boolean {
     if (isCharacterDead(character)) {
       continue;
     }
-    if (!isBotId(playerId)) {
+    if (!isBotControlled(match, playerId)) {
       return false;
     }
     aliveBots += 1;
@@ -89,6 +89,9 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
         !Number.isFinite(match.started_at))
     ) {
       match.started_at = Math.floor(nowMs / 1000);
+      if (match.last_human_action_at === undefined) {
+        match.last_human_action_at = match.started_at;
+      }
       if (match.autoSkip !== false) {
         match.lastAutoAdvanceAt = match.started_at;
       }
@@ -104,6 +107,9 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
       return { state };
     }
 
+    if (match.current_turn === 0 && match.last_human_action_at === undefined) {
+      match.last_human_action_at = match.started_at;
+    }
     dispatchRankedMatchStartedOutbox(match.match_id, ctx, nk, logger);
     dispatchTurnNotificationOutbox(
       match.match_id,
@@ -175,12 +181,12 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
         return { state };
       }
 
-      assignAfkActions(match);
-      assignAfkSkillPoints(match);
+
+
     }
 
     const trapsBeforeTurn = match.traps?.length ?? 0;
-    const outcome = resolveTurnForMatch(match, logger, nk);
+    const outcome = resolveTurnForMatch(match, logger, nk, { isAutoAdvance: true });
     if (!outcome.advanced || !outcome.resolvedTurn) {
       return { state };
     }
@@ -283,45 +289,7 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
     }
 
     if (match.removed && match.removed !== 0) {
-      try {
-        const alive = getAliveCharacterIds(match);
-        const characters = match.playerCharacters ?? {};
-        const firstAlive = alive.length > 0 ? alive[0] : undefined;
-        const winningChar = firstAlive ? characters[firstAlive] : undefined;
-        const winningTeamId = winningChar
-          ? winningChar.secretTeamId?.trim() ||
-            winningChar.teamId?.trim() ||
-            `solo_${firstAlive}`
-          : undefined;
-        const winnerIds = winningTeamId
-          ? (match.players ?? []).filter((pId) => {
-              const char = characters[pId];
-              const team =
-                char?.secretTeamId?.trim() ||
-                char?.teamId?.trim() ||
-                `solo_${pId}`;
-              return team === winningTeamId;
-            })
-          : alive;
-        const winnerId = alive.length > 0 ? alive[0] : undefined;
-        const reason = alive.length === 0 ? "all_dead" : "last_alive";
-        nkWrapper.matchSignal(
-          runtimeMatchId,
-          JSON.stringify({
-            type: "match_ended",
-            match_id: match.match_id,
-            winnerId,
-            winnerIds,
-            reason,
-          }),
-        );
-      } catch (error) {
-        logger.debug(
-          "autoskip match_ended signal failed for %s: %s",
-          runtimeMatchId,
-          (error as Error).message,
-        );
-      }
+      emitMatchEndedSignal(nkWrapper, match, outcome.outcome);
     }
 
     if (pushOutbox) {

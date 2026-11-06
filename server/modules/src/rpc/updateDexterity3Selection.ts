@@ -6,6 +6,7 @@ import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { isCharacterIncapacitated } from "../utils/playerCharacter";
+import { recordHumanGameplayActivity } from "../utils/activityClock";
 
 export function updateDexterity3SelectionRpc(
   ctx: nkruntime.Context,
@@ -38,6 +39,7 @@ export function updateDexterity3SelectionRpc(
   if (isCharacterIncapacitated(character)) throw makeNakamaError("character_incapacitated", nkruntime.Codes.FAILED_PRECONDITION);
   if (getSkillRank(character, "dexterity3") === 0) throw makeNakamaError("skill_required:dexterity3", nkruntime.Codes.FAILED_PRECONDITION);
   character.dexterity3SelectedItemId = itemId ?? undefined;
+  recordHumanGameplayActivity(match, ctx.userId);
   storage.writeMatch(match, read.version);
   return JSON.stringify({ ok: true, match_id: match.match_id, item_id: character.dexterity3SelectedItemId ?? null });
 }

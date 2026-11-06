@@ -19,12 +19,13 @@ import {
   tailorTrapsForViewer,
 } from "../utils/matchView";
 import { isCharacterIncapacitated, isCharacterDead } from "../utils/playerCharacter";
-import { resolveTurnForMatch } from "../match/turnResolution";
+import { resolveTurnForMatch, type TurnResolutionResult } from "../match/turnResolution";
 import { sendTutorialBotMessageForTurn } from "../match/TutorialBotChat";
-import { getAliveCharacterIds } from "../match/checkEndGame";
+import { emitMatchEndedSignal } from "../match/checkEndGame";
 import { validateTime } from "../utils/validation";
 import { getRuntimeMatchId } from "../utils/matchIds";
 import { isAdminUser, isGameMasterUser } from "../utils/admin";
+import { recordHumanGameplayActivity } from "../utils/activityClock";
 import { createReplaySnapshot } from "../match/replay/snapshot";
 import {
   createTurnNotificationOutbox,
@@ -176,6 +177,10 @@ export function updateReadyStateRpc(
     match.readyStates[ctx.userId] = effectiveReady;
   }
 
+  if (requestedReady) {
+    recordHumanGameplayActivity(match, ctx.userId);
+  }
+
   let advanced = false;
   const trapsBeforeTurn = match.traps?.length ?? 0;
   let allReady = false;
@@ -204,13 +209,14 @@ export function updateReadyStateRpc(
       );
   }
   let advanceResult: AdvanceTurnResult | null = null;
+  let turnOutcome: TurnResolutionResult | null = null;
   let resolvedTurnNumber: number | null = null;
 
   if (allReady) {
-    const outcome = resolveTurnForMatch(match, logger, nk);
-    if (outcome.advanced) {
-      resolvedTurnNumber = outcome.resolvedTurn ?? null;
-      advanceResult = { events: outcome.events };
+    turnOutcome = resolveTurnForMatch(match, logger, nk);
+    if (turnOutcome.advanced) {
+      resolvedTurnNumber = turnOutcome.resolvedTurn ?? null;
+      advanceResult = { events: turnOutcome.events };
       advanced = true;
       const advancedAtMs = Date.now();
       if (shouldDeferAutomaticAdvance(match, advancedAtMs)) {
@@ -339,44 +345,7 @@ export function updateReadyStateRpc(
     }
 
     if (match.removed && match.removed !== 0) {
-      try {
-        const alive = getAliveCharacterIds(match);
-        const characters = match.playerCharacters ?? {};
-        const firstAlive = alive.length > 0 ? alive[0] : undefined;
-        const winningChar = firstAlive ? characters[firstAlive] : undefined;
-        const winningTeamId = winningChar
-          ? winningChar.secretTeamId?.trim() ||
-            winningChar.teamId?.trim() ||
-            `solo_${firstAlive}`
-          : undefined;
-        const winnerIds = winningTeamId
-          ? (match.players ?? []).filter((pId) => {
-              const char = characters[pId];
-              const team =
-                char?.secretTeamId?.trim() ||
-                char?.teamId?.trim() ||
-                `solo_${pId}`;
-              return team === winningTeamId;
-            })
-          : alive;
-        const winnerId = alive.length > 0 ? alive[0] : undefined;
-        const reason = alive.length === 0 ? "all_dead" : "last_alive";
-        nkWrapper.matchSignal(
-          getRuntimeMatchId(match),
-          JSON.stringify({
-            type: "match_ended",
-            match_id: matchId,
-            winnerId,
-            winnerIds,
-            reason,
-          }),
-        );
-      } catch (e) {
-        logger.debug(
-          "update_ready_state match_ended signal failed: %s",
-          (e as Error).message,
-        );
-      }
+      emitMatchEndedSignal(nkWrapper, match, turnOutcome?.outcome);
     }
   }
 

@@ -34,3 +34,4 @@ export {
 } from "./facebookDataDeletion";
 export { registerPushSubscriptionRpc } from "./registerPushSubscription";
 export { unregisterPushSubscriptionRpc } from "./unregisterPushSubscription";
+export { cleanStaleMatchesRpc } from "./cleanStaleMatches";

@@ -12,6 +12,8 @@ import { buildMatchReport } from "./matchReport";
 import { finalizeRankedTeamPlacements } from "./rankedPlacements";
 import { enqueueRankedMatchSettlement } from "./rankedElo";
 import { updateAccountMetadata } from "../services/accountMetadata";
+import type { NakamaWrapper } from "../services/nakamaWrapper";
+import { getRuntimeMatchId } from "../utils/matchIds";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -116,7 +118,7 @@ export type EndGameOutcome =
   | { ended: false; reason: "not_started" | "already_removed" | "not_ended" }
   | {
       ended: true;
-      reason: "last_alive" | "all_dead";
+      reason: "last_alive" | "all_dead" | "inactivity_timeout";
       winnerId?: string;
       aliveCharacterIds: string[];
     };
@@ -192,30 +194,20 @@ export function getAliveCharacterIds(match: MatchRecord): string[] {
   return alive;
 }
 
-export function finalizeMatchIfEnded(
+export function finalizeMatchWithOutcome(
   match: MatchRecord,
+  outcome: EndGameOutcome,
   nk: nkruntime.Nakama,
   logger: nkruntime.Logger,
   currentTurnEvents: ReplayEvent[] = [],
   resolvedTurn = match.current_turn,
+  nowMs = Date.now(),
 ): EndGameOutcome {
-  const outcome = checkEndGameOutcome(match);
-  logger.info(
-    "finalizeMatchIfEnded match %s outcome: %o",
-    match.match_id,
-    outcome,
-  );
   if (!outcome.ended) {
-    logger.info(
-      "finalizeMatchIfEnded match %s not ended, reason: %s",
-      match.match_id,
-      outcome.reason,
-    );
     return outcome;
   }
 
   finalizeRankedTeamPlacements(match, resolvedTurn);
-  const nowMs = Date.now();
   const rankedMetadata = match.metadata?.[RANKED_MATCH_METADATA_KEY];
   const isRanked = Boolean(rankedMetadata);
   if (rankedMetadata) {
@@ -255,7 +247,6 @@ export function finalizeMatchIfEnded(
   }
 
   const participants = Array.isArray(match.players) ? match.players : [];
-  const winnerId = outcome.winnerId;
   let users: nkruntime.User[] = [];
 
   if (participants.length > 0) {
@@ -263,7 +254,7 @@ export function finalizeMatchIfEnded(
       users = nk.usersGetId(participants) ?? [];
     } catch (error) {
       logger.error(
-        "finalizeMatchIfEnded usersGetId failed for match %s: %s",
+        "finalizeMatchWithOutcome usersGetId failed for match %s: %s",
         match.match_id,
         (error && (error as Error).message) || String(error),
       );
@@ -282,12 +273,13 @@ export function finalizeMatchIfEnded(
         resolvedTurn,
         currentTurnEvents,
         users,
+        outcome.reason === "last_alive" ? outcome.winnerId : undefined,
       );
       storage.writeMatchReport(report);
     }
   } catch (error) {
     logger.error(
-      "finalizeMatchIfEnded report write failed for match %s: %s",
+      "finalizeMatchWithOutcome report write failed for match %s: %s",
       match.match_id,
       (error && (error as Error).message) || String(error),
     );
@@ -295,12 +287,12 @@ export function finalizeMatchIfEnded(
 
   if (!isRanked && !match.gameMasterMode && participants.length > 0) {
     const characters = match.playerCharacters ?? {};
-    const firstAlive = outcome.aliveCharacterIds[0];
-    const winningCharacter = firstAlive ? characters[firstAlive] : undefined;
+    const winnerId = outcome.winnerId ?? outcome.aliveCharacterIds[0];
+    const winningCharacter = winnerId ? characters[winnerId] : undefined;
     const winningTeamId = winningCharacter
       ? winningCharacter.secretTeamId?.trim() ||
         winningCharacter.teamId?.trim() ||
-        `solo_${firstAlive}`
+        `solo_${winnerId}`
       : undefined;
 
     for (const playerId of participants) {
@@ -313,7 +305,8 @@ export function finalizeMatchIfEnded(
       const isWinner =
         outcome.reason === "last_alive" &&
         Boolean(winningTeamId && playerTeamId === winningTeamId);
-      const isDraw = outcome.reason === "all_dead";
+      const isDraw =
+        outcome.reason === "all_dead" || outcome.reason === "inactivity_timeout";
 
       try {
         const status = updateAccountMetadata(nk, playerId, (metadata) => {
@@ -335,7 +328,7 @@ export function finalizeMatchIfEnded(
             lastMatchEndedAtMs: nowMs,
           };
           logger.info(
-            "finalizeMatchIfEnded updating stats for user %s: %o",
+            "finalizeMatchWithOutcome updating stats for user %s: %o",
             playerId,
             nextStats,
           );
@@ -347,14 +340,14 @@ export function finalizeMatchIfEnded(
         });
         if (status !== "updated") {
           logger.error(
-            "finalizeMatchIfEnded account metadata update %s for user %s",
+            "finalizeMatchWithOutcome account metadata update %s for user %s",
             status,
             playerId,
           );
         }
       } catch (error) {
         logger.error(
-          "finalizeMatchIfEnded account metadata update failed for user %s: %s",
+          "finalizeMatchWithOutcome account metadata update failed for user %s: %s",
           playerId,
           (error && (error as Error).message) || String(error),
         );
@@ -363,4 +356,113 @@ export function finalizeMatchIfEnded(
   }
 
   return outcome;
+}
+
+export function finalizeMatchIfEnded(
+  match: MatchRecord,
+  nk: nkruntime.Nakama,
+  logger: nkruntime.Logger,
+  currentTurnEvents: ReplayEvent[] = [],
+  resolvedTurn = match.current_turn,
+): EndGameOutcome {
+  const outcome = checkEndGameOutcome(match);
+  logger.info(
+    "finalizeMatchIfEnded match %s outcome: %o",
+    match.match_id,
+    outcome,
+  );
+  if (!outcome.ended) {
+    logger.info(
+      "finalizeMatchIfEnded match %s not ended, reason: %s",
+      match.match_id,
+      outcome.reason,
+    );
+    return outcome;
+  }
+
+  return finalizeMatchWithOutcome(
+    match,
+    outcome,
+    nk,
+    logger,
+    currentTurnEvents,
+    resolvedTurn,
+  );
+}
+
+export function emitMatchEndedSignal(
+  nkWrapper: NakamaWrapper,
+  match: MatchRecord,
+  outcome?: EndGameOutcome,
+): void {
+  try {
+    const endedOutcome = outcome && outcome.ended ? outcome : undefined;
+    const characters = match.playerCharacters ?? {};
+    const alive = endedOutcome?.aliveCharacterIds ?? getAliveCharacterIds(match);
+
+    let winnerId = endedOutcome?.winnerId;
+    if (endedOutcome?.reason === "inactivity_timeout") {
+      winnerId = undefined;
+    } else {
+      if (!winnerId) {
+        const ranked = match.metadata?.[RANKED_MATCH_METADATA_KEY];
+        const winningPlacement = ranked?.placements?.find(
+          (p) => p.place === 1 && !p.eliminated,
+        );
+        if (winningPlacement) {
+          const winningTeamId = winningPlacement.teamId;
+          const memberOnTeam = (match.players ?? []).find((pId) => {
+            const char = characters[pId];
+            const team =
+              char?.secretTeamId?.trim() ||
+              char?.teamId?.trim() ||
+              `solo_${pId}`;
+            return team === winningTeamId;
+          });
+          if (memberOnTeam) {
+            winnerId = memberOnTeam;
+          }
+        }
+      }
+      if (!winnerId) {
+        winnerId = alive.length > 0 ? alive[0] : undefined;
+      }
+    }
+
+    const reason =
+      endedOutcome?.reason ?? (alive.length === 0 ? "all_dead" : "last_alive");
+    const winningChar = winnerId ? characters[winnerId] : undefined;
+    const winningTeamId = winningChar
+      ? winningChar.secretTeamId?.trim() ||
+        winningChar.teamId?.trim() ||
+        `solo_${winnerId}`
+      : undefined;
+
+    const winnerIds =
+      reason === "inactivity_timeout"
+        ? []
+        : winningTeamId
+        ? (match.players ?? []).filter((pId) => {
+            const char = characters[pId];
+            const team =
+              char?.secretTeamId?.trim() ||
+              char?.teamId?.trim() ||
+              `solo_${pId}`;
+            return team === winningTeamId;
+          })
+        : alive;
+
+    nkWrapper.matchSignal(
+      getRuntimeMatchId(match),
+      JSON.stringify({
+        type: "match_ended",
+        match_id: match.match_id,
+        winnerId,
+        winnerIds,
+        reason,
+      }),
+    );
+  } catch (error) {
+    // signal emission is best effort
+  }
 }

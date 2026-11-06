@@ -59,6 +59,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   Defeat: "Derrota",
   "Defeat!": "¡Derrota!",
   "Match Draw": "Empate",
+  "Inactivity Draw": "Empate por inactividad",
   Turns: "Turnos",
   "Team Leaderboard": "Clasificación de equipos",
   Winner: "Ganador",

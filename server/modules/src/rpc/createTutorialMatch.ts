@@ -79,6 +79,7 @@ export function createTutorialMatchRpc(
   }
 
   match.runtime_match_id = runtimeMatchId;
+  match.last_roster_activity_at = Math.floor(Date.now() / 1000);
   try {
     storage.writeMatch(match);
   } catch (error) {

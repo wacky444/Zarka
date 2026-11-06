@@ -9,6 +9,7 @@ import { isGameMasterUser } from "../utils/admin";
 import { isCharacterDead } from "../utils/playerCharacter";
 import { applySkillToCharacter } from "../match/afkSkills";
 import { getRuntimeMatchId } from "../utils/matchIds";
+import { recordHumanGameplayActivity } from "../utils/activityClock";
 
 export function upgradeSkillRpc(
   ctx: nkruntime.Context,
@@ -148,6 +149,7 @@ export function upgradeSkillRpc(
     applySkillToCharacter(character, id);
   }
 
+  recordHumanGameplayActivity(match, ctx.userId);
   storage.writeMatch(match, read.version);
 
   if (match.gameMasterMode) {
