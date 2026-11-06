@@ -270,16 +270,17 @@ test("section headers format counts correctly", () => {
 
 test("resolveMyMatchRoute correctly maps match statuses to view targets", () => {
   assert.equal(resolveMyMatchRoute("waiting"), "lobby");
-  assert.equal(resolveMyMatchRoute("in_progress"), "none");
+  assert.equal(resolveMyMatchRoute("in_progress"), "game");
   assert.equal(resolveMyMatchRoute("finished"), "report");
 });
 
-test("isMyMatchClickable permits waiting and finished matches, rejects started", () => {
+test("isMyMatchClickable permits waiting, in_progress, and finished matches", () => {
   assert.equal(isMyMatchClickable({ status: "waiting", started: false }), true);
-  assert.equal(isMyMatchClickable({ status: "in_progress", started: true }), false);
-  assert.equal(isMyMatchClickable({ status: "in_progress", started: false }), false);
-  assert.equal(isMyMatchClickable({ status: "waiting", started: true }), false);
+  assert.equal(isMyMatchClickable({ status: "in_progress", started: true }), true);
+  assert.equal(isMyMatchClickable({ status: "in_progress", started: false }), true);
+  assert.equal(isMyMatchClickable({ status: "waiting", started: true }), true);
   assert.equal(isMyMatchClickable({ status: "finished", started: false }), true);
+  assert.equal(isMyMatchClickable({}), false);
 });
 
 test("dispatchMyMatchSelection routes waiting match to lobby", async () => {
@@ -301,7 +302,7 @@ test("dispatchMyMatchSelection routes waiting match to lobby", async () => {
   assert.deepEqual(calls, ["lobby:match-lobby-1"]);
 });
 
-test("dispatchMyMatchSelection routes in_progress match to none without calling handlers", async () => {
+test("dispatchMyMatchSelection routes in_progress match to game/resume", async () => {
   const calls: string[] = [];
   const handlers = {
     openLobby: (id: string) => {
@@ -316,8 +317,8 @@ test("dispatchMyMatchSelection routes in_progress match to none without calling 
   };
 
   const target = await dispatchMyMatchSelection("match-running-1", "in_progress", handlers);
-  assert.equal(target, "none");
-  assert.deepEqual(calls, []);
+  assert.equal(target, "game");
+  assert.deepEqual(calls, ["game:match-running-1"]);
 });
 
 test("dispatchMyMatchSelection routes finished match with or without report to report view", async () => {
@@ -372,16 +373,19 @@ test("clicking card never modifies readiness or triggers turn submission", () =>
   assert.equal(match.currentTurn, 0);
 });
 
-test("clicking started match does nothing", () => {
+test("clicking started match emits selection", () => {
   const match = createMyMatch("in_progress", {
     match_id: "match-play-started",
     started: true
   });
   let routeCalled = false;
-  const handler = createSelectMatchHandler(match, () => {
+  let selectedId = "";
+  const handler = createSelectMatchHandler(match, (matchId) => {
     routeCalled = true;
+    selectedId = matchId;
   });
   handler();
-  assert.equal(routeCalled, false);
+  assert.equal(routeCalled, true);
+  assert.equal(selectedId, "match-play-started");
 });
 

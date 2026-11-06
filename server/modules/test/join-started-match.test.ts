@@ -130,6 +130,30 @@ test("join_match RPC rejects attempts to join started match", () => {
   );
 });
 
+test("join_match RPC allows existing participant to open started match", () => {
+  const harness = createMockHarness();
+  const storage = new StorageService(createNakamaWrapper(harness.nk));
+  const record = createMatchRecord({ match_id: "started-match-member", started: true, players: ["host-user"] });
+  storage.writeMatch(record);
+
+  const hostCtx: nkruntime.Context = {
+    userId: "host-user",
+    username: "host",
+    vars: {}
+  } as unknown as nkruntime.Context;
+
+  const resJson = joinMatchRpc(
+    hostCtx,
+    harness.logger,
+    harness.nk,
+    JSON.stringify({ match_id: "started-match-member" })
+  );
+  const res = JSON.parse(resJson);
+  assert.equal(res.ok, true);
+  assert.equal(res.match_id, "started-match-member");
+  assert.equal(res.started, true);
+});
+
 test("buildMatchCardSummary sets isJoinable false for started match even with open slots", () => {
   const startedWithOpenSlots = createMatchRecord({
     players: ["host-user"],

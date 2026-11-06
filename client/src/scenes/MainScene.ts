@@ -860,15 +860,9 @@ export class MainScene extends Phaser.Scene {
     matchId: string,
     status: MatchCardStatus
   ): Promise<void> {
-    if (status === "in_progress") {
-      return;
-    }
     const route = resolveMyMatchRoute(status);
     if (route === "report") {
       this.openMatchReport(matchId);
-      return;
-    }
-    if (route === "none") {
       return;
     }
     await this.joinMatch(matchId);

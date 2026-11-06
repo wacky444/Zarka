@@ -129,7 +129,11 @@ export function isMyMatchClickable(match: {
   status?: MatchCardStatus;
   started?: boolean;
 }): boolean {
-  return match.status !== "in_progress" && match.started !== true;
+  return (
+    match.status === "waiting" ||
+    match.status === "in_progress" ||
+    match.status === "finished"
+  );
 }
 
 export function createSelectMatchHandler(
@@ -148,7 +152,7 @@ export function createSelectMatchHandler(
   };
 }
 
-export type MyMatchRouteTarget = "lobby" | "game" | "report" | "none";
+export type MyMatchRouteTarget = "lobby" | "game" | "report";
 
 export function resolveMyMatchRoute(
   status: MatchCardStatus
@@ -157,7 +161,7 @@ export function resolveMyMatchRoute(
     return "report";
   }
   if (status === "in_progress") {
-    return "none";
+    return "game";
   }
   return "lobby";
 }
@@ -167,7 +171,7 @@ export async function dispatchMyMatchSelection(
   status: MatchCardStatus,
   handlers: {
     openLobby: (matchId: string) => void | Promise<void>;
-    openGame?: (matchId: string) => void | Promise<void>;
+    openGame: (matchId: string) => void | Promise<void>;
     openReport: (matchId: string) => void | Promise<void>;
   }
 ): Promise<MyMatchRouteTarget> {
@@ -177,12 +181,10 @@ export async function dispatchMyMatchSelection(
       await handlers.openReport(matchId);
       break;
     case "game":
-      await handlers.openGame?.(matchId);
+      await handlers.openGame(matchId);
       break;
     case "lobby":
       await handlers.openLobby(matchId);
-      break;
-    case "none":
       break;
   }
   return target;

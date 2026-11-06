@@ -98,12 +98,6 @@ function joinMatchRpcLocked(
   if (typeof match.started !== "boolean") {
     match.started = false;
   }
-  if (!match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] && match.started) {
-    throw makeNakamaError(
-      "match_already_started",
-      nkruntime.Codes.FAILED_PRECONDITION
-    );
-  }
 
   let joinedNow = false;
   let shouldWrite = false;
@@ -151,6 +145,12 @@ function joinMatchRpcLocked(
   };
 
   if (match.players.indexOf(ctx.userId) === -1) {
+    if (!match.metadata?.[TUTORIAL_MATCH_METADATA_KEY] && match.started && !match.gameMasterMode) {
+      throw makeNakamaError(
+        "match_already_started",
+        nkruntime.Codes.FAILED_PRECONDITION
+      );
+    }
     if (match.gameMasterMode) {
       match.players.push(ctx.userId);
       match.gameMasterUserIds = Array.isArray(match.gameMasterUserIds)
