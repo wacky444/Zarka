@@ -1,4 +1,7 @@
 module.exports = {
+  Scene: class Scene {
+    constructor() {}
+  },
   Math: {
     Clamp(val, min, max) {
       return Math.min(Math.max(val, min), max);

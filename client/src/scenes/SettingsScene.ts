@@ -205,6 +205,31 @@ export class SettingsScene extends Phaser.Scene {
     super("SettingsScene");
   }
 
+  init() {
+    this.settingsSceneShuttingDown = false;
+    this.rankedMatchSlotsRevision = 0;
+    this.rankedMatchSlotsPending = null;
+    this.rankedMatchSlotsSaving = false;
+    this.rankedMatchSlotsSaveError = false;
+    this.rankedMatchSlots = this.confirmedRankedMatchSlots;
+    if (this.rankedMatchSlotsSaveTimer !== null) {
+      clearTimeout(this.rankedMatchSlotsSaveTimer);
+      this.rankedMatchSlotsSaveTimer = null;
+    }
+    if (this.skinSaveTimer !== null) {
+      clearTimeout(this.skinSaveTimer);
+      this.skinSaveTimer = null;
+    }
+    this.skinSavePending = false;
+    this.saving = false;
+    this.tabButtons = {};
+    this.skinSelectors = {};
+    this.skinCategoryOrder = [];
+    this.previewLayers = {};
+    this.displayNameLoaded = false;
+    this.pushBusy = false;
+  }
+
   preload() {
     if (!this.textures.exists("char")) {
       this.load.atlasXML(
@@ -223,8 +248,21 @@ export class SettingsScene extends Phaser.Scene {
       return;
     }
 
+    this.settingsSceneShuttingDown = false;
+    this.rankedMatchSlotsRevision = 0;
+    this.rankedMatchSlotsPending = null;
+    this.rankedMatchSlotsSaving = false;
+    this.rankedMatchSlotsSaveError = false;
+
+    const userChanged = this.session?.user_id !== data.session.user_id;
     this.client = data.client;
     this.session = data.session;
+    if (userChanged) {
+      this.confirmedRankedMatchSlots = 0;
+      this.rankedMatchSlots = 0;
+    } else {
+      this.rankedMatchSlots = this.confirmedRankedMatchSlots;
+    }
     this.turnService =
       (this.registry.get("turnService") as TurnService | undefined) ??
       new TurnService(this.client, this.session);
@@ -390,8 +428,8 @@ export class SettingsScene extends Phaser.Scene {
     this.accountRoot.add(this.rankedMatchSlotsDecreaseButton);
 
     this.rankedMatchSlotsValueText = this.add
-      .text(0, 0, "0", {
-        color: "#888888",
+      .text(0, 0, `${this.rankedMatchSlots}`, {
+        color: this.rankedMatchSlots === 0 ? "#888888" : "#ffffff",
         fontSize: "22px",
         fontStyle: "bold",
         align: "center"
@@ -410,11 +448,16 @@ export class SettingsScene extends Phaser.Scene {
     this.accountRoot.add(this.rankedMatchSlotsIncreaseButton);
 
     this.rankedMatchSlotsStateText = this.add
-      .text(0, 0, t("Disabled"), {
-        color: "#888888",
-        fontSize: "13px",
-        align: "center"
-      })
+      .text(
+        0,
+        0,
+        this.rankedMatchSlots === 0 ? t("Disabled") : t("Enabled"),
+        {
+          color: this.rankedMatchSlots === 0 ? "#888888" : "#86efac",
+          fontSize: "13px",
+          align: "center"
+        }
+      )
       .setOrigin(0.5, 0);
     this.accountRoot.add(this.rankedMatchSlotsStateText);
     this.updateRankedMatchSlotsControl();
@@ -1038,6 +1081,9 @@ export class SettingsScene extends Phaser.Scene {
       }
       this.confirmedRankedMatchSlots = pending.value;
       this.rankedMatchSlotsSaveError = false;
+      if (this.rankedMatchSlotsRevision === 0) {
+        this.setRankedMatchSlots(pending.value);
+      }
     } catch (error) {
       console.warn("Failed to save ranked match slots:", error);
       if (
@@ -1057,7 +1103,13 @@ export class SettingsScene extends Phaser.Scene {
   }
 
   private updateRankedMatchSlotsControl(): void {
-    if (this.settingsSceneShuttingDown) {
+    if (
+      this.settingsSceneShuttingDown ||
+      !this.rankedMatchSlotsValueText ||
+      !this.rankedMatchSlotsStateText ||
+      !this.rankedMatchSlotsDecreaseButton ||
+      !this.rankedMatchSlotsIncreaseButton
+    ) {
       return;
     }
     this.rankedMatchSlotsValueText.setText(`${this.rankedMatchSlots}`);
@@ -1232,7 +1284,9 @@ export class SettingsScene extends Phaser.Scene {
       }
     } catch (e) {
       console.error("Failed to save skin:", e);
-      this.statusText.setText("Failed to save skin");
+      if (!this.settingsSceneShuttingDown) {
+        this.statusText.setText("Failed to save skin");
+      }
     } finally {
       this.saving = false;
       if (this.skinSavePending && this.skinSaveTimer === null) {
@@ -1265,6 +1319,10 @@ export class SettingsScene extends Phaser.Scene {
         }
       } catch (e) {
         console.warn("Failed to load user account metadata:", e);
+      }
+
+      if (this.settingsSceneShuttingDown) {
+        return;
       }
 
       let userInfo = `User ID: ${this.session.user_id}\n`;
@@ -1394,7 +1452,13 @@ export class SettingsScene extends Phaser.Scene {
   }
 
   private async refreshPushNotificationUi(): Promise<void> {
+    if (this.settingsSceneShuttingDown) {
+      return;
+    }
     this.pushState = await getPushNotificationState();
+    if (this.settingsSceneShuttingDown) {
+      return;
+    }
     const statusKeys: Record<PushNotificationState, string> = {
       unsupported: "Web Push is not supported by this browser.",
       unconfigured: "Push notifications are not configured for this app.",

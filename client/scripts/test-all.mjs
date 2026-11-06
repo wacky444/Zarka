@@ -82,6 +82,17 @@ const suites = [
     name: "guest-display-name",
     entryPoint: "test/GuestDisplayName.test.ts",
     alias: { phaser: phaserShim, phaser3spectorjs: phaserShim }
+  },
+  {
+    name: "settings-scene-slots",
+    entryPoint: "test/SettingsSceneSlots.test.ts",
+    define: {
+      "import.meta.env": JSON.stringify({
+        BASE_URL: "/Zarka/",
+        VITE_WEB_PUSH_VAPID_PUBLIC_KEY: "A".repeat(87)
+      })
+    },
+    alias: { phaser: phaserShim, phaser3spectorjs: phaserShim }
   }
 ];
 
