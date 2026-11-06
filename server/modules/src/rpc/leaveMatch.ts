@@ -2,6 +2,7 @@
 
 import { createNakamaWrapper } from "../services/nakamaWrapper";
 import { StorageService } from "../services/storageService";
+import { deleteUnstartedLobbyAndArtifacts } from "../services/lobbyCleanup";
 import { makeNakamaError } from "../utils/errors";
 import { MatchRecord } from "../models/types";
 import { getRuntimeMatchId } from "../utils/matchIds";
@@ -75,89 +76,55 @@ export function leaveMatchRpc(
       delete match.readyStates[ctx.userId];
     }
     if (match.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
-      match.removed = 1;
-      match.started = false;
       try {
-        storage.writeMatch(match, read.version);
+        deleteUnstartedLobbyAndArtifacts(
+          match,
+          read.version,
+          storage,
+          nkWrapper,
+          logger
+        );
       } catch {
         throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
-      }
-      try {
-        nkWrapper.matchSignal(
-          getRuntimeMatchId(match),
-          JSON.stringify({ type: "match_removed" })
-        );
-      } catch (signalError) {
-        logger.debug(
-          "leave_match tutorial removal signal failed: %s",
-          (signalError as Error).message
-        );
-      }
-      try {
-        for (const replay of storage.listReplaysForMatch(matchId)) {
-          storage.deleteReplayByKey(replay.key);
-        }
-        storage.deleteChatLog(matchId);
-        storage.deleteMatch(matchId);
-      } catch (cleanupError) {
-        logger.warn(
-          "leave_match tutorial cleanup failed for %s: %s",
-          matchId,
-          (cleanupError as Error).message || String(cleanupError)
-        );
       }
     } else {
       const empty = match.players.length === 0;
       if (empty) {
-        match.removed = 1;
-        match.started = false;
+        try {
+          deleteUnstartedLobbyAndArtifacts(
+            match,
+            read.version,
+            storage,
+            nkWrapper,
+            logger
+          );
+        } catch {
+          throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
+        }
       } else {
         recordRosterActivity(match);
-      }
-      try {
-        storage.writeMatch(match, read.version);
         try {
-          nkWrapper.matchSignal(
-            getRuntimeMatchId(match),
-            JSON.stringify(
-              empty
-                ? { type: "match_removed" }
-                : {
-                    type: "sync_players",
-                    players: match.players,
-                    size: match.size,
-                    name: match.name,
-                    started: match.started,
-                    gameMasterUserIds: match.gameMasterUserIds,
-                  }
-            )
-          );
-        } catch (signalError) {
-          logger.debug(
-            "leave_match: matchSignal failed: %s",
-            (signalError as Error).message
-          );
-        }
-      } catch {
-        throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
-      }
-      if (empty) {
-        try {
-          for (const turn of storage.listTurnsForMatch(matchId)) {
-            storage.deleteTurnByKey(turn.key);
+          storage.writeMatch(match, read.version);
+          try {
+            nkWrapper.matchSignal(
+              getRuntimeMatchId(match),
+              JSON.stringify({
+                type: "sync_players",
+                players: match.players,
+                size: match.size,
+                name: match.name,
+                started: match.started,
+                gameMasterUserIds: match.gameMasterUserIds,
+              })
+            );
+          } catch (signalError) {
+            logger.debug(
+              "leave_match: matchSignal failed: %s",
+              (signalError as Error).message
+            );
           }
-          for (const replay of storage.listReplaysForMatch(matchId)) {
-            storage.deleteReplayByKey(replay.key);
-          }
-          storage.deleteChatLog(matchId);
-          storage.deleteMatchReport(matchId);
-          storage.deleteMatch(matchId);
-        } catch (cleanupError) {
-          logger.warn(
-            "leave_match: empty match cleanup failed for %s: %s",
-            matchId,
-            (cleanupError as Error).message || String(cleanupError)
-          );
+        } catch {
+          throw makeNakamaError("storage_write_failed", nkruntime.Codes.INTERNAL);
         }
       }
     }
