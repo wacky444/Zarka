@@ -2,12 +2,15 @@
 
 import { processRankedQueue } from "../services/rankedQueue";
 import { processPendingRankedSettlements } from "../match/rankedElo";
+import { scanAndCleanStaleMatches } from "../services/matchCleanupService";
 
 export interface RankedQueueCoordinatorState extends nkruntime.MatchState {
   lastProcessAtMs: number;
+  lastCleanupAtMs?: number;
 }
 
 const PROCESS_INTERVAL_MS = 10_000;
+export const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 export function rankedQueueCoordinatorMatchInit(
   _ctx: nkruntime.Context,
@@ -32,6 +35,20 @@ export function rankedQueueCoordinatorMatchLoop(
   _messages: nkruntime.MatchMessage[]
 ) {
   const nowMs = Date.now();
+  if (nowMs - (state.lastCleanupAtMs ?? 0) >= CLEANUP_INTERVAL_MS) {
+    state.lastCleanupAtMs = nowMs;
+    try {
+      scanAndCleanStaleMatches(nk, logger, {
+        nowSeconds: Math.floor(nowMs / 1000),
+      });
+    } catch (error) {
+      logger.error(
+        "stale match cleanup failed: %s",
+        (error && (error as Error).message) || String(error)
+      );
+    }
+  }
+
   if (nowMs - state.lastProcessAtMs >= PROCESS_INTERVAL_MS) {
     state.lastProcessAtMs = nowMs;
     try {

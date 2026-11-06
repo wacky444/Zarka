@@ -35,7 +35,8 @@ import {
   facebookDataDeletionRpc,
   facebookDataDeletionStatusRpc,
   registerPushSubscriptionRpc,
-  unregisterPushSubscriptionRpc
+  unregisterPushSubscriptionRpc,
+  cleanStaleMatchesRpc
 } from "./rpc";
 import { asyncTurnMatchHandler } from "./match/async_turn";
 import {
@@ -333,6 +334,14 @@ export function InitModule(
   } catch (error) {
     logger.error(
       "Failed to register unregister_push_subscription: %s",
+      (error && (error as Error).message) || String(error)
+    );
+  }
+  try {
+    initializer.registerRpc("clean_stale_matches", cleanStaleMatchesRpc);
+  } catch (error) {
+    logger.error(
+      "Failed to register clean_stale_matches: %s",
       (error && (error as Error).message) || String(error)
     );
   }
