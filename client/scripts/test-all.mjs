@@ -49,6 +49,10 @@ const suites = [
     entryPoint: "test/CraftingCatalogAndMetadata.test.ts"
   },
   {
+    name: "dexterity3-cooldown",
+    entryPoint: "test/Dexterity3Cooldown.test.ts"
+  },
+  {
     name: "chainsaw-action-warnings",
     entryPoint: "test/ChainsawActionWarnings.test.ts"
   },

@@ -31,7 +31,11 @@ import { LocationSelector } from "../LocationSelector";
 import { ExtraExecutionSelector } from "../ExtraExecutionSelector";
 import { THEME } from "../ColorPalette";
 import { resolveItemTexture } from "../itemIcons";
-import { buildDexterity3ProductItems, parseDexterity3Product } from "../dexterity3SelectorItems";
+import {
+  buildDexterity3ProductItems,
+  getDexterity3CooldownState,
+  parseDexterity3Product
+} from "../dexterity3SelectorItems";
 import { PlayerSelector, type PlayerOption } from "../PlayerSelector";
 import {
   ItemPrioritySelector,
@@ -533,6 +537,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.dexterity3Label.setVisible(false);
     this.dexterity3Selector.setVisible(false);
     this.dexterity3Selector.setActive(false);
+    this.dexterity3Selector.setEnabled(false);
 
     this.mainActionBox = scene.add
       .rectangle(0, 0, boxWidth, BOX_HEIGHT, 0x1b2440)
@@ -1150,10 +1155,12 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       this.applyExtraSecondaryActions([], null, null);
       this.dexterity3Selection = null;
       this.dexterity3Selector.setValue(null, false);
+      this.dexterity3Label.setText(t("Dexterity 3"));
       this.dexterity3Box.setVisible(false);
       this.dexterity3Label.setVisible(false);
       this.dexterity3Selector.setVisible(false);
       this.dexterity3Selector.setActive(false);
+      this.dexterity3Selector.setEnabled(false);
       this.refreshActionSpecificSelectors(
         null,
         undefined,
@@ -1176,12 +1183,19 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
 
     const character = context.character;
     const hasDexterity3 = character.abilities?.includes("dexterity3") === true;
+    const cdState = getDexterity3CooldownState(character, this.currentTurn);
+    this.dexterity3Label.setText(cdState.label);
     this.dexterity3Selection = character.dexterity3SelectedItemId ?? null;
     this.dexterity3Selector.setValue(this.dexterity3Selection, false);
     this.dexterity3Box.setVisible(hasDexterity3);
     this.dexterity3Label.setVisible(hasDexterity3);
     this.dexterity3Selector.setVisible(hasDexterity3);
     this.dexterity3Selector.setActive(hasDexterity3);
+    const isEditingEnabled =
+      !this.tutorialActive || this.tutorialActionEditingEnabled;
+    this.dexterity3Selector.setEnabled(
+      hasDexterity3 && !cdState.isOnCooldown && isEditingEnabled
+    );
     const actions = collectMainActions(character);
     const mainActionId = character.actionPlan?.main?.actionId ?? null;
     const mainExtraExecutions = character.actionPlan?.main?.extraExecutions ?? 0;
@@ -1527,6 +1541,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       return;
     }
     this.closeCurrentGridSelect();
+    this.dexterity3Selector.setEnabled(false);
     this.mainActionDropdown.setEnabled(false);
     this.secondaryActionDropdown.setEnabled(false);
     this.extraSecondaryActionDropdown.setEnabled(false);
@@ -1554,6 +1569,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
 
   closeCurrentGridSelect(): void {
     this.actionOrderHelpModal.close();
+    this.dexterity3Selector.hideModal();
     this.mainActionDropdown.hideModal();
     this.playerSelector.hideDropdown();
     this.scareSecondPlayerSelector.hideDropdown();
