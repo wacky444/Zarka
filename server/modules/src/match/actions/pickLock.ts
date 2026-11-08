@@ -7,17 +7,31 @@ import { clearPlanByKey, consumeCarriedItem, hasCarriedItem } from "./utils";
 function openSafe(match: MatchRecord, safe: NonNullable<MatchRecord["safeContainers"]>[number], character: PlannedActionParticipant["character"]): string[] {
   safe.opened = true;
   const tile = match.map?.tiles.find((entry) => entry.id === safe.tileId);
-  if (tile) {
-    tile.itemIds = (tile.itemIds ?? []).filter((id) => id !== safe.safeItemId);
+  const newTileItemIds: string[] = [];
+  if (tile && Array.isArray(tile.itemIds)) {
+    for (let i = 0; i < tile.itemIds.length; i += 1) {
+      if (tile.itemIds[i] !== safe.safeItemId) {
+        newTileItemIds.push(tile.itemIds[i]);
+      }
+    }
   }
-  if (match.items) {
-    match.items = match.items.filter((item) => item.item_id !== safe.safeItemId);
+  const newMatchItems: NonNullable<MatchRecord["items"]> = [];
+  if (Array.isArray(match.items)) {
+    for (let i = 0; i < match.items.length; i += 1) {
+      if (match.items[i]?.item_id !== safe.safeItemId) {
+        newMatchItems.push(match.items[i]);
+      }
+    }
   }
   for (const pc of Object.values(match.playerCharacters ?? {})) {
-    if (pc.discoveredItemIds) {
-      pc.discoveredItemIds = pc.discoveredItemIds.filter(
-        (id) => id !== safe.safeItemId
-      );
+    if (Array.isArray(pc.discoveredItemIds)) {
+      const newDiscovered: string[] = [];
+      for (let i = 0; i < pc.discoveredItemIds.length; i += 1) {
+        if (pc.discoveredItemIds[i] !== safe.safeItemId) {
+          newDiscovered.push(pc.discoveredItemIds[i]);
+        }
+      }
+      pc.discoveredItemIds = newDiscovered;
     }
   }
   const discovered = new Set(character.discoveredItemIds ?? []);
@@ -25,12 +39,14 @@ function openSafe(match: MatchRecord, safe: NonNullable<MatchRecord["safeContain
   const revealedIds: string[] = [];
   for (let index = 0; index < safe.contents.length; index += 1) {
     const itemId = `${safe.safeItemId}_contents_${index}`;
-    if (!match.items?.some((item) => item.item_id === itemId)) {
-      (match.items ??= []).push({ item_id: itemId, item_type: safe.contents[index] });
-    }
-    if (tile && !tile.itemIds!.includes(itemId)) tile.itemIds!.push(itemId);
+    newMatchItems.push({ item_id: itemId, item_type: safe.contents[index] });
+    newTileItemIds.push(itemId);
     revealedIds.push(itemId);
   }
+  if (tile) {
+    tile.itemIds = newTileItemIds;
+  }
+  match.items = newMatchItems;
   character.discoveredItemIds = [...new Set([...discovered, ...revealedIds])];
   return revealedIds;
 }
