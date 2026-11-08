@@ -65,7 +65,8 @@ export function createTutorialMatchRpc(
       botPlayers: String(match.botPlayers ?? 1),
       turnsToBeAt1Tile: String(match.turnsToBeAt1Tile ?? 30),
       current_turn: String(match.current_turn ?? 0),
-      started: String(match.started === true)
+      started: String(match.started === true),
+      loversMode: "false"
     });
   } catch (error) {
     logger.error(
@@ -79,6 +80,7 @@ export function createTutorialMatchRpc(
   }
 
   match.runtime_match_id = runtimeMatchId;
+  match.loversMode = false;
   match.last_roster_activity_at = Math.floor(Date.now() / 1000);
   try {
     storage.writeMatch(match);

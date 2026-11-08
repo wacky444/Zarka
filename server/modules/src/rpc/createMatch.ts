@@ -44,6 +44,7 @@ function createMatchRpcLocked(
   let autoSkip = true;
   let turnsToBeAt1Tile = 30;
   let gameMasterMode = false;
+  let loversMode = true;
 
   let json: any = null;
   if (payload && payload !== "") {
@@ -81,6 +82,9 @@ function createMatchRpcLocked(
     if (typeof json.turnsToBeAt1Tile === "number") {
       turnsToBeAt1Tile = Math.max(1, Math.floor(json.turnsToBeAt1Tile));
     }
+    if (typeof json.loversMode === "boolean") {
+      loversMode = json.loversMode;
+    }
     if (json.gameMasterMode === true) {
       if (!isAdminUser(nk, ctx.userId)) {
         throw makeNakamaError(
@@ -113,7 +117,8 @@ function createMatchRpcLocked(
     turnsToBeAt1Tile: String(turnsToBeAt1Tile),
     game_id: gameId,
     gameMasterMode: String(gameMasterMode),
-    gameMasterUserIds: gameMasterMode ? JSON.stringify([ctx.userId]) : ""
+    gameMasterUserIds: gameMasterMode ? JSON.stringify([ctx.userId]) : "",
+    loversMode: String(loversMode)
   };
 
   const runtimeMatchId = nkWrapper.matchCreate("async_turn", params);
@@ -139,7 +144,8 @@ function createMatchRpcLocked(
     started: false,
     removed: 0,
     gameMasterMode: gameMasterMode ? true : undefined,
-    gameMasterUserIds: gameMasterMode ? [ctx.userId] : undefined
+    gameMasterUserIds: gameMasterMode ? [ctx.userId] : undefined,
+    loversMode
   };
 
   storage.writeMatch(record);
@@ -151,7 +157,8 @@ function createMatchRpcLocked(
     turnsToBeAt1Tile,
     name,
     started: false,
-    gameMasterMode: gameMasterMode ? true : undefined
+    gameMasterMode: gameMasterMode ? true : undefined,
+    loversMode
   };
 
   return JSON.stringify(response);

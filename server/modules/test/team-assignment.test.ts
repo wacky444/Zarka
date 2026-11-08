@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { TUTORIAL_MATCH_METADATA_KEY } from "@shared";
 import type { MatchRecord } from "../src/models/types";
 import { distributeTeams } from "../src/match/teams";
 import { startMatchRecord } from "../src/match/startMatchRecord";
@@ -92,3 +93,65 @@ test("matches with six or fewer participants keep existing no-special-role rule"
   assert.equal(assignment.heroPlayerId, undefined);
   assert.equal(assignment.twinPlayerIds, undefined);
 });
+
+test("distributeTeams rolls loversTriggerTurn in [4, 20] when loversMode is enabled and >= 2 teams", () => {
+  const match = createMatch(4, 2);
+  match.loversMode = true;
+
+  distributeTeams(match);
+  assert.ok(typeof match.loversTriggerTurn === "number");
+  assert.ok(match.loversTriggerTurn >= 4 && match.loversTriggerTurn <= 20);
+  assert.equal(Number.isInteger(match.loversTriggerTurn), true);
+
+  // Test boundaries: min (4) and max (20)
+  const matchMin = createMatch(4, 2);
+  withRandom(() => 0, () => distributeTeams(matchMin));
+  assert.equal(matchMin.loversTriggerTurn, 4);
+
+  const matchMax = createMatch(4, 2);
+  withRandom(() => 0.999999, () => distributeTeams(matchMax));
+  assert.equal(matchMax.loversTriggerTurn, 20);
+});
+
+test("distributeTeams defaults loversMode !== false to rolling loversTriggerTurn", () => {
+  const match = createMatch(4, 2);
+  delete match.loversMode;
+
+  distributeTeams(match);
+  assert.ok(typeof match.loversTriggerTurn === "number");
+  assert.ok(match.loversTriggerTurn >= 4 && match.loversTriggerTurn <= 20);
+});
+
+test("distributeTeams leaves loversTriggerTurn undefined when loversMode is false", () => {
+  const match = createMatch(4, 2);
+  match.loversMode = false;
+
+  distributeTeams(match);
+  assert.equal(match.loversTriggerTurn, undefined);
+});
+
+test("distributeTeams leaves loversTriggerTurn undefined for tutorial matches", () => {
+  const match = createMatch(2, 0);
+  match.loversMode = true;
+  match.metadata = {
+    [TUTORIAL_MATCH_METADATA_KEY]: { type: "guided_tutorial", version: 1 }
+  };
+
+  distributeTeams(match);
+  assert.equal(match.loversTriggerTurn, undefined);
+});
+
+test("startMatchRecord rolls loversTriggerTurn for loversMode !== false and leaves undefined for loversMode === false", () => {
+  const logger = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} } as any;
+
+  const matchNormal = createMatch(4, 2);
+  startMatchRecord(matchNormal, logger, 1000);
+  assert.ok(typeof matchNormal.loversTriggerTurn === "number");
+  assert.ok(matchNormal.loversTriggerTurn >= 4 && matchNormal.loversTriggerTurn <= 20);
+
+  const matchDisabled = createMatch(4, 2);
+  matchDisabled.loversMode = false;
+  startMatchRecord(matchDisabled, logger, 1000);
+  assert.equal(matchDisabled.loversTriggerTurn, undefined);
+});
+

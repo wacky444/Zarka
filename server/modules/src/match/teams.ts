@@ -1,6 +1,6 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import type { PlayerCharacter } from "@shared";
+import { TUTORIAL_MATCH_METADATA_KEY, type PlayerCharacter } from "@shared";
 import type { MatchRecord } from "../models/types";
 
 export const THEME_PLANETS = [
@@ -433,6 +433,16 @@ export function distributeTeams(
   }
 
   match.teams = Object.keys(result.teams);
+
+  const opposingTeams = Object.keys(result.teams).filter(
+    (t) => t !== "Gemelos"
+  );
+  const isTutorial = Boolean(match.metadata?.[TUTORIAL_MATCH_METADATA_KEY]);
+  if (match.loversMode !== false && !isTutorial && opposingTeams.length >= 2) {
+    match.loversTriggerTurn = 4 + Math.floor(Math.random() * 17);
+  } else {
+    delete match.loversTriggerTurn;
+  }
 
   if (logger) {
     logger.info(

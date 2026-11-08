@@ -226,6 +226,7 @@ export function createTutorialMatch({
     items,
     teams: [PLAYER_TEAM_ID, BOT_TEAM_ID],
     teamCounts: { [PLAYER_TEAM_ID]: 1, [BOT_TEAM_ID]: 1 },
+    loversMode: false,
     metadata: {
       [TUTORIAL_MATCH_METADATA_KEY]: {
         type: "guided_tutorial",

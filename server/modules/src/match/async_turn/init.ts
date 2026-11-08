@@ -73,6 +73,10 @@ export const asyncTurnMatchInit: nkruntime.MatchInitFunction<AsyncTurnState> =
           return undefined;
         }
       })(),
+      loversMode:
+        params && params["loversMode"] !== undefined
+          ? params["loversMode"] !== "false"
+          : undefined,
     };
 
     if ((isRestore || isRanked) && params && params["players"]) {

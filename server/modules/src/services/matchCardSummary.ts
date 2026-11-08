@@ -141,7 +141,8 @@ export function buildMatchCardSummary(
     nextAdvanceAtMs,
     timeStatus,
     mapPreviewCells: getMapPreviewCells(match, currentTurn),
-    ...(terminalReason ? { terminalReason } : {})
+    ...(terminalReason ? { terminalReason } : {}),
+    ...(match.loversMode !== undefined ? { loversMode: match.loversMode } : {})
   };
 }
 
@@ -170,6 +171,7 @@ export function buildMyMatchCardSummary(
     botPlayers: match.botPlayers,
     turnsToBeAt1Tile: match.turnsToBeAt1Tile,
     started: match.started === true,
-    currentUserReady: match.readyStates?.[currentUserId] === true
+    currentUserReady: match.readyStates?.[currentUserId] === true,
+    ...(match.loversMode !== undefined ? { loversMode: match.loversMode } : {})
   };
 }

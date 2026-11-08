@@ -56,6 +56,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
         if (typeof nn === "string") state.name = nn;
         if (typeof msg.gameMasterMode === "boolean") state.gameMasterMode = msg.gameMasterMode;
         if (Array.isArray(msg.gameMasterUserIds)) state.gameMasterUserIds = msg.gameMasterUserIds;
+        if (typeof msg.loversMode === "boolean") state.loversMode = msg.loversMode;
 
         try {
           const label = buildMatchLabel({
@@ -80,6 +81,7 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
             name: state.name,
             started: state.started,
             players: state.order,
+            loversMode: state.loversMode,
           });
           dispatcher.broadcastMessage(
             OPCODE_SETTINGS_UPDATE,

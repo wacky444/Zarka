@@ -55,6 +55,7 @@ export function listMyMatchesRpc(
           autoSkip: match.autoSkip,
           botPlayers: match.botPlayers,
           turnsToBeAt1Tile: match.turnsToBeAt1Tile,
+          loversMode: match.loversMode,
           has_report: false
         });
         continue;
@@ -73,6 +74,7 @@ export function listMyMatchesRpc(
           started: false,
           turns: match.current_turn,
           duration_ms: 0,
+          loversMode: match.loversMode,
           has_report: false
         });
         continue;
@@ -106,7 +108,8 @@ export function listMyMatchesRpc(
         ),
         player_team_won: playerTeamWon,
         has_report: true,
-        terminalReason: report.reason
+        terminalReason: report.reason,
+        loversMode: match.loversMode
       });
     }
 

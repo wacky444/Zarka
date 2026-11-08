@@ -73,7 +73,8 @@ function run12BotSimulation(seedNumber: number): SimulationResult {
       created_at: 1700000000,
       current_turn: 0,
       started: true,
-      removed: 0
+      removed: 0,
+      loversMode: false
     };
 
     const logger = {

@@ -90,6 +90,8 @@ export function updateSettingsRpc(
     typeof settings.name === "string"
       ? normalizeMatchName(settings.name, match.name ?? DEFAULT_MATCH_NAME)
       : undefined;
+  const newLoversMode =
+    typeof settings.loversMode === "boolean" ? settings.loversMode : undefined;
 
   if (typeof newSize === "number") match.size = newSize;
   if (typeof newCols === "number") match.cols = newCols;
@@ -107,6 +109,9 @@ export function updateSettingsRpc(
     }
   }
   if (typeof newName === "string") match.name = newName;
+  if (typeof newLoversMode === "boolean" && !match.started) {
+    match.loversMode = newLoversMode;
+  }
 
   const kickedNonAdminIds: string[] = [];
   if (settings.gameMasterMode === true) {
@@ -179,6 +184,7 @@ export function updateSettingsRpc(
           gameMasterMode: match.gameMasterMode,
           gameMasterUserIds: match.gameMasterUserIds,
           controlledCharacterRoster: match.controlledCharacterRoster,
+          loversMode: match.loversMode,
         })
       );
     } catch (signalError) {
@@ -236,6 +242,7 @@ export function updateSettingsRpc(
     started: match.started,
     gameMasterMode: match.gameMasterMode,
     controlledCharacterRoster: match.controlledCharacterRoster,
+    loversMode: match.loversMode,
   };
 
   return JSON.stringify(response);

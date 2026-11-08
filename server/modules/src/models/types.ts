@@ -36,4 +36,5 @@ export interface AsyncTurnState extends nkruntime.MatchState {
   matchRemoved?: boolean;
   gameMasterMode?: boolean;
   gameMasterUserIds?: string[];
+  loversMode?: boolean;
 }
