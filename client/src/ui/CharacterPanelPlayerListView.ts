@@ -4,6 +4,7 @@ import { isBot, type MatchRecord } from "@shared";
 import type { PlayerOption } from "./PlayerSelector";
 import { formatPlayerPerceptionDetails } from "./PlayerPerceptionDetails";
 import { HoverTooltip } from "./HoverTooltip";
+import { THEME } from "./ColorPalette";
 
 type PlayerTabListEntry = {
   playerId: string;
@@ -897,6 +898,9 @@ export class CharacterPanelPlayerListView {
       const aliveInTeam = teamCounts[teamName] ?? 0;
       const isEliminated = aliveInTeam === 0;
 
+      const isViewerLover = viewer?.secretTeamId === "Enamorados";
+      const isLoversTeam = teamName === "Enamorados";
+
       const bg = this.scene.add
         .rectangle(
           0,
@@ -909,6 +913,13 @@ export class CharacterPanelPlayerListView {
         .setOrigin(0, 0)
         .setStrokeStyle(1, isEliminated ? 0x4a2332 : 0x2f3a5d, 1);
 
+      const nameLabelColor =
+        isLoversTeam && isViewerLover
+          ? THEME.colors.loversText
+          : isEliminated
+            ? "#94a3d4"
+            : "#ffffff";
+
       const nameLabel = this.scene.add
         .text(
           PLAYER_LIST_LABEL_PADDING,
@@ -916,7 +927,7 @@ export class CharacterPanelPlayerListView {
           `${t(teamName)}:`,
           {
             fontSize: "14px",
-            color: isEliminated ? "#94a3d4" : "#ffffff",
+            color: nameLabelColor,
             fontStyle: "bold"
           }
         )
@@ -1073,6 +1084,10 @@ export class CharacterPanelPlayerListView {
   }
 
   private applySelectionStyles(): void {
+    const viewer = this.currentUserId
+      ? this.currentMatch?.playerCharacters?.[this.currentUserId]
+      : undefined;
+
     for (const entry of this.playersTabEntries) {
       const character = this.currentMatch?.playerCharacters?.[entry.playerId];
       const isDead =
@@ -1082,7 +1097,15 @@ export class CharacterPanelPlayerListView {
           character.stats.health.current <= 0);
       const selected = entry.playerId === this.playersTabSelection;
 
-      if (isDead) {
+      const isConfirmedLover =
+        viewer?.secretTeamId === "Enamorados" &&
+        viewer?.revealedTeamIdsByPlayerId?.[entry.playerId] === "Enamorados";
+
+      if (isConfirmedLover) {
+        entry.button.setFillStyle(THEME.colors.loversBackground, 0.95);
+        entry.button.setStrokeStyle(selected ? 2 : 1, THEME.colors.loversBorder, 1);
+        entry.label.setColor(THEME.colors.loversText);
+      } else if (isDead) {
         entry.button.setFillStyle(selected ? 0x6e2424 : 0x4a1818, 0.95);
         entry.button.setStrokeStyle(selected ? 2 : 1, 0xd65858, 1);
         entry.label.setColor(selected ? "#ffcccc" : "#ff9999");
@@ -1113,13 +1136,37 @@ export class CharacterPanelPlayerListView {
     const viewer = this.currentUserId
       ? match.playerCharacters?.[this.currentUserId]
       : undefined;
-    const teamId =
-      match.revealedTeamsByPlayerId?.[selectedId]?.trim() ||
-      viewer?.revealedTeamIdsByPlayerId?.[selectedId]?.trim() ||
-      character?.secretTeamId?.trim() ||
-      character?.teamId?.trim() ||
-      UNKNOWN_TEAM_LABEL;
-    this.playersTabCardTeam.setText(`${t("Team")}: ${t(teamId)}`);
+    const isViewer =
+      selectedId === this.currentUserId ||
+      character?.id === this.currentUserId;
+    const isConfirmedLover =
+      viewer?.secretTeamId === "Enamorados" &&
+      viewer?.revealedTeamIdsByPlayerId?.[selectedId] === "Enamorados";
+
+    if (isViewer && character?.secretTeamId === "Enamorados" && character?.teamId) {
+      const teamLabel = `${t("Enamorados")} (${t("Cover team")}: ${t(character.teamId)})`;
+      this.playersTabCardTeam.setText(`${t("Team")}: ${teamLabel}`);
+      this.playersTabCardTeam.setColor(THEME.colors.loversText);
+      this.playersTabCardBackground.setFillStyle(THEME.colors.panelBackground, 0.95);
+      this.playersTabCardBackground.setStrokeStyle(1, THEME.colors.panelBorder, 0.8);
+    } else if (isConfirmedLover) {
+      const teamLabel = `${t("Enamorados")} (${t("Lover")})`;
+      this.playersTabCardTeam.setText(`${t("Team")}: ${teamLabel}`);
+      this.playersTabCardTeam.setColor(THEME.colors.loversText);
+      this.playersTabCardBackground.setFillStyle(THEME.colors.loversBackground, 0.95);
+      this.playersTabCardBackground.setStrokeStyle(1, THEME.colors.loversBorder, 1);
+    } else {
+      const teamId =
+        match.revealedTeamsByPlayerId?.[selectedId]?.trim() ||
+        viewer?.revealedTeamIdsByPlayerId?.[selectedId]?.trim() ||
+        character?.secretTeamId?.trim() ||
+        character?.teamId?.trim() ||
+        UNKNOWN_TEAM_LABEL;
+      this.playersTabCardTeam.setText(`${t("Team")}: ${t(teamId)}`);
+      this.playersTabCardTeam.setColor(THEME.colors.cardTeamText);
+      this.playersTabCardBackground.setFillStyle(THEME.colors.panelBackground, 0.95);
+      this.playersTabCardBackground.setStrokeStyle(1, THEME.colors.panelBorder, 0.8);
+    }
     const details = formatPlayerPerceptionDetails(
       viewer,
       character,

@@ -42,7 +42,9 @@ const CRITICAL_REPLAY_ACTION_IDS = new Set<string>([
   "throw_object",
   "status_dead",
   "use_chemical_weapon",
-  "inject_virus"
+  "inject_virus",
+  "lovers_formed",
+  "lovers_announced"
 ]);
 
 function getEventImportance(event: ReplayEvent): ReplayImportance {
@@ -1163,12 +1165,38 @@ export class CharacterPanelLogView {
           }
           continue;
         }
+        if (actionId === "lovers_formed") {
+          const metadata = event.action.metadata as
+            | { partnerPlayerId?: string; coverTeamId?: string }
+            | undefined;
+          const partnerPlayerId = metadata?.partnerPlayerId;
+          const partnerName = partnerPlayerId
+            ? this.resolvePlayerName(partnerPlayerId)
+            : t("Player");
+          const coverTeamId = metadata?.coverTeamId ?? "";
+          lines.push(
+            `${actor} ${t("fell in love with")} ${partnerName} — ${t("belongs to the team")} ${t("Enamorados")} (${t("Cover team")}: ${t(coverTeamId)})`
+          );
+          continue;
+        }
+        if (actionId === "lovers_announced") {
+          lines.push(`${t("Two survivors have fallen in love in Zarka")}`);
+          continue;
+        }
         if (actionId === "status_dead") {
           if (!event.actorId || !eliminatedInLog.has(event.actorId)) {
             if (event.actorId) {
               eliminatedInLog.add(event.actorId);
             }
-            lines.push(`${actor} ${t("was eliminated")}`);
+            const meta = event.action.metadata as
+              | { wasLover?: unknown; teamId?: unknown }
+              | undefined;
+            const isLoverDead =
+              meta?.wasLover === true || meta?.teamId === "Enamorados";
+            const loverSuffix = isLoverDead
+              ? ` — ${t("One of the Lovers has died")}`
+              : "";
+            lines.push(`${actor} ${t("was eliminated")}${loverSuffix}`);
           }
           continue;
         }
@@ -2143,21 +2171,45 @@ export class CharacterPanelLogView {
                 if (target.targetId) {
                   eliminatedInLog.add(target.targetId);
                 }
-                const team =
-                  (target.metadata as { teamId?: string })?.teamId ||
-                  this.resolvePlayerTeam(target.targetId);
+                const targetMeta = target.metadata as
+                  | { wasLover?: unknown; teamId?: string }
+                  | undefined;
+                const isLoverDead =
+                  targetMeta?.wasLover === true ||
+                  targetMeta?.teamId === "Enamorados";
+                const team = isLoverDead
+                  ? "Enamorados"
+                  : targetMeta?.teamId ||
+                    this.resolvePlayerTeam(target.targetId);
                 const teamSuffix = team ? ` (${t("Team")} ${t(team)})` : "";
-                lines.push(`${targetName}${teamSuffix} ${t("was eliminated")}`);
+                const loverSuffix = isLoverDead
+                  ? ` — ${t("One of the Lovers has died")}`
+                  : "";
+                lines.push(
+                  `${targetName}${teamSuffix} ${t("was eliminated")}${loverSuffix}`
+                );
               }
             } else if (target.eliminated) {
               if (target.targetId) {
                 eliminatedInLog.add(target.targetId);
               }
-              const team =
-                (target.metadata as { teamId?: string })?.teamId ||
-                this.resolvePlayerTeam(target.targetId);
+              const targetMeta = target.metadata as
+                | { wasLover?: unknown; teamId?: string }
+                | undefined;
+              const isLoverDead =
+                targetMeta?.wasLover === true ||
+                targetMeta?.teamId === "Enamorados";
+              const team = isLoverDead
+                ? "Enamorados"
+                : targetMeta?.teamId ||
+                  this.resolvePlayerTeam(target.targetId);
               const teamSuffix = team ? ` (${t("Team")} ${t(team)})` : "";
-              lines.push(`${targetName}${teamSuffix} ${t("was eliminated")}`);
+              const loverSuffix = isLoverDead
+                ? ` — ${t("One of the Lovers has died")}`
+                : "";
+              lines.push(
+                `${targetName}${teamSuffix} ${t("was eliminated")}${loverSuffix}`
+              );
             } else if (movedTo) {
               lines.push(
                 `${targetName} ${t("fled to")} (${movedTo.q}, ${movedTo.r})`
@@ -2225,21 +2277,31 @@ export class CharacterPanelLogView {
         continue;
       }
       if (event.action.actionId === "status_dead") {
-        const teamId = (
-          event.action.metadata as { teamId?: unknown } | undefined
-        )?.teamId;
-        handleElimination(
-          event.actorId,
-          typeof teamId === "string" ? teamId : undefined
-        );
+        const meta = event.action.metadata as
+          | { wasLover?: unknown; teamId?: unknown }
+          | undefined;
+        const isLoverDead =
+          meta?.wasLover === true || meta?.teamId === "Enamorados";
+        const teamId = isLoverDead
+          ? "Enamorados"
+          : typeof meta?.teamId === "string"
+            ? meta.teamId
+            : undefined;
+        handleElimination(event.actorId, teamId);
       }
       for (const target of event.targets ?? []) {
         if (target.eliminated && target.targetId) {
-          const teamId = target.metadata?.teamId;
-          handleElimination(
-            target.targetId,
-            typeof teamId === "string" ? teamId : undefined
-          );
+          const meta = target.metadata as
+            | { wasLover?: unknown; teamId?: unknown }
+            | undefined;
+          const isLoverDead =
+            meta?.wasLover === true || meta?.teamId === "Enamorados";
+          const teamId = isLoverDead
+            ? "Enamorados"
+            : typeof meta?.teamId === "string"
+              ? meta.teamId
+              : undefined;
+          handleElimination(target.targetId, teamId);
         }
       }
     }

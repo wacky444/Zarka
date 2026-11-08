@@ -64,6 +64,9 @@ export const THEME = {
 
     unreadBadge: 0xff6600,
 
+    topBannerBackground: 0x200b13,
+    cardTeamText: "#a0b7ff",
+
     loversAccent: 0xf43f5e,
     loversText: "#fb7185",
     loversBackground: 0x3b182f,

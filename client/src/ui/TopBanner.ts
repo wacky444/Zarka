@@ -1,9 +1,13 @@
 import Phaser from "phaser";
+import { THEME } from "./ColorPalette";
 
 export interface TopBannerPayload {
   text: string;
   texture?: string;
   frame?: string;
+  textColor?: string;
+  accentColor?: number;
+  backgroundColor?: number;
 }
 
 export interface TopBannerOptions {
@@ -45,7 +49,7 @@ export class TopBanner {
     container.setVisible(false);
 
     const background = scene.add
-      .rectangle(0, 0, scene.scale.width, this.height, 0x200b13, 0.92)
+      .rectangle(0, 0, scene.scale.width, this.height, THEME.colors.topBannerBackground, 0.92)
       .setOrigin(0, 0)
       .setInteractive({ useHandCursor: true });
     background.on(
@@ -72,7 +76,7 @@ export class TopBanner {
     const label = scene.add
       .text(0, 0, "", {
         fontSize: "24px",
-        color: "#ffffff",
+        color: THEME.colors.textPrimary,
         fontStyle: "bold",
       })
       .setOrigin(0, 0.5);
@@ -123,6 +127,21 @@ export class TopBanner {
       this.portrait.setVisible(false);
     }
     this.label.setText(payload.text ?? "");
+    if (payload.textColor) {
+      this.label.setColor(payload.textColor);
+    } else {
+      this.label.setColor(THEME.colors.textPrimary);
+    }
+    if (payload.backgroundColor !== undefined) {
+      this.background.setFillStyle(payload.backgroundColor, 0.92);
+    } else {
+      this.background.setFillStyle(THEME.colors.topBannerBackground, 0.92);
+    }
+    if (payload.accentColor !== undefined) {
+      this.background.setStrokeStyle(2, payload.accentColor, 1);
+    } else {
+      this.background.setStrokeStyle();
+    }
     this.layout(this.scene.scale.width);
     this.container.setVisible(true);
     if (this.timer) {

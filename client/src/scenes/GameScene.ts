@@ -2029,10 +2029,19 @@ export class GameScene extends Phaser.Scene {
       character?.secretTeamId?.trim() ||
       character?.teamId?.trim();
     const teamSuffix = teamId ? ` (${t("Team")}: ${t(teamId)})` : "";
+    const isLover =
+      teamId === "Enamorados" || character?.secretTeamId === "Enamorados";
     const bannerPayload: TopBannerPayload = {
       text: `${payload.playerName}${teamSuffix} ${t("was eliminated")}`,
       texture: payload.texture,
-      frame: payload.frame
+      frame: payload.frame,
+      ...(isLover
+        ? {
+            textColor: THEME.colors.loversText,
+            accentColor: THEME.colors.loversAccent,
+            backgroundColor: THEME.colors.loversBackground
+          }
+        : {})
     };
     this.topBanner?.show(bannerPayload);
     if (this.currentMatch && payload.playerId) {
@@ -4047,6 +4056,37 @@ export class GameScene extends Phaser.Scene {
         : (match.current_turn ?? 0);
     this.topBanner?.show({ text: `Turn ${turnNumber}` });
     if (replayEvents.length > 0) {
+      const hasLoversAnnouncement = replayEvents.some(
+        (e) =>
+          e.kind === "player" &&
+          (e.action.actionId === "lovers_announced" ||
+            e.action.actionId === "lovers_formed")
+      );
+      if (hasLoversAnnouncement) {
+        this.topBanner?.show({
+          text: t("Two survivors have fallen in love in Zarka"),
+          textColor: THEME.colors.loversText,
+          accentColor: THEME.colors.loversAccent,
+          backgroundColor: THEME.colors.loversBackground
+        });
+      }
+
+      const hasDeadLover = replayEvents.some(
+        (e) =>
+          e.kind === "player" &&
+          e.action.actionId === "status_dead" &&
+          ((e.action.metadata as { wasLover?: unknown; teamId?: unknown } | undefined)?.wasLover === true ||
+            (e.action.metadata as { teamId?: unknown } | undefined)?.teamId === "Enamorados")
+      );
+      if (hasDeadLover) {
+        this.topBanner?.show({
+          text: t("One of the Lovers has died"),
+          textColor: THEME.colors.loversText,
+          accentColor: THEME.colors.loversAccent,
+          backgroundColor: THEME.colors.loversBackground
+        });
+      }
+
       this.logReplayCache.set(this.getReplayCacheKey(turnNumber), { events: replayEvents });
       this.logReplayCache.set(this.getReplayCacheKey(turnNumber, "all"), { events: replayEvents });
       for (const event of replayEvents) {

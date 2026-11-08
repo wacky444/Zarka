@@ -18,6 +18,8 @@ export interface CharacterSkillMultiplier {
 export interface HugoCharacterInput {
   readonly name: string;
   readonly team?: string;
+  readonly secretTeamId?: string;
+  readonly teamId?: string;
   readonly skills?: readonly CharacterSkillMultiplier[];
   readonly abilities?: readonly string[];
   readonly speed?: number;
@@ -317,11 +319,21 @@ export const formatHugoCharacterLog = (input: HugoCharacterInput): string => {
   const itemsStr = formatInventoryItems(input.inventory);
 
   const rawTeam = input.team ?? "";
-  const teamStr = rawTeam
-    ? rawTeam.startsWith("Equipo")
-      ? rawTeam
-      : `Equipo ${rawTeam}`
-    : "Sin equipo";
+  let teamStr: string;
+  if (
+    (input.secretTeamId === "Enamorados" ||
+      input.team === "Enamorados" ||
+      input.team === "Equipo Enamorados") &&
+    input.teamId
+  ) {
+    teamStr = `Equipo Enamorados (Tapadera: ${input.teamId})`;
+  } else {
+    teamStr = rawTeam
+      ? rawTeam.startsWith("Equipo")
+        ? rawTeam
+        : `Equipo ${rawTeam}`
+      : "Sin equipo";
+  }
 
   const speed = input.speed ?? input.stats?.speed ?? 0;
   const coord = input.coord ?? input.position?.coord ?? { q: 0, r: 0 };
@@ -457,6 +469,57 @@ export const formatCharacterTurnLog = (
     const playerList = Array.isArray(playersMap)
       ? playersMap
       : Object.values(playersMap);
+
+    let loverPartner: {
+      id?: string;
+      coord?: { q: number; r: number };
+      position?: { coord: { q: number; r: number } };
+      stats?: { baseViewRange?: number; health?: { current: number } };
+      statuses?: { conditions?: string[] };
+      secretTeamId?: string;
+      discoveredItemIds?: string[];
+    } | undefined = undefined;
+
+    if (char.secretTeamId === "Enamorados") {
+      for (const p of playerList) {
+        const other = p as {
+          id?: string;
+          coord?: { q: number; r: number };
+          position?: { coord: { q: number; r: number } };
+          stats?: { baseViewRange?: number; health?: { current: number } };
+          statuses?: { conditions?: string[] };
+          secretTeamId?: string;
+          discoveredItemIds?: string[];
+        };
+        if (!other || other.id === (char as PlayerCharacter).id) {
+          continue;
+        }
+        const isDead =
+          other.statuses?.conditions?.includes("dead") ||
+          (typeof other.stats?.health?.current === "number" &&
+            other.stats.health.current <= 0);
+        if (
+          !isDead &&
+          (other.secretTeamId === "Enamorados" ||
+            (other.id &&
+              (char as PlayerCharacter).revealedTeamIdsByPlayerId?.[other.id] ===
+                "Enamorados") ||
+            (other.id &&
+              (char as PlayerCharacter).relationships?.confirmedTeammates?.includes(
+                other.id
+              )))
+        ) {
+          loverPartner = other;
+          break;
+        }
+      }
+    }
+
+    const partnerCoord = loverPartner
+      ? loverPartner.coord ?? loverPartner.position?.coord
+      : undefined;
+    const partnerViewRange = loverPartner?.stats?.baseViewRange ?? 3;
+
     for (const p of playerList) {
       const other = p as {
         id?: string;
@@ -468,7 +531,16 @@ export const formatCharacterTurnLog = (
         continue;
       }
       const otherCoord = other.coord ?? other.position?.coord;
-      if (otherCoord && axialDist(charCoord, otherCoord) <= viewRange) {
+      const isVisibleDirectly =
+        otherCoord && axialDist(charCoord, otherCoord) <= viewRange;
+      const isVisibleThroughPartner =
+        loverPartner &&
+        (other.id === loverPartner.id ||
+          (otherCoord &&
+            partnerCoord &&
+            axialDist(partnerCoord, otherCoord) <= partnerViewRange));
+
+      if (isVisibleDirectly || isVisibleThroughPartner) {
         const otherId = other.id ?? "";
         const otherName =
           usernames?.[otherId] ??
@@ -476,16 +548,19 @@ export const formatCharacterTurnLog = (
           other.name ??
           other.id ??
           "Player";
-        visibleEntities.push(otherName);
+        if (!visibleEntities.includes(otherName)) {
+          visibleEntities.push(otherName);
+        }
       }
     }
     const itemsMap = snapshot.items ?? {};
     const itemsList = Array.isArray(itemsMap)
       ? itemsMap
       : Object.values(itemsMap);
-    const discoveredItemIds = new Set<string>(
-      (char as PlayerCharacter).discoveredItemIds ?? []
-    );
+    const discoveredItemIds = new Set<string>([
+      ...((char as PlayerCharacter).discoveredItemIds ?? []),
+      ...(loverPartner?.discoveredItemIds ?? [])
+    ]);
     for (const item of itemsList) {
       const raw = item as {
         id?: string;
@@ -497,7 +572,11 @@ export const formatCharacterTurnLog = (
       }
       const itemCoord = raw.coord;
       const isHere =
-        itemCoord && itemCoord.q === charCoord.q && itemCoord.r === charCoord.r;
+        (itemCoord && itemCoord.q === charCoord.q && itemCoord.r === charCoord.r) ||
+        (partnerCoord &&
+          itemCoord &&
+          itemCoord.q === partnerCoord.q &&
+          itemCoord.r === partnerCoord.r);
       if (isHere || (raw.id && discoveredItemIds.has(raw.id))) {
         const itemId = raw.itemId ?? "";
         const libItem = (
@@ -555,9 +634,26 @@ export const formatCharacterTurnLog = (
     char.name ??
     "Player";
 
+  let resolvedTeam = teamName;
+  if (!resolvedTeam) {
+    if (char.secretTeamId === "Enamorados" && char.teamId) {
+      resolvedTeam = `Equipo Enamorados (Tapadera: ${char.teamId})`;
+    } else {
+      resolvedTeam = char.secretTeamId ?? char.teamId ?? "Sin equipo";
+    }
+  } else if (
+    char.secretTeamId === "Enamorados" &&
+    char.teamId &&
+    (resolvedTeam === "Enamorados" || resolvedTeam === "Equipo Enamorados")
+  ) {
+    resolvedTeam = `Equipo Enamorados (Tapadera: ${char.teamId})`;
+  }
+
   const input: HugoCharacterInput = {
     name: resolvedName,
-    team: teamName ?? char.secretTeamId ?? char.teamId ?? "Sin equipo",
+    team: resolvedTeam,
+    secretTeamId: char.secretTeamId,
+    teamId: char.teamId,
     skills: char.skills,
     abilities: char.abilities,
     speed: char.speed ?? char.stats?.speed,
