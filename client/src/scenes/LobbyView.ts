@@ -84,6 +84,7 @@ export class LobbyView {
   private rows = DEFAULT_MAP_ROWS;
   private roundTime = "23:00";
   private autoSkip = true;
+  private loversMode = true;
   private botPlayers = 5;
   private turnsToBeAt1Tile = 30;
   private matchName = LobbyView.DEFAULT_MATCH_NAME;
@@ -106,6 +107,7 @@ export class LobbyView {
   private rowsStepper?: StepperHandle;
   private roundTimeInput?: TimeInputHandle;
   private autoSkipToggle?: ToggleHandle;
+  private loversModeToggle?: ToggleHandle;
   private botPlayersStepper?: StepperHandle;
   private turnsToBeAt1TileStepper?: StepperHandle;
   private renameButton?: UIButton;
@@ -383,6 +385,21 @@ export class LobbyView {
       this.isHost
     );
 
+    this.loversModeToggle = addLabeledToggle(
+      this.scene,
+      this.contentRoot,
+      0,
+      0,
+      t("Lovers Team"),
+      () => this.loversMode,
+      (v) => {
+        this.loversMode = v;
+        this.emitSettings();
+      },
+      true,
+      this.isHost && !this.started
+    );
+
     this.botPlayersStepper = addLabeledStepper(
       this.scene,
       this.contentRoot,
@@ -462,6 +479,7 @@ export class LobbyView {
       this.rowsStepper.container,
       this.roundTimeInput.container,
       this.autoSkipToggle.container,
+      this.loversModeToggle.container,
       this.botPlayersStepper.container,
       this.turnsToBeAt1TileStepper.container,
       this.gameMasterToggle.container
@@ -766,6 +784,7 @@ export class LobbyView {
     this.rowsStepper?.setEnabled(enabled);
     this.roundTimeInput?.setEnabled(enabled);
     this.autoSkipToggle?.setEnabled(enabled && !this.gameMasterMode);
+    this.loversModeToggle?.setEnabled(enabled && !this.started);
     this.botPlayersStepper?.setEnabled(enabled && !this.gameMasterMode);
     this.turnsToBeAt1TileStepper?.setEnabled(enabled);
     this.gameMasterToggle?.setEnabled(enabled && this.isAdmin);
@@ -799,6 +818,7 @@ export class LobbyView {
     started?: boolean;
     gameMasterMode?: boolean;
     controlledCharacterRoster?: Array<{ id: string; name: string; skin: Skin }>;
+    loversMode?: boolean;
   }) {
     if (typeof partial.size === "number") {
       this.players = Phaser.Math.Clamp(
@@ -824,6 +844,10 @@ export class LobbyView {
     if (typeof partial.autoSkip === "boolean") {
       this.autoSkip = partial.autoSkip;
       this.autoSkipToggle?.setDisplayValue(this.autoSkip);
+    }
+    if (typeof partial.loversMode === "boolean") {
+      this.loversMode = partial.loversMode;
+      this.loversModeToggle?.setDisplayValue(this.loversMode);
     }
     if (typeof partial.botPlayers === "number") {
       this.botPlayers = Phaser.Math.Clamp(
@@ -889,6 +913,9 @@ export class LobbyView {
     this.autoSkip = true;
     this.autoSkipToggle?.setDisplayValue(this.autoSkip);
 
+    this.loversMode = true;
+    this.loversModeToggle?.setDisplayValue(this.loversMode);
+
     this.botPlayers = 5;
     this.botPlayersStepper?.setDisplayValue(this.botPlayers);
 
@@ -950,7 +977,8 @@ export class LobbyView {
       turnsToBeAt1Tile: this.turnsToBeAt1Tile,
       name: this.matchName,
       gameMasterMode: this.gameMasterMode,
-      controlledCharacterRoster: this.gameMasterMode ? this.controlledCharacters : undefined
+      controlledCharacterRoster: this.gameMasterMode ? this.controlledCharacters : undefined,
+      loversMode: this.loversMode
     };
   }
 
@@ -1038,6 +1066,7 @@ export class LobbyView {
     if (started) {
       this.startMatchBusy = false;
     }
+    this.loversModeToggle?.setEnabled(this.isHost && !this.started);
     this.updateStartButtonState();
     this.updateLeaveButtonState();
     if (this.returnToGameButton) {

@@ -62,7 +62,12 @@ export const THEME = {
     subtabInactiveStroke: 0x253055,
     subtabInactiveText: "#8ea4d2",
 
-    unreadBadge: 0xff6600
+    unreadBadge: 0xff6600,
+
+    loversAccent: 0xf43f5e,
+    loversText: "#fb7185",
+    loversBackground: 0x3b182f,
+    loversBorder: 0xe11d48
   },
 
   buttons: {

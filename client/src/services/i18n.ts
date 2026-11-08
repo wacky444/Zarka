@@ -5,6 +5,24 @@ type TextValue = string | string[];
 const LOCALE_STORAGE_KEY = "zarka_locale";
 
 const SPANISH_TRANSLATIONS: Record<string, string> = {
+  "Enamorados": "Enamorados",
+  "Lovers": "Enamorados",
+  "Lovers Team": "Equipo Enamorados",
+  "Equipo Enamorados": "Equipo Enamorados",
+  "Enable Lovers Team": "Activar equipo Enamorados",
+  "Activar equipo Enamorados": "Activar equipo Enamorados",
+  "Cover team": "Equipo tapadera",
+  "Equipo tapadera": "Equipo tapadera",
+  "Lover": "Enamorado/a",
+  "Enamorado/a": "Enamorado/a",
+  "fell in love with": "se ha enamorado de",
+  "se ha enamorado de": "se ha enamorado de",
+  "Two survivors have fallen in love in Zarka":
+    "Dos supervivientes se han enamorado en Zarka",
+  "Dos supervivientes se han enamorado en Zarka":
+    "Dos supervivientes se han enamorado en Zarka",
+  "One of the Lovers has died": "Ha muerto uno de los Enamorados",
+  "Ha muerto uno de los Enamorados": "Ha muerto uno de los Enamorados",
   "End Game Report": "Informe final",
   "View replay": "Ver repetición",
   "Back to Report": "Volver al informe",
@@ -1030,6 +1048,24 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
 };
 
 const ENGLISH_GAME_NAMES: Record<string, string> = {
+  "Enamorados": "Lovers",
+  "Lovers": "Lovers",
+  "Equipo Enamorados": "Lovers Team",
+  "Lovers Team": "Lovers Team",
+  "Activar equipo Enamorados": "Enable Lovers Team",
+  "Enable Lovers Team": "Enable Lovers Team",
+  "Equipo tapadera": "Cover team",
+  "Cover team": "Cover team",
+  "Enamorado/a": "Lover",
+  "Lover": "Lover",
+  "se ha enamorado de": "fell in love with",
+  "fell in love with": "fell in love with",
+  "Dos supervivientes se han enamorado en Zarka":
+    "Two survivors have fallen in love in Zarka",
+  "Two survivors have fallen in love in Zarka":
+    "Two survivors have fallen in love in Zarka",
+  "Ha muerto uno de los Enamorados": "One of the Lovers has died",
+  "One of the Lovers has died": "One of the Lovers has died",
   "Bienvenido a Zarka": "Welcome to Zarka",
   "se te cae": "you dropped",
   "no ve a nadie con los prismáticos": "does not see anyone with binoculars",

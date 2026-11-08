@@ -211,14 +211,17 @@ export function addLabeledToggle(
   });
   controlContainer.add(lab);
 
-  const valText = scene.add.text(80, 0, getter() ? "ON" : "OFF", {
+  const valX = Math.max(80, Math.ceil((lab.width || 0) + 10));
+  const btnX = Math.max(130, valX + 50);
+
+  const valText = scene.add.text(valX, 0, getter() ? "ON" : "OFF", {
     color: THEME.colors.energyCost
   });
   controlContainer.add(valText);
 
   const toggleBtn = makeButton(
     scene,
-    130,
+    btnX,
     -2,
     "Toggle",
     () => {

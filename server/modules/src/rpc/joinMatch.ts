@@ -267,6 +267,7 @@ function joinMatchRpcLocked(
     started: match.started,
     gameMasterMode: match.gameMasterMode,
     controlledCharacterRoster: match.controlledCharacterRoster,
+    loversMode: match.loversMode,
   };
 
   return JSON.stringify(response);

@@ -69,6 +69,7 @@ export type JoinMatchPayload = {
   started?: boolean;
   gameMasterMode?: boolean;
   controlledCharacterRoster?: Array<{ id: string; name: string; skin: Skin }>;
+  loversMode?: boolean;
   error?: string;
 };
 

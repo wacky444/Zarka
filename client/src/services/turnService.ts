@@ -61,6 +61,7 @@ export class TurnService {
     name?: string;
     started?: boolean;
     players?: string[];
+    loversMode?: boolean;
   }) => void;
   private onMatchRemoved?: () => void;
   private onMatchEnded?: (payload: MatchEndedMessagePayload) => void;
@@ -535,6 +536,7 @@ export class TurnService {
               started?: boolean;
               name?: string;
               players?: string[];
+              loversMode?: boolean;
             };
             if (this.onSettingsUpdate) this.onSettingsUpdate(payload);
           } catch (e) {
@@ -680,6 +682,7 @@ export class TurnService {
       started?: boolean;
       name?: string;
       players?: string[];
+      loversMode?: boolean;
     }) => void
   ) {
     this.onSettingsUpdate = cb;

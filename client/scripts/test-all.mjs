@@ -79,6 +79,11 @@ const suites = [
     alias: { phaser: phaserShim, phaser3spectorjs: phaserShim }
   },
   {
+    name: "lovers-task5",
+    entryPoint: "test/LoversTask5.test.ts",
+    alias: { phaser: phaserShim, phaser3spectorjs: phaserShim }
+  },
+  {
     name: "gm-location-selector",
     entryPoint: "test/GmLocationSelector.test.ts"
   },

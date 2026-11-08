@@ -210,7 +210,8 @@ export class MainScene extends Phaser.Scene {
         this.lobbyView.setMatchInfo(matchId, displayName);
         this.lobbyView.applySettings({
           gameMasterMode: parsed.gameMasterMode,
-          controlledCharacterRoster: parsed.controlledCharacterRoster
+          controlledCharacterRoster: parsed.controlledCharacterRoster,
+          loversMode: parsed.loversMode
         });
         if (typeof parsed.started === "boolean") {
           this.lobbyView.setMatchStarted(parsed.started);
@@ -243,6 +244,7 @@ export class MainScene extends Phaser.Scene {
                   turnsToBeAt1Tile?: number;
                   gameMasterMode?: boolean;
                   controlledCharacterRoster?: Array<{ id: string; name: string; skin: Skin }>;
+                  loversMode?: boolean;
                 })
               : undefined;
           const creator: string | undefined = matchObj?.creator;
@@ -270,7 +272,8 @@ export class MainScene extends Phaser.Scene {
               name: matchObj.name,
               started: matchObj.started,
               gameMasterMode: matchObj.gameMasterMode ?? false,
-              controlledCharacterRoster: matchObj.controlledCharacterRoster
+              controlledCharacterRoster: matchObj.controlledCharacterRoster,
+              loversMode: matchObj.loversMode
             });
           }
           if (matchObj?.name) {
@@ -620,7 +623,8 @@ export class MainScene extends Phaser.Scene {
           p.cols !== undefined && p.rows !== undefined
             ? `${p.cols}x${p.rows}`
             : null,
-          p.started !== undefined ? (p.started ? "started" : "waiting") : null
+          p.started !== undefined ? (p.started ? "started" : "waiting") : null,
+          p.loversMode !== undefined ? `loversMode=${p.loversMode}` : null
         ]
           .filter(Boolean)
           .join(", ");
