@@ -795,6 +795,13 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "target had no items to steal": "el objetivo no tiene objetos que robar",
   "is protected": "está protegido",
   protects: "protege a",
+  "Reduce un tercio del daño recibido; siempre protege al propio personaje y, si se selecciona un objetivo, protege a ambos. Bloquea asaltos, robos y registros salvo consentimiento.":
+    "Reduce un tercio del daño recibido; siempre protege al propio personaje y, si se selecciona un objetivo, protege a ambos. Bloquea asaltos, robos y registros salvo consentimiento.",
+  "Reduces damage received by one third; always protects your own character and, if a target is selected, protects both. Blocks assaults, thefts, and searches unless consented.":
+    "Reduce un tercio del daño recibido; siempre protege al propio personaje y, si se selecciona un objetivo, protege a ambos. Bloquea asaltos, robos y registros salvo consentimiento.",
+  "If protection prevents damage.": "Si la protección evita daño.",
+  "Si la protección evita daño.": "Si la protección evita daño.",
+  "protege a": "protege a",
   "target is protected": "el objetivo está protegido",
   "an action": "una acción",
   extra: "extra",
@@ -1137,6 +1144,14 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
     "Allows placing a second C4 charge.",
   "Colocar trampa": "Place trap",
   Proteger: "Protect",
+  "Reduce un tercio del daño recibido; siempre protege al propio personaje y, si se selecciona un objetivo, protege a ambos. Bloquea asaltos, robos y registros salvo consentimiento.":
+    "Reduces damage received by one third; always protects your own character and, if a target is selected, protects both. Blocks assaults, thefts, and searches unless consented.",
+  "Reduces damage received by one third; always protects your own character and, if a target is selected, protects both. Blocks assaults, thefts, and searches unless consented.":
+    "Reduces damage received by one third; always protects your own character and, if a target is selected, protects both. Blocks assaults, thefts, and searches unless consented.",
+  "Si la protección evita daño.": "If protection prevents damage.",
+  "If protection prevents damage.": "If protection prevents damage.",
+  "protege a": "protects",
+  protects: "protects",
   Esquivar: "Dodge",
   "Atacar con cuchillo": "Knife attack",
   Desplazarse: "Move",

@@ -112,6 +112,11 @@ const suites = [
       })
     },
     alias: { phaser: phaserShim, phaser3spectorjs: phaserShim }
+  },
+  {
+    name: "protect-action",
+    entryPoint: "test/ProtectAction.test.ts",
+    alias: { phaser: phaserShim, phaser3spectorjs: phaserShim }
   }
 ];
 

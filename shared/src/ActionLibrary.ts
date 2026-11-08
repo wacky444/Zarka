@@ -336,7 +336,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     effects: [
       {
         description:
-          "Reduce un tercio del daño recibido y puede asignarse a otro personaje; bloquea asaltos, robos y registros salvo consentimiento."
+          "Reduce un tercio del daño recibido; siempre protege al propio personaje y, si se selecciona un objetivo, protege a ambos. Bloquea asaltos, robos y registros salvo consentimiento."
       }
     ],
     texture: "Board Game Icons",

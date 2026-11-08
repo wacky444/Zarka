@@ -59,8 +59,22 @@ export class ProtectAction extends BaseAction {
         deadCharacterPolicy: "exclude",
       });
       const appliedTargets: ReplayActionTarget[] = [];
+      const protectedPlayerIds = new Set<string>();
+
+      applyProtection(participant.character);
+      match.playerCharacters = match.playerCharacters ?? {};
+      match.playerCharacters[participant.playerId] = participant.character;
+      appliedTargets.push({
+        targetId: participant.playerId,
+        effects: guardEffectMask(),
+      });
+      protectedPlayerIds.add(participant.playerId);
+
       for (const targetId of targets) {
-        const target = match.playerCharacters?.[targetId];
+        if (protectedPlayerIds.has(targetId)) {
+          continue;
+        }
+        const target = match.playerCharacters[targetId];
         if (!target) {
           continue;
         }
@@ -70,6 +84,7 @@ export class ProtectAction extends BaseAction {
           targetId,
           effects: guardEffectMask(),
         });
+        protectedPlayerIds.add(targetId);
       }
       this.clearPlan(participant);
       if (appliedTargets.length === 0) {

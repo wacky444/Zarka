@@ -1744,7 +1744,7 @@ export class CharacterPanelLogView {
           } else if (actionId === "start_chainsaw") {
             lines.push(`${actor} ${t("started the chainsaw")}`);
           } else if (actionId === "protect") {
-            const targetId = event.targets?.[0]?.targetId;
+            const targetId = event.targets?.find((target) => target.targetId && target.targetId !== event.actorId)?.targetId;
             if (targetId && targetId !== event.actorId) {
               lines.push(
                 `${actor} ${t("protects")} ${this.resolvePlayerName(targetId)}`
