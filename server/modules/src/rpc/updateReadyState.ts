@@ -12,6 +12,7 @@ import { MatchRecord } from "../models/types";
 import type { AdvanceTurnResult } from "../match/advanceTurn";
 import {
   getEliminatedTeamsByPlayerId,
+  getLivingLoverPartner,
   tailorC4sForViewer,
   tailorMapForCharacter,
   tailorMatchItemsForCharacter,
@@ -396,6 +397,16 @@ export function updateReadyStateRpc(
   );
   const currentViewerCharacter =
     match.playerCharacters?.[ctx.userId] ?? null;
+  const currentViewerPartner = getLivingLoverPartner(
+    currentViewerCharacter,
+    match.playerCharacters,
+  );
+  const combinedDiscoveredC4Ids = Array.from(
+    new Set([
+      ...(currentViewerCharacter?.discoveredC4Ids ?? []),
+      ...(currentViewerPartner?.discoveredC4Ids ?? []),
+    ]),
+  );
   const response: import("@shared").UpdateReadyStatePayload = {
     ok: true,
     match_id: matchId,
@@ -410,16 +421,16 @@ export function updateReadyStateRpc(
     playerCharacters: tailoredPlayerCharacters,
     map: viewAll
       ? match.map
-      : tailorMapForCharacter(match.map, currentViewerCharacter),
+      : tailorMapForCharacter(match.map, currentViewerCharacter, currentViewerPartner),
     items: viewAll
       ? match.items
-      : tailorMatchItemsForCharacter(match.items, currentViewerCharacter),
+      : tailorMatchItemsForCharacter(match.items, currentViewerCharacter, currentViewerPartner),
     traps: tailorTrapsForViewer(match.traps, ctx.userId, viewAll),
     c4s: tailorC4sForViewer(
       match.c4s,
       ctx.userId,
       viewAll,
-      currentViewerCharacter?.discoveredC4Ids
+      combinedDiscoveredC4Ids
     ),
   };
 

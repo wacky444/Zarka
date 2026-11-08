@@ -23,6 +23,7 @@ import { clampNumber, validateTime } from "../../utils/validation";
 import { tailorReplayEvents } from "../replay/tailorReplay";
 import { isCharacterDead } from "../../utils/playerCharacter";
 import {
+  getLivingLoverPartner,
   tailorC4sForViewer,
   tailorMapForCharacter,
   tailorMatchItemsForCharacter,
@@ -319,6 +320,14 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
                   ),
                 ),
               );
+              const viewerChar = msg.playerCharacters?.[playerId] ?? null;
+              const partnerChar = getLivingLoverPartner(viewerChar, msg.playerCharacters);
+              const combinedDiscoveredC4Ids = Array.from(
+                new Set([
+                  ...(viewerChar?.discoveredC4Ids ?? []),
+                  ...(partnerChar?.discoveredC4Ids ?? []),
+                ]),
+              );
               const payload = JSON.stringify({
                 ...payloadBase,
                 viewDistance: viewAll ? Number.MAX_VALUE : viewDistance,
@@ -328,20 +337,22 @@ export const asyncTurnMatchSignal: nkruntime.MatchSignalFunction<AsyncTurnState>
                   ? msg.map
                   : tailorMapForCharacter(
                       msg.map,
-                      msg.playerCharacters?.[playerId] ?? null,
+                      viewerChar,
+                      partnerChar,
                     ),
                 items: viewAll
                   ? msg.items
                   : tailorMatchItemsForCharacter(
                       msg.items,
-                      msg.playerCharacters?.[playerId] ?? null,
+                      viewerChar,
+                      partnerChar,
                     ),
                 traps: tailorTrapsForViewer(msg.traps, playerId, viewAll),
                 c4s: tailorC4sForViewer(
                   msg.c4s,
                   playerId,
                   viewAll,
-                  msg.playerCharacters?.[playerId]?.discoveredC4Ids
+                  combinedDiscoveredC4Ids
                 ),
               });
               dispatcher.broadcastMessage(

@@ -12,6 +12,7 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { tailorReplayEvents } from "../match/replay/tailorReplay";
 import {
+  getLivingLoverPartner,
   tailorC4sForViewer,
   tailorMapForCharacter,
   tailorMatchItemsForCharacter,
@@ -31,16 +32,23 @@ function tailorReplaySnapshot(
     return snapshot;
   }
   const viewerCharacter = sourceCharacters?.[viewerId] ?? null;
+  const partnerCharacter = getLivingLoverPartner(viewerCharacter, sourceCharacters);
+  const combinedDiscoveredC4Ids = Array.from(
+    new Set([
+      ...(viewerCharacter?.discoveredC4Ids ?? []),
+      ...(partnerCharacter?.discoveredC4Ids ?? []),
+    ]),
+  );
   return {
     ...snapshot,
-    map: tailorMapForCharacter(snapshot.map, viewerCharacter),
-    items: tailorMatchItemsForCharacter(snapshot.items, viewerCharacter),
+    map: tailorMapForCharacter(snapshot.map, viewerCharacter, partnerCharacter),
+    items: tailorMatchItemsForCharacter(snapshot.items, viewerCharacter, partnerCharacter),
     traps: tailorTrapsForViewer(snapshot.traps, viewerId),
     c4s: tailorC4sForViewer(
       snapshot.c4s,
       viewerId,
       false,
-      viewerCharacter?.discoveredC4Ids
+      combinedDiscoveredC4Ids
     ),
     playerCharacters: tailorPlayerCharactersForViewer(
       snapshot.playerCharacters,

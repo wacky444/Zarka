@@ -19,25 +19,31 @@ import { canReceiveTrackerSignal } from "../match/trackerState";
 type DiscoveredItemLookup = Record<string, true>;
 
 function buildDiscoveredItemLookup(
-  character: PlayerCharacter | undefined | null
+  character: PlayerCharacter | undefined | null,
+  partner?: PlayerCharacter | undefined | null
 ): DiscoveredItemLookup {
   const lookup: DiscoveredItemLookup = {};
-  if (!character || !Array.isArray(character.discoveredItemIds)) {
-    return lookup;
-  }
-  for (const entry of character.discoveredItemIds) {
-    if (typeof entry !== "string" || entry.length === 0) {
-      continue;
+  const addIds = (char: PlayerCharacter | undefined | null) => {
+    if (!char || !Array.isArray(char.discoveredItemIds)) {
+      return;
     }
-    lookup[entry] = true;
-  }
+    for (const entry of char.discoveredItemIds) {
+      if (typeof entry !== "string" || entry.length === 0) {
+        continue;
+      }
+      lookup[entry] = true;
+    }
+  };
+  addIds(character);
+  addIds(partner);
   return lookup;
 }
 
 function filterMapByDiscoveredLookup(
   map: GameMap | undefined,
   discovered: DiscoveredItemLookup,
-  viewer: PlayerCharacter | undefined | null
+  viewer: PlayerCharacter | undefined | null,
+  partner?: PlayerCharacter | undefined | null
 ): GameMap | undefined {
   if (!map) {
     return undefined;
@@ -52,7 +58,10 @@ function filterMapByDiscoveredLookup(
         const hasFire =
           typeof tile.meta?.fireStartTurn === "number" ||
           typeof tile.meta?.fireEndTurn === "number";
-        if (canCharacterDetectFire(viewer, tile.coord) || !hasFire) {
+        const canDetect =
+          canCharacterDetectFire(viewer, tile.coord) ||
+          (partner ? canCharacterDetectFire(partner, tile.coord) : false);
+        if (canDetect || !hasFire) {
           return { ...tile, itemIds };
         }
         const meta = { ...(tile.meta ?? {}) };
@@ -158,6 +167,34 @@ function computeViewRange(
   return Math.max(0, Math.floor(raw));
 }
 
+export function getLivingLoverPartner(
+  viewer: PlayerCharacter | undefined | null,
+  playerCharacters: Record<string, PlayerCharacter> | undefined
+): PlayerCharacter | undefined {
+  if (viewer?.secretTeamId?.trim() !== "Enamorados" || isCharacterDead(viewer)) {
+    return undefined;
+  }
+  if (!playerCharacters) {
+    return undefined;
+  }
+  for (const id in playerCharacters) {
+    if (!Object.prototype.hasOwnProperty.call(playerCharacters, id)) {
+      continue;
+    }
+    const partner = playerCharacters[id];
+    if (
+      partner &&
+      partner.id !== viewer.id &&
+      partner.secretTeamId?.trim() === "Enamorados" &&
+      !isCharacterDead(partner) &&
+      viewer.relationships?.confirmedTeammates?.includes(partner.id)
+    ) {
+      return partner;
+    }
+  }
+  return undefined;
+}
+
 export function tailorPlayerCharactersForViewer(
   playerCharacters: Record<string, PlayerCharacter> | undefined,
   viewerId: string | undefined | null,
@@ -189,6 +226,19 @@ export function tailorPlayerCharactersForViewer(
     typeof currentTurn === "number" && viewer.cameraView?.turn === currentTurn
       ? viewer.cameraView.playerIds
       : undefined;
+
+  const partner = getLivingLoverPartner(viewer, playerCharacters);
+  const partnerCoord = partner?.position?.coord;
+  const partnerViewRange = partner ? computeViewRange(partner) : 0;
+  const partnerRemoteView =
+    partner && typeof currentTurn === "number" && partner.remoteView?.turn === currentTurn
+      ? partner.remoteView.coord
+      : undefined;
+  const partnerCameraView =
+    partner && typeof currentTurn === "number" && partner.cameraView?.turn === currentTurn
+      ? partner.cameraView.playerIds
+      : undefined;
+
   const filtered: Record<string, PlayerCharacter> = {};
   for (const id in playerCharacters) {
     if (!Object.prototype.hasOwnProperty.call(playerCharacters, id)) {
@@ -200,12 +250,18 @@ export function tailorPlayerCharactersForViewer(
       filtered[id] = sanitizedViewer;
       continue;
     }
-    if (!isInitialSpawnTurn && isCharacterHidden(candidate, currentTurn ?? 0)) {
-      if (!canSeeHiddenCharacter(viewer, candidate)) {
+
+    const isPartner = !!partner && id === partner.id;
+
+    if (!isPartner && !isInitialSpawnTurn && isCharacterHidden(candidate, currentTurn ?? 0)) {
+      const canSee =
+        canSeeHiddenCharacter(viewer, candidate) ||
+        (partner ? canSeeHiddenCharacter(partner, candidate) : false);
+      if (!canSee) {
         continue;
       }
     }
-    if (!viewerCoord) {
+    if (!viewerCoord && !isPartner && (!partner || !partnerCoord)) {
       continue;
     }
     const candidateCoord = candidate?.position?.coord;
@@ -213,7 +269,7 @@ export function tailorPlayerCharactersForViewer(
       continue;
     }
     const isInNormalView =
-      isInitialSpawnTurn || axialDistance(viewerCoord, candidateCoord) <= viewRange;
+      isInitialSpawnTurn || (!!viewerCoord && axialDistance(viewerCoord, candidateCoord) <= viewRange);
     const isInRemoteView =
       !!remoteView &&
       remoteView.q === candidateCoord.q &&
@@ -240,13 +296,29 @@ export function tailorPlayerCharactersForViewer(
         trackerView.coord.q === candidateCoord.q &&
         trackerView.coord.r === candidateCoord.r,
     );
+
+    let isInLoverPartnerView = false;
+    if (partner) {
+      const partnerNormalView =
+        !!partnerCoord && axialDistance(partnerCoord, candidateCoord) <= partnerViewRange;
+      const partnerRemote =
+        !!partnerRemoteView &&
+        partnerRemoteView.q === candidateCoord.q &&
+        partnerRemoteView.r === candidateCoord.r;
+      const partnerCamera =
+        !!partnerCameraView && partnerCameraView.indexOf(id) !== -1;
+      isInLoverPartnerView = partnerNormalView || partnerRemote || partnerCamera;
+    }
+
     const revealedTeamId = viewer.revealedTeamIdsByPlayerId?.[id];
     if (
+      isPartner ||
       isInNormalView ||
       isInRemoteView ||
       isInCameraView ||
       isInRadioView ||
-      isInTrackerView
+      isInTrackerView ||
+      isInLoverPartnerView
     ) {
       const isDead =
         isCharacterDead(candidate) ||
@@ -294,17 +366,33 @@ export function tailorPlayerCharactersForViewer(
 
 export function tailorMapForCharacter(
   map: GameMap | undefined,
-  character: PlayerCharacter | undefined | null
+  character: PlayerCharacter | undefined | null,
+  partnerOrCharacters?: PlayerCharacter | Record<string, PlayerCharacter> | null
 ): GameMap | undefined {
-  const discovered = buildDiscoveredItemLookup(character);
-  return filterMapByDiscoveredLookup(map, discovered, character);
+  const partner =
+    partnerOrCharacters && "id" in partnerOrCharacters
+      ? (partnerOrCharacters as PlayerCharacter)
+      : getLivingLoverPartner(
+          character,
+          partnerOrCharacters as Record<string, PlayerCharacter> | undefined
+        );
+  const discovered = buildDiscoveredItemLookup(character, partner);
+  return filterMapByDiscoveredLookup(map, discovered, character, partner);
 }
 
 export function tailorMatchItemsForCharacter(
   items: MatchItemRecord[] | undefined,
-  character: PlayerCharacter | undefined | null
+  character: PlayerCharacter | undefined | null,
+  partnerOrCharacters?: PlayerCharacter | Record<string, PlayerCharacter> | null
 ): MatchItemRecord[] | undefined {
-  const discovered = buildDiscoveredItemLookup(character);
+  const partner =
+    partnerOrCharacters && "id" in partnerOrCharacters
+      ? (partnerOrCharacters as PlayerCharacter)
+      : getLivingLoverPartner(
+          character,
+          partnerOrCharacters as Record<string, PlayerCharacter> | undefined
+        );
+  const discovered = buildDiscoveredItemLookup(character, partner);
   return filterItemsByDiscoveredLookup(items, discovered);
 }
 
@@ -338,10 +426,11 @@ export function tailorMatchForPlayer(
     playerId && match.playerCharacters
       ? match.playerCharacters[playerId]
       : undefined;
-  const discovered = buildDiscoveredItemLookup(character);
+  const partner = getLivingLoverPartner(character, match.playerCharacters);
+  const discovered = buildDiscoveredItemLookup(character, partner);
   const map = viewAll
     ? match.map
-    : filterMapByDiscoveredLookup(match.map, discovered, character);
+    : filterMapByDiscoveredLookup(match.map, discovered, character, partner);
   const visibleItems = viewAll
     ? match.items
     : filterItemsByDiscoveredLookup(match.items, discovered);
@@ -351,11 +440,17 @@ export function tailorMatchForPlayer(
     return visibleItem;
   });
   const traps = tailorTrapsForViewer(match.traps, playerId, viewAll);
+  const combinedDiscoveredC4Ids = Array.from(
+    new Set([
+      ...(character?.discoveredC4Ids ?? []),
+      ...(partner?.discoveredC4Ids ?? []),
+    ])
+  );
   const c4s = tailorC4sForViewer(
     match.c4s,
     playerId,
     viewAll,
-    character?.discoveredC4Ids
+    combinedDiscoveredC4Ids
   );
   const zarkanDonations = viewAll
     ? match.zarkanDonations ?? []
@@ -431,6 +526,11 @@ export function tailorMatchForPlayer(
   delete publicMatch.reportProgress;
   delete publicMatch.safeContainers;
   delete publicMatch.trackers;
+  if (!viewAll) {
+    delete publicMatch.loversTriggerTurn;
+    delete publicMatch.loversFormedTurn;
+    delete publicMatch.loverPlayerIds;
+  }
   return {
     ...publicMatch,
     playerCharacters: playerCharacters ?? {},

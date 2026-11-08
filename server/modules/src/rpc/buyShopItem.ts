@@ -41,6 +41,17 @@ function effectiveTeamId(character: {
   return teamId && teamId.length > 0 ? teamId : null;
 }
 
+export function detectiveRevealedTeamId(character: {
+  secretTeamId?: string;
+  teamId?: string;
+}): string | null {
+  const secretTeam = character.secretTeamId?.trim();
+  if (secretTeam === "Enamorados" || secretTeam === "Gemelos") {
+    return character.teamId?.trim() || null;
+  }
+  return effectiveTeamId(character);
+}
+
 function isSameCoord(a: Axial | undefined, b: Axial | undefined): boolean {
   return !!a && !!b && a.q === b.q && a.r === b.r;
 }
@@ -239,8 +250,8 @@ export function buyShopItemRpc(
   let metadata: Record<string, unknown> = { shopId, cost };
 
   if (resolvedShopId === "detective" && target && targetPlayerId) {
-    const actorTeamId = effectiveTeamId(actor);
-    targetTeamId = effectiveTeamId(target) ?? undefined;
+    const actorTeamId = detectiveRevealedTeamId(actor);
+    targetTeamId = detectiveRevealedTeamId(target) ?? undefined;
     if (!targetTeamId) {
       throw makeNakamaError(
         "target_team_not_available",
