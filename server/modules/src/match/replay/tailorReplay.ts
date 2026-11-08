@@ -58,7 +58,19 @@ export function tailorReplayEvents(
     return [];
   }
   if (viewAll) {
-    return events.map((event) => ({ ...event }));
+    return events.map((event) => {
+      if (
+        event.kind === "player" &&
+        event.action.actionId === "lovers_announced"
+      ) {
+        return {
+          ...event,
+          actorId: "",
+          visibility: { scope: "all" },
+        };
+      }
+      return { ...event };
+    });
   }
   const character = playerCharacters?.[playerId] ?? null;
   const viewerCoord = character?.position?.coord ?? null;
@@ -67,18 +79,34 @@ export function tailorReplayEvents(
   for (const event of events) {
     if (event.kind === "player") {
       if (event.action.actionId === "status_dead") {
-        const teamId = (event.action.metadata as { teamId?: unknown } | undefined)
-          ?.teamId;
+        const metadata = event.action.metadata as
+          | { teamId?: unknown; wasLover?: unknown }
+          | undefined;
+        const teamId = metadata?.teamId;
+        const wasLover = metadata?.wasLover === true;
+        const outMetadata: Record<string, unknown> = {};
+        if (typeof teamId === "string" && teamId.trim()) {
+          outMetadata.teamId = teamId.trim();
+        }
+        if (wasLover) {
+          outMetadata.wasLover = true;
+        }
         result.push({
           kind: "player",
           importance: 1,
           actorId: event.actorId,
           action: {
             actionId: event.action.actionId,
-            ...(typeof teamId === "string" && teamId.trim()
-              ? { metadata: { teamId: teamId.trim() } }
+            ...(Object.keys(outMetadata).length > 0
+              ? { metadata: outMetadata }
               : {}),
           },
+          visibility: { scope: "all" },
+        });
+      } else if (event.action.actionId === "lovers_announced") {
+        result.push({
+          ...event,
+          actorId: "",
           visibility: { scope: "all" },
         });
       } else if (filterPlayerEvent(event, playerId)) {

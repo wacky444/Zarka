@@ -33,6 +33,7 @@ import {
   clearExpiredFires,
 } from "./turnFire";
 import { applyScheduledDestruction } from "./turnDestruction";
+import { resolveLoversFormation } from "./lovers";
 import { refreshTrackerViews } from "./trackerState";
 import { createPerception4DetectionEvents } from "./perception4";
 import { dropOverweightItems } from "./dropOverweightItems";
@@ -397,6 +398,8 @@ export function advanceTurn(
       }
     }
   }
+
+  replayEvents.push(...resolveLoversFormation(match, resolvedTurn, logger));
 
   for (const action of actions) {
     replayEvents.push(

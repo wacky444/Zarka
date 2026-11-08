@@ -62,13 +62,21 @@ export function applyScheduledDestruction(
     const outcome = applyHealthDelta(character, -999, true, logger, true);
     match.playerCharacters[playerId] = outcome.character;
     const teamId = character.secretTeamId?.trim() || character.teamId?.trim();
+    const wasLover = character.secretTeamId?.trim() === "Enamorados";
+    const deathMetadata: Record<string, unknown> = {};
+    if (teamId) {
+      deathMetadata.teamId = teamId;
+    }
+    if (wasLover) {
+      deathMetadata.wasLover = true;
+    }
     replayEvents.push({
       kind: "player",
       importance: ReplayImportance.Critical,
       actorId: character.id,
       action: {
         actionId: "status_dead",
-        ...(teamId ? { metadata: { teamId } } : {})
+        ...(Object.keys(deathMetadata).length > 0 ? { metadata: deathMetadata } : {})
       },
       visibility: { scope: "all" }
     });

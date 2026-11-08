@@ -515,10 +515,12 @@ export function applyHealthDelta(
     logger.debug("dead becameDead:", becameDead);
   }
 
+  const wasLover = character.secretTeamId?.trim() === "Enamorados";
   const event = becameDead
     ? createDeathReplayEvent(
         character.id,
-        character.secretTeamId?.trim() || character.teamId?.trim()
+        character.secretTeamId?.trim() || character.teamId?.trim(),
+        wasLover
       )
     : becameUnconscious
     ? createUnconsciousReplayEvent(
@@ -711,12 +713,21 @@ function createUnconsciousReplayEvent(
   };
 }
 
-function createDeathReplayEvent(
+export function createDeathReplayEvent(
   actorId: string | undefined,
-  teamId: string | undefined
+  teamId: string | undefined,
+  wasLover?: boolean
 ): ReplayPlayerEvent | undefined {
   if (!actorId) {
     return undefined;
+  }
+  const isLover = wasLover === true || teamId === "Enamorados";
+  const metadata: Record<string, unknown> = {};
+  if (teamId) {
+    metadata.teamId = teamId;
+  }
+  if (isLover) {
+    metadata.wasLover = true;
   }
   return {
     kind: "player",
@@ -724,7 +735,7 @@ function createDeathReplayEvent(
     actorId,
     action: {
       actionId: STATUS_DEAD_ACTION_ID,
-      ...(teamId ? { metadata: { teamId } } : {}),
+      ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
     },
     visibility: { scope: "all" },
   };
