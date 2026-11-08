@@ -14,4 +14,5 @@ export type InMatchSettings = {
   seed?: string; // Map generation seed
   gameMasterMode?: boolean;
   controlledCharacterRoster?: Array<{ id: string; name: string; skin: import("./UserAccount").Skin }>;
+  loversMode?: boolean;
 };

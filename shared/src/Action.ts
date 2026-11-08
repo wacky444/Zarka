@@ -83,7 +83,9 @@ export type ActionId =
   | "buy_pyromaniac"
   | "fire_damage"
   | "buy_bomber"
-  | "buy_trafficker";
+  | "buy_trafficker"
+  | "lovers_formed"
+  | "lovers_announced";
 
 export type ActionTag =
   | "Attack"

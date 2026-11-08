@@ -55,6 +55,7 @@ export type CreateMatchPayload = {
   started?: boolean;
   gameMasterMode?: boolean;
   controlledCharacterRoster?: Array<{ id: string; name: string; skin: Skin }>;
+  loversMode?: boolean;
 };
 
 export type JoinMatchPayload = {
@@ -185,6 +186,7 @@ export type UpdateSettingsPayload = {
   started?: boolean;
   gameMasterMode?: boolean;
   controlledCharacterRoster?: Array<{ id: string; name: string; skin: Skin }>;
+  loversMode?: boolean;
   error?: string;
 };
 
@@ -218,6 +220,7 @@ export interface MatchCardSummary {
   timeStatus: MatchCardTimeStatus;
   mapPreviewCells: MatchPreviewCell[];
   terminalReason?: MatchReportReason;
+  loversMode?: boolean;
 }
 
 export interface MyMatchCardSummary extends MatchCardSummary {
@@ -238,6 +241,7 @@ export interface MyMatchCardSummary extends MatchCardSummary {
   player_team_won?: boolean;
   has_report?: boolean;
   currentUserReady: boolean;
+  loversMode?: boolean;
 }
 
 export type ListMyMatchesPayload = {

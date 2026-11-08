@@ -116,6 +116,14 @@ export interface MatchRecord {
   gameMasterMode?: boolean;
   gameMasterUserIds?: string[];
   controlledCharacterRoster?: Array<{ id: string; name: string; skin: Skin }>;
+  /** Indicates whether the Lovers (Enamorados) team can form during the match. */
+  loversMode?: boolean;
+  /** Server-private pre-rolled turn integer in [4, 20] at which eligible co-location begins triggering the flechazo. */
+  loversTriggerTurn?: number;
+  /** Server-private turn number when the Lovers team was formed. */
+  loversFormedTurn?: number;
+  /** Server-private tuple of the two character IDs that formed the Enamorados team. */
+  loverPlayerIds?: [string, string];
 }
 
 export interface TurnRecord {

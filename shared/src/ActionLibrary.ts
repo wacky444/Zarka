@@ -1656,6 +1656,36 @@ export const ActionLibrary: ActionLibraryDefinition = {
     actionSubOrder: 10,
     notes: ["Evento privado al contratar una entrega del traficante."],
     tags: ["Economy", "Logistics"]
+  },
+  lovers_formed: {
+    id: "lovers_formed",
+    name: "Enamoramiento",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "suit_hearts.png",
+    actionOrder: 0,
+    actionSubOrder: 0,
+    notes: ["Informe personal de formación del equipo Enamorados."],
+    tags: ["Status"]
+  },
+  lovers_announced: {
+    id: "lovers_announced",
+    name: "Anuncio de enamorados",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "suit_hearts.png",
+    actionOrder: 0,
+    actionSubOrder: 0,
+    notes: ["Anuncio público de que dos supervivientes se han enamorado en Zarka."],
+    tags: ["Status"]
   }
 };
 
