@@ -4088,7 +4088,9 @@ export class GameScene extends Phaser.Scene {
       }
 
       this.logReplayCache.set(this.getReplayCacheKey(turnNumber), { events: replayEvents });
-      this.logReplayCache.set(this.getReplayCacheKey(turnNumber, "all"), { events: replayEvents });
+      if (this.adminViewEnabled) {
+        this.logReplayCache.set(this.getReplayCacheKey(turnNumber, "all"), { events: replayEvents });
+      }
       for (const event of replayEvents) {
         if (event.kind === "player") {
           if (event.action.actionId === "status_dead" && event.actorId) {
@@ -4120,7 +4122,9 @@ export class GameScene extends Phaser.Scene {
         this.renderPlayerCharacters(match);
       }
       this.logReplayCache.set(this.getReplayCacheKey(turnNumber), { events: [] });
-      this.logReplayCache.set(this.getReplayCacheKey(turnNumber, "all"), { events: [] });
+      if (this.adminViewEnabled) {
+        this.logReplayCache.set(this.getReplayCacheKey(turnNumber, "all"), { events: [] });
+      }
     }
 
     this.updateCharacterPanel(match);
@@ -4731,7 +4735,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private getReplayCacheKey(turn: number, characterId?: string | null): string {
-    const char = characterId !== undefined ? characterId : this.selectedLogCharacterId;
+    const canFilter = Boolean(this.adminViewEnabled || this.reportReplayMode);
+    let char = characterId !== undefined ? characterId : this.selectedLogCharacterId;
+    if (!canFilter) {
+      char = this.currentUserId;
+    }
     return generateReplayCacheKey(turn, char);
   }
 
@@ -4826,14 +4834,21 @@ export class GameScene extends Phaser.Scene {
     panel.setLogLoading(true);
     this.updateReplayControls();
     try {
+      const canFilterOrViewAll = Boolean(
+        this.adminViewEnabled || this.reportReplayMode
+      );
       const isAll =
-        this.selectedLogCharacterId === null ||
-        this.selectedLogCharacterId === "all";
-      const characterParam = isAll ? "all" : this.selectedLogCharacterId;
+        canFilterOrViewAll &&
+        (this.selectedLogCharacterId === null ||
+          this.selectedLogCharacterId === "all");
+      const characterParam = canFilterOrViewAll
+        ? (isAll ? "all" : this.selectedLogCharacterId ?? undefined)
+        : (this.currentUserId ?? undefined);
+      const viewAllParam = canFilterOrViewAll && isAll;
       const res = await service.getReplay(
         matchId,
         turn,
-        this.adminViewEnabled || isAll,
+        viewAllParam,
         this.reportReplayMode,
         characterParam
       );

@@ -255,3 +255,37 @@ test("nonparticipants cannot use report replay access", () => {
 
   assert.equal(errorCode, 7);
 });
+
+test("admin in ongoing match without view_all enabled receives tailored events even if character all is requested", () => {
+  const { nk, logger } = createHarness(false);
+  const response = getReplayRpc(
+    { userId: "admin" } as nkruntime.Context,
+    logger,
+    nk,
+    JSON.stringify({ match_id: MATCH_ID, turn: 1, view_all: false, character: "all" }),
+  );
+  const result = JSON.parse(response) as {
+    events: unknown[];
+    character?: string;
+  };
+
+  assert.deepEqual(result.events, []);
+  assert.equal(result.character, "admin");
+});
+
+test("admin in ongoing match with view_all enabled can load untailored replay events", () => {
+  const { nk, logger } = createHarness(false);
+  const response = getReplayRpc(
+    { userId: "admin" } as nkruntime.Context,
+    logger,
+    nk,
+    JSON.stringify({ match_id: MATCH_ID, turn: 1, view_all: true, character: "all" }),
+  );
+  const result = JSON.parse(response) as {
+    events: unknown[];
+    character?: string;
+  };
+
+  assert.deepEqual(result.events, [HIDDEN_EVENT]);
+  assert.equal(result.character, "all");
+});

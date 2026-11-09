@@ -123,19 +123,25 @@ export function getReplayRpc(
     turn = 0;
   }
 
+  const canFilterOrViewAll =
+    match.gameMasterMode === true ||
+    hasMatchReport ||
+    (json.view_all === true && isAdmin);
+
   let viewAll = false;
   let targetViewerId = ctx.userId;
 
-  if (match.gameMasterMode) {
-    viewAll = true;
-  } else if (isAuthorized) {
+  if (canFilterOrViewAll) {
     if (requestedCharacter && requestedCharacter.toLowerCase() === "all") {
       viewAll = true;
     } else if (requestedCharacter) {
       targetViewerId = requestedCharacter;
       viewAll = false;
     } else {
-      viewAll = (json.view_all === true && isAdmin) || hasMatchReport;
+      viewAll =
+        (json.view_all === true && isAdmin) ||
+        hasMatchReport ||
+        match.gameMasterMode === true;
     }
   } else {
     targetViewerId = ctx.userId;
@@ -195,7 +201,7 @@ export function getReplayRpc(
     turn,
     max_turn: maxTurn,
     ...(requestedCharacter !== undefined
-      ? { character: isAuthorized ? requestedCharacter : ctx.userId }
+      ? { character: canFilterOrViewAll ? requestedCharacter : ctx.userId }
       : {}),
     events,
     snapshot,
