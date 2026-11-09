@@ -552,10 +552,7 @@ export class MainScene extends Phaser.Scene {
           }
         } catch (e) {
           console.error("start_match error", e);
-          const errorMessage =
-            typeof e === "object" && e !== null && "message" in e
-              ? String(e.message)
-              : String(e);
+          const errorMessage = await this.extractRpcErrorMessage(e);
           if (errorMessage.includes("insufficient_spawn_tiles")) {
             this.lobbyView.showSpawnValidationWarning();
             this.statusText.setText(
@@ -805,6 +802,27 @@ export class MainScene extends Phaser.Scene {
       return raw as T; // already parsed
     }
     throw new Error("Unsupported payload type: " + typeof raw);
+  }
+
+  private async extractRpcErrorMessage(e: unknown): Promise<string> {
+    if (e && typeof (e as { json?: unknown }).json === "function") {
+      try {
+        const json = await (e as Response).json();
+        if (typeof json?.message === "string") return json.message;
+        if (typeof json?.error === "string") return json.error;
+      } catch {
+        // Ignore JSON parse failure
+      }
+    }
+    if (e && typeof e === "object") {
+      const errObj = e as { message?: string; error?: string };
+      if (typeof errObj.message === "string") return errObj.message;
+      if (typeof errObj.error === "string") return errObj.error;
+    }
+    if (e instanceof Error) {
+      return e.message;
+    }
+    return String(e);
   }
 
   public showMyMatchesView() {

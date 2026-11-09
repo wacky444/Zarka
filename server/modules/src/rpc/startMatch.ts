@@ -54,17 +54,20 @@ export function startMatchRpc(
   const read = storage.getMatch(matchId);
 
   if (!read) {
+    logger.warn("start_match: match not found: %s", matchId);
     throw makeNakamaError("not_found", nkruntime.Codes.NOT_FOUND);
   }
 
   const match: MatchRecord = read.match;
   if (match.metadata?.[RANKED_MATCH_METADATA_KEY]) {
+    logger.warn("start_match: ranked start rejected for match %s", matchId);
     throw makeNakamaError(
       "ranked_start_server_only",
       nkruntime.Codes.PERMISSION_DENIED
     );
   }
   if (match.removed && match.removed !== 0) {
+    logger.warn("start_match: match ended %s", matchId);
     throw makeNakamaError("match_ended", nkruntime.Codes.FAILED_PRECONDITION);
   }
   if (typeof match.started !== "boolean") {
@@ -163,6 +166,14 @@ export function startMatchRpc(
   }
 
   if (!hasEnoughSpawnTiles(match)) {
+    logger.warn(
+      "start_match: insufficient spawn tiles for match %s (cols=%s, rows=%s, players=%s, botPlayers=%s)",
+      matchId,
+      String(match.cols),
+      String(match.rows),
+      String(match.players?.length ?? 0),
+      String(match.botPlayers ?? 0)
+    );
     throw makeNakamaError(
       "insufficient_spawn_tiles",
       nkruntime.Codes.FAILED_PRECONDITION
