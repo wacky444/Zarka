@@ -123,7 +123,7 @@ test("bots assign testament to a living random teammate", () => {
 test("bot uses create_fire against an enemy when fuel covers target distance", () => {
   const bot = createCharacter("bot1", "bots", "origin", { q: 0, r: 0 });
   const enemy = createCharacter("human", "humans", "enemy-tile", { q: 1, r: 0 });
-  bot.inventory.carriedItems = [{ itemId: "fuel", quantity: 5, weight: 10 }];
+  bot.inventory.carriedItems = [{ itemId: "fuel", quantity: 3, weight: 6 }];
   const match = createMatch(
     [bot, enemy],
     [

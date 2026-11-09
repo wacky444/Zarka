@@ -27,7 +27,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
     requirements: [
       {
         description:
-          "Consume 2 unidades de combustible. Gastando 3 combustibles adicionales, el incendio puede iniciarse en una localización adyacente.",
+          "Consume 2 unidades de combustible en la localización propia o 3 en una adyacente.",
         consumesResource: true
       }
     ],
@@ -38,7 +38,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
       }
     ],
     notes: [
-      "Gastando 3 combustibles adicionales el incendio puede iniciarse en una localización adyacente.",
+      "Requiere 3 unidades de combustible para iniciarse en una localización adyacente.",
       "Jugadores con Percepción 4 pueden detectar el incendio desde cualquier distancia"
     ],
     tags: ["Attack", "Area", "Ranged"]

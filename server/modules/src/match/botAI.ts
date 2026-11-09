@@ -550,7 +550,7 @@ function createFireCandidate(
       return false;
     }
     const distance = axialDistance(origin, coord);
-    const fuelCost = distance === 0 ? 2 : distance === 1 ? 5 : 0;
+    const fuelCost = distance === 0 ? 2 : distance === 1 ? 3 : 0;
     const tile = context.map.byCoord[coordKey(coord)];
     return (
       fuelCost > 0 &&

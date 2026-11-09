@@ -4509,7 +4509,7 @@ export class GameScene extends Phaser.Scene {
             : total,
         0
       );
-      const requiredFuel = distance === 0 ? 2 : 5;
+      const requiredFuel = distance === 0 ? 2 : 3;
       if (fuelQuantity < requiredFuel) {
         return false;
       }

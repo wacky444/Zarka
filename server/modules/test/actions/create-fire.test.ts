@@ -100,9 +100,9 @@ test("creating a fire locally consumes two fuel and schedules three future turns
   assert.equal(event.action.metadata?.fireEndTurn, 4);
 });
 
-test("an adjacent fire consumes five fuel across carried stacks", () => {
+test("an adjacent fire consumes three fuel across carried stacks", () => {
   const actor = createCharacter("actor", 0);
-  const match = createMatch(actor, { q: 1, r: 0 }, [2, 3]);
+  const match = createMatch(actor, { q: 1, r: 0 }, [1, 2]);
   const events = executeAction(
     match,
     ActionLibrary.create_fire,
@@ -117,12 +117,12 @@ test("an adjacent fire consumes five fuel across carried stacks", () => {
 
   assert.deepEqual(targetTile?.meta, { fireStartTurn: 2, fireEndTurn: 4 });
   assert.equal(actor.inventory.carriedItems.length, 0);
-  assert.equal(event.action.metadata?.fuelConsumed, 5);
+  assert.equal(event.action.metadata?.fuelConsumed, 3);
 });
 
 test("fire creation replay is visible to nearby viewers and perception4", () => {
   const actor = createCharacter("actor", 0);
-  const match = createMatch(actor, { q: 1, r: 0 }, [5]);
+  const match = createMatch(actor, { q: 1, r: 0 }, [3]);
   const nearby = createCharacter("nearby", 1);
   nearby.stats.baseViewRange = 1;
   const distant = createCharacter("distant", 5);
@@ -149,9 +149,9 @@ test("fire creation replay is visible to nearby viewers and perception4", () => 
   }
 });
 
-test("an adjacent fire fails without five fuel", () => {
+test("an adjacent fire fails without three fuel", () => {
   const actor = createCharacter("actor", 0);
-  const match = createMatch(actor, { q: 1, r: 0 }, [4]);
+  const match = createMatch(actor, { q: 1, r: 0 }, [2]);
   const events = executeAction(
     match,
     ActionLibrary.create_fire,
@@ -164,7 +164,7 @@ test("an adjacent fire fails without five fuel", () => {
   );
 
   assert.equal(match.map?.tiles[1].meta?.fireStartTurn, undefined);
-  assert.equal(actor.inventory.carriedItems[0].quantity, 4);
+  assert.equal(actor.inventory.carriedItems[0].quantity, 2);
   assert.ok(failure && failure.kind === "player");
   assert.equal(failure.action.metadata?.attemptedActionId, "create_fire");
   assert.equal(failure.action.metadata?.missingItemId, "fuel");

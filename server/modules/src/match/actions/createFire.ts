@@ -16,7 +16,7 @@ import { BaseAction } from "./classes/BaseAction";
 
 const FIRE_DURATION_TURNS = 3;
 const LOCAL_FUEL_COST = 2;
-const ADJACENT_FUEL_COST = 5;
+const ADJACENT_FUEL_COST = 3;
 
 function countFuel(character: PlannedActionParticipant["character"]): number {
   return (character.inventory?.carriedItems ?? []).reduce(
