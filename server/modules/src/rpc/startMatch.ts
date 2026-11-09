@@ -18,7 +18,11 @@ import { tailorMapForCharacter } from "../utils/matchView";
 import { createReplaySnapshot } from "../match/replay/snapshot";
 import { getRuntimeMatchId } from "../utils/matchIds";
 import { startMatchRecord } from "../match/startMatchRecord";
-import { hasEnoughSpawnTiles, createDefaultCharacter } from "../utils/playerCharacter";
+import {
+  hasEnoughSpawnTiles,
+  createDefaultCharacter,
+  ensureAllPlayerCharacters
+} from "../utils/playerCharacter";
 
 export function startMatchRpc(
   ctx: nkruntime.Context,
@@ -164,6 +168,8 @@ export function startMatchRpc(
     };
     return JSON.stringify(already);
   }
+
+  ensureAllPlayerCharacters(match);
 
   if (!hasEnoughSpawnTiles(match)) {
     logger.warn(

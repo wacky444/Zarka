@@ -212,11 +212,6 @@ export function distributeTeams(
         orderedRoster.push(botId);
       }
     }
-    for (const charId of Object.keys(characters)) {
-      if (orderedRoster.indexOf(charId) === -1) {
-        orderedRoster.push(charId);
-      }
-    }
   }
 
   const totalPlayers = orderedRoster.length;

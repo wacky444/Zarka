@@ -75,6 +75,9 @@ export function leaveMatchRpc(
     ) {
       delete match.readyStates[ctx.userId];
     }
+    if (!match.started && match.playerCharacters) {
+      delete match.playerCharacters[ctx.userId];
+    }
     if (match.metadata?.[TUTORIAL_MATCH_METADATA_KEY]) {
       try {
         deleteUnstartedLobbyAndArtifacts(

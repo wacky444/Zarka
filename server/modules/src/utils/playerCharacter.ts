@@ -165,6 +165,19 @@ export function ensureAllPlayerCharacters(match: MatchRecord): boolean {
     ensureId(`bot${i}`);
   }
 
+  if (!match.started) {
+    const validIds = new Set<string>(match.players);
+    for (let i = 1; i <= totalBots; i += 1) {
+      validIds.add(`bot${i}`);
+    }
+    for (const charId of Object.keys(match.playerCharacters)) {
+      if (!validIds.has(charId)) {
+        delete match.playerCharacters[charId];
+        mutated = true;
+      }
+    }
+  }
+
   return mutated;
 }
 
@@ -373,11 +386,6 @@ function getSpawnRoster(match: MatchRecord): string[] {
   const roster = [...match.players];
   for (let index = 1; index <= totalBots; index += 1) {
     roster.push(`bot${index}`);
-  }
-  for (const characterId of Object.keys(match.playerCharacters ?? {})) {
-    if (!roster.includes(characterId)) {
-      roster.push(characterId);
-    }
   }
   return roster;
 }
