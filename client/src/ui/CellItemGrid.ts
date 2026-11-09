@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { ItemLibrary, type ItemId } from "@shared";
 import { resolveItemTexture } from "./itemIcons";
-import { composeItemDescription, ItemTooltipManager } from "./ItemTooltip";
+import { ItemTooltipManager } from "./ItemTooltip";
 import { THEME } from "./ColorPalette";
 
 export interface CellItemGridEntry {
@@ -70,12 +70,7 @@ export function createCellItemGrid(
       ) {
         return;
       }
-      itemTooltip.show(
-        pointer.x,
-        pointer.y,
-        definition.name,
-        composeItemDescription(definition.description, definition.notes)
-      );
+      itemTooltip.showItem(pointer.x, pointer.y, definition);
     });
     const quantity = scene.add
       .text(cellX, cellY + rowHeight - 3, `×${entry.quantity}`, {

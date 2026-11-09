@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { t } from "../services/i18n";
-import { HoverTooltip } from "./HoverTooltip";
+import { ItemTooltipManager } from "./ItemTooltip";
 
 export interface InventoryGridItem {
   id: string;
@@ -40,7 +40,7 @@ export class InventoryGrid extends Phaser.GameObjects.Container {
   private containerWidth: number;
   private containerHeight: number;
   private emptyLabel: Phaser.GameObjects.Text;
-  private tooltip: HoverTooltip | null = null;
+  private tooltip: ItemTooltipManager | null = null;
   private readonly hideTooltipOnPointerDown = (): void => {
     this.tooltip?.hide();
   };
@@ -236,9 +236,11 @@ export class InventoryGrid extends Phaser.GameObjects.Container {
             return;
           }
           this.ensureTooltip();
-          this.tooltip?.show(pointer.x, pointer.y, {
-            title: item.name,
-            body: description,
+          this.tooltip?.showItem(pointer.x, pointer.y, {
+            name: item.name,
+            description: item.description,
+            notes: item.notes,
+            weight: item.weightPerItem,
           });
         }
       );
@@ -363,10 +365,7 @@ export class InventoryGrid extends Phaser.GameObjects.Container {
 
   private ensureTooltip() {
     if (!this.tooltip) {
-      this.tooltip = new HoverTooltip(this.scene);
+      this.tooltip = new ItemTooltipManager(this.scene, 10002);
     }
-    const tooltipGO = this.tooltip.getGameObject();
-    tooltipGO.setDepth(10002);
-    this.scene.children.bringToTop(tooltipGO);
   }
 }

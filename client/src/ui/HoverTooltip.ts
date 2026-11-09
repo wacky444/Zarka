@@ -1,8 +1,10 @@
 import Phaser from "phaser";
+import { t } from "../services/i18n";
 
-interface TooltipContent {
+export interface TooltipContent {
   title?: string;
   body?: string;
+  weight?: number | null;
 }
 
 export class HoverTooltip {
@@ -10,6 +12,7 @@ export class HoverTooltip {
   private readonly container: Phaser.GameObjects.Container;
   private readonly background: Phaser.GameObjects.Rectangle;
   private readonly titleText: Phaser.GameObjects.Text;
+  private readonly weightText: Phaser.GameObjects.Text;
   private readonly bodyText: Phaser.GameObjects.Text;
   private readonly padding = 12;
   private readonly maxWidth = 280;
@@ -38,6 +41,14 @@ export class HoverTooltip {
       })
       .setOrigin(0, 0);
 
+    this.weightText = scene.add
+      .text(0, 0, "", {
+        fontSize: "13px",
+        fontStyle: "bold",
+        color: "#94a3b8",
+      })
+      .setOrigin(1, 0);
+
     this.bodyText = scene.add
       .text(0, 0, "", {
         fontSize: "13px",
@@ -51,6 +62,7 @@ export class HoverTooltip {
 
     this.container.add(this.background);
     this.container.add(this.titleText);
+    this.container.add(this.weightText);
     this.container.add(this.bodyText);
   }
 
@@ -59,7 +71,8 @@ export class HoverTooltip {
   }
 
   show(x: number, y: number, content: TooltipContent) {
-    if (!content.title && !content.body) {
+    const hasWeight = content.weight !== undefined && content.weight !== null;
+    if (!content.title && !content.body && !hasWeight) {
       return;
     }
 
@@ -69,12 +82,30 @@ export class HoverTooltip {
       mainCam.ignore(this.container);
     }
 
-
     const availableWidth = this.maxWidth - this.padding * 2;
+    const titleGap = 12;
+
+    if (hasWeight) {
+      const weightValue = Number.isInteger(content.weight)
+        ? content.weight
+        : Math.round((content.weight as number) * 10) / 10;
+      this.weightText.setVisible(true);
+      this.weightText.setText(`${t("Weight")} ${weightValue}`);
+    } else {
+      this.weightText.setVisible(false);
+      this.weightText.setText("");
+    }
+
+    const weightWidth = this.weightText.visible
+      ? this.weightText.getBounds().width
+      : 0;
+    const titleAvailableWidth = this.weightText.visible
+      ? Math.max(60, availableWidth - weightWidth - titleGap)
+      : availableWidth;
 
     if (content.title) {
       this.titleText.setVisible(true);
-      this.titleText.setWordWrapWidth(availableWidth, true);
+      this.titleText.setWordWrapWidth(titleAvailableWidth, true);
       this.titleText.setText(content.title);
     } else {
       this.titleText.setVisible(false);
@@ -90,27 +121,39 @@ export class HoverTooltip {
       this.bodyText.setText("");
     }
 
-    const titleHeight = this.titleText.visible
-      ? this.titleText.getBounds().height
-      : 0;
-    const gap = this.titleText.visible && this.bodyText.visible ? 6 : 0;
-    const bodyHeight = this.bodyText.visible
-      ? this.bodyText.getBounds().height
-      : 0;
-
-    this.titleText.setPosition(this.padding, this.padding);
-    this.bodyText.setPosition(this.padding, this.padding + titleHeight + gap);
-
     const titleWidth = this.titleText.visible
       ? this.titleText.getBounds().width
       : 0;
+    const titleRowWidth =
+      titleWidth + (this.weightText.visible ? titleGap + weightWidth : 0);
     const bodyWidth = this.bodyText.visible
       ? this.bodyText.getBounds().width
       : 0;
     const contentWidth = Math.min(
       this.maxWidth,
-      Math.max(titleWidth, bodyWidth) + this.padding * 2
+      Math.max(titleRowWidth, bodyWidth) + this.padding * 2
     );
+
+    const titleHeight = Math.max(
+      this.titleText.visible ? this.titleText.getBounds().height : 0,
+      this.weightText.visible ? this.weightText.getBounds().height : 0
+    );
+    const gap =
+      (this.titleText.visible || this.weightText.visible) &&
+      this.bodyText.visible
+        ? 6
+        : 0;
+    const bodyHeight = this.bodyText.visible
+      ? this.bodyText.getBounds().height
+      : 0;
+
+    this.titleText.setPosition(this.padding, this.padding);
+    const weightY = this.titleText.visible
+      ? this.padding + 2
+      : this.padding;
+    this.weightText.setPosition(contentWidth - this.padding, weightY);
+    this.bodyText.setPosition(this.padding, this.padding + titleHeight + gap);
+
     const contentHeight = this.padding * 2 + titleHeight + gap + bodyHeight;
 
     this.background.setSize(contentWidth, contentHeight);

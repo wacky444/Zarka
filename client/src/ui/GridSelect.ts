@@ -67,6 +67,7 @@ export interface GridSelectItem {
   energyCost?: number;
   disabled?: boolean;
   isEmptyOption?: boolean;
+  weight?: number;
 }
 
 interface OpaquePixelCenter {
@@ -1423,12 +1424,11 @@ export class GridSelect extends Phaser.GameObjects.Container {
           return;
         }
         this.ensureTooltip();
-        this.tooltip?.show(
-          pointer.x,
-          pointer.y,
-          item.name,
-          stripActionDescriptionMarkup(descriptionContent)
-        );
+        this.tooltip?.showItem(pointer.x, pointer.y, {
+          name: item.name,
+          description: stripActionDescriptionMarkup(descriptionContent),
+          weight: item.weight
+        });
       };
       background.on(
         Phaser.Input.Events.POINTER_DOWN,

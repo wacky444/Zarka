@@ -19,7 +19,8 @@ export function buildCraftingProductItems(
       description: definition.description,
       texture: visual.texture,
       frame: visual.frame,
-      missingRequirement: requirementWarning
+      missingRequirement: requirementWarning,
+      weight: definition.weight
     };
   });
 }

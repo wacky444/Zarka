@@ -56,8 +56,10 @@ export function buildCharacterPanelItemOptions(
           label: poisoned ? `☠ ${definition?.name ?? itemId} — POISONED` : definition?.name ?? itemId,
           poisoned,
           description: definition?.description,
+          notes: definition?.notes,
           texture: visual.texture,
-          frame: visual.frame
+          frame: visual.frame,
+          weight: definition?.weight
         });
       }
 
@@ -88,8 +90,10 @@ export function buildCharacterPanelItemOptions(
         label: poisoned ? `☠ ${name} — POISONED` : stack.quantity > 1 ? `${name} (x${stack.quantity})` : name,
         poisoned,
         description: definition?.description,
+        notes: definition?.notes,
         texture: visual.texture,
-        frame: visual.frame
+        frame: visual.frame,
+        weight: definition?.weight
       });
     }
   }
@@ -107,8 +111,10 @@ export function buildCharacterPanelItemOptions(
         id: definition.id,
         label: definition.name,
         description: definition.description,
+        notes: definition.notes,
         texture: visual.texture,
-        frame: visual.frame
+        frame: visual.frame,
+        weight: definition.weight
       });
     }
   }

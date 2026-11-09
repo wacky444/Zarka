@@ -27,7 +27,6 @@ import {
 import { resolveItemTexture } from "../ui/itemIcons";
 import {
   ItemTooltipManager,
-  composeItemDescription,
 } from "../ui/ItemTooltip";
 import {
   CellContentsPanel,
@@ -807,10 +806,6 @@ export class GameBoardRenderer {
           if (!this.scene.textures.exists(textureInfo.texture)) {
             continue;
           }
-          const tooltipBody = composeItemDescription(
-            definition.description,
-            definition.notes,
-          );
           const showTooltip = (pointer: Phaser.Input.Pointer) => {
             if (pointer.button !== 0 && !pointer.wasTouch) {
               return;
@@ -824,12 +819,7 @@ export class GameBoardRenderer {
             if (pointer.getDistance() > 15) {
               return;
             }
-            this.itemTooltip.show(
-              pointer.x,
-              pointer.y,
-              definition.name,
-              tooltipBody,
-            );
+            this.itemTooltip.showItem(pointer.x, pointer.y, definition);
           };
           if (poisonedTypes.has(itemType)) {
             const poisonGlow = this.scene.add.circle(x, y, 13, 0x22c55e, 0.28)

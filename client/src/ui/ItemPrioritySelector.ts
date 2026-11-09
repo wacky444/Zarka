@@ -4,16 +4,19 @@ import {
   PICKUP_NONE_PRIORITY_ID
 } from "@shared";
 import { GridSelect, type GridSelectItem } from "./GridSelect";
+import { t } from "../services/i18n";
 
 export type ItemPriorityOption = {
   id: string;
   label: string;
   description?: string;
+  notes?: string[];
   texture?: string;
   frame?: string;
   iconScale?: number;
   disabled?: boolean;
   poisoned?: boolean;
+  weight?: number;
 };
 
 const SELECT_LABEL = "[ Add priority item ]";
@@ -320,6 +323,7 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
           option.id !== PICKUP_NONE_PRIORITY_ID &&
           !this.priority.includes(option.id) &&
           prioritizedItemCount >= this.maxEntries),
+      weight: option.weight,
     }));
   }
 
@@ -426,8 +430,16 @@ export class ItemPrioritySelector extends Phaser.GameObjects.Container {
       const id = this.priority[index];
       const option = this.options.find((entry) => entry.id === id);
       const name = option?.label ?? id;
+      const weightValue =
+        option?.weight !== undefined && option?.weight !== null
+          ? Number.isInteger(option.weight)
+            ? option.weight
+            : Math.round(option.weight * 10) / 10
+          : null;
+      const weightSuffix =
+        weightValue !== null ? ` (${t("Weight")} ${weightValue})` : "";
       const text = this.scene.add
-        .text(0, cursorY, `${index + 1}. ${name}`, {
+        .text(0, cursorY, `${index + 1}. ${name}${weightSuffix}`, {
           fontSize: "15px",
           color: "#e2e8f0",
         })

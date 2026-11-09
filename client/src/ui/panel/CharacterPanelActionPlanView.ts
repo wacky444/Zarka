@@ -4192,6 +4192,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
         id,
         label: `${ItemLibrary[item!.item_type].name} (${id.slice(-5)})`,
         description: ItemLibrary[item!.item_type].description,
+        notes: ItemLibrary[item!.item_type].notes,
+        weight: ItemLibrary[item!.item_type].weight,
         ...resolveItemTexture(ItemLibrary[item!.item_type])
       }));
     const characterOptions = Object.entries(match?.playerCharacters ?? {})

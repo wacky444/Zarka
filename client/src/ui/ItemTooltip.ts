@@ -1,5 +1,14 @@
 import Phaser from "phaser";
 import { HoverTooltip } from "./HoverTooltip";
+import { t } from "../services/i18n";
+
+export interface ItemTooltipPayload {
+  name?: string;
+  title?: string;
+  description?: string | null;
+  notes?: string[];
+  weight?: number | null;
+}
 
 export function composeItemDescription(
   description: string,
@@ -23,12 +32,32 @@ export class ItemTooltipManager {
     private readonly depth = 10005
   ) {}
 
-  show(x: number, y: number, title: string, body: string): void {
-    if (!title && !body) {
+  show(
+    x: number,
+    y: number,
+    title: string,
+    body: string,
+    weight?: number | null
+  ): void {
+    const hasWeight = weight !== undefined && weight !== null;
+    if (!title && !body && !hasWeight) {
       return;
     }
     const tooltip = this.ensureTooltip();
-    tooltip.show(x, y, { title, body });
+    tooltip.show(x, y, { title, body, weight });
+  }
+
+  showItem(
+    x: number,
+    y: number,
+    item: ItemTooltipPayload
+  ): void {
+    const rawTitle = item.title ?? item.name ?? "";
+    const title = rawTitle ? t(rawTitle) : "";
+    const description = item.description ? t(item.description) : "";
+    const notes = item.notes?.map((note) => t(note));
+    const body = composeItemDescription(description, notes);
+    this.show(x, y, title, body, item.weight);
   }
 
   hide(): void {

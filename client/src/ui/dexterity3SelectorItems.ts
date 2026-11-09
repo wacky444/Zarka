@@ -28,6 +28,32 @@ export function getDexterity3CooldownState(
   };
 }
 
+export function shouldShowDexterity3ActionSelector(
+  selectedAction: string | null,
+  character: PlayerCharacter | null | undefined
+): boolean {
+  if (selectedAction !== "dexterity3") {
+    return false;
+  }
+  const abilities = Array.isArray(character?.abilities)
+    ? character.abilities
+    : [];
+  return abilities.includes("dexterity3");
+}
+
+export function shouldShowDexterity3ExtraSelector(
+  selectedAction: string | null,
+  character: PlayerCharacter | null | undefined
+): boolean {
+  if (selectedAction !== "dexterity3") {
+    return false;
+  }
+  const abilities = Array.isArray(character?.abilities)
+    ? character.abilities
+    : [];
+  return abilities.includes("dexterity3");
+}
+
 export function parseDexterity3Product(value: string | null): Dexterity3ProductId | null {
   return DEXTERITY3_PRODUCTS.find((itemId) => itemId === value) ?? null;
 }
@@ -42,6 +68,7 @@ export function buildDexterity3ProductItems(): GridSelectItem[] {
       description: definition.description,
       texture: visual.texture,
       frame: visual.frame,
+      weight: definition.weight,
     };
   });
 }
