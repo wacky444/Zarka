@@ -13,7 +13,7 @@ const BOT_NAMES = [
   "Donna",
   "Heken",
   "Ruth",
-  "Sarah",
+  "Mosti",
   "Carol",
   "Bicho",
   "Alex",
