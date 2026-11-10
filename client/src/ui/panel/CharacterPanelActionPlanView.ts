@@ -144,7 +144,8 @@ export function buildMainActionSelection(
     targetPlayerIds: state.supportsPlayer
       ? [
           state.targetPlayerId,
-          state.secondTargetPlayerIsScareTarget
+          state.secondTargetPlayerIsScareTarget ||
+          state.secondTargetPlayerIsStealTarget
             ? state.secondTargetPlayerId
             : null
         ].filter((id): id is string => id !== null)
@@ -1219,7 +1220,10 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
 
     const serverSecondTargetPlayerId = normalizePlayerId(
       mainActionId === "shoot_pistol" || mainActionId === "steal"
-        ? character.actionPlan?.main?.secondTargetPlayerId
+        ? character.actionPlan?.main?.secondTargetPlayerId ??
+          (Array.isArray(targetPlayers) && targetPlayers.length > 1
+            ? targetPlayers[1]
+            : null)
         : Array.isArray(targetPlayers) && targetPlayers.length > 1
           ? targetPlayers[1]
           : null
@@ -3687,6 +3691,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       this.setScareSecondTargetPlayer(null, false);
     }
     this.refreshScareSecondPlayerSelectorState();
+    this.refreshPlayerOptionsForSelectors();
     if (this.tutorialActive && this.tutorialStepId) {
       this.setTutorialHighlight(this.tutorialStepId, this.tutorialActive);
     }

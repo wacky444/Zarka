@@ -236,3 +236,89 @@ test("Dexterity 2 cannot prioritize Special-category items", () => {
     false
   );
 });
+
+test("extra steal with targetPlayerIds array steals from second target", () => {
+  const fixture = createFixture(["knife"], ["knife"], undefined, 1);
+  const secondTarget = createDefaultCharacter("target2");
+  secondTarget.position = { tileId: "tile", coord: { q: 0, r: 0 } };
+  secondTarget.inventory.carriedItems = [
+    { itemId: "medicine", quantity: 1, weight: ItemLibrary.medicine.weight }
+  ];
+  fixture.match.players.push(secondTarget.id);
+  fixture.match.playerCharacters[secondTarget.id] = secondTarget;
+  fixture.participant.plan.targetPlayerIds = [fixture.target.id, secondTarget.id];
+  delete fixture.participant.plan.secondTargetPlayerId;
+
+  executeStealAction([fixture.participant], fixture.match);
+
+  assert.deepEqual(
+    fixture.actor.inventory.carriedItems.map((stack) => stack.itemId),
+    ["knife", "medicine"]
+  );
+  assert.equal(fixture.target.inventory.carriedItems.length, 0);
+  assert.equal(secondTarget.inventory.carriedItems.length, 0);
+});
+
+test("extra steal without Dexterity 2 steals from two different targets", () => {
+  const fixture = createFixture(["knife"], [], undefined, 1);
+  fixture.actor.abilities = [];
+  const secondTarget = createDefaultCharacter("target2");
+  secondTarget.position = { tileId: "tile", coord: { q: 0, r: 0 } };
+  secondTarget.inventory.carriedItems = [
+    { itemId: "medicine", quantity: 1, weight: ItemLibrary.medicine.weight }
+  ];
+  fixture.match.players.push(secondTarget.id);
+  fixture.match.playerCharacters[secondTarget.id] = secondTarget;
+  fixture.participant.plan.secondTargetPlayerId = secondTarget.id;
+
+  executeStealAction([fixture.participant], fixture.match);
+
+  assert.deepEqual(
+    fixture.actor.inventory.carriedItems.map((stack) => stack.itemId),
+    ["knife", "medicine"]
+  );
+  assert.equal(fixture.target.inventory.carriedItems.length, 0);
+  assert.equal(secondTarget.inventory.carriedItems.length, 0);
+});
+
+test("main-action RPC sets secondTargetPlayerId when given targetPlayerIds with two targets", () => {
+  const fixture = createFixture([], []);
+  let storedMatch = fixture.match;
+  const nakama = {
+    storageRead: () => [{ value: storedMatch, version: "1" }],
+    storageWrite: (requests: Array<{ value: unknown }>) => {
+      const write = requests[0];
+      if (write) {
+        storedMatch = write.value as MatchRecord;
+      }
+    },
+    storageList: () => ({ objects: [] }),
+    storageDelete: () => undefined,
+    matchCreate: () => "",
+    matchList: () => ({ matches: [] }),
+    matchSignal: () => ""
+  } as unknown as nkruntime.Nakama;
+
+  updateMainActionRpc(
+    { userId: fixture.actor.id } as nkruntime.Context,
+    logger,
+    nakama,
+    JSON.stringify({
+      match_id: fixture.match.match_id,
+      submission: {
+        actionId: ActionLibrary.steal.id,
+        extraExecutions: 1,
+        targetPlayerIds: ["target", "target2"]
+      }
+    })
+  );
+
+  assert.deepEqual(
+    storedMatch.playerCharacters.thief.actionPlan?.main?.targetPlayerIds,
+    ["target", "target2"]
+  );
+  assert.equal(
+    storedMatch.playerCharacters.thief.actionPlan?.main?.secondTargetPlayerId,
+    "target2"
+  );
+});

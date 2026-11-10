@@ -200,6 +200,12 @@ export function updateMainActionRpc(
       (normalizedActionId !== "shoot_pistol" && normalizedActionId !== "steal")
     ) {
       secondTargetPlayerId = undefined;
+    } else if (normalizedActionId === "steal") {
+      if (!secondTargetPlayerId && targetPlayerIds && targetPlayerIds.length > 1) {
+        secondTargetPlayerId = targetPlayerIds[1];
+      } else if (secondTargetPlayerId && targetPlayerIds && targetPlayerIds.length === 1) {
+        targetPlayerIds = [targetPlayerIds[0], secondTargetPlayerId];
+      }
     }
     if (normalizedActionId !== "steal" || !extraExecutions) {
       secondTargetItemIds = undefined;

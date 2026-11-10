@@ -235,7 +235,8 @@ export class StealAction extends BaseAction {
       const stealCount = 1 + extraExecutions;
       const requestedTargetPlayerId = participant.plan.targetPlayerIds?.[0];
       const requestedSecondTargetPlayerId =
-        participant.plan.secondTargetPlayerId;
+        participant.plan.secondTargetPlayerId ??
+        participant.plan.targetPlayerIds?.[1];
       let firstTargetCandidate: TargetCandidate | undefined;
       let secondTargetCandidate: TargetCandidate | undefined;
       let blockedByProtection = false;
