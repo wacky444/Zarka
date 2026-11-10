@@ -77,9 +77,9 @@ test("protect action always protects own character when self is selected as targ
   assert.equal(event.targets?.[0].targetId, "actor");
 });
 
-test("protect action protects both own character and target when another player is selected", () => {
-  const actor = createCharacter("actor");
-  const target = createCharacter("target");
+test("protect action protects both own character and target when another player is in the same cell (distance 0)", () => {
+  const actor = createCharacter("actor", 0);
+  const target = createCharacter("target", 0);
   actor.actionPlan = {
     main: { actionId: ActionLibrary.protect.id, targetPlayerIds: ["target"] }
   };
@@ -95,6 +95,26 @@ test("protect action protects both own character and target when another player 
   assert.ok(targetIds.includes("actor"));
   assert.ok(targetIds.includes("target"));
   assert.equal(targetIds.length, 2);
+});
+
+test("protect action protects only self when selected target is at distance greater than 0", () => {
+  const actor = createCharacter("actor", 0);
+  const target = createCharacter("target", 1);
+  actor.actionPlan = {
+    main: { actionId: ActionLibrary.protect.id, targetPlayerIds: ["target"] }
+  };
+  const match = createMatch([actor, target]);
+
+  const events = executeAction(match, ActionLibrary.protect, 1, {}, logger);
+  const event = getProtectEvent(events);
+
+  assert.ok(actor.statuses.conditions.includes("protected"));
+  assert.ok(!target.statuses?.conditions?.includes("protected"));
+
+  const targetIds = event.targets?.map((t) => t.targetId) ?? [];
+  assert.ok(targetIds.includes("actor"));
+  assert.ok(!targetIds.includes("target"));
+  assert.equal(targetIds.length, 1);
 });
 
 test("protect action protects own character even if selected target is dead", () => {

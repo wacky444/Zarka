@@ -16,6 +16,7 @@ import {
   collectPlanTargetIds,
   type PlannedActionParticipant,
 } from "./utils";
+import { areSameLocation } from "../../utils/location";
 import { BaseAction } from "./classes/BaseAction";
 
 function ensureStatusState(character: PlayerCharacter): PlayerStatusState {
@@ -76,6 +77,14 @@ export class ProtectAction extends BaseAction {
         }
         const target = match.playerCharacters[targetId];
         if (!target) {
+          continue;
+        }
+        if (
+          !areSameLocation(
+            participant.character.position?.coord,
+            target.position?.coord
+          )
+        ) {
           continue;
         }
         applyProtection(target);
