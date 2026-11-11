@@ -110,6 +110,7 @@ export async function animateChainsawAttackEvent(
               impactY - dirY * 16,
               "board_icon_chainsaw"
             );
+            context.ignoreUI(chainsawIcon);
             chainsawIcon.setDepth((targetSprite.depth || 10) + 5);
             chainsawIcon.setScale(0.7);
             chainsawIcon.setAngle(-25);
@@ -130,6 +131,7 @@ export async function animateChainsawAttackEvent(
           }
 
           const graphics = scene.add.graphics();
+          context.ignoreUI(graphics);
           graphics.setDepth((targetSprite.depth || 10) + 6);
 
           const slashAngle = Math.atan2(dirY, dirX) + Math.PI / 2;
@@ -172,6 +174,7 @@ export async function animateChainsawAttackEvent(
               i % 2 === 0 ? 0xff2200 : 0xffbb00,
               1
             );
+            context.ignoreUI(spark);
             spark.setDepth((targetSprite.depth || 10) + 7);
             particles.push(spark);
 
