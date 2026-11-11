@@ -25,7 +25,7 @@ export function executeStartChainsawAction(
     participant.character.statuses.chainsaw = { remainingTurns: 5 };
 
     const originLocation = participant.character.position?.coord;
-    const hearingRadious = ActionLibrary.start_chainsaw.hearingRadious ?? 1;
+    const hearingRadious = ActionLibrary.start_chainsaw.hearingRadious ?? 0;
     const hearingPlayerIds: string[] = [participant.playerId];
 
     if (originLocation) {

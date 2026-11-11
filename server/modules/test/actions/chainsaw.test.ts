@@ -64,7 +64,7 @@ function createTestMatch(): { match: MatchRecord; tile: HexTileSnapshot } {
   return { match, tile };
 }
 
-test("start_chainsaw consumes 1 fuel, sets remainingTurns to 5, and includes nearby players in visibility", () => {
+test("start_chainsaw consumes 1 fuel, sets remainingTurns to 5, and includes players in the same cell in visibility", () => {
   const { match, tile } = createTestMatch();
   const p1 = match.playerCharacters.p1;
   p1.actionPlan = {
@@ -92,12 +92,12 @@ test("start_chainsaw consumes 1 fuel, sets remainingTurns to 5, and includes nea
   // Chainsaw status set
   assert.equal(p1.statuses?.chainsaw?.remainingTurns, 5);
 
-  // Visibility: includes p1 (actor), p2 (same cell, dist 0), p3 (adj cell, dist 1), but NOT p4 (dist 3)
+  // Visibility: includes p1 (actor), p2 (same cell, dist 0), but NOT p3 (adj cell, dist 1) or p4 (dist 3)
   assert.equal(actionEvent.visibility?.scope, "limited");
   const visiblePlayers = actionEvent.visibility?.playerIds ?? [];
   assert.ok(visiblePlayers.includes("p1"), "p1 should hear it");
   assert.ok(visiblePlayers.includes("p2"), "p2 in same cell should hear it");
-  assert.ok(visiblePlayers.includes("p3"), "p3 at distance 1 should hear it");
+  assert.equal(visiblePlayers.includes("p3"), false, "p3 at distance 1 should NOT hear it");
   assert.equal(visiblePlayers.includes("p4"), false, "p4 at distance 3 should NOT hear it");
 });
 

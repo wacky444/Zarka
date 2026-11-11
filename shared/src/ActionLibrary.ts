@@ -856,7 +856,7 @@ export const ActionLibrary: ActionLibraryDefinition = {
   },
   start_chainsaw: {
     id: "start_chainsaw",
-    hearingRadious: 1,
+    hearingRadious: 0,
     name: "Arrancar motosierra",
     category: ActionCategory.Secondary,
     energyCost: 1,
