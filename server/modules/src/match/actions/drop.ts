@@ -14,6 +14,7 @@ import {
 } from "@shared";
 import { type PlannedActionParticipant } from "./utils";
 import { findTileById } from "./search";
+import { findTileAtCoord } from "../../utils/location";
 import { getUsableExtraExecutions } from "../../utils/energy";
 import { BaseAction } from "./classes/BaseAction";
 
@@ -200,13 +201,15 @@ export class DropAction extends BaseAction {
       const limit = 1 + extraReps;
       const isSell = participant.plan.sellInstead === true;
 
-      const tile = tileId ? findTileById(match, tileId) : undefined;
+      const tile =
+        (tileId ? findTileById(match, tileId) : undefined) ??
+        (coord ? findTileAtCoord(match.map?.tiles, coord) : undefined);
       const chosenItems = selectItemsToDrop(
         participant.character,
         priorities,
         limit
       );
-      const processedItems: Array<{ itemType: ItemId; zarkans?: number }> = [];
+      const processedItems: Array<{ itemType: ItemId; zarkans?: number; id?: string }> = [];
       let totalEarnedZarkans = 0;
 
       for (const itemType of chosenItems) {
@@ -265,9 +268,11 @@ export class DropAction extends BaseAction {
           if (!Array.isArray(participant.character.discoveredItemIds)) {
             participant.character.discoveredItemIds = [];
           }
-          participant.character.discoveredItemIds.push(newId);
+          if (participant.character.discoveredItemIds.indexOf(newId) === -1) {
+            participant.character.discoveredItemIds.push(newId);
+          }
 
-          processedItems.push({ itemType });
+          processedItems.push({ itemType, id: newId });
         }
       }
 
@@ -277,11 +282,16 @@ export class DropAction extends BaseAction {
         match.playerCharacters[participant.playerId] = participant.character;
       }
 
+      const discoveredItemIds = processedItems
+        .map((item) => item.id)
+        .filter((id): id is string => typeof id === "string");
       const metadata: Record<string, unknown> = {
         droppedCount: processedItems.length,
         droppedItems: processedItems.map((item) => ({
-          itemType: item.itemType
+          itemType: item.itemType,
+          ...(item.id ? { id: item.id } : {})
         })),
+        ...(discoveredItemIds.length > 0 ? { discoveredItemIds } : {}),
         sellInstead: isSell,
         extraExecutions: extraReps
       };

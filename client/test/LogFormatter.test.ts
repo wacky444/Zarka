@@ -510,3 +510,43 @@ test("CharacterPanelLogView formatReplayEvents formats pick_up with items and wi
 
   setLocale("en");
 });
+
+test("formatCharacterTurnLog reveals dropped items on character location under Ves:", () => {
+  const char = {
+    id: "p1",
+    name: "Hugo",
+    position: { coord: { q: 1, r: 2 } },
+    discoveredItemIds: ["itm_knife_1"]
+  } as any;
+
+  const snapshot = {
+    items: [
+      { item_id: "itm_knife_1", item_type: "knife" },
+      { item_id: "itm_hidden_axe", item_type: "axe" }
+    ],
+    map: {
+      tiles: [
+        {
+          id: "tile-1",
+          coord: { q: 1, r: 2 },
+          localizationType: "House",
+          frame: "house.png",
+          itemIds: ["itm_knife_1", "itm_hidden_axe"]
+        }
+      ]
+    }
+  } as any;
+
+  const log = formatCharacterTurnLog(
+    char,
+    "Verde",
+    1,
+    [],
+    snapshot,
+    [],
+    "Hugo"
+  );
+
+  assert.ok(log.includes("Ves: cuchillo"), `Expected log to include 'Ves: cuchillo', got: ${log}`);
+  assert.ok(!log.includes("hacha"), `Hidden item should not be in Ves, got: ${log}`);
+});

@@ -561,14 +561,22 @@ export const formatCharacterTurnLog = (
       ...((char as PlayerCharacter).discoveredItemIds ?? []),
       ...(loverPartner?.discoveredItemIds ?? [])
     ]);
+    const itemTypeById = new Map<string, string>();
     for (const item of itemsList) {
+      if (!item) {
+        continue;
+      }
       const raw = item as {
         id?: string;
+        item_id?: string;
         itemId?: string;
+        item_type?: string;
         coord?: { q: number; r: number };
       };
-      if (!raw) {
-        continue;
+      const id = raw.item_id ?? raw.id;
+      const type = raw.item_type ?? raw.itemId;
+      if (id && type) {
+        itemTypeById.set(id, type);
       }
       const itemCoord = raw.coord;
       const isHere =
@@ -577,13 +585,45 @@ export const formatCharacterTurnLog = (
           itemCoord &&
           itemCoord.q === partnerCoord.q &&
           itemCoord.r === partnerCoord.r);
-      if (isHere || (raw.id && discoveredItemIds.has(raw.id))) {
-        const itemId = raw.itemId ?? "";
+      if (isHere || (id && discoveredItemIds.has(id))) {
+        const itemId = type ?? "";
         const libItem = (
           ItemLibrary as Record<string, { name: string } | undefined>
         )[itemId];
         const itemName = (libItem?.name ?? itemId).toLowerCase();
-        if (itemName) {
+        if (itemName && !visibleEntities.includes(itemName)) {
+          visibleEntities.push(itemName);
+        }
+      }
+    }
+
+    const tiles = Array.isArray(snapshot.map?.tiles) ? snapshot.map.tiles : [];
+    for (const tile of tiles) {
+      if (!tile || !tile.coord) {
+        continue;
+      }
+      const isHere =
+        (tile.coord.q === charCoord.q && tile.coord.r === charCoord.r) ||
+        (partnerCoord &&
+          tile.coord.q === partnerCoord.q &&
+          tile.coord.r === partnerCoord.r);
+      if (!isHere) {
+        continue;
+      }
+      const tileItemIds = Array.isArray(tile.itemIds) ? tile.itemIds : [];
+      for (const id of tileItemIds) {
+        if (typeof id !== "string" || !discoveredItemIds.has(id)) {
+          continue;
+        }
+        const itemType = itemTypeById.get(id);
+        if (!itemType) {
+          continue;
+        }
+        const libItem = (
+          ItemLibrary as Record<string, { name: string } | undefined>
+        )[itemType];
+        const itemName = (libItem?.name ?? itemType).toLowerCase();
+        if (itemName && !visibleEntities.includes(itemName)) {
           visibleEntities.push(itemName);
         }
       }

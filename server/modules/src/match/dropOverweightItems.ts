@@ -59,20 +59,25 @@ function removeOneItem(
   match: MatchRecord,
   playerId: string,
   itemId: ItemId,
-  tileId: string
-): boolean {
+  tileId?: string
+): string | null {
   const character = match.playerCharacters?.[playerId];
   const carriedItems = character?.inventory?.carriedItems;
   const load = character?.stats?.load;
-  const tile = match.map?.tiles.find((candidate) => candidate.id === tileId);
+  const coord = character?.position?.coord;
+  const tile = match.map?.tiles.find(
+    (candidate) =>
+      (tileId && candidate.id === tileId) ||
+      (candidate.coord && coord && candidate.coord.q === coord.q && candidate.coord.r === coord.r)
+  );
   if (!character || !Array.isArray(carriedItems) || !load || !tile) {
-    return false;
+    return null;
   }
   const index = carriedItems.findIndex(
     (stack) => stack && stack.itemId === itemId && stack.quantity > 0,
   );
   if (index < 0) {
-    return false;
+    return null;
   }
   const definition = ItemLibrary[itemId];
   const weight = Math.max(0, definition.weight);
@@ -94,21 +99,27 @@ function removeOneItem(
   tile.itemIds = Array.isArray(tile.itemIds) ? tile.itemIds : [];
   tile.itemIds.push(itemIdOnGround);
   character.discoveredItemIds = character.discoveredItemIds ?? [];
-  character.discoveredItemIds.push(itemIdOnGround);
+  if (character.discoveredItemIds.indexOf(itemIdOnGround) === -1) {
+    character.discoveredItemIds.push(itemIdOnGround);
+  }
   syncBandolierLoadCapacity(character);
-  return true;
+  return itemIdOnGround;
 }
 
 export function dropOverweightItems(match: MatchRecord): ReplayPlayerEvent[] {
   const events: ReplayPlayerEvent[] = [];
-  for (const playerId of match.players ?? []) {
+  const playerIds = Array.from(
+    new Set([...(match.players ?? []), ...Object.keys(match.playerCharacters ?? {})])
+  );
+  for (const playerId of playerIds) {
     const character = match.playerCharacters?.[playerId];
     const load = character?.stats?.load;
     const tileId = character?.position?.tileId;
+    const coord = character?.position?.coord;
     if (
       !character ||
       !load ||
-      !tileId ||
+      (!tileId && !coord) ||
       !Number.isFinite(load.current) ||
       !Number.isFinite(load.max) ||
       load.current <= load.max
@@ -116,13 +127,14 @@ export function dropOverweightItems(match: MatchRecord): ReplayPlayerEvent[] {
       continue;
     }
 
-    const droppedItems: ItemId[] = [];
+    const droppedItems: Array<{ itemType: ItemId; id: string }> = [];
     for (const candidate of getCandidates(match, playerId)) {
       if (load.current <= load.max) {
         break;
       }
-      if (removeOneItem(match, playerId, candidate.itemId, tileId)) {
-        droppedItems.push(candidate.itemId);
+      const droppedId = removeOneItem(match, playerId, candidate.itemId, tileId);
+      if (droppedId) {
+        droppedItems.push({ itemType: candidate.itemId, id: droppedId });
       }
     }
     if (droppedItems.length === 0) {
@@ -139,7 +151,8 @@ export function dropOverweightItems(match: MatchRecord): ReplayPlayerEvent[] {
         metadata: {
           automatic: true,
           droppedCount: droppedItems.length,
-          droppedItems: droppedItems.map((itemType) => ({ itemType })),
+          droppedItems: droppedItems.map((item) => ({ itemType: item.itemType, id: item.id })),
+          discoveredItemIds: droppedItems.map((item) => item.id),
           sellInstead: false,
           load: { current: load.current, max: load.max },
         },
