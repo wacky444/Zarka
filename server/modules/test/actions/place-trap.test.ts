@@ -275,3 +275,59 @@ test("placing a trap stores it on the match and keeps placement diagnostics", ()
     "place_trap added match=%s trap=%s owner=%s traps_after=%d",
   ));
 });
+
+test("stepping on a trap applies damage reduction from both vest and resilience2", () => {
+  const victim = createDefaultCharacter("victim");
+  victim.stats.health = { current: 10, max: 10, knockoutThreshold: 5, injuredMax: 5 };
+  victim.position = { tileId: "tile_0", coord: { q: 0, r: 0 } };
+  // Add resilience2 ability (damage reduction 1)
+  victim.abilities = ["resilience2"];
+  // Add bulletproof_vest in inventory (physical damage reduction 1)
+  victim.inventory.carriedItems = [
+    { itemId: "bulletproof_vest", quantity: 1, weight: 5 },
+  ];
+
+  const trap: TrapRecord = {
+    id: "trap-test",
+    ownerId: "enemy",
+    from: { tileId: "tile_0", coord: { q: 0, r: 0 } },
+    to: { tileId: "tile_1", coord: { q: 1, r: 0 } },
+    damage: 7,
+    placedTurn: 1,
+  };
+
+  const match: MatchRecord = {
+    match_id: "trap-reduction-test",
+    players: ["victim", "enemy"],
+    playerCharacters: { victim },
+    playerList: {},
+    size: 2,
+    created_at: 1,
+    current_turn: 2,
+    started: true,
+    removed: 0,
+    map: {
+      cols: 2,
+      rows: 1,
+      seed: "trap-test",
+      tiles: [
+        { id: "tile_0", coord: { q: 0, r: 0 }, localizationType: "House", frame: "house.png", itemIds: [] },
+        { id: "tile_1", coord: { q: 1, r: 0 }, localizationType: "House", frame: "house.png", itemIds: [] },
+      ],
+    } as unknown as MatchRecord["map"],
+    traps: [trap],
+  };
+
+  const events = triggerTrapsForMovement(
+    match,
+    victim.id,
+    { tileId: "tile_0", coord: { q: 0, r: 0 } },
+    { tileId: "tile_1", coord: { q: 1, r: 0 } },
+  );
+
+  assert.equal(events.length, 1);
+  // Trap damage: 7 - 1 (vest) - 1 (resilience2) = 5
+  assert.equal(events[0].action.damageDealt, 5);
+  assert.equal(events[0].targets?.[0].damageTaken, 5);
+  assert.equal(victim.stats.health.current, 5);
+});

@@ -7,7 +7,7 @@ import type {
   ReplayPlayerEvent,
   TrapRecord,
 } from "@shared";
-import { ActionLibrary, axialDistance, neighbors } from "@shared";
+import { ActionLibrary, axialDistance, getDamageReduction, neighbors } from "@shared";
 import type { MatchRecord } from "../../models/types";
 import { isCharacterDead } from "../../utils/playerCharacter";
 import { findTileAtCoord } from "../../utils/location";
@@ -408,10 +408,10 @@ export function triggerTrapsForTransition(
     return [];
   }
 
-  const damage = Math.max(
-    0,
-    triggeredTrap.damage - getInventoryDamageReduction(character, "physical"),
-  );
+  const damageReduction =
+    getDamageReduction(character) +
+    getInventoryDamageReduction(character, "physical");
+  const damage = Math.max(0, triggeredTrap.damage - damageReduction);
   const outcome = applyHealthDelta(character, -damage, false, logger);
   character.stats = outcome.character.stats;
   character.progression = outcome.character.progression;
