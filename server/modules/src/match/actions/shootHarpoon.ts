@@ -11,18 +11,14 @@ import type {
 import {
   ActionLibrary,
   ReplayActionEffect,
-  getDamageReduction,
   getDodgeSuccessChance,
 } from "@shared";
 import {
-  applyHealthDelta,
+  applyDamage,
   buildGuardedEffectMask,
   consumeCarriedItem,
   hasCarriedItem,
-  getInventoryDamageReduction,
-  isTargetProtected,
   mergeCharacterState,
-  resolveGuardedDamage,
   type PlannedActionParticipant,
 } from "./utils";
 import { getUsableExtraExecutions } from "../../utils/energy";
@@ -110,21 +106,16 @@ export class ShootHarpoonAction extends BaseAction {
           continue;
         }
 
-        const guarded = isTargetProtected(target);
         const distance = targetCandidate.distance;
         const perShotDamage = distance === 0 ? 7 : 6;
         const baseDamage = perShotDamage * (1 + extraExecutions);
-        const guardedDamage = resolveGuardedDamage(baseDamage, guarded);
-        const damageReduction =
-          getDamageReduction(target) +
-          getInventoryDamageReduction(target, "arrow");
-        const dealtAmount = Math.max(0, guardedDamage - damageReduction);
 
         const {
           result: healthChange,
           character: updatedTarget,
           event,
-        } = applyHealthDelta(target, -dealtAmount);
+          guarded,
+        } = applyDamage(target, baseDamage, "arrow");
         mergeCharacterState(target, updatedTarget);
         match.playerCharacters[targetId] = target;
 

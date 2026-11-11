@@ -6,8 +6,7 @@ import type {
 } from "@shared";
 import type { MatchRecord } from "../models/types";
 import {
-  applyHealthDelta,
-  getInventoryDamageReduction,
+  applyDamage,
   type PlannedActionKey,
 } from "./actions/utils";
 import { isCharacterDead } from "../utils/playerCharacter";
@@ -65,11 +64,12 @@ export function applyFireDamageBeforeAction(
       if (!plan || plan.actionId !== actionId) {
         continue;
       }
-      const damage = Math.max(
-        0,
-        2 - getInventoryDamageReduction(character, "fire"),
-      );
-      const outcome = applyHealthDelta(character, -damage, true, logger);
+      const outcome = applyDamage(character, 2, "fire", {
+        ignoreGuarded: true,
+        ignoreSkillReduction: true,
+        canDamageUnconscious: true,
+        logger,
+      });
       character = outcome.character;
       characters[playerId] = character;
       const damageTaken = Math.max(0, -outcome.result.delta);

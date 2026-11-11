@@ -13,18 +13,14 @@ import {
   ActionLibrary,
   ReplayActionEffect,
   axialDistance,
-  getDamageReduction,
   getDodgeSuccessChance,
 } from "@shared";
 import {
-  applyHealthDelta,
+  applyDamage,
   buildGuardedEffectMask,
   consumeCarriedItem,
   hasCarriedItem,
-  getInventoryDamageReduction,
-  isTargetProtected,
   mergeCharacterState,
-  resolveGuardedDamage,
   type PlannedActionParticipant,
 } from "./utils";
 import { getUsableExtraExecutions } from "../../utils/energy";
@@ -151,18 +147,12 @@ export class ShootPistolAction extends BaseAction {
           continue;
         }
 
-        const guarded = isTargetProtected(target);
-        const guardedDamage = resolveGuardedDamage(10, guarded);
-        const damageReduction =
-          getDamageReduction(target) +
-          getInventoryDamageReduction(target, "bullet");
-        const dealtAmount = Math.max(0, guardedDamage - damageReduction);
-
         const {
           result: healthChange,
           character: updatedTarget,
           event,
-        } = applyHealthDelta(target, -dealtAmount);
+          guarded,
+        } = applyDamage(target, 10, "bullet");
         mergeCharacterState(target, updatedTarget);
         match.playerCharacters[targetId] = target;
 

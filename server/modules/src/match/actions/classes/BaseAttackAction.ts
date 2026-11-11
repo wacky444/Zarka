@@ -10,16 +10,13 @@ import type {
 } from "@shared";
 import { ReplayActionEffect } from "@shared";
 import {
-  applyHealthDelta,
+  applyDamage,
   mergeCharacterState,
   buildGuardedEffectMask,
-  isTargetProtected,
-  resolveGuardedDamage,
-  getInventoryDamageReduction,
   type DamageSource,
   type PlannedActionParticipant,
 } from "../utils";
-import { ActionLibrary, getDamageReduction, getDodgeSuccessChance } from "@shared";
+import { ActionLibrary, getDodgeSuccessChance } from "@shared";
 import { awardExperience } from "../../progression";
 import { getUsableExtraExecutions } from "../../../utils/energy";
 import { axialDistance } from "../../../utils/location";
@@ -131,26 +128,22 @@ export abstract class BaseAttackAction extends BaseAction {
           }
           continue;
         }
-        const guarded = isTargetProtected(target);
         const baseDamage = this.getBaseDamage(
           participant,
           targetId,
           match,
           usableExtra
         );
-        const guardedDamage = resolveGuardedDamage(baseDamage, guarded);
-        const damageReduction =
-          getDamageReduction(target) +
-          getInventoryDamageReduction(
-            target,
-            this.getDamageSource(participant)
-          );
-        const dealtAmount = Math.max(0, guardedDamage - damageReduction);
         const {
           result: healthChange,
           character: updatedTarget,
           event,
-        } = applyHealthDelta(target, -dealtAmount);
+          guarded,
+        } = applyDamage(
+          target,
+          baseDamage,
+          this.getDamageSource(participant)
+        );
         mergeCharacterState(target, updatedTarget);
         match.playerCharacters[targetId] = target;
         if (event) {

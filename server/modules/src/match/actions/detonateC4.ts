@@ -1,19 +1,16 @@
 /// <reference path="../../../node_modules/nakama-runtime/index.d.ts" />
 
-import { ActionLibrary, ReplayActionEffect, axialDistance, getDamageReduction } from "@shared";
+import { ActionLibrary, ReplayActionEffect, axialDistance } from "@shared";
 import type { ActionId, Axial, C4Record, ReplayPlayerEvent } from "@shared";
 import type { MatchRecord } from "../../models/types";
 import { getRequestedExtraExecutions, getUsableExtraExecutions } from "../../utils/energy";
 import {
-  applyHealthDelta,
+  applyDamage,
   consumeCarriedItem,
   countCarriedItem,
   createFailedActionEvent,
-  getInventoryDamageReduction,
-  isTargetProtected,
   matchesDeadCharacterPolicy,
   mergeCharacterState,
-  resolveGuardedDamage,
   type PlannedActionParticipant,
 } from "./utils";
 import { BaseAction } from "./classes/BaseAction";
@@ -73,14 +70,7 @@ function detonateCharge(
       continue;
     }
 
-    const guarded = isTargetProtected(target);
-    const guardedDamage = resolveGuardedDamage(C4_DAMAGE, guarded);
-    const damageReduction =
-      getDamageReduction(target) + getInventoryDamageReduction(target, "explosive");
-    const outcome = applyHealthDelta(
-      target,
-      -Math.max(0, guardedDamage - damageReduction),
-    );
+    const outcome = applyDamage(target, C4_DAMAGE, "explosive");
     mergeCharacterState(target, outcome.character);
     match.playerCharacters[playerId] = target;
     if (outcome.event) {

@@ -3,7 +3,6 @@
 import {
   ActionLibrary,
   axialDistance,
-  getDamageReduction,
   getDodgeSuccessChance,
   ItemLibrary,
   ReplayActionEffect,
@@ -20,14 +19,11 @@ import { getUsableExtraExecutions } from "../../utils/energy";
 import { findTileAtCoord } from "../../utils/location";
 import { collectTargets } from "./targeting";
 import {
-  applyHealthDelta,
+  applyDamage,
   buildGuardedEffectMask,
   consumeCarriedItem,
   createFailedActionEvent,
-  getInventoryDamageReduction,
-  isTargetProtected,
   mergeCharacterState,
-  resolveGuardedDamage,
   type PlannedActionParticipant,
 } from "./utils";
 import { awardExperience } from "../progression";
@@ -263,17 +259,12 @@ export class ThrowObjectAction extends BaseAction {
           continue;
         }
 
-        const guarded = isTargetProtected(target);
-        const guardedDamage = resolveGuardedDamage(baseDamage, guarded);
-        const damageReduction =
-          getDamageReduction(target) +
-          getInventoryDamageReduction(target, "physical");
-        const dealtAmount = Math.max(0, guardedDamage - damageReduction);
         const {
           result: healthChange,
           character: updatedTarget,
           event,
-        } = applyHealthDelta(target, -dealtAmount);
+          guarded,
+        } = applyDamage(target, baseDamage, "physical");
         mergeCharacterState(target, updatedTarget);
         match.playerCharacters![candidate.id] = target;
         for (const item of thrownItems) {

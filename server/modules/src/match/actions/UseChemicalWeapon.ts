@@ -9,16 +9,12 @@ import type {
 } from "@shared";
 import {
   ReplayActionEffect,
-  getDamageReduction,
 } from "@shared";
 import {
-  applyHealthDelta,
+  applyDamage,
   buildGuardedEffectMask,
   consumeCarriedItem,
-  getInventoryDamageReduction,
-  isTargetProtected,
   mergeCharacterState,
-  resolveGuardedDamage,
   type PlannedActionParticipant,
 } from "./utils";
 import { collectTargets } from "./targeting";
@@ -67,18 +63,12 @@ export class ChemicalWeaponAction extends BaseAction {
           continue;
         }
 
-        const guarded = isTargetProtected(target);
-        const guardedDamage = resolveGuardedDamage(baseDamage, guarded);
-        const damageReduction =
-          getDamageReduction(target) +
-          getInventoryDamageReduction(target, "chemical");
-        const dealtAmount = Math.max(0, guardedDamage - damageReduction);
-
         const {
           result: healthChange,
           character: updatedTarget,
           event,
-        } = applyHealthDelta(target, -dealtAmount);
+          guarded,
+        } = applyDamage(target, baseDamage, "chemical");
         mergeCharacterState(target, updatedTarget);
         match.playerCharacters[targetId] = target;
 

@@ -11,19 +11,15 @@ import {
   ActionLibrary,
   ReplayActionEffect,
   axialDistance,
-  getDamageReduction,
   isCharacterHidden,
 } from "@shared";
 import { findTileAtCoord } from "../../utils/location";
 import {
-  applyHealthDelta,
+  applyDamage,
   buildGuardedEffectMask,
   consumeCarriedItem,
-  isTargetProtected,
   matchesDeadCharacterPolicy,
   mergeCharacterState,
-  getInventoryDamageReduction,
-  resolveGuardedDamage,
   type PlannedActionParticipant,
 } from "./utils";
 import { maybeTriggerVengefulCounterAttack } from "./vengeful";
@@ -110,13 +106,7 @@ export class ShootRocketLauncherAction extends BaseAction {
           continue;
         }
 
-        const guarded = isTargetProtected(character);
-        const guardedDamage = resolveGuardedDamage(ROCKET_DAMAGE, guarded);
-        const damageReduction =
-          getDamageReduction(character) +
-          getInventoryDamageReduction(character, "explosive");
-        const dealtAmount = Math.max(0, guardedDamage - damageReduction);
-        const outcome = applyHealthDelta(character, -dealtAmount);
+        const outcome = applyDamage(character, ROCKET_DAMAGE, "explosive");
         mergeCharacterState(character, outcome.character);
         match.playerCharacters![targetId] = character;
         if (outcome.event) {
@@ -128,7 +118,7 @@ export class ShootRocketLauncherAction extends BaseAction {
         const targetEntry: ReplayActionTarget = {
           targetId,
           damageTaken: applied,
-          effects: buildGuardedEffectMask(guarded),
+          effects: buildGuardedEffectMask(outcome.guarded),
         };
         if (outcome.result.current === 0 && outcome.result.previous > 0) {
           targetEntry.eliminated = true;

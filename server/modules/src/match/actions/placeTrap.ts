@@ -7,7 +7,7 @@ import type {
   ReplayPlayerEvent,
   TrapRecord,
 } from "@shared";
-import { ActionLibrary, axialDistance, getDamageReduction, neighbors } from "@shared";
+import { ActionLibrary, axialDistance, neighbors } from "@shared";
 import type { MatchRecord } from "../../models/types";
 import { isCharacterDead } from "../../utils/playerCharacter";
 import { findTileAtCoord } from "../../utils/location";
@@ -16,9 +16,8 @@ import {
   getUsableExtraExecutions,
 } from "../../utils/energy";
 import {
-  applyHealthDelta,
+  applyDamage,
   consumeCarriedItem,
-  getInventoryDamageReduction,
   resolvePlanDestination,
   type PlannedActionParticipant,
 } from "./utils";
@@ -408,11 +407,10 @@ export function triggerTrapsForTransition(
     return [];
   }
 
-  const damageReduction =
-    getDamageReduction(character) +
-    getInventoryDamageReduction(character, "physical");
-  const damage = Math.max(0, triggeredTrap.damage - damageReduction);
-  const outcome = applyHealthDelta(character, -damage, false, logger);
+  const outcome = applyDamage(character, triggeredTrap.damage, "physical", {
+    ignoreGuarded: true,
+    logger,
+  });
   character.stats = outcome.character.stats;
   character.progression = outcome.character.progression;
   character.economy = outcome.character.economy;

@@ -13,6 +13,7 @@ import {
   ItemLibrary,
   ReplayActionEffect,
   getCharacterSpeed,
+  getDamageReduction,
   getKnockoutThreshold,
   hasLethalDamageProtection,
 } from "@shared";
@@ -538,6 +539,89 @@ export function applyHealthDelta(
     character: nextCharacter,
     result,
     event,
+  };
+}
+
+export interface DamageCalculationOptions {
+  /** If true, ignore the "protected" status condition on the target. */
+  ignoreGuarded?: boolean;
+  /** If true, ignore skill-based damage reduction like Resistencia 2. */
+  ignoreSkillReduction?: boolean;
+  /** If true, ignore inventory-based reduction like bulletproof vest. */
+  ignoreInventoryReduction?: boolean;
+}
+
+export function computeDamageReduction(
+  target: PlayerCharacter,
+  source: DamageSource,
+  options?: DamageCalculationOptions
+): number {
+  let reduction = 0;
+  if (!options?.ignoreSkillReduction && source !== "poison" && source !== "virus") {
+    reduction += getDamageReduction(target);
+  }
+  if (!options?.ignoreInventoryReduction) {
+    reduction += getInventoryDamageReduction(target, source);
+  }
+  return reduction;
+}
+
+export function computeFinalDamage(
+  target: PlayerCharacter,
+  rawDamage: number,
+  source: DamageSource,
+  options?: DamageCalculationOptions
+): {
+  finalDamage: number;
+  guarded: boolean;
+  guardedDamage: number;
+  reduction: number;
+} {
+  const guarded = options?.ignoreGuarded ? false : isTargetProtected(target);
+  const guardedDamage = resolveGuardedDamage(rawDamage, guarded);
+  const reduction = computeDamageReduction(target, source, options);
+  const finalDamage = Math.max(0, guardedDamage - reduction);
+  return { finalDamage, guarded, guardedDamage, reduction };
+}
+
+export interface ApplyDamageOptions extends DamageCalculationOptions {
+  canDamageUnconscious?: boolean;
+  logger?: any;
+  bypassResilience?: boolean;
+}
+
+export interface DamageOutcome extends HealthDeltaOutcome {
+  guarded: boolean;
+  rawDamage: number;
+  damageDealt: number;
+  reduction: number;
+}
+
+export function applyDamage(
+  target: PlayerCharacter,
+  rawDamage: number,
+  source: DamageSource,
+  options?: ApplyDamageOptions
+): DamageOutcome {
+  const { finalDamage, guarded, reduction } = computeFinalDamage(
+    target,
+    rawDamage,
+    source,
+    options
+  );
+  const outcome = applyHealthDelta(
+    target,
+    -finalDamage,
+    options?.canDamageUnconscious ?? false,
+    options?.logger,
+    options?.bypassResilience ?? false
+  );
+  return {
+    ...outcome,
+    guarded,
+    rawDamage,
+    damageDealt: finalDamage,
+    reduction,
   };
 }
 

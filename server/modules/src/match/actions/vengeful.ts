@@ -9,18 +9,14 @@ import type {
 } from "@shared";
 import {
   ReplayActionEffect,
-  getDamageReduction,
   getDodgeSuccessChance,
   getSkillRank,
 } from "@shared";
 import {
-  applyHealthDelta,
+  applyDamage,
   buildGuardedEffectMask,
-  getInventoryDamageReduction,
   hasCarriedItem,
-  isTargetProtected,
   mergeCharacterState,
-  resolveGuardedDamage,
 } from "./utils";
 import { isCharacterDead } from "../../utils/playerCharacter";
 
@@ -129,18 +125,12 @@ export function maybeTriggerVengefulCounterAttack(
       effects: ReplayActionEffect.Dodged,
     };
   } else {
-    const guarded = isTargetProtected(aggressor);
-    const guardedDamage = resolveGuardedDamage(weapon.baseDamage, guarded);
-    const damageReduction =
-      getDamageReduction(aggressor) +
-      getInventoryDamageReduction(aggressor, "physical");
-    const dealtAmount = Math.max(0, guardedDamage - damageReduction);
-
     const {
       result: healthChange,
       character: updatedAggressor,
       event: healthEvent,
-    } = applyHealthDelta(aggressor, -dealtAmount);
+      guarded,
+    } = applyDamage(aggressor, weapon.baseDamage, "physical");
 
     mergeCharacterState(aggressor, updatedAggressor);
     match.playerCharacters[aggressorId] = aggressor;

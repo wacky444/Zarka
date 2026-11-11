@@ -18,8 +18,7 @@ import { StorageService } from "../services/storageService";
 import { makeNakamaError } from "../utils/errors";
 import { isGameMasterUser } from "../utils/admin";
 import {
-  applyHealthDelta,
-  getInventoryDamageReduction,
+  applyDamage,
 } from "../match/actions/utils";
 import { isCharacterDead } from "../utils/playerCharacter";
 import { tailorPlayerCharactersForViewer } from "../utils/matchView";
@@ -425,17 +424,12 @@ export function buyShopItemRpc(
         if (!candidate) {
           continue;
         }
-        const damage = Math.max(
-          0,
-          5 - getInventoryDamageReduction(candidate, "explosive"),
-        );
-        const outcome = applyHealthDelta(
-          candidate,
-          -damage,
-          true,
-          undefined,
-          true,
-        );
+        const outcome = applyDamage(candidate, 5, "explosive", {
+          ignoreGuarded: true,
+          ignoreSkillReduction: true,
+          canDamageUnconscious: true,
+          bypassResilience: true,
+        });
         characters[playerId] = outcome.character;
         const damageTaken = Math.max(0, -outcome.result.delta);
         if (damageTaken > 0) {
