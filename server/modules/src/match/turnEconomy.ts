@@ -169,7 +169,7 @@ export function applyTraffickerDeliveries(
         );
         continue;
       }
-      const existing = carriedItems.find((stack) => stack.itemId === itemId);
+      const existing = carriedItems.find((stack) => stack && stack.itemId === itemId);
       if (existing) existing.quantity += 1;
       else carriedItems.push({ itemId, quantity: 1, weight: definition.weight });
       replayEvents.push({

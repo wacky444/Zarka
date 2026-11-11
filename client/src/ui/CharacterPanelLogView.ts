@@ -2056,6 +2056,8 @@ export class CharacterPanelLogView {
               lines.push(
                 `${actor} ${t("picked up")} ${pickedItems.join(", ")}`
               );
+            } else {
+              lines.push(`${actor} ${t("picked up nothing")}`);
             }
           } else if (actionId === "black_market_trade") {
             const meta = event.action.metadata as

@@ -213,3 +213,17 @@ test("existing carried bandolier grants capacity when inventory is reconciled", 
 
   assert.equal(character.stats.load.max, 30);
 });
+
+test("syncBandolierLoadCapacity handles undefined or null entries in carriedItems without throwing", () => {
+  const character = createDefaultCharacter("player");
+  (character.inventory.carriedItems as any).push(undefined, null, {
+    itemId: "bandolier",
+    quantity: 1,
+    weight: 0,
+  });
+
+  assert.doesNotThrow(() => {
+    syncBandolierLoadCapacity(character);
+  });
+  assert.equal(character.stats.load.max, 30);
+});

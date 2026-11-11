@@ -445,3 +445,68 @@ test("CharacterPanelLogView setSelectedCharacter updates selector value and trig
   assert.equal(logView.getSelectedCharacter(), "char_2");
   assert.equal(callbackValue, "char_2");
 });
+
+test("CharacterPanelLogView formatReplayEvents formats pick_up with items and without items in English and Spanish", () => {
+  const scene = createMockScene();
+  const logView = new CharacterPanelLogView({
+    panel: { add() {}, emit() {} } as any,
+    elements: {
+      prevButton: createMockElement(scene) as any,
+      nextButton: createMockElement(scene) as any,
+      playButton: createMockElement(scene) as any,
+      filterTrack: createMockElement(scene) as any,
+      filterKnob: createMockElement(scene) as any,
+      filterLabel: createMockElement(scene) as any,
+      turnLabel: createMockElement(scene) as any,
+      statusText: createMockElement(scene) as any,
+      eventsBox: createMockElement(scene) as any,
+      eventsText: createMockElement(scene) as any,
+    },
+    resolvePlayerName: (id) => (id === "p1" ? "MP" : id ?? "Unknown"),
+    resolveItemName: (type) => (type === "pistol" ? "Pistola" : type),
+  });
+
+  const successEvent: ReplayEvent = {
+    kind: "player",
+    importance: 1,
+    actorId: "p1",
+    action: {
+      actionId: "pick_up",
+      metadata: {
+        pickedItems: [{ id: "itm_1", itemType: "pistol" }],
+      },
+    },
+  };
+
+  const emptyEvent: ReplayEvent = {
+    kind: "player",
+    importance: 1,
+    actorId: "p1",
+    action: {
+      actionId: "pick_up",
+      metadata: {
+        pickedItems: [],
+        pickedCount: 0,
+        pickedAny: false,
+      },
+    },
+  };
+
+  const { setLocale } = require("../src/services/i18n");
+
+  setLocale("en");
+  const enLinesSuccess = logView.formatReplayEvents([successEvent]);
+  assert.equal(enLinesSuccess[1], "p1 picked up Pistol");
+
+  const enLinesEmpty = logView.formatReplayEvents([emptyEvent]);
+  assert.equal(enLinesEmpty[1], "p1 picked up nothing");
+
+  setLocale("es");
+  const esLinesSuccess = logView.formatReplayEvents([successEvent]);
+  assert.equal(esLinesSuccess[1], "p1 recogió Pistola");
+
+  const esLinesEmpty = logView.formatReplayEvents([emptyEvent]);
+  assert.equal(esLinesEmpty[1], "p1 no recogió nada");
+
+  setLocale("en");
+});

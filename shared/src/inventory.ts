@@ -9,7 +9,7 @@ export function syncBandolierLoadCapacity(character: PlayerCharacter): void {
   }
   const hasBandolier = (character.inventory?.carriedItems ?? []).some(
     (item: PlayerItemStack) =>
-      item.itemId === "bandolier" &&
+      item?.itemId === "bandolier" &&
       typeof item.quantity === "number" &&
       item.quantity > 0,
   );

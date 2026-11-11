@@ -20,6 +20,9 @@ function getCandidates(match: MatchRecord, playerId: string): DropCandidate[] {
   const candidates: DropCandidate[] = [];
   let order = 0;
   for (const stack of carriedItems) {
+    if (!stack || !stack.itemId) {
+      continue;
+    }
     const definition = ItemLibrary[stack.itemId as ItemId];
     if (!definition || !Number.isFinite(stack.quantity) || stack.quantity <= 0) {
       continue;
@@ -51,7 +54,7 @@ function removeOneItem(
     return false;
   }
   const index = carriedItems.findIndex(
-    (stack) => stack.itemId === itemId && stack.quantity > 0,
+    (stack) => stack && stack.itemId === itemId && stack.quantity > 0,
   );
   if (index < 0) {
     return false;
@@ -65,6 +68,7 @@ function removeOneItem(
     stack.quantity -= 1;
     stack.weight = Math.max(0, stack.weight - weight);
   }
+  character.inventory.carriedItems = carriedItems.filter(Boolean);
   load.current = Math.max(0, load.current - weight);
 
   const itemIdOnGround = `itm_${Date.now().toString(36)}_${Math.random()
