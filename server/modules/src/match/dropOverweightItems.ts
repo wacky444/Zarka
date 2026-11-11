@@ -27,6 +27,13 @@ function getCandidates(match: MatchRecord, playerId: string): DropCandidate[] {
     if (!definition || !Number.isFinite(stack.quantity) || stack.quantity <= 0) {
       continue;
     }
+    const itemWeight =
+      typeof definition.weight === "number" && Number.isFinite(definition.weight)
+        ? Math.max(0, definition.weight)
+        : 0;
+    if (itemWeight <= 0) {
+      continue;
+    }
     const rawValue = definition.sellValue;
     const value = typeof rawValue === "number" && Number.isFinite(rawValue)
       ? rawValue
@@ -36,7 +43,15 @@ function getCandidates(match: MatchRecord, playerId: string): DropCandidate[] {
       order += 1;
     }
   }
-  candidates.sort((a, b) => a.value - b.value || a.order - b.order);
+  candidates.sort((a, b) => {
+    // Special rule: remote c4 detonator is dropped among the last items to avoid losing it due to 0/low sell value
+    const aIsDetonator = a.itemId === "detonator";
+    const bIsDetonator = b.itemId === "detonator";
+    if (aIsDetonator !== bIsDetonator) {
+      return aIsDetonator ? 1 : -1;
+    }
+    return a.value - b.value || a.order - b.order;
+  });
   return candidates;
 }
 

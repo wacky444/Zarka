@@ -75,3 +75,77 @@ test("characters within load capacity keep inventory unchanged", () => {
   assert.equal(match.items?.length, 0);
   assert.equal(match.playerCharacters.player.inventory.carriedItems.length, 2);
 });
+
+test("remote c4 detonator is protected by special rule and dropped last among overweight items", () => {
+  const match = createMatch(13);
+  const character = match.playerCharacters.player;
+  character.inventory.carriedItems = [
+    { itemId: "detonator", quantity: 1, weight: 2 },
+    { itemId: "wood", quantity: 1, weight: 1 },
+    { itemId: "knife", quantity: 1, weight: 1 },
+    { itemId: "axe", quantity: 1, weight: 5 },
+  ];
+
+  // load is 13, max is 10 (3 overweight).
+  // wood (value 0, weight 1) drops first -> load 12.
+  // knife (value 2, weight 3) drops next -> load 9 <= 10.
+  // Axe and detonator should NOT be dropped.
+  const events = dropOverweightItems(match);
+
+  assert.equal(character.stats.load.current, 9);
+  assert.deepEqual(
+    character.inventory.carriedItems.map((item) => item.itemId),
+    ["detonator", "axe"]
+  );
+  assert.equal(events.length, 1);
+  assert.equal(events[0].action.metadata?.droppedCount, 2);
+  const droppedTypes = (events[0].action.metadata?.droppedItems as Array<{ itemType: string }>).map(
+    (entry) => entry.itemType
+  );
+  assert.deepEqual(droppedTypes, ["wood", "knife"]);
+});
+
+test("detonator is only dropped when no other items remain to relieve overweight", () => {
+  const match = createMatch(12);
+  const character = match.playerCharacters.player;
+  character.inventory.carriedItems = [
+    { itemId: "detonator", quantity: 1, weight: 2 },
+    { itemId: "wood", quantity: 1, weight: 1 },
+  ];
+
+  // load is 12, max is 10 (2 overweight).
+  // wood (weight 1) drops first -> load 11. Still > 10.
+  // detonator (weight 2) drops second -> load 9 <= 10.
+  const events = dropOverweightItems(match);
+
+  assert.equal(character.stats.load.current, 9);
+  assert.deepEqual(character.inventory.carriedItems, []);
+  assert.equal(events.length, 1);
+  const droppedTypes = (events[0].action.metadata?.droppedItems as Array<{ itemType: string }>).map(
+    (entry) => entry.itemType
+  );
+  assert.deepEqual(droppedTypes, ["wood", "detonator"]);
+});
+
+test("zero-weight items like bandolier or tracker are ignored for overweight dropping", () => {
+  const match = createMatch(12);
+  const character = match.playerCharacters.player;
+  character.inventory.carriedItems = [
+    { itemId: "bandolier", quantity: 1, weight: 0 },
+    { itemId: "tracker", quantity: 1, weight: 0 },
+    { itemId: "axe", quantity: 1, weight: 5 },
+  ];
+
+  const events = dropOverweightItems(match);
+
+  assert.equal(character.stats.load.current, 7);
+  assert.deepEqual(
+    character.inventory.carriedItems.map((item) => item.itemId),
+    ["bandolier", "tracker"]
+  );
+  assert.equal(events.length, 1);
+  const droppedTypes = (events[0].action.metadata?.droppedItems as Array<{ itemType: string }>).map(
+    (entry) => entry.itemType
+  );
+  assert.deepEqual(droppedTypes, ["axe"]);
+});
