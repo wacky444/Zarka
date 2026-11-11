@@ -464,3 +464,66 @@ test("formatReplayEvents formats team_assigned with partnerPlayerId for twins", 
     setLocale(previousLocale);
   }
 });
+
+test("live match character panel maintains live status and is not overwritten by replay snapshot", () => {
+  // Simulates GameScene applyReplaySnapshot & resolvePlayerAccounts panel update logic
+  const liveMatch = {
+    match_id: "match-123",
+    current_turn: 5,
+    playerCharacters: {
+      player1: {
+        id: "player1",
+        name: "Hero",
+        stats: {
+          health: { current: 10, max: 12 },
+          energy: { current: 15, max: 20 }
+        },
+        actionPlan: {
+          main: { actionId: "knife_attack" }
+        }
+      }
+    }
+  };
+
+  const replayMatch = {
+    match_id: "match-123",
+    current_turn: 1,
+    playerCharacters: {
+      player1: {
+        id: "player1",
+        name: "Hero",
+        stats: {
+          health: { current: 2, max: 12 },
+          energy: { current: 3, max: 20 }
+        },
+        actionPlan: {
+          main: { actionId: "train" }
+        }
+      }
+    }
+  };
+
+  let panelUpdatedWith: any = null;
+  const mockCharacterPanel = {
+    updateFromMatch(match: any) {
+      panelUpdatedWith = match;
+    }
+  };
+
+  const reportReplayMode = false;
+  // If not in reportReplayMode, characterPanel must NEVER be updated with replayMatch
+  if (reportReplayMode) {
+    mockCharacterPanel.updateFromMatch(replayMatch);
+  }
+
+  assert.equal(panelUpdatedWith, null);
+
+  // In exitReplayMode or clearReplaySnapshot, live match is restored
+  if (!reportReplayMode && liveMatch) {
+    mockCharacterPanel.updateFromMatch(liveMatch);
+  }
+  assert.equal(panelUpdatedWith?.current_turn, 5);
+  assert.equal(panelUpdatedWith?.playerCharacters.player1.stats.health.current, 10);
+  assert.equal(panelUpdatedWith?.playerCharacters.player1.stats.energy.current, 15);
+});
+

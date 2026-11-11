@@ -3173,8 +3173,9 @@ export class GameScene extends Phaser.Scene {
     }
     if (hasNameChange) {
       this.renderPlayerCharacters(match);
+      const panelMatch = this.reportReplayMode ? match : this.currentMatch ?? match;
       this.characterPanel.updateFromMatch(
-        match,
+        panelMatch,
         this.currentUserId,
         Object.keys(this.playerNameMap).length > 0
           ? this.playerNameMap
@@ -4710,13 +4711,15 @@ export class GameScene extends Phaser.Scene {
           return;
         }
         this.renderPlayerCharacters(activeReplay.match);
-        this.characterPanel?.updateFromMatch(
-          activeReplay.match,
-          this.currentUserId,
-          Object.keys(this.playerNameMap).length > 0
-            ? this.playerNameMap
-            : undefined
-        );
+        if (this.reportReplayMode) {
+          this.characterPanel?.updateFromMatch(
+            activeReplay.match,
+            this.currentUserId,
+            Object.keys(this.playerNameMap).length > 0
+              ? this.playerNameMap
+              : undefined
+          );
+        }
       });
     }
     this.updateReplayControls();
@@ -4731,6 +4734,9 @@ export class GameScene extends Phaser.Scene {
     if (renderCurrentState && this.currentMatch?.map) {
       this.renderMap(this.currentMatch.map);
       this.renderPlayerCharacters(this.currentMatch);
+    }
+    if (renderCurrentState && !this.reportReplayMode && this.currentMatch) {
+      this.updateCharacterPanel(this.currentMatch);
     }
   }
 
