@@ -16,6 +16,7 @@ import type { MatchRecord } from "../src/models/types";
 import { RANKED_MATCH_METADATA_KEY, type ReplayRecord } from "@shared";
 import { createNakamaWrapper } from "../src/services/nakamaWrapper";
 import { StorageService } from "../src/services/storageService";
+import { createDefaultCharacter } from "../src/utils/playerCharacter";
 import {
   registerPushSubscriptionRpc
 } from "../src/rpc/registerPushSubscription";
@@ -413,6 +414,67 @@ test("turn outbox snapshots subscribed human participants and skips ended matche
       nk,
       logger()
     ),
+    null
+  );
+});
+
+test("turn outbox excludes dead human players from notification targets", () => {
+  const { nk } = createFakeNakama();
+  writeSubscription(nk, "p1", "11111111-1111-4111-8111-111111111111");
+  writeSubscription(nk, "p2", "22222222-2222-4222-8222-222222222222");
+  writeSubscription(nk, "dead-condition", "33333333-3333-4333-8333-333333333333");
+  writeSubscription(nk, "dead-hp", "44444444-4444-4444-8444-444444444444");
+  writeSubscription(nk, "dead-record", "55555555-5555-4555-8555-555555555555");
+
+  const deadConditionChar = createDefaultCharacter("dead-condition");
+  deadConditionChar.statuses = { conditions: ["dead"] };
+
+  const deadHpChar = createDefaultCharacter("dead-hp");
+  deadHpChar.stats.health.current = 0;
+
+  const match = createMatch({
+    players: ["p1", "p2", "dead-condition", "dead-hp", "dead-record"],
+    playerCharacters: {
+      p1: createDefaultCharacter("p1"),
+      p2: createDefaultCharacter("p2"),
+      "dead-condition": deadConditionChar,
+      "dead-hp": deadHpChar,
+      "dead-record": createDefaultCharacter("dead-record")
+    },
+    deadCharacters: {
+      "dead-record": true
+    }
+  });
+
+  const outbox = createTurnNotificationOutbox(
+    match,
+    context("p1"),
+    nk,
+    logger()
+  );
+
+  assert.ok(outbox);
+  assert.deepEqual(outbox.targets, [
+    { userId: "p1", deviceId: "11111111-1111-4111-8111-111111111111", locale: "en" },
+    { userId: "p2", deviceId: "22222222-2222-4222-8222-222222222222", locale: "en" }
+  ]);
+});
+
+test("turn outbox returns null when all human players are dead", () => {
+  const { nk } = createFakeNakama();
+  writeSubscription(nk, "dead-1", "11111111-1111-4111-8111-111111111111");
+  writeSubscription(nk, "dead-2", "22222222-2222-4222-8222-222222222222");
+
+  const match = createMatch({
+    players: ["dead-1", "dead-2"],
+    deadCharacters: {
+      "dead-1": true,
+      "dead-2": true
+    }
+  });
+
+  assert.equal(
+    createTurnNotificationOutbox(match, context("dead-1"), nk, logger()),
     null
   );
 });

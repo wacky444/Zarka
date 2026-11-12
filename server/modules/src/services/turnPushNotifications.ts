@@ -18,7 +18,7 @@ import type {
 } from "../models/pushNotifications";
 import type { MatchRecord } from "../models/types";
 import { isBotId } from "../match/botAI";
-import { isCharacterIncapacitated } from "../utils/playerCharacter";
+import { isCharacterDead, isCharacterIncapacitated } from "../utils/playerCharacter";
 import { RANKED_MATCH_METADATA_KEY } from "@shared";
 import { isPushDispatchConfigured, parsePushSubscription } from "./pushSubscriptions";
 
@@ -37,6 +37,19 @@ function getHumanPlayerIds(match: MatchRecord): string[] {
       playerId !== NAKAMA_SYSTEM_USER_ID &&
       playerId !== SERVER_USER_ID &&
       !isBotId(playerId)
+  );
+}
+
+function isPlayerDead(match: MatchRecord, playerId: string): boolean {
+  if (match.deadCharacters?.[playerId] === true) {
+    return true;
+  }
+  return isCharacterDead(match.playerCharacters?.[playerId]);
+}
+
+function getLivingHumanPlayerIds(match: MatchRecord): string[] {
+  return getHumanPlayerIds(match).filter(
+    (playerId) => !isPlayerDead(match, playerId)
   );
 }
 
@@ -129,11 +142,12 @@ function parseOutbox(value: unknown): PushNotificationOutbox | null {
   return null;
 }
 
-function createNotificationTargets(
+function createNotificationTargetsForPlayers(
   match: MatchRecord,
   ctx: nkruntime.Context,
   nk: nkruntime.Nakama,
-  logger: nkruntime.Logger
+  logger: nkruntime.Logger,
+  playerIds: string[]
 ): TurnNotificationTarget[] | null {
   if (
     !isPushDispatchConfigured(ctx.env) ||
@@ -145,7 +159,6 @@ function createNotificationTargets(
   }
 
   const targets: TurnNotificationTarget[] = [];
-  const playerIds = getHumanPlayerIds(match);
   for (const userId of playerIds) {
     try {
       const response = nk.storageList(userId, PUSH_SUBSCRIPTION_COLLECTION, 20);
@@ -171,6 +184,21 @@ function createNotificationTargets(
   return targets.length > 0 ? targets : null;
 }
 
+function createNotificationTargets(
+  match: MatchRecord,
+  ctx: nkruntime.Context,
+  nk: nkruntime.Nakama,
+  logger: nkruntime.Logger
+): TurnNotificationTarget[] | null {
+  return createNotificationTargetsForPlayers(
+    match,
+    ctx,
+    nk,
+    logger,
+    getHumanPlayerIds(match)
+  );
+}
+
 export function createTurnNotificationOutbox(
   match: MatchRecord,
   ctx: nkruntime.Context,
@@ -179,11 +207,17 @@ export function createTurnNotificationOutbox(
   wasTimeSkipped = false
 ): TurnNotificationOutbox | null {
   if (!Number.isFinite(match.current_turn)) return null;
-  const humanPlayerIds = getHumanPlayerIds(match);
-  if (humanPlayerIds.length === 1 && !wasTimeSkipped) {
+  const livingHumanPlayerIds = getLivingHumanPlayerIds(match);
+  if (livingHumanPlayerIds.length === 1 && !wasTimeSkipped) {
     return null;
   }
-  const targets = createNotificationTargets(match, ctx, nk, logger);
+  const targets = createNotificationTargetsForPlayers(
+    match,
+    ctx,
+    nk,
+    logger,
+    livingHumanPlayerIds
+  );
   if (!targets) return null;
   const turn = match.current_turn;
   return {
@@ -204,7 +238,11 @@ function getUnreadyHumanPlayerIds(match: MatchRecord): string[] {
   const readyStates = match.readyStates ?? {};
   return getHumanPlayerIds(match).filter((playerId) => {
     const character = match.playerCharacters?.[playerId] ?? null;
-    return !isCharacterIncapacitated(character) && readyStates[playerId] !== true;
+    return (
+      !isPlayerDead(match, playerId) &&
+      !isCharacterIncapacitated(character) &&
+      readyStates[playerId] !== true
+    );
   });
 }
 
@@ -214,40 +252,13 @@ function createUnreadyNotificationTargets(
   nk: nkruntime.Nakama,
   logger: nkruntime.Logger
 ): TurnNotificationTarget[] | null {
-  if (
-    !isPushDispatchConfigured(ctx.env) ||
-    match.started !== true ||
-    (typeof match.removed === "number" && match.removed !== 0) ||
-    !Array.isArray(match.players)
-  ) {
-    return null;
-  }
-
-  const targets: TurnNotificationTarget[] = [];
-  const playerIds = getUnreadyHumanPlayerIds(match);
-  for (const userId of playerIds) {
-    try {
-      const response = nk.storageList(userId, PUSH_SUBSCRIPTION_COLLECTION, 20);
-      for (const entry of response?.objects ?? []) {
-        if (typeof entry?.key !== "string") continue;
-        const subscription = getStoredSubscription(entry.value, userId, entry.key);
-        if (subscription) {
-          targets.push({
-            userId,
-            deviceId: entry.key,
-            locale: subscription.locale
-          });
-        }
-      }
-    } catch (error) {
-      logger.warn(
-        "push subscription lookup failed for user %s: %s",
-        userId,
-        (error as Error).message || String(error)
-      );
-    }
-  }
-  return targets.length > 0 ? targets : null;
+  return createNotificationTargetsForPlayers(
+    match,
+    ctx,
+    nk,
+    logger,
+    getUnreadyHumanPlayerIds(match)
+  );
 }
 
 export function createTurnExpiringOutbox(

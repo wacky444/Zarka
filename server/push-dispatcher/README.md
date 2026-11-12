@@ -28,7 +28,7 @@ The public VAPID key is browser configuration. Never put the private VAPID key o
 
 - Authenticated RPCs bind one browser device subscription to the current Nakama account. Rebinding the same device to another account deletes the old owner’s record.
 - Nakama stores subscriptions and outbox jobs with server-only storage permissions. Endpoint hosts are restricted to known browser push services to prevent SSRF.
-- Turn advance snapshots subscribed human participants, including eliminated participants while match remains active; bots and system users are excluded. English/Spanish notification text follows each device’s selected app language. No new-turn notice is queued after match finalization.
+- Turn advance snapshots subscribed human participants, excluding dead participants while match remains active; bots and system users are excluded. English/Spanish notification text follows each device’s selected app language. No new-turn notice is queued after match finalization.
 - Match state and outbox job are written in one atomic Nakama storage transaction. Nakama sends pushes after the commit; failures leave jobs pending for retry. Web Push HTTP 404/410 responses remove stale subscriptions.
 - The service caches successful idempotency keys briefly, and the service worker replaces duplicate notifications for the same match turn.
 
