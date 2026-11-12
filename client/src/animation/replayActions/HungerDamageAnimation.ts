@@ -2,9 +2,10 @@ import type { ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
 import type { SkinContainer } from "../../ui/PlayerSkinRenderer";
 import { playRandomSound } from "../soundPlayer";
+import { THEME } from "../../ui/ColorPalette";
 
 const HUNGER_SOUNDS = ["hurt"];
-const HUNGER_COLOR = 0xef4444;
+const HUNGER_COLOR = THEME.colors.energyAccent;
 const HUNGER_TEXT_COLOR = "#f87171";
 
 export async function animateHungerDamageEvent(
