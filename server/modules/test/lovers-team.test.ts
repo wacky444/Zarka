@@ -468,7 +468,7 @@ test("Test 4 — Same-Turn Cooperative Action Unlock: Enamoramiento runs before 
 // -----------------------------------------------------------------------------
 // Test 5 — Detective Cover Team Preservation
 // -----------------------------------------------------------------------------
-test("Test 5 — Detective Cover Team Preservation: reveals cover team, stores in revealedTeamIdsByPlayerId, grants 10 pending Zarkans", () => {
+test("Test 5 — Detective Cover Team Preservation: reveals cover team, stores in revealedTeamIdsByPlayerId, grants 4 pending Zarkans", () => {
   const investigator = createDefaultCharacter("investigator");
   investigator.teamId = "Equipo Rojo";
   investigator.economy.zarkans = ShopLibrary.detective.cost;
@@ -523,10 +523,10 @@ test("Test 5 — Detective Cover Team Preservation: reveals cover team, stores i
     updatedMatch.playerCharacters?.investigator?.revealedTeamIdsByPlayerId?.["targetLover"],
     "Equipo Azul"
   );
-  // Awarded 10 pending Zarkans because investigator ("Equipo Rojo") !== target cover ("Equipo Azul")
+  // Awarded 4 pending Zarkans because investigator ("Equipo Rojo") !== target cover ("Equipo Azul")
   assert.equal(
     updatedMatch.playerCharacters?.targetLover?.economy?.pendingZarkans,
-    10
+    4
   );
 });
 

@@ -120,7 +120,7 @@ test("detectiveRevealedTeamId returns cover team for Enamorados and Gemelos", ()
   );
 });
 
-test("Purchasing Detective on player with secretTeamId: Enamorados returns cover team and awards 10 Zarkans to opposing team", () => {
+test("Purchasing Detective on player with secretTeamId: Enamorados returns cover team and awards 4 Zarkans to opposing team", () => {
   const investigator = createDefaultCharacter("investigator");
   investigator.teamId = "Equipo Azul";
   investigator.economy.zarkans = ShopLibrary.detective.cost;
@@ -170,7 +170,7 @@ test("Purchasing Detective on player with secretTeamId: Enamorados returns cover
   );
   assert.equal(
     updatedMatch.playerCharacters?.target?.economy?.pendingZarkans,
-    10,
+    4,
   );
 });
 
@@ -279,6 +279,6 @@ test("Purchasing Detective on target with secretTeamId: Gemelos reveals cover te
   );
   assert.equal(
     updatedMatch.playerCharacters?.target?.economy?.pendingZarkans,
-    10,
+    4,
   );
 });

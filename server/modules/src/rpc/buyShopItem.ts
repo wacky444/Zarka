@@ -40,6 +40,8 @@ function effectiveTeamId(character: {
   return teamId && teamId.length > 0 ? teamId : null;
 }
 
+export const DETECTIVE_ENEMY_REWARD = 4;
+
 export function detectiveRevealedTeamId(character: {
   secretTeamId?: string;
   teamId?: string;
@@ -262,7 +264,7 @@ export function buyShopItemRpc(
       [targetPlayerId]: targetTeamId,
     };
     opposingTeam = actorTeamId !== null && actorTeamId !== targetTeamId;
-    reward = opposingTeam ? 10 : 0;
+    reward = opposingTeam ? DETECTIVE_ENEMY_REWARD : 0;
     if (reward > 0) {
       target.economy = target.economy ?? {
         zarkans: 0,
