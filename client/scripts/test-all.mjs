@@ -135,6 +135,11 @@ const suites = [
     name: "secondary-action-selection",
     entryPoint: "test/SecondaryActionSelection.test.ts",
     alias: { phaser: phaserShim, phaser3spectorjs: phaserShim }
+  },
+  {
+    name: "virus-damage-animation",
+    entryPoint: "test/VirusDamageAnimation.test.ts",
+    alias: { phaser: phaserShim, phaser3spectorjs: phaserShim }
   }
 ];
 

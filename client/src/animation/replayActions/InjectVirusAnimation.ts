@@ -3,6 +3,7 @@ import type { ReplayPlayerEvent } from "@shared";
 import type { MoveReplayContext } from "../MoveReplayContext";
 import { playRandomSound } from "../soundPlayer";
 import { resolveItemLabel, resolveItemVisual } from "./ItemVisuals";
+import { animateVirusDamageEvent } from "./VirusDamageAnimation";
 
 const INJECTION_SOUNDS = ["cork_stabbed", "squelching_1", "squelching_2"];
 
@@ -14,6 +15,7 @@ export async function animateInjectVirusEvent(
     | { infectedTargetId?: unknown; infectionTick?: unknown }
     | undefined;
   if (metadata?.infectionTick === true) {
+    await animateVirusDamageEvent(context, event);
     return;
   }
   const targetId =

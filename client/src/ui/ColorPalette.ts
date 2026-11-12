@@ -26,6 +26,7 @@ export const THEME = {
     healthAccent: 0x4ade80,
     healthDamage: "#f97373",
     healthRecover: "#4ade80",
+    virusAccent: 0xa855f7,
 
     loadingBackground: 0x0f172a,
     loadingTrack: 0x1f2a4a,

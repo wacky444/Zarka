@@ -1642,6 +1642,21 @@ export const ActionLibrary: ActionLibraryDefinition = {
     notes: ["Daño causado por falta de esfuerzo al realizar una acción."],
     tags: ["Status"]
   },
+  virus_damage: {
+    id: "virus_damage",
+    name: "Daño por virus",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "virus.png",
+    actionOrder: 99,
+    actionSubOrder: 10,
+    notes: ["Daño causado por exposición al virus."],
+    tags: ["Status"]
+  },
   buy_bomber: {
     id: "buy_bomber",
     name: "Contratar bombardero",

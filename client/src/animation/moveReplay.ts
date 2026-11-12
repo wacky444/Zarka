@@ -40,6 +40,7 @@ import { animateShootHarpoonEvent } from "./replayActions/ShootHarpoonAnimation"
 import { animateRocketLauncherEvent } from "./replayActions/RocketLauncherAnimation";
 import { animateFireDamageEvent } from "./replayActions/FireDamageAnimation";
 import { animateHungerDamageEvent } from "./replayActions/HungerDamageAnimation";
+import { animateVirusDamageEvent } from "./replayActions/VirusDamageAnimation";
 import { animateBomberEvent } from "./replayActions/BomberAnimation";
 import { animatePickLockEvent } from "./replayActions/PickLockAnimation";
 import { animateTraffickerDeliveryEvent } from "./replayActions/TraffickerDeliveryAnimation";
@@ -97,7 +98,11 @@ export async function playReplayEvents(
         await animateGiveEvent(context, event);
       }
     } else if (actionId === ActionLibrary.inject_virus.id) {
-      await animateInjectVirusEvent(context, event);
+      if ((event.action.metadata as { infectionTick?: unknown } | undefined)?.infectionTick === true) {
+        await animateVirusDamageEvent(context, event);
+      } else {
+        await animateInjectVirusEvent(context, event);
+      }
     } else if (actionId === ActionLibrary.inject_vaccine.id) {
       await animateInjectVaccineEvent(context, event);
     } else if (actionId === ActionLibrary.feed.id) {
@@ -126,6 +131,8 @@ export async function playReplayEvents(
       await animateFireDamageEvent(context, event);
     } else if (actionId === ActionLibrary.hunger_damage.id) {
       await animateHungerDamageEvent(context, event);
+    } else if (actionId === ActionLibrary.virus_damage?.id || actionId === "virus_damage") {
+      await animateVirusDamageEvent(context, event);
     } else if (actionId === ActionLibrary.buy_bomber.id) {
       await animateBomberEvent(context, event);
     } else if (actionId === ActionLibrary.punch.id) {

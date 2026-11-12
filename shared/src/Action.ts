@@ -83,6 +83,7 @@ export type ActionId =
   | "buy_pyromaniac"
   | "fire_damage"
   | "hunger_damage"
+  | "virus_damage"
   | "buy_bomber"
   | "buy_trafficker"
   | "lovers_formed"

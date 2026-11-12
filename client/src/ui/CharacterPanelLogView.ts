@@ -43,6 +43,7 @@ const CRITICAL_REPLAY_ACTION_IDS = new Set<string>([
   "status_dead",
   "use_chemical_weapon",
   "inject_virus",
+  "virus_damage",
   "lovers_formed",
   "lovers_announced"
 ]);
@@ -51,8 +52,9 @@ function getEventImportance(event: ReplayEvent): ReplayImportance {
   if (event.kind === "player") {
     const actionId = event.action.actionId as string;
     const isVirusInfectionTick =
-      actionId === "inject_virus" &&
-      (event.action.metadata as { infectionTick?: boolean } | undefined)?.infectionTick === true;
+      (actionId === "inject_virus" &&
+        (event.action.metadata as { infectionTick?: boolean } | undefined)?.infectionTick === true) ||
+      actionId === "virus_damage";
     if (isVirusInfectionTick) {
       return event.importance !== undefined ? event.importance : ReplayImportance.Notable;
     }
@@ -1901,15 +1903,17 @@ export class CharacterPanelLogView {
                   : ""
               }`
             );
-          } else if (actionId === "inject_virus") {
-            const infectionTick = (
-              event.action.metadata as { infectionTick?: boolean } | undefined
-            )?.infectionTick;
+          } else if (actionId === "inject_virus" || actionId === "virus_damage") {
+            const infectionTick =
+              actionId === "virus_damage" ||
+              (
+                event.action.metadata as { infectionTick?: boolean } | undefined
+              )?.infectionTick;
             if (infectionTick) {
               const damage =
                 typeof event.action.damageDealt === "number"
                   ? event.action.damageDealt
-                  : 0;
+                  : (event.targets?.[0]?.damageTaken ?? 0);
               const targetId = event.targets?.[0]?.targetId;
               const targetName = this.resolvePlayerName(targetId);
               lines.push(
