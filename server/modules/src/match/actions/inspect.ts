@@ -4,7 +4,7 @@ import type {
   ReplayActionDone,
   ReplayPlayerEvent,
 } from "@shared";
-import { ActionLibrary } from "@shared";
+import { ActionLibrary, addCarriedItem } from "@shared";
 import type { MatchRecord } from "../../models/types";
 import { getUsableExtraExecutions } from "../../utils/energy";
 import { collectTargets } from "./targeting";
@@ -61,22 +61,7 @@ function recoverAttachedTracker(
   if (!tracker) {
     return false;
   }
-  target.inventory = target.inventory ?? { carriedItems: [] };
-  target.inventory.carriedItems = Array.isArray(target.inventory.carriedItems)
-    ? target.inventory.carriedItems
-    : [];
-  const carriedTracker = target.inventory.carriedItems.find(
-    (item) => item.itemId === "tracker",
-  );
-  if (carriedTracker) {
-    carriedTracker.quantity += 1;
-  } else {
-    target.inventory.carriedItems.push({
-      itemId: "tracker",
-      quantity: 1,
-      weight: 0,
-    });
-  }
+  addCarriedItem(target, "tracker", 1, { unitWeight: 0 });
   tracker.discoveredByTarget = true;
   return true;
 }

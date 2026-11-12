@@ -1,6 +1,6 @@
 /// <reference path="../../node_modules/nakama-runtime/index.d.ts" />
 
-import { getSkillEffectTotal, ItemLibrary, type ItemId } from "@shared";
+import { addCarriedItem, getSkillEffectTotal, ItemLibrary, type ItemId } from "@shared";
 import type { ActionId, ReplayEvent } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { isCharacterDead } from "../utils/playerCharacter";
@@ -120,7 +120,7 @@ export function applyTraffickerDeliveries(
     const deliveries = characters[playerId]?.pendingTraffickerDeliveries;
     if (Array.isArray(deliveries)) queuedCount += deliveries.length;
   }
-  logger.info(
+  logger?.info?.(
     "trafficker_delivery_scan match=%s turn=%d characters=%d queued=%d",
     match.match_id,
     match.current_turn ?? 0,
@@ -131,7 +131,7 @@ export function applyTraffickerDeliveries(
     const deceased = characters[playerId];
     const deliveries = deceased?.pendingTraffickerDeliveries;
     if (!deceased || !Array.isArray(deliveries) || deliveries.length === 0) continue;
-    logger.info(
+    logger?.info?.(
       "trafficker_delivery_pending match=%s turn=%d owner=%s items=%s",
       match.match_id,
       match.current_turn ?? 0,
@@ -143,7 +143,7 @@ export function applyTraffickerDeliveries(
       : deceased;
     deceased.pendingTraffickerDeliveries = [];
     if (!recipient || isCharacterDead(recipient)) {
-      logger.warn(
+      logger?.warn?.(
         "trafficker_delivery_abandoned match=%s turn=%d owner=%s recipient=%s reason=%s",
         match.match_id,
         match.current_turn ?? 0,
@@ -153,10 +153,6 @@ export function applyTraffickerDeliveries(
       );
       continue;
     }
-    recipient.inventory ??= { carriedItems: [] };
-    const carriedItems = Array.isArray(recipient.inventory.carriedItems)
-      ? [...recipient.inventory.carriedItems]
-      : [];
     for (const itemId of deliveries) {
       const definition = ItemLibrary[itemId as ItemId];
       if (!definition) {
@@ -169,9 +165,10 @@ export function applyTraffickerDeliveries(
         );
         continue;
       }
-      const existing = carriedItems.find((stack) => stack && stack.itemId === itemId);
-      if (existing) existing.quantity += 1;
-      else carriedItems.push({ itemId, quantity: 1, weight: definition.weight });
+      addCarriedItem(recipient, itemId as ItemId, 1);
+      const existing = recipient.inventory?.carriedItems?.find(
+        (stack) => stack && stack.itemId === itemId,
+      );
       replayEvents.push({
         kind: "player",
         importance: 1,
@@ -189,10 +186,9 @@ export function applyTraffickerDeliveries(
         existing ? existing.quantity : 1,
       );
     }
-    recipient.inventory.carriedItems = carriedItems;
     match.playerCharacters[recipient.id] = recipient;
   }
-  logger.info(
+  logger?.info?.(
     "trafficker_delivery_scan_complete match=%s turn=%d queued_at_scan=%d",
     match.match_id,
     match.current_turn ?? 0,

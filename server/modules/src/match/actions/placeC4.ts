@@ -1,6 +1,6 @@
 /// <reference path="../../../node_modules/nakama-runtime/index.d.ts" />
 
-import { ActionLibrary, ItemLibrary } from "@shared";
+import { ActionLibrary, addCarriedItem, ItemLibrary } from "@shared";
 import type {
   ActionId,
   C4Record,
@@ -28,25 +28,7 @@ function createC4Id(match: MatchRecord, ownerId: string, turn: number): string {
 }
 
 function addDetonator(character: PlannedActionParticipant["character"]): void {
-  character.inventory ??= { carriedItems: [] };
-  character.inventory.carriedItems ??= [];
-  const weight = ItemLibrary.detonator.weight;
-  const stack = character.inventory.carriedItems.find(
-    (item) => item.itemId === "detonator",
-  );
-  if (stack) {
-    stack.quantity += 1;
-    stack.weight += weight;
-  } else {
-    character.inventory.carriedItems.push({
-      itemId: "detonator",
-      quantity: 1,
-      weight,
-    });
-  }
-  if (character.stats?.load) {
-    character.stats.load.current += weight;
-  }
+  addCarriedItem(character, "detonator");
 }
 
 export class PlaceC4Action extends BaseAction {

@@ -1,6 +1,7 @@
 import type { MatchRecord } from "../../models/types";
 import {
   ActionLibrary,
+  addCarriedItem,
   ItemCategory,
   ItemLibrary,
   MAX_STEAL_PRIORITY_ITEMS,
@@ -57,24 +58,7 @@ function addItem(
   itemType: ItemId,
   weight: number
 ): void {
-  const carriedItems = ensureCarriedItems(character);
-  for (const stack of carriedItems) {
-    if (stack.itemId !== itemType) {
-      continue;
-    }
-    stack.quantity =
-      typeof stack.quantity === "number" && isFinite(stack.quantity)
-        ? stack.quantity + 1
-        : 1;
-    stack.weight =
-      typeof stack.weight === "number" && isFinite(stack.weight)
-        ? stack.weight + weight
-        : weight;
-    adjustLoad(character, weight);
-    return;
-  }
-  carriedItems.push({ itemId: itemType, quantity: 1, weight });
-  adjustLoad(character, weight);
+  addCarriedItem(character, itemType, 1, { unitWeight: weight });
 }
 
 function removeItem(

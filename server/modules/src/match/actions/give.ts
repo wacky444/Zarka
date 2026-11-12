@@ -1,5 +1,6 @@
 import {
   ActionLibrary,
+  addCarriedItem,
   ItemLibrary,
   syncBandolierLoadCapacity,
   type ActionId,
@@ -72,30 +73,7 @@ function addItem(
   itemType: ItemId,
   weight: number
 ): void {
-  character.inventory ??= { carriedItems: [] };
-  if (!Array.isArray(character.inventory.carriedItems)) {
-    character.inventory.carriedItems = [];
-  }
-  const stack = character.inventory.carriedItems.find(
-    (item) => item.itemId === itemType
-  );
-  if (stack) {
-    stack.quantity =
-      typeof stack.quantity === "number" && Number.isFinite(stack.quantity)
-        ? Math.max(0, Math.floor(stack.quantity)) + 1
-        : 1;
-    stack.weight =
-      typeof stack.weight === "number" && Number.isFinite(stack.weight)
-        ? Math.max(0, stack.weight) + weight
-        : weight;
-  } else {
-    character.inventory.carriedItems.push({
-      itemId: itemType,
-      quantity: 1,
-      weight,
-    });
-  }
-  adjustLoad(character, weight);
+  addCarriedItem(character, itemType, 1, { unitWeight: weight });
 }
 
 function findRecipient(

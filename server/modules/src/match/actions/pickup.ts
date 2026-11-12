@@ -1,6 +1,7 @@
 import type { MatchRecord } from "../../models/types";
 import {
   ActionLibrary,
+  addCarriedItem,
   ExtraExecutionEffect,
   getSkillEffectTotal,
   ItemLibrary,
@@ -72,76 +73,6 @@ function resolveItemWeight(itemType: ItemId): number {
     }
   }
   return 0;
-}
-
-function incrementLoad(character: PlayerCharacter, weight: number): void {
-  if (weight <= 0) {
-    return;
-  }
-  if (!character.stats) {
-    return;
-  }
-  const load = character.stats.load;
-  if (!load) {
-    character.stats.load = {
-      current: weight,
-      max: weight,
-      bandolierCapacityBonus: 0,
-    };
-    return;
-  }
-  const current =
-    typeof load.current === "number" && isFinite(load.current)
-      ? load.current
-      : 0;
-  load.current = current + weight;
-}
-
-function ensureInventory(character: PlayerCharacter) {
-  if (!character.inventory) {
-    character.inventory = { carriedItems: [] };
-  }
-  if (!Array.isArray(character.inventory.carriedItems)) {
-    character.inventory.carriedItems = [];
-  }
-  return character.inventory;
-}
-
-function addItemToInventory(
-  character: PlayerCharacter,
-  itemType: ItemId,
-  weight: number
-): void {
-  const inventory = ensureInventory(character);
-  const carried = inventory.carriedItems;
-  let stackIndex = -1;
-  for (let index = 0; index < carried.length; index += 1) {
-    const entry = carried[index];
-    if (entry && entry.itemId === itemType) {
-      stackIndex = index;
-      break;
-    }
-  }
-  if (stackIndex !== -1) {
-    const stack = carried[stackIndex];
-    const quantity =
-      typeof stack.quantity === "number" && isFinite(stack.quantity)
-        ? stack.quantity
-        : 0;
-    stack.quantity = quantity + 1;
-    const totalWeight =
-      typeof stack.weight === "number" && isFinite(stack.weight)
-        ? stack.weight
-        : 0;
-    stack.weight = totalWeight + weight;
-  } else {
-    carried.push({
-      itemId: itemType,
-      quantity: 1,
-      weight,
-    });
-  }
-  inventory.carriedItems = carried;
 }
 
 function removeItemFromMatch(match: MatchRecord, itemId: string): void {
@@ -360,8 +291,7 @@ export class PickUpAction extends BaseAction {
               } else {
                 const weight = resolveItemWeight(itemType);
                 // TODO check for exceeding load capacity to reduce health
-                addItemToInventory(participant.character, itemType, weight);
-                incrementLoad(participant.character, weight);
+                addCarriedItem(participant.character, itemType, 1, { unitWeight: weight });
               }
               removeItemFromTile(tile, itemId);
               removeItemFromMatch(match, itemId);
