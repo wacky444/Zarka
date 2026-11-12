@@ -1,5 +1,6 @@
 import {
   ItemLibrary,
+  removeCarriedItem,
   syncBandolierLoadCapacity,
   type ItemId,
   type ReplayPlayerEvent,
@@ -73,23 +74,10 @@ function removeOneItem(
   if (!character || !Array.isArray(carriedItems) || !load || !tile) {
     return null;
   }
-  const index = carriedItems.findIndex(
-    (stack) => stack && stack.itemId === itemId && stack.quantity > 0,
-  );
-  if (index < 0) {
+  const removed = removeCarriedItem(character, itemId, 1);
+  if (!removed) {
     return null;
   }
-  const definition = ItemLibrary[itemId];
-  const weight = Math.max(0, definition.weight);
-  const stack = carriedItems[index];
-  if (stack.quantity === 1) {
-    carriedItems.splice(index, 1);
-  } else {
-    stack.quantity -= 1;
-    stack.weight = Math.max(0, stack.weight - weight);
-  }
-  character.inventory.carriedItems = carriedItems.filter(Boolean);
-  load.current = Math.max(0, load.current - weight);
 
   const itemIdOnGround = `itm_${Date.now().toString(36)}_${Math.random()
     .toString(36)

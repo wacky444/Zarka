@@ -2,6 +2,7 @@ import type { MatchRecord } from "../../models/types";
 import {
   ActionLibrary,
   ItemLibrary,
+  removeCarriedItem,
   syncBandolierLoadCapacity,
   type ActionId,
   type ItemId,
@@ -47,47 +48,12 @@ function itemWeight(itemType: ItemId): number {
     : 0;
 }
 
-function decrementLoad(character: PlayerCharacter, weight: number): void {
-  if (weight <= 0 || !character.stats?.load) {
-    return;
-  }
-  const current =
-    typeof character.stats.load.current === "number" &&
-    isFinite(character.stats.load.current)
-      ? character.stats.load.current
-      : 0;
-  character.stats.load.current = Math.max(0, current - weight);
-}
-
 function removeItem(
   character: PlayerCharacter,
   itemType: ItemId,
   weight: number
 ): boolean {
-  const carriedItems = ensureCarriedItems(character);
-  for (let index = 0; index < carriedItems.length; index += 1) {
-    const stack = carriedItems[index];
-    if (stack.itemId !== itemType) {
-      continue;
-    }
-    const quantity =
-      typeof stack.quantity === "number" && isFinite(stack.quantity)
-        ? stack.quantity
-        : 1;
-    if (quantity <= 1) {
-      carriedItems.splice(index, 1);
-    } else {
-      stack.quantity = quantity - 1;
-      const stackWeight =
-        typeof stack.weight === "number" && isFinite(stack.weight)
-          ? stack.weight
-          : weight * quantity;
-      stack.weight = Math.max(0, stackWeight - weight);
-    }
-    decrementLoad(character, weight);
-    return true;
-  }
-  return false;
+  return removeCarriedItem(character, itemType, 1, { unitWeight: weight });
 }
 
 function selectItems(

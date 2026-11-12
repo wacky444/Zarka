@@ -8,6 +8,10 @@ export interface AddCarriedItemOptions {
   unitWeight?: number;
 }
 
+export interface RemoveCarriedItemOptions {
+  unitWeight?: number;
+}
+
 export interface AddCarriedItemResult {
   addedQuantity: number;
   addedWeight: number;
@@ -108,6 +112,85 @@ export function recalculateCharacterLoad(character: PlayerCharacter): number {
   }
   syncBandolierLoadCapacity(character);
   return totalWeight;
+}
+
+export function removeCarriedItem(
+  character: PlayerCharacter,
+  itemId: ItemId,
+  quantity = 1,
+  options?: RemoveCarriedItemOptions,
+): boolean {
+  if (!itemId || quantity <= 0) {
+    return false;
+  }
+  const carried = character.inventory?.carriedItems;
+  if (!Array.isArray(carried) || carried.length === 0) {
+    return false;
+  }
+
+  let totalAvailable = 0;
+  for (const s of carried) {
+    if (s && s.itemId === itemId && typeof s.quantity === "number" && s.quantity > 0) {
+      totalAvailable += Math.floor(s.quantity);
+    }
+  }
+  if (totalAvailable < quantity) {
+    return false;
+  }
+
+  let remainingToRemove = quantity;
+  let totalRemovedWeight = 0;
+  const definition = ItemLibrary[itemId];
+
+  for (let i = carried.length - 1; i >= 0 && remainingToRemove > 0; i -= 1) {
+    const stack = carried[i];
+    if (!stack || stack.itemId !== itemId) {
+      continue;
+    }
+    const stackQty =
+      typeof stack.quantity === "number" && Number.isFinite(stack.quantity)
+        ? Math.max(0, Math.floor(stack.quantity))
+        : 0;
+    if (stackQty <= 0) {
+      carried.splice(i, 1);
+      continue;
+    }
+    const toRemove = Math.min(stackQty, remainingToRemove);
+    const unitWeight =
+      typeof options?.unitWeight === "number" && Number.isFinite(options.unitWeight)
+        ? Math.max(0, options.unitWeight)
+        : typeof definition?.weight === "number" && Number.isFinite(definition.weight)
+          ? Math.max(0, definition.weight)
+          : typeof stack.weight === "number" && stackQty > 0 && Number.isFinite(stack.weight)
+            ? Math.max(0, stack.weight / stackQty)
+            : 0;
+
+    const removedStackWeight = unitWeight * toRemove;
+    totalRemovedWeight += removedStackWeight;
+    remainingToRemove -= toRemove;
+
+    if (stackQty <= toRemove) {
+      carried.splice(i, 1);
+    } else {
+      stack.quantity = stackQty - toRemove;
+      if (typeof stack.weight === "number" && Number.isFinite(stack.weight)) {
+        stack.weight = Math.max(0, stack.weight - removedStackWeight);
+      }
+    }
+  }
+
+  if (character.stats?.load) {
+    const currentLoad =
+      typeof character.stats.load.current === "number" &&
+      Number.isFinite(character.stats.load.current)
+        ? character.stats.load.current
+        : 0;
+    character.stats.load.current = Math.max(0, currentLoad - totalRemovedWeight);
+  }
+
+  syncBandolierLoadCapacity(character);
+
+  return true;
 }
 
 export function syncBandolierLoadCapacity(character: PlayerCharacter): void {

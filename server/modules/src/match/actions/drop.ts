@@ -4,6 +4,7 @@ import {
   getLockerSaleBonus,
   getSkillRank,
   ItemLibrary,
+  removeCarriedItem,
   syncBandolierLoadCapacity,
   type ActionId,
   type HexTileSnapshot,
@@ -47,58 +48,12 @@ function resolveItemWeight(itemType: ItemId): number {
   return 0;
 }
 
-function decrementLoad(character: PlayerCharacter, weight: number): void {
-  if (weight <= 0 || !character.stats?.load) {
-    return;
-  }
-  const load = character.stats.load;
-  const current =
-    typeof load.current === "number" && isFinite(load.current)
-      ? load.current
-      : 0;
-  load.current = Math.max(0, current - weight);
-}
-
 function removeItemFromInventory(
   character: PlayerCharacter,
   itemType: ItemId,
   weight: number
 ): boolean {
-  if (
-    !character.inventory ||
-    !Array.isArray(character.inventory.carriedItems)
-  ) {
-    return false;
-  }
-  const carried = character.inventory.carriedItems;
-  let index = -1;
-  for (let i = 0; i < carried.length; i += 1) {
-    const entry = carried[i];
-    if (entry && entry.itemId === itemType) {
-      index = i;
-      break;
-    }
-  }
-  if (index === -1) {
-    return false;
-  }
-  const stack = carried[index];
-  const currentQuantity =
-    typeof stack.quantity === "number" && isFinite(stack.quantity)
-      ? stack.quantity
-      : 1;
-  if (currentQuantity <= 1) {
-    carried.splice(index, 1);
-  } else {
-    stack.quantity = currentQuantity - 1;
-    const currentWeight =
-      typeof stack.weight === "number" && isFinite(stack.weight)
-        ? stack.weight
-        : weight;
-    stack.weight = Math.max(0, currentWeight - weight);
-  }
-  decrementLoad(character, weight);
-  return true;
+  return removeCarriedItem(character, itemType, 1, { unitWeight: weight });
 }
 
 function selectItemsToDrop(

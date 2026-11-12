@@ -6,6 +6,7 @@ import {
   ItemLibrary,
   MAX_STEAL_PRIORITY_ITEMS,
   getSkillRank,
+  removeCarriedItem,
   syncBandolierLoadCapacity,
   type ActionId,
   type ItemId,
@@ -66,30 +67,7 @@ function removeItem(
   itemType: ItemId,
   weight: number
 ): boolean {
-  const carriedItems = ensureCarriedItems(character);
-  for (let index = 0; index < carriedItems.length; index += 1) {
-    const stack = carriedItems[index];
-    if (stack.itemId !== itemType) {
-      continue;
-    }
-    const quantity =
-      typeof stack.quantity === "number" && isFinite(stack.quantity)
-        ? stack.quantity
-        : 1;
-    if (quantity <= 1) {
-      carriedItems.splice(index, 1);
-    } else {
-      stack.quantity = quantity - 1;
-      const stackWeight =
-        typeof stack.weight === "number" && isFinite(stack.weight)
-          ? stack.weight
-          : weight * quantity;
-      stack.weight = Math.max(0, stackWeight - weight);
-    }
-    adjustLoad(character, -weight);
-    return true;
-  }
-  return false;
+  return removeCarriedItem(character, itemType, 1, { unitWeight: weight });
 }
 
 function getCarriedItemTypes(character: PlayerCharacter): ItemId[] {

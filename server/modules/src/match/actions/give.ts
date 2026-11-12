@@ -2,6 +2,7 @@ import {
   ActionLibrary,
   addCarriedItem,
   ItemLibrary,
+  removeCarriedItem,
   syncBandolierLoadCapacity,
   type ActionId,
   type ItemId,
@@ -41,31 +42,7 @@ function removeItem(
   itemType: ItemId,
   weight: number
 ): boolean {
-  const carriedItems = character.inventory?.carriedItems;
-  if (!Array.isArray(carriedItems)) {
-    return false;
-  }
-  const index = carriedItems.findIndex((item) => item.itemId === itemType);
-  if (index < 0) {
-    return false;
-  }
-  const stack = carriedItems[index];
-  const quantity =
-    typeof stack.quantity === "number" && Number.isFinite(stack.quantity)
-      ? Math.max(0, Math.floor(stack.quantity))
-      : 0;
-  if (quantity <= 1) {
-    carriedItems.splice(index, 1);
-  } else {
-    stack.quantity = quantity - 1;
-    const stackWeight =
-      typeof stack.weight === "number" && Number.isFinite(stack.weight)
-        ? Math.max(0, stack.weight)
-        : weight * quantity;
-    stack.weight = Math.max(0, stackWeight - weight);
-  }
-  adjustLoad(character, -weight);
-  return true;
+  return removeCarriedItem(character, itemType, 1, { unitWeight: weight });
 }
 
 function addItem(

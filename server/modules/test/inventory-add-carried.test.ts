@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   addCarriedItem,
   recalculateCharacterLoad,
+  removeCarriedItem,
   ItemLibrary,
   type PlayerCharacter,
 } from "@shared";
@@ -87,4 +88,51 @@ test("applyTraffickerDeliveries increments load via addCarriedItem", () => {
     ItemLibrary.food.weight + ItemLibrary.pistol.weight
   );
   assert.equal(recipient.inventory.carriedItems.length, 2);
+});
+
+test("removeCarriedItem reduces stack and load", () => {
+  const character = createDefaultCharacter("char-4", "Echo");
+  character.inventory = { carriedItems: [] };
+  character.stats.load = { current: 0, max: 25, bandolierCapacityBonus: 0 };
+
+  addCarriedItem(character, "bullet", 5);
+  assert.equal(character.stats.load.current, 5);
+
+  const removedPartial = removeCarriedItem(character, "bullet", 2);
+  assert.equal(removedPartial, true);
+  assert.equal(character.stats.load.current, 3);
+  assert.equal(character.inventory.carriedItems[0].quantity, 3);
+  assert.equal(character.inventory.carriedItems[0].weight, 3);
+
+  const removedRemaining = removeCarriedItem(character, "bullet", 3);
+  assert.equal(removedRemaining, true);
+  assert.equal(character.stats.load.current, 0);
+  assert.equal(character.inventory.carriedItems.length, 0);
+});
+
+test("removeCarriedItem rejects when quantity is insufficient", () => {
+  const character = createDefaultCharacter("char-5", "Foxtrot");
+  character.inventory = { carriedItems: [] };
+  character.stats.load = { current: 0, max: 25, bandolierCapacityBonus: 0 };
+
+  addCarriedItem(character, "bullet", 2);
+  const result = removeCarriedItem(character, "bullet", 3);
+  assert.equal(result, false);
+  assert.equal(character.stats.load.current, 2);
+  assert.equal(character.inventory.carriedItems[0].quantity, 2);
+});
+
+test("removeCarriedItem removes bandolier capacity bonus when removed", () => {
+  const character = createDefaultCharacter("char-6", "Golf");
+  character.inventory = { carriedItems: [] };
+  character.stats.load = { current: 0, max: 25, bandolierCapacityBonus: 0 };
+
+  addCarriedItem(character, "bandolier", 1);
+  assert.equal(character.stats.load.bandolierCapacityBonus, 5);
+  assert.equal(character.stats.load.max, 30);
+
+  const removed = removeCarriedItem(character, "bandolier", 1);
+  assert.equal(removed, true);
+  assert.equal(character.stats.load.bandolierCapacityBonus, 0);
+  assert.equal(character.stats.load.max, 25);
 });

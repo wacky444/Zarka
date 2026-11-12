@@ -1,4 +1,4 @@
-import { addCarriedItem, ItemLibrary } from "@shared";
+import { addCarriedItem, ItemLibrary, removeCarriedItem } from "@shared";
 import type { ItemId, PlayerCharacter, RecipeComponent } from "@shared";
 
 export type InventoryTransformFailure = "missing_items" | "inventory_capacity";
@@ -46,36 +46,9 @@ export function applyInventoryTransform(
     return "inventory_capacity";
   }
 
-  const carriedItems = (character.inventory?.carriedItems ?? []).map((stack) => ({
-    ...stack
-  }));
   for (const input of inputs) {
-    let remaining = input.quantity;
-    for (let index = 0; index < carriedItems.length && remaining > 0; index += 1) {
-      const stack = carriedItems[index];
-      if (stack.itemId !== input.itemId) {
-        continue;
-      }
-      const available = Math.max(0, Math.floor(stack.quantity));
-      const consumed = Math.min(available, remaining);
-      if (consumed === 0) {
-        continue;
-      }
-      stack.quantity = available - consumed;
-      const stackWeight = Number.isFinite(stack.weight)
-        ? Math.max(0, stack.weight)
-        : ItemLibrary[input.itemId].weight * available;
-      stack.weight = Math.max(
-        0,
-        stackWeight - ItemLibrary[input.itemId].weight * consumed
-      );
-      remaining -= consumed;
-    }
+    removeCarriedItem(character, input.itemId, input.quantity);
   }
-
-  character.inventory ??= { carriedItems: [] };
-  character.inventory.carriedItems = carriedItems.filter((stack) => stack.quantity > 0);
-  load.current = Math.max(0, load.current - getComponentWeight(inputs));
   for (const output of outputs) {
     addCarriedItem(character, output.itemId, output.quantity);
   }
