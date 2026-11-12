@@ -50,5 +50,18 @@ module.exports = {
       WAKE: "wake",
       SHUTDOWN: "shutdown"
     }
+  },
+  Events: {
+    EventEmitter: class EventEmitter {
+      on() {
+        return this;
+      }
+      off() {
+        return this;
+      }
+      emit() {
+        return true;
+      }
+    }
   }
 };

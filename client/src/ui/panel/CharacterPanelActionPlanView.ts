@@ -1709,58 +1709,52 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   }
 
   getSecondaryActionSelection(): SecondaryActionSelection {
-    return buildSecondaryActionSelection(
-      {
-        actionId: this.secondaryActionSelection,
-        targetLocation: this.secondaryActionTarget,
-        targetPlayerId: this.secondaryActionTargetPlayerId,
-        secondTargetPlayerId: this.secondaryInspectSecondTargetPlayerId,
-        targetItemIds: this.secondaryActionPriorityItems,
-        extraExecutions: this.secondaryExtraExecutions,
-        prioritizeFoodDrink: this.secondaryPrioritizeFoodDrink,
-        singleTarget: this.secondaryChemicalSingleTarget,
-        sellInstead: this.secondarySellInstead,
-        supportsLocation: this.selectedSecondaryActionSupportsLocation(),
-        supportsPlayer: this.selectedSecondaryActionSupportsSingleTarget(),
-        supportsItems: this.selectedSecondaryActionSupportsItemPriority(),
-        supportsExtra: this.selectedSecondaryActionSupportsExtraExecution(),
-        hasAdditionalTarget: this.secondaryInspectAdditionalTarget,
-        craftedItemId: this.secondaryCraftingSelector.getCraftedItemId() ?? undefined,
-        manipulateOperations:
-          this.secondaryActionSelection === "manipulate"
-            ? this.secondaryManipulateSelector.getOperations() ?? undefined
-            : undefined
-      },
-      { includeSellInstead: false }
-    );
+    return buildSecondaryActionSelection({
+      actionId: this.secondaryActionSelection,
+      targetLocation: this.secondaryActionTarget,
+      targetPlayerId: this.secondaryActionTargetPlayerId,
+      secondTargetPlayerId: this.secondaryInspectSecondTargetPlayerId,
+      targetItemIds: this.secondaryActionPriorityItems,
+      extraExecutions: this.secondaryExtraExecutions,
+      prioritizeFoodDrink: this.secondaryPrioritizeFoodDrink,
+      singleTarget: this.secondaryChemicalSingleTarget,
+      sellInstead: this.secondarySellInstead,
+      supportsLocation: this.selectedSecondaryActionSupportsLocation(),
+      supportsPlayer: this.selectedSecondaryActionSupportsSingleTarget(),
+      supportsItems: this.selectedSecondaryActionSupportsItemPriority(),
+      supportsExtra: this.selectedSecondaryActionSupportsExtraExecution(),
+      hasAdditionalTarget: this.secondaryInspectAdditionalTarget,
+      craftedItemId: this.secondaryCraftingSelector.getCraftedItemId() ?? undefined,
+      manipulateOperations:
+        this.secondaryActionSelection === "manipulate"
+          ? this.secondaryManipulateSelector.getOperations() ?? undefined
+          : undefined
+    });
   }
 
   getExtraSecondaryActionSelection(): SecondaryActionSelection {
-    return buildExtraSecondaryActionSelection(
-      {
-        actionId: this.extraSecondaryActionSelection,
-        targetLocation: this.extraSecondaryActionTarget,
-        targetPlayerId: this.extraSecondaryActionTargetPlayerId,
-        secondTargetPlayerId: null,
-        targetItemIds: this.extraSecondaryActionPriorityItems,
-        extraExecutions: this.extraSecondaryExtraExecutions,
-        prioritizeFoodDrink: this.extraSecondaryPrioritizeFoodDrink,
-        singleTarget: this.extraSecondaryChemicalSingleTarget,
-        sellInstead: this.extraSecondarySellInstead,
-        supportsLocation: this.selectedExtraSecondaryActionSupportsLocation(),
-        supportsPlayer: this.selectedExtraSecondaryActionSupportsSingleTarget(),
-        supportsItems: this.selectedExtraSecondaryActionSupportsItemPriority(),
-        supportsExtra: this.selectedExtraSecondaryActionSupportsExtraExecution(),
-        hasAdditionalTarget: false,
-        craftedItemId:
-          this.extraSecondaryCraftingSelector.getCraftedItemId() ?? undefined,
-        manipulateOperations:
-          this.extraSecondaryActionSelection === "manipulate"
-            ? this.extraSecondaryManipulateSelector.getOperations() ?? undefined
-            : undefined
-      },
-      { includeToggles: false, includeTargetLists: false }
-    );
+    return buildExtraSecondaryActionSelection({
+      actionId: this.extraSecondaryActionSelection,
+      targetLocation: this.extraSecondaryActionTarget,
+      targetPlayerId: this.extraSecondaryActionTargetPlayerId,
+      secondTargetPlayerId: null,
+      targetItemIds: this.extraSecondaryActionPriorityItems,
+      extraExecutions: this.extraSecondaryExtraExecutions,
+      prioritizeFoodDrink: this.extraSecondaryPrioritizeFoodDrink,
+      singleTarget: this.extraSecondaryChemicalSingleTarget,
+      sellInstead: this.extraSecondarySellInstead,
+      supportsLocation: this.selectedExtraSecondaryActionSupportsLocation(),
+      supportsPlayer: this.selectedExtraSecondaryActionSupportsSingleTarget(),
+      supportsItems: this.selectedExtraSecondaryActionSupportsItemPriority(),
+      supportsExtra: this.selectedExtraSecondaryActionSupportsExtraExecution(),
+      hasAdditionalTarget: false,
+      craftedItemId:
+        this.extraSecondaryCraftingSelector.getCraftedItemId() ?? undefined,
+      manipulateOperations:
+        this.extraSecondaryActionSelection === "manipulate"
+          ? this.extraSecondaryManipulateSelector.getOperations() ?? undefined
+          : undefined
+    });
   }
 
   setMainActionTarget(target: Axial | null, emit = false): boolean {
