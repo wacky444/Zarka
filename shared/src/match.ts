@@ -69,6 +69,12 @@ export interface ZarkanDonationRecord {
   turn: number;
 }
 
+export interface PendingBomberStrike {
+  buyerPlayerId: string;
+  targetLocation: Axial;
+  purchasedTurn: number;
+}
+
 export interface MatchRecord {
   /** Stable logical game identifier used by storage and client RPCs. */
   match_id: string;
@@ -104,6 +110,7 @@ export interface MatchRecord {
   c4s?: C4Record[];
   /** Server-private tracker placements; omitted from normal player views. */
   trackers?: MatchTrackerRecord[];
+  pendingBomberStrikes?: PendingBomberStrike[];
   /** Donation history; match views expose entries only to participants involved. */
   zarkanDonations?: ZarkanDonationRecord[];
   teams?: string[];

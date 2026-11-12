@@ -526,6 +526,7 @@ export function tailorMatchForPlayer(
   delete publicMatch.reportProgress;
   delete publicMatch.safeContainers;
   delete publicMatch.trackers;
+  delete publicMatch.pendingBomberStrikes;
   if (!viewAll) {
     delete publicMatch.loversTriggerTurn;
     delete publicMatch.loversFormedTurn;

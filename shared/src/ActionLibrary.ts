@@ -1667,8 +1667,8 @@ export const ActionLibrary: ActionLibraryDefinition = {
     hidden: true,
     texture: "Board Game Icons",
     frame: "fire.png",
-    actionOrder: 99,
-    actionSubOrder: 9,
+    actionOrder: 18,
+    actionSubOrder: 3,
     notes: ["Evento público al contratar un bombardero."],
     tags: ["Economy", "Attack", "Area"]
   },
@@ -1714,7 +1714,9 @@ export const ActionLibrary: ActionLibraryDefinition = {
     frame: "suit_hearts.png",
     actionOrder: 0,
     actionSubOrder: 0,
-    notes: ["Anuncio público de que dos supervivientes se han enamorado en Zarka."],
+    notes: [
+      "Anuncio público de que dos supervivientes se han enamorado en Zarka."
+    ],
     tags: ["Status"]
   }
 };

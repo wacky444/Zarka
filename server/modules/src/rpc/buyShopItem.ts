@@ -413,43 +413,12 @@ export function buyShopItemRpc(
         fireTurns: 3,
       };
     } else {
-      const bomberTargetIds = Object.keys(characters).filter((playerId) => {
-        const candidate = characters[playerId];
-        return (
-          !!candidate &&
-          !isCharacterDead(candidate) &&
-          isSameCoord(candidate.position?.coord, targetLocation)
-        );
+      match.pendingBomberStrikes = match.pendingBomberStrikes ?? [];
+      match.pendingBomberStrikes.push({
+        buyerPlayerId: ctx.userId,
+        targetLocation,
+        purchasedTurn: Math.max(0, Math.floor(match.current_turn ?? 0)),
       });
-      for (const playerId of bomberTargetIds) {
-        const candidate = characters[playerId];
-        if (!candidate) {
-          continue;
-        }
-        const outcome = applyDamage(candidate, 5, "explosive", {
-          ignoreGuarded: true,
-          ignoreSkillReduction: true,
-          canDamageUnconscious: true,
-          bypassResilience: true,
-        });
-        characters[playerId] = outcome.character;
-        const damageTaken = Math.max(0, -outcome.result.delta);
-        if (damageTaken > 0) {
-          postPurchaseEvents.push({
-            kind: "player",
-            importance: 1,
-            actorId: playerId,
-            action: {
-              actionId: "buy_bomber",
-              metadata: { personalDamage: damageTaken },
-            },
-            visibility: { scope: "limited", playerIds: [playerId] },
-          });
-        }
-        if (outcome.event) {
-          postPurchaseEvents.push(outcome.event);
-        }
-      }
       metadata = {
         ...metadata,
         targetLocation,
@@ -488,9 +457,6 @@ export function buyShopItemRpc(
       metadata: traffickerItem
         ? { ...metadata, itemId: traffickerItem, shopId: resolvedShopId }
         : metadata,
-      ...(resolvedShopId === "bomber" && targetLocation
-        ? { targetLocation }
-        : {}),
     },
     targets:
       observedPlayerIds.length > 0

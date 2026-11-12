@@ -33,6 +33,7 @@ import { executeShootPistolAction } from "./actions/shootPistol";
 import { executeShootHarpoonAction } from "./actions/shootHarpoon";
 import { executeShootRocketLauncherAction } from "./actions/shootRocketLauncher";
 import { executeSleepAction } from "./actions/sleep";
+import { executeBomberStrikes } from "./turnBomber";
 import { executeRecoverAction } from "./actions/recover";
 import { executeBreakfastAction } from "./actions/breakfast";
 import { executeRefuelAction } from "./actions/refuel";
@@ -1816,6 +1817,9 @@ export function executeAction(
       }
       handled = true;
     }
+  } else if (action.id === ActionLibrary.buy_bomber.id) {
+    eventsForAction = executeBomberStrikes(match, resolvedTurn, logger);
+    handled = true;
   }
 
 function calculateActionExperience(

@@ -13,6 +13,7 @@ import { createNakamaWrapper } from "../src/services/nakamaWrapper";
 import { StorageService } from "../src/services/storageService";
 import { tailorReplayEvents } from "../src/match/replay/tailorReplay";
 import { createDefaultCharacter } from "../src/utils/playerCharacter";
+import { advanceTurn } from "../src/match/advanceTurn";
 
 const MATCH_ID = "bomber-damage-visibility";
 const BLAST_COORD = { q: 0, r: 0 };
@@ -99,7 +100,12 @@ test("bomber damage log is private to each affected player", () => {
     matchSignal: () => "",
   } as unknown as nkruntime.Nakama;
   const context = { userId: "buyer" } as nkruntime.Context;
-  const logger = { debug: () => undefined } as unknown as nkruntime.Logger;
+  const logger = {
+    debug: () => undefined,
+    info: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+  } as unknown as nkruntime.Logger;
 
   const response = JSON.parse(
     buyShopItemRpc(
@@ -125,7 +131,22 @@ test("bomber damage log is private to each affected player", () => {
     1
   );
   assert.ok(replay);
-  const personalDamageEvents = replay.events.filter(
+  const personalDamageEventsTurn1 = replay.events.filter(
+    (event): event is ReplayPlayerEvent =>
+      event.kind === "player" &&
+      (event.action.metadata as { personalDamage?: unknown } | undefined)
+        ?.personalDamage === 5
+  );
+  assert.equal(personalDamageEventsTurn1.length, 0);
+
+  const storedMatch = stored.get(
+    keyFor(MATCH_COLLECTION, `${MATCH_KEY_PREFIX}${MATCH_ID}`, SERVER_USER_ID)
+  )!.value as MatchRecord;
+  assert.equal(storedMatch.pendingBomberStrikes?.length, 1);
+
+  const { events: turn2Events } = advanceTurn(storedMatch, 2, logger, nakama);
+
+  const personalDamageEvents = turn2Events.filter(
     (event): event is ReplayPlayerEvent =>
       event.kind === "player" &&
       (event.action.metadata as { personalDamage?: unknown } | undefined)
@@ -144,16 +165,28 @@ test("bomber damage log is private to each affected player", () => {
     )
   );
 
+  const mainStrike = turn2Events.find(
+    (event): event is ReplayPlayerEvent =>
+      event.kind === "player" &&
+      event.action.actionId === "buy_bomber" &&
+      (event.action.metadata as { bomberStrike?: unknown } | undefined)
+        ?.bomberStrike === true
+  );
+  assert.ok(mainStrike);
+  assert.equal(mainStrike.actorId, "buyer");
+  assert.deepEqual(mainStrike.action.targetLocation, BLAST_COORD);
+  assert.equal(mainStrike.visibility?.scope, "all");
+
   const victimView = tailorReplayEvents(
-    replay.events,
+    turn2Events,
     "victim1",
-    match.playerCharacters,
+    storedMatch.playerCharacters,
     0
   );
   const bystanderView = tailorReplayEvents(
-    replay.events,
+    turn2Events,
     "bystander",
-    match.playerCharacters,
+    storedMatch.playerCharacters,
     0
   );
   assert.equal(
@@ -174,4 +207,5 @@ test("bomber damage log is private to each affected player", () => {
     ),
     false
   );
+  assert.equal(storedMatch.pendingBomberStrikes, undefined);
 });

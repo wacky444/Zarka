@@ -149,7 +149,7 @@ export const ShopLibrary: ShopLibraryDefinition = {
   bomber: {
     id: "bomber",
     name: "Bomber",
-    description: "Deals five unavoidable damage to every player in a location.",
+    description: "Deals five unavoidable damage to every player in a location in the next turn.",
     cost: 30,
     implemented: true,
     category: "Mercenaries"

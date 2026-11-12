@@ -1330,6 +1330,7 @@ export class CharacterPanelLogView {
                 personalDamage?: unknown;
                 shopId?: unknown;
                 itemId?: unknown;
+                bomberStrike?: unknown;
               }
             | undefined;
           if (
@@ -1353,6 +1354,15 @@ export class CharacterPanelLogView {
           if (typeof metadata?.personalDamage === "number") {
             lines.push(
               `${actor} ${t("was hit by a bomber and lost")} ${metadata.personalDamage} ${t("health")}`
+            );
+            continue;
+          }
+          if (metadata?.bomberStrike === true) {
+            const location = readAxialMetadata(metadata?.targetLocation);
+            lines.push(
+              location
+                ? `${t("A bomber struck at")} (${location.q}, ${location.r})`
+                : `${t("A bomber struck")}`
             );
             continue;
           }

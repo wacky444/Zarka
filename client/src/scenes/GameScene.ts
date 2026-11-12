@@ -3803,12 +3803,6 @@ export class GameScene extends Phaser.Scene {
           });
           this.characterPanel?.appendLogReplay(turn, turn, events);
           this.completeVisibleTutorialSteps();
-          if (
-            result.event.kind === "player" &&
-            result.event.action.actionId === "buy_bomber"
-          ) {
-            this.enqueueReplay([result.event]);
-          }
         }
       }
       this.characterPanel?.finishShopPurchase();
