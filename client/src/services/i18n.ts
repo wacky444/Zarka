@@ -792,6 +792,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "was eliminated": "fue eliminado",
   "was damaged by fire": "fue dañado por el fuego",
   "damaged by fire": "dañado por el fuego",
+  "lost 1 health to hunger": "perdió 1 de vida por el hambre",
   "was damaged by hunger": "fue dañado por el hambre",
   "damaged by hunger": "dañado por el hambre",
   Cell: "Casilla",
