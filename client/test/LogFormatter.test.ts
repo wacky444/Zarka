@@ -511,6 +511,56 @@ test("CharacterPanelLogView formatReplayEvents formats pick_up with items and wi
   setLocale("en");
 });
 
+test("CharacterPanelLogView formatReplayEvents formats hunger_damage without repeating took damage", () => {
+  const scene = createMockScene();
+  const logView = new CharacterPanelLogView({
+    panel: { add() {}, emit() {} } as any,
+    elements: {
+      prevButton: createMockElement(scene) as any,
+      nextButton: createMockElement(scene) as any,
+      playButton: createMockElement(scene) as any,
+      filterTrack: createMockElement(scene) as any,
+      filterKnob: createMockElement(scene) as any,
+      filterLabel: createMockElement(scene) as any,
+      turnLabel: createMockElement(scene) as any,
+      statusText: createMockElement(scene) as any,
+      eventsBox: createMockElement(scene) as any,
+      eventsText: createMockElement(scene) as any,
+    },
+    resolvePlayerName: (id) => (id === "p1" ? "Hugo Jj" : id ?? "Unknown"),
+  }) as any;
+
+  const hungerEvent: ReplayEvent = {
+    kind: "player",
+    importance: 1,
+    actorId: "p1",
+    action: {
+      actionId: "hunger_damage",
+      damageDealt: 1,
+      metadata: { source: "hunger" },
+    },
+    targets: [
+      {
+        targetId: "p1",
+        damageTaken: 1,
+        eliminated: false,
+      },
+    ],
+  };
+
+  const { setLocale } = require("../src/services/i18n");
+
+  setLocale("es");
+  const esLines = logView.formatReplayEvents([hungerEvent]);
+  assert.equal(esLines.length, 1);
+  assert.equal(esLines[0], "p1 perdió 1 de vida por el hambre");
+
+  setLocale("en");
+  const enLines = logView.formatReplayEvents([hungerEvent]);
+  assert.equal(enLines.length, 1);
+  assert.equal(enLines[0], "p1 lost 1 health to hunger");
+});
+
 test("formatCharacterTurnLog reveals dropped items on character location under Ves:", () => {
   const char = {
     id: "p1",

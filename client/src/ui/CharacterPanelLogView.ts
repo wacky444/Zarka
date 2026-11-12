@@ -2166,11 +2166,13 @@ export class CharacterPanelLogView {
               typeof target.damageTaken === "number" &&
               target.damageTaken >= 0
             ) {
-              lines.push(
-                `${targetName} ${t("took")} ${target.damageTaken} ${t(
-                  "damage"
-                )}`
-              );
+              if (actionId !== "hunger_damage") {
+                lines.push(
+                  `${targetName} ${t("took")} ${target.damageTaken} ${t(
+                    "damage"
+                  )}`
+                );
+              }
               if (target.eliminated) {
                 if (target.targetId) {
                   eliminatedInLog.add(target.targetId);
