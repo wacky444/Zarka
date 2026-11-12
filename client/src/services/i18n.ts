@@ -792,6 +792,8 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "was eliminated": "fue eliminado",
   "was damaged by fire": "fue dañado por el fuego",
   "damaged by fire": "dañado por el fuego",
+  "was damaged by hunger": "fue dañado por el hambre",
+  "damaged by hunger": "dañado por el hambre",
   Cell: "Casilla",
   changed: "cambió",
   "was destroyed": "fue destruida",
@@ -1122,6 +1124,7 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   "Requiere 3 unidades de combustible para iniciarse en una localización adyacente.":
     "Requires 3 units of fuel to start in an adjacent location.",
   "Daño por incendio": "Fire damage",
+  "Daño por hambre": "Hunger damage",
   Recuperarse: "Recover",
   Alimentar: "Feed",
   Desayunar: "Have breakfast",

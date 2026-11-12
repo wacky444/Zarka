@@ -1627,6 +1627,21 @@ export const ActionLibrary: ActionLibraryDefinition = {
     notes: ["Daño causado al ejecutar una acción en un incendio."],
     tags: ["Attack", "Area"]
   },
+  hunger_damage: {
+    id: "hunger_damage",
+    name: "Daño por hambre",
+    category: ActionCategory.Secondary,
+    energyCost: 0,
+    cooldown: 0,
+    developed: true,
+    hidden: true,
+    texture: "Board Game Icons",
+    frame: "resource_apple.png",
+    actionOrder: 99,
+    actionSubOrder: 9,
+    notes: ["Daño causado por falta de esfuerzo al realizar una acción."],
+    tags: ["Status"]
+  },
   buy_bomber: {
     id: "buy_bomber",
     name: "Contratar bombardero",

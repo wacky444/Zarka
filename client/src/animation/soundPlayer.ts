@@ -136,6 +136,7 @@ export const ACTION_SOUNDS: Record<string, string[]> = {
   status_unconscious: ["wobble"],
   place_trap: ["lock_quick", "snap"],
   fire_damage: ["fire_lighting", "hurt"],
+  hunger_damage: ["hurt"],
   fire_rocket_launcher: ["explosion_large", "explosion_medium", "explosion_small"],
   buy_bomber: ["explosion_large", "explosion_medium", "explosion_small"],
   failedAction: ["undesired_effect", "sci_fi_error", "cancel"],

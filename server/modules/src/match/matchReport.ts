@@ -138,6 +138,7 @@ function collectEvents(
       actionId === "buy_spy_drone" ||
       actionId === "buy_pyromaniac" ||
       actionId === "fire_damage" ||
+      actionId === "hunger_damage" ||
       actionId === "buy_bomber";
     if (actor && !isNonActionEvent) {
       actor.actions_used += 1;

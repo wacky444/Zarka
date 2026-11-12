@@ -183,7 +183,9 @@ function applyEnergyForParticipants(
       effectiveCost,
       logger,
     );
-    if (outcome.event) {
+    if (outcome.events && outcome.events.length > 0) {
+      events.push(...outcome.events);
+    } else if (outcome.event) {
       events.push(outcome.event);
     }
     characters[participant.playerId] = participant.character;

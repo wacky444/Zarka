@@ -39,6 +39,7 @@ export interface ActionEnergyOutcome {
   healthLost: number;
   exhausted: boolean;
   event?: ReplayPlayerEvent;
+  events?: ReplayPlayerEvent[];
 }
 
 export interface HealthChangeResult {
@@ -629,7 +630,37 @@ export function applyActionEnergyCost(
 
   mergeCharacterState(character, healthOutcome.character);
   outcome.healthLost = Math.max(0, -healthOutcome.result.delta);
-  outcome.event = healthOutcome.event;
+  if (outcome.healthLost > 0) {
+    const hungerEvent: ReplayPlayerEvent = {
+      kind: "player",
+      importance: 1,
+      actorId: character.id,
+      action: {
+        actionId: "hunger_damage",
+        originLocation: character.position?.coord,
+        damageDealt: outcome.healthLost,
+        metadata: {
+          source: "hunger",
+        },
+      },
+      targets: [
+        {
+          targetId: character.id,
+          damageTaken: outcome.healthLost,
+          eliminated: healthOutcome.result.dead,
+        },
+      ],
+    };
+    const events: ReplayPlayerEvent[] = [hungerEvent];
+    if (healthOutcome.event) {
+      events.push(healthOutcome.event);
+    }
+    outcome.event = hungerEvent;
+    outcome.events = events;
+  } else if (healthOutcome.event) {
+    outcome.event = healthOutcome.event;
+    outcome.events = [healthOutcome.event];
+  }
 
   return outcome;
 }

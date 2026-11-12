@@ -1727,6 +1727,8 @@ export class CharacterPanelLogView {
           lines.push(`${actor} ${t("moved to")} (${q}, ${r})`);
         } else if (actionId === "fire_damage") {
           lines.push(`${actor} ${t("was damaged by fire")}`);
+        } else if (actionId === "hunger_damage") {
+          lines.push(`${actor} ${t("was damaged by hunger")}`);
         } else {
           const extraExecutions =
             typeof (event.action.metadata as { extraExecutions?: unknown })

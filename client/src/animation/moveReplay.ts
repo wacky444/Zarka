@@ -39,6 +39,7 @@ import { animateShootPistolEvent } from "./replayActions/ShootPistolAnimation";
 import { animateShootHarpoonEvent } from "./replayActions/ShootHarpoonAnimation";
 import { animateRocketLauncherEvent } from "./replayActions/RocketLauncherAnimation";
 import { animateFireDamageEvent } from "./replayActions/FireDamageAnimation";
+import { animateHungerDamageEvent } from "./replayActions/HungerDamageAnimation";
 import { animateBomberEvent } from "./replayActions/BomberAnimation";
 import { animatePickLockEvent } from "./replayActions/PickLockAnimation";
 import { animateTraffickerDeliveryEvent } from "./replayActions/TraffickerDeliveryAnimation";
@@ -123,6 +124,8 @@ export async function playReplayEvents(
       await animateRocketLauncherEvent(context, event);
     } else if (actionId === ActionLibrary.fire_damage.id) {
       await animateFireDamageEvent(context, event);
+    } else if (actionId === ActionLibrary.hunger_damage.id) {
+      await animateHungerDamageEvent(context, event);
     } else if (actionId === ActionLibrary.buy_bomber.id) {
       await animateBomberEvent(context, event);
     } else if (actionId === ActionLibrary.punch.id) {
