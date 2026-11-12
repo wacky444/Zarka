@@ -70,8 +70,6 @@ async function animateTarget(
   damageText.setDepth(sprite.depth + 2);
   context.ignoreUI(damageText);
 
-  const startX = sprite.x;
-  const startY = sprite.y;
   const tintInfo = {
     topLeft: sprite.tintTopLeft,
     topRight: sprite.tintTopRight,
@@ -105,15 +103,10 @@ async function animateTarget(
       onUpdate: () => {
         effect.setAlpha(animationState.alpha);
         damageText.setAlpha(animationState.alpha);
-        sprite.setPosition(
-          startX + (Math.random() - 0.5) * 4,
-          startY + (Math.random() - 0.5) * 4,
-        );
         follow();
       },
       onComplete: () => {
         scene.events.off("update", follow);
-        sprite.setPosition(startX, startY);
         if (tintInfo.tinted) {
           sprite.setTint(
             tintInfo.topLeft,
