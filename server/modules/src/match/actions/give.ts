@@ -155,10 +155,19 @@ function selectItemsToGive(
   }
 
   const selected: ItemId[] = [];
-  for (const itemId of priorities) {
-    while (selected.length < limit && (counts[itemId] ?? 0) > 0) {
-      selected.push(itemId as ItemId);
+  for (const rawPriority of priorities) {
+    const itemId = rawPriority.includes(":")
+      ? (rawPriority.split(":")[0] as ItemId)
+      : (rawPriority as ItemId);
+    if (selected.length < limit && (counts[itemId] ?? 0) > 0) {
+      selected.push(itemId);
       counts[itemId] -= 1;
+      if (!rawPriority.includes(":")) {
+        while (selected.length < limit && (counts[itemId] ?? 0) > 0) {
+          selected.push(itemId);
+          counts[itemId] -= 1;
+        }
+      }
     }
     if (selected.length >= limit) {
       return selected;

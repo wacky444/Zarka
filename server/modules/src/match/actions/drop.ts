@@ -119,10 +119,19 @@ function selectItemsToDrop(
       counts[stack.itemId] = stack.quantity;
     }
   }
-  for (const priorityId of priorities) {
-    while (selected.length < limit && (counts[priorityId] ?? 0) > 0) {
-      selected.push(priorityId as ItemId);
-      counts[priorityId] -= 1;
+  for (const rawPriority of priorities) {
+    const itemType = rawPriority.includes(":")
+      ? (rawPriority.split(":")[0] as ItemId)
+      : (rawPriority as ItemId);
+    if (selected.length < limit && (counts[itemType] ?? 0) > 0) {
+      selected.push(itemType);
+      counts[itemType] -= 1;
+      if (!rawPriority.includes(":")) {
+        while (selected.length < limit && (counts[itemType] ?? 0) > 0) {
+          selected.push(itemType);
+          counts[itemType] -= 1;
+        }
+      }
     }
     if (selected.length >= limit) {
       break;

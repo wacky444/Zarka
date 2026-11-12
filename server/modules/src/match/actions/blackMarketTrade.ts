@@ -113,8 +113,17 @@ function selectItems(
       quantities[itemType] -= 1;
     }
   };
-  for (const itemType of priorities) {
-    append(itemType);
+  for (const rawPriority of priorities) {
+    const itemType = rawPriority.includes(":")
+      ? (rawPriority.split(":")[0] as ItemId)
+      : (rawPriority as ItemId);
+    if (selected.length < limit && (quantities[itemType] ?? 0) > 0) {
+      selected.push(itemType);
+      quantities[itemType] -= 1;
+      if (!rawPriority.includes(":")) {
+        append(itemType);
+      }
+    }
     if (selected.length >= limit) {
       return selected;
     }

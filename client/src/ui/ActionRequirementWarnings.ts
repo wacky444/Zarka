@@ -146,6 +146,18 @@ export function getMissingRequirement(
     }
   }
 
+  if (definition.id === "give") {
+    const hasItemToGive = (character?.inventory?.carriedItems ?? []).some(
+      (stack) =>
+        typeof stack.quantity === "number" &&
+        stack.quantity > 0 &&
+        ItemLibrary[stack.itemId as ItemId] !== undefined
+    );
+    if (!hasItemToGive) {
+      return t("Debe tener el objeto a entregar.");
+    }
+  }
+
   if (
     definition.id === "detect" &&
     getSkillRank(character, "perception4") > 0

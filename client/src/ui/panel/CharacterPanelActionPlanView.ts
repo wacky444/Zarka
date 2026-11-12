@@ -3145,7 +3145,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   private refreshExtraSecondaryItemSelectorState(): void {
     const isInventorySale =
       this.extraSecondaryActionSelection === "drop" ||
-      this.extraSecondaryActionSelection === "black_market_trade";
+      this.extraSecondaryActionSelection === "black_market_trade" ||
+      this.extraSecondaryActionSelection === "give";
     const availableOptions = this.extraSecondaryActionSelection === "poison_food"
       ? this.getPoisonFoodItemOptions()
       : isInventorySale ? this.inventoryItemOptions : this.itemOptions;
@@ -3565,7 +3566,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
   private refreshSecondaryItemSelectorState(): void {
     const isInventorySale =
       this.secondaryActionSelection === "drop" ||
-      this.secondaryActionSelection === "black_market_trade";
+      this.secondaryActionSelection === "black_market_trade" ||
+      this.secondaryActionSelection === "give";
     const availableOptions = this.secondaryActionSelection === "poison_food"
       ? this.getPoisonFoodItemOptions()
       : isInventorySale ? this.inventoryItemOptions : this.itemOptions;
@@ -3996,18 +3998,27 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
           continue;
         }
       }
-      const option = optionsList.find((entry) => entry.id === trimmed);
+      let option = optionsList.find((entry) => entry.id === trimmed);
+      if (!option && !trimmed.includes(":")) {
+        option = optionsList.find(
+          (entry) => !seen.has(entry.id) && entry.id.startsWith(`${trimmed}:`)
+        );
+      }
       if (!option || option.disabled) {
         if (trimmed === PICKUP_NONE_PRIORITY_ID) {
           noneCount -= 1;
         }
         continue;
       }
+      const resolvedId = option.id;
+      if (seen.has(resolvedId)) {
+        continue;
+      }
       if (trimmed !== PICKUP_NONE_PRIORITY_ID) {
         itemCount += 1;
       }
-      seen.add(trimmed);
-      filtered.push(trimmed);
+      seen.add(resolvedId);
+      filtered.push(resolvedId);
     }
     return filtered;
   }
@@ -4095,7 +4106,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     }
     const optionsList =
       this.secondaryActionSelection === "drop" ||
-      this.secondaryActionSelection === "black_market_trade"
+      this.secondaryActionSelection === "black_market_trade" ||
+      this.secondaryActionSelection === "give"
         ? this.inventoryItemOptions
         : this.itemOptions;
     const filtered = this.filterPriorityIds(ids, optionsList);
@@ -4126,7 +4138,8 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     }
     const optionsList =
       this.extraSecondaryActionSelection === "drop" ||
-      this.extraSecondaryActionSelection === "black_market_trade"
+      this.extraSecondaryActionSelection === "black_market_trade" ||
+      this.extraSecondaryActionSelection === "give"
         ? this.inventoryItemOptions
         : this.itemOptions;
     const filtered = this.filterPriorityIds(ids, optionsList);
@@ -4219,9 +4232,13 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       return this.stealItemOptions;
     }
     if (this.mainActionSelection === "throw_object") {
-      return this.inventoryItemOptions.filter(
-        (option) => option.id !== "zarkans" && option.id !== "zarkan3"
-      );
+      return this.inventoryItemOptions.filter((option) => {
+        const baseId = option.id.includes(":") ? option.id.split(":")[0] : option.id;
+        return baseId !== "zarkans" && baseId !== "zarkan3";
+      });
+    }
+    if (this.mainActionSelection === "give") {
+      return this.inventoryItemOptions;
     }
     if (this.mainActionSelection !== "pick_up") {
       return this.itemOptions;

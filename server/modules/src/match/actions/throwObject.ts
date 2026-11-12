@@ -69,13 +69,22 @@ function selectThrowableItemTypes(
   }
 
   const selected: ItemId[] = [];
-  for (const itemType of priorities) {
+  for (const rawPriority of priorities) {
+    const itemType = rawPriority.includes(":")
+      ? (rawPriority.split(":")[0] as ItemId)
+      : (rawPriority as ItemId);
     if (!Object.prototype.hasOwnProperty.call(counts, itemType)) {
       continue;
     }
-    while (selected.length < limit && counts[itemType] > 0) {
-      selected.push(itemType as ItemId);
+    if (selected.length < limit && counts[itemType] > 0) {
+      selected.push(itemType);
       counts[itemType] -= 1;
+      if (!rawPriority.includes(":")) {
+        while (selected.length < limit && counts[itemType] > 0) {
+          selected.push(itemType);
+          counts[itemType] -= 1;
+        }
+      }
     }
   }
   if (selected.length < limit) {

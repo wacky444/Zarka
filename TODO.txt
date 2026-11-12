@@ -21,6 +21,8 @@
 		- new button to view achievements in the menu, hidden with a tip
 	- example, kill by throwing food, first win, push to death, friendly fire, think of more achievements, about 24 total
 	- tutorial doesn't trigger achievements
+	- achievemnt this is fine, stay in fire the whole duration
+	
 
 -t feature, search can reveal placed c4, but can't be picked up
 	- add it to the pool of possible findable items in the cell
@@ -55,7 +57,7 @@
 
 - autoplay en modo reproducir, al cambiar turno se reproduzca automaticamente
 
-- bug, change posion to show items on ground or items in inventory of players registered, all in the same select
+- bug, change poison to show items on ground or items in inventory of players registered, all in the same select
 
 - reuse the button style "Copiar parte" and make it main button component
 

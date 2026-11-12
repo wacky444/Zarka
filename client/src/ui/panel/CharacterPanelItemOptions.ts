@@ -67,6 +67,8 @@ export function buildCharacterPanelItemOptions(
     const carriedItems = Array.isArray(character?.inventory?.carriedItems)
       ? character.inventory.carriedItems
       : [];
+    let poisonedFoodRemaining = Math.max(0, Math.floor(character?.poisonedFoodCount ?? 0));
+    let optionIndex = 0;
     for (const stack of carriedItems) {
       if (
         !stack ||
@@ -84,17 +86,24 @@ export function buildCharacterPanelItemOptions(
       const visual = definition
         ? resolveItemTexture(definition)
         : { texture: "hex", frame: "grass_01.png" };
-      const poisoned = (itemId === "food" || itemId === "drink") && (character?.poisonedFoodCount ?? 0) > 0;
-      inventoryItems.push({
-        id: itemId,
-        label: poisoned ? `☠ ${name} — POISONED` : stack.quantity > 1 ? `${name} (x${stack.quantity})` : name,
-        poisoned,
-        description: definition?.description,
-        notes: definition?.notes,
-        texture: visual.texture,
-        frame: visual.frame,
-        weight: definition?.weight
-      });
+      const count = Math.max(1, Math.floor(stack.quantity));
+      for (let i = 0; i < count; i++) {
+        const isFoodOrDrink = itemId === "food" || itemId === "drink";
+        const isPoisoned = isFoodOrDrink && poisonedFoodRemaining > 0;
+        if (isPoisoned) {
+          poisonedFoodRemaining--;
+        }
+        inventoryItems.push({
+          id: `${itemId}:${optionIndex++}`,
+          label: isPoisoned ? `☠ ${name} — POISONED` : name,
+          poisoned: isPoisoned,
+          description: definition?.description,
+          notes: definition?.notes,
+          texture: visual.texture,
+          frame: visual.frame,
+          weight: definition?.weight
+        });
+      }
     }
   }
   if (character?.abilities?.includes("dexterity2")) {
