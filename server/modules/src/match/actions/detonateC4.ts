@@ -108,12 +108,20 @@ export class DetonateC4Action extends BaseAction {
       const ownedCharges = charges.filter(
         (charge) => charge.ownerId === participant.playerId,
       );
-      const primaryCoord =
-        participant.plan.targetLocationId ??
-        participant.character.position?.coord;
-      const primaryCharge = primaryCoord
-        ? findOwnedCharge(charges, participant.playerId, primaryCoord, new Set())
-        : undefined;
+      const detonatorCount = countCarriedItem(
+        participant.character,
+        "detonator",
+      );
+      const primaryCharge = participant.plan.targetLocationId
+        ? findOwnedCharge(
+            charges,
+            participant.playerId,
+            participant.plan.targetLocationId,
+            new Set(),
+          )
+        : detonatorCount === 1
+          ? ownedCharges[0]
+          : undefined;
       if (!primaryCharge) {
         events.push(
           createFailedActionEvent(participant, ActionLibrary.detonate_c4.id, {
@@ -138,10 +146,6 @@ export class DetonateC4Action extends BaseAction {
             excludedIds,
           )
         : ownedCharges.find((charge) => !excludedIds.has(charge.id));
-      const detonatorCount = countCarriedItem(
-        participant.character,
-        "detonator",
-      );
       const extraExecutions = getUsableExtraExecutions(
         participant.character,
         {

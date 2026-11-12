@@ -72,6 +72,11 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "The chainsaw attack order goes first, it won't be started, it requires two turns, first start then attack":
     "El ataque con motosierra va primero, no estará arrancada, requiere dos turnos, primero arrancar y luego atacar",
   "Chainsaw order": "Orden de motosierra",
+  "Select C4 target": "Selecciona objetivo de C4",
+  "You have two detonators and have not selected a target location for C4 detonation.":
+    "Tienes dos detonadores y no has seleccionado una localización objetivo para detonar el C4.",
+  "Target location required (2 detonators)":
+    "Localización requerida (2 detonadores)",
   "Requires running chainsaw": "Requiere la motosierra arrancada",
   "Victory!": "¡Victoria!",
   Defeat: "Derrota",
@@ -1194,6 +1199,11 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   Asustar: "Scare",
   "Detonar C4": "Detonate C4",
   "detonó un C4 en": "detonated a C4 at",
+  "Selecciona objetivo de C4": "Select C4 target",
+  "Tienes dos detonadores y no has seleccionado una localización objetivo para detonar el C4.":
+    "You have two detonators and have not selected a target location for C4 detonation.",
+  "Localización requerida (2 detonadores)":
+    "Target location required (2 detonators)",
   "Atacar con hacha": "Axe attack",
   "Golpear con bate": "Bat attack",
   "Atacar con motosierra": "Chainsaw attack",

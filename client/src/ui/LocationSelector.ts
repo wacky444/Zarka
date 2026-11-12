@@ -17,6 +17,7 @@ export class LocationSelector extends Phaser.GameObjects.Container {
   private pending = false;
   private preferredWidth: number;
   private tutorialHighlighted = false;
+  private warning: string | null = null;
   private disposed = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, width: number) {
@@ -104,12 +105,35 @@ export class LocationSelector extends Phaser.GameObjects.Container {
       return;
     }
     this.current = normalized;
-    if (!normalized) {
-      this.valueText.setText("None selected");
-    } else {
-      this.valueText.setText(`(${normalized.q}, ${normalized.r})`);
-    }
+    this.updateValueDisplay();
     this.updateButtons();
+  }
+
+  setWarning(warning: string | null): void {
+    if (this.disposed) {
+      return;
+    }
+    if (this.warning === warning) {
+      return;
+    }
+    this.warning = warning;
+    this.updateValueDisplay();
+  }
+
+  private updateValueDisplay(): void {
+    if (!this.current) {
+      if (this.warning) {
+        this.valueText.setText(this.warning);
+        this.valueText.setColor(THEME.colors.warning);
+      } else {
+        this.valueText.setText("None selected");
+        this.valueText.setColor("#cbd5f5");
+      }
+    } else {
+      this.valueText.setText(`(${this.current.q}, ${this.current.r})`);
+      this.valueText.setColor("#cbd5f5");
+    }
+    this.layoutChildren();
   }
 
   setEnabled(enabled: boolean): void {

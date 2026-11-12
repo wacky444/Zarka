@@ -57,6 +57,10 @@ const suites = [
     entryPoint: "test/ChainsawActionWarnings.test.ts"
   },
   {
+    name: "detonate-c4-warnings",
+    entryPoint: "test/DetonateC4Warnings.test.ts"
+  },
+  {
     name: "detect-action-warnings",
     entryPoint: "test/DetectActionWarnings.test.ts"
   },

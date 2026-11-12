@@ -1621,6 +1621,8 @@ export class CharacterPanel extends Phaser.GameObjects.Container {
       willBeOverweight: this.actionPlanView?.willBeOverweight() ?? false,
       hasChainsawOrderConflict:
         this.actionPlanView?.hasChainsawOrderConflict() ?? false,
+      hasDetonateC4LocationWarning:
+        this.actionPlanView?.hasDetonateC4LocationWarning() ?? false,
       tutorialActive: this.tutorialActive,
       tutorialStepId: this.tutorialStepId,
       tutorialReadyEnabled: this.tutorialReadyEnabled,

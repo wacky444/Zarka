@@ -27,6 +27,7 @@ export interface CharacterPanelReadyRefreshOptions {
   tutorialReadyEnabled: boolean;
   tutorialReadyAllowed: boolean;
   hasChainsawOrderConflict?: boolean;
+  hasDetonateC4LocationWarning?: boolean;
   mobile?: boolean;
 }
 
@@ -38,6 +39,7 @@ export class CharacterPanelReadyView {
   private readonly energyWarning: ReadyWarning;
   private readonly overweightWarning: ReadyWarning;
   private readonly chainsawOrderWarning: ReadyWarning;
+  private readonly detonateC4Warning: ReadyWarning;
   private readonly warningTooltip: ItemTooltipManager;
   private readonly onReadyChange?: (ready: boolean) => void;
   private readyState = false;
@@ -148,6 +150,21 @@ export class CharacterPanelReadyView {
       onTooltipRequested: (message, tooltipX, tooltipY) =>
         this.showWarningTooltip(message, tooltipX, tooltipY)
     });
+    this.detonateC4Warning = new ReadyWarning({
+      scene,
+      parent,
+      x: x + this.readyToggle.width + 12,
+      y: y + 1,
+      text: t("Select C4 target"),
+      color: THEME.colors.warning,
+      emphasized: true,
+      tooltip: () =>
+        t(
+          "You have two detonators and have not selected a target location for C4 detonation."
+        ),
+      onTooltipRequested: (message, tooltipX, tooltipY) =>
+        this.showWarningTooltip(message, tooltipX, tooltipY)
+    });
 
     this.warningTooltip = new ItemTooltipManager(scene);
     scene.input.on(
@@ -183,7 +200,8 @@ export class CharacterPanelReadyView {
       this.readyHighlightBorder,
       ...this.energyWarning.getAllGameObjects(),
       ...this.overweightWarning.getAllGameObjects(),
-      ...this.chainsawOrderWarning.getAllGameObjects()
+      ...this.chainsawOrderWarning.getAllGameObjects(),
+      ...this.detonateC4Warning.getAllGameObjects()
     ];
   }
 
@@ -243,6 +261,7 @@ export class CharacterPanelReadyView {
     this.energyWarning.setMobile(mobile);
     this.overweightWarning.setMobile(mobile);
     this.chainsawOrderWarning.setMobile(mobile);
+    this.detonateC4Warning.setMobile(mobile);
   }
 
   refresh(options: CharacterPanelReadyRefreshOptions): void {
@@ -291,6 +310,12 @@ export class CharacterPanelReadyView {
       !showOverweightWarning &&
       options.hasChainsawOrderConflict === true &&
       warningRowIsActive;
+    const showDetonateC4Warning =
+      !showEnergyWarning &&
+      !showOverweightWarning &&
+      !showChainsawOrderWarning &&
+      options.hasDetonateC4LocationWarning === true &&
+      warningRowIsActive;
 
     const previousWarning = this.activeWarning;
     this.energyWarning.setText(t("Insufficient energy"));
@@ -299,13 +324,17 @@ export class CharacterPanelReadyView {
     this.overweightWarning.setVisible(showOverweightWarning);
     this.chainsawOrderWarning.setText(t("Chainsaw order"));
     this.chainsawOrderWarning.setVisible(showChainsawOrderWarning);
+    this.detonateC4Warning.setText(t("Select C4 target"));
+    this.detonateC4Warning.setVisible(showDetonateC4Warning);
     this.activeWarning = showEnergyWarning
       ? this.energyWarning
       : showOverweightWarning
         ? this.overweightWarning
         : showChainsawOrderWarning
           ? this.chainsawOrderWarning
-          : null;
+          : showDetonateC4Warning
+            ? this.detonateC4Warning
+            : null;
     if (this.activeWarning !== previousWarning || this.activeWarning === null) {
       this.hideWarningTooltip();
     }
@@ -354,6 +383,7 @@ export class CharacterPanelReadyView {
     this.energyWarning.destroy();
     this.overweightWarning.destroy();
     this.chainsawOrderWarning.destroy();
+    this.detonateC4Warning.destroy();
   }
 
   private isTutorialHighlightActive(): boolean {
@@ -419,6 +449,11 @@ export class CharacterPanelReadyView {
       warningX,
       this.readyToggle.y +
         (this.readyToggle.height - this.chainsawOrderWarning.getHeight()) / 2
+    );
+    this.detonateC4Warning.setPosition(
+      warningX,
+      this.readyToggle.y +
+        (this.readyToggle.height - this.detonateC4Warning.getHeight()) / 2
     );
   }
 

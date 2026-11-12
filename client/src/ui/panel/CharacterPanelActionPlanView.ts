@@ -1773,6 +1773,7 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       }
       this.locationSelector.setValue(null);
       this.locationSelector.setPending(false);
+      this.locationSelector.setWarning(null);
       if (emit && changed) {
         this.emitMainActionChange();
       }
@@ -1794,6 +1795,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     this.locationSelector.setValue(
       normalized ? { q: normalized.q, r: normalized.r } : null
     );
+    if (this.hasDetonateC4LocationWarning()) {
+      this.locationSelector.setWarning(t("Target location required (2 detonators)"));
+    } else {
+      this.locationSelector.setWarning(null);
+    }
     if (!normalized) {
       this.locationSelector.setPending(false);
     }
@@ -2938,6 +2944,34 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
     return isMainChainsawAttack && isSecondaryStartChainsaw;
   }
 
+  public hasDetonateC4LocationWarning(): boolean {
+    const isDetonateC4 =
+      this.mainActionSelection === "detonate_c4" ||
+      (!this.mainActionSelection &&
+        this.currentCharacter?.actionPlan?.main?.actionId === "detonate_c4");
+    if (!isDetonateC4) {
+      return false;
+    }
+    const carried = this.currentCharacter?.inventory?.carriedItems ?? [];
+    const detonatorCount = carried.reduce(
+      (sum, stack) =>
+        stack.itemId === "detonator" &&
+        typeof stack.quantity === "number" &&
+        Number.isFinite(stack.quantity)
+          ? sum + Math.max(0, Math.floor(stack.quantity))
+          : sum,
+      0
+    );
+    if (detonatorCount < 2) {
+      return false;
+    }
+    const hasTargetLocation =
+      this.mainActionTarget !== null ||
+      (!this.mainActionSelection &&
+        this.currentCharacter?.actionPlan?.main?.targetLocationId != null);
+    return !hasTargetLocation;
+  }
+
   private refreshExtraSecondaryDropdownItems(): void {
     const character = this.currentCharacter;
     if (!character) {
@@ -3309,6 +3343,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       return;
     }
     this.locationSelector.setEnabled(this.mainActionSelection !== null);
+    if (this.hasDetonateC4LocationWarning()) {
+      this.locationSelector.setWarning(t("Target location required (2 detonators)"));
+    } else {
+      this.locationSelector.setWarning(null);
+    }
     this.updateScrollLayout();
   }
 

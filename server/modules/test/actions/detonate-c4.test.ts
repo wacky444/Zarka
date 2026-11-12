@@ -231,3 +231,76 @@ test("failed detonation preserves detonator when no owned C4 is at target", () =
     true,
   );
 });
+
+test("detonation without target location succeeds when player has only one detonator", () => {
+  const match = createMatch();
+  // Owner is at tile_5 (q: 5, r: 0), C4 is at tile_0 (q: 0, r: 0)
+  delete match.playerCharacters.owner.actionPlan!.main!.targetLocationId;
+
+  const events = executeAction(
+    match,
+    ActionLibrary.detonate_c4,
+    9,
+    {},
+    logger,
+  );
+
+  assert.equal(match.c4s?.length, 0);
+  assert.equal(
+    match.playerCharacters.owner.inventory.carriedItems.some(
+      (item) => item.itemId === "detonator",
+    ),
+    false,
+  );
+  assert.equal(match.playerCharacters.victim.stats.health.current, 0);
+  const detonationEvents = events.filter(
+    (event: ReplayEvent) =>
+      event.kind === "player" &&
+      event.action.actionId === ActionLibrary.detonate_c4.id,
+  );
+  assert.equal(detonationEvents.length, 1);
+  const event = detonationEvents[0];
+  assert.ok(event && event.kind === "player");
+  assert.deepEqual(event.action.targetLocation, { q: 0, r: 0 });
+});
+
+test("detonation without target location fails when player has multiple detonators", () => {
+  const match = createMatch();
+  const owner = match.playerCharacters.owner;
+  owner.inventory.carriedItems = [
+    { itemId: "detonator", quantity: 2, weight: 4 },
+  ];
+  owner.stats.load.current = 4;
+  delete owner.actionPlan!.main!.targetLocationId;
+  match.c4s = [
+    ...(match.c4s ?? []),
+    {
+      id: "c4_8_owner_1",
+      ownerId: "owner",
+      tileId: "tile_2",
+      coord: { q: 2, r: 0 },
+      placedTurn: 7,
+    },
+  ];
+
+  const events = executeAction(
+    match,
+    ActionLibrary.detonate_c4,
+    9,
+    {},
+    logger,
+  );
+
+  // Both C4s remain, both detonators remain, action fails
+  assert.equal(match.c4s?.length, 2);
+  assert.equal(owner.inventory.carriedItems[0]?.quantity, 2);
+  assert.equal(
+    events.some(
+      (event) =>
+        event.kind === "player" &&
+        event.action.actionId === ActionLibrary.failedAction.id &&
+        (event.action.metadata as { reason?: string }).reason === "invalid_target",
+    ),
+    true,
+  );
+});
