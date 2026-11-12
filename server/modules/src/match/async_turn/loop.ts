@@ -15,7 +15,11 @@ import {
   isCharacterDead,
   isCharacterIncapacitated,
 } from "../../utils/playerCharacter";
-import { emitMatchEndedSignal } from "../checkEndGame";
+import {
+  checkEndGameOutcome,
+  emitMatchEndedSignal,
+  finalizeMatchIfEnded
+} from "../checkEndGame";
 import { createReplaySnapshot } from "../replay/snapshot";
 import {
   checkAndSendTurnExpiringNotification,
@@ -79,8 +83,29 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
     }
 
     const match = stored.match;
+    if (match.removed && match.removed !== 0) {
+      state.matchRemoved = true;
+      return null;
+    }
     if (match.started !== true) {
       return { state };
+    }
+
+    const preOutcome = checkEndGameOutcome(match);
+    if (preOutcome.ended) {
+      finalizeMatchIfEnded(match, nk, logger, [], match.current_turn);
+      try {
+        storage.writeMatch(match, stored.version);
+      } catch (error) {
+        logger.warn(
+          "Failed to write finalized match %s: %s",
+          match.match_id,
+          String(error)
+        );
+      }
+      emitMatchEndedSignal(nkWrapper, match, preOutcome);
+      state.matchRemoved = true;
+      return null;
     }
 
     if (
@@ -290,6 +315,8 @@ export const asyncTurnMatchLoop: nkruntime.MatchLoopFunction<AsyncTurnState> =
 
     if (match.removed && match.removed !== 0) {
       emitMatchEndedSignal(nkWrapper, match, outcome.outcome);
+      state.matchRemoved = true;
+      return null;
     }
 
     if (pushOutbox) {

@@ -7,6 +7,7 @@ import {
 } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { isCharacterDead } from "../utils/playerCharacter";
+import { isBotControlled } from "../utils/activityClock";
 import { createStorageService } from "../services/storageService";
 import { buildMatchReport } from "./matchReport";
 import { finalizeRankedTeamPlacements } from "./rankedPlacements";
@@ -145,6 +146,15 @@ export function checkEndGameOutcome(match: MatchRecord): EndGameOutcome {
   }
 
   if (alive.length === 0) {
+    return {
+      ended: true,
+      reason: "all_dead",
+      aliveCharacterIds: [],
+    };
+  }
+
+  const isRanked = Boolean(match.metadata?.[RANKED_MATCH_METADATA_KEY]);
+  if (isRanked && alive.every((id) => isBotControlled(match, id))) {
     return {
       ended: true,
       reason: "all_dead",
@@ -401,7 +411,10 @@ export function emitMatchEndedSignal(
     const alive = endedOutcome?.aliveCharacterIds ?? getAliveCharacterIds(match);
 
     let winnerId = endedOutcome?.winnerId;
-    if (endedOutcome?.reason === "inactivity_timeout") {
+    if (
+      endedOutcome?.reason === "inactivity_timeout" ||
+      endedOutcome?.reason === "all_dead"
+    ) {
       winnerId = undefined;
     } else {
       if (!winnerId) {
@@ -439,7 +452,7 @@ export function emitMatchEndedSignal(
       : undefined;
 
     const winnerIds =
-      reason === "inactivity_timeout"
+      reason === "inactivity_timeout" || reason === "all_dead"
         ? []
         : winningTeamId
         ? (match.players ?? []).filter((pId) => {

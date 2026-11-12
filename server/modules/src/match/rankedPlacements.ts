@@ -103,7 +103,7 @@ export function finalizeRankedTeamPlacements(
         eliminated: false
       });
     }
-  } else if (survivingTeams.length === 0) {
+  } else {
     for (const teamId of teams.keys()) {
       if (knownTeams.has(teamId)) continue;
       placements.push({

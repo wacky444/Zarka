@@ -6,6 +6,7 @@ import {
   type RankedMatchMetadata,
 } from "@shared";
 import type { MatchRecord } from "../src/models/types";
+import { checkEndGameOutcome } from "../src/match/checkEndGame";
 import { checkAndProcessRankedAfkForfeits } from "../src/match/rankedAfkForfeit";
 import { resolveTurnForMatch } from "../src/match/turnResolution";
 import { processBotActions } from "../src/match/botAI";
@@ -479,4 +480,38 @@ test("Immediate Elo settlement: full end-to-end turn resolution triggers ranked 
   assert.ok(statsA.elo > 1000);
   assert.equal(statsB.losses, 1);
   assert.ok(statsB.elo < 1000);
+});
+
+test("Ranked match with only bots alive ends instantly in a draw", () => {
+  const { nk, logger } = createTestHarness(["human-a", "human-b"]);
+  const storage = createStorageService(nk);
+
+  const charA = createCharacter("human-a", "Player A");
+  charA.statuses = { conditions: ["dead"] };
+  const charB = createCharacter("human-b", "Player B");
+  charB.stats.health.current = 0;
+  const bot1 = createCharacter("bot1", "Bot 1");
+  const bot2 = createCharacter("bot2", "Bot 2");
+
+  const match = createRankedMatch(["human-a", "human-b", "bot1", "bot2"], {
+    "human-a": charA,
+    "human-b": charB,
+    "bot1": bot1,
+    "bot2": bot2,
+  });
+
+  const outcome = checkEndGameOutcome(match);
+  assert.equal(outcome.ended, true);
+  assert.equal(outcome.reason, "all_dead");
+
+  storage.writeMatch(match);
+  const turnResult = resolveTurnForMatch(match, logger, nk, { isAutoAdvance: true });
+  assert.equal(match.started, false);
+  assert.equal(match.removed, 1);
+
+  const report = storage.getMatchReport(match.match_id);
+  assert.ok(report);
+  assert.equal(report.reason, "all_dead");
+  assert.equal(report.winning_team_id, undefined);
+  assert.deepEqual(report.winning_character_ids, []);
 });
