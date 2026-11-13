@@ -6,6 +6,9 @@ import type { MatchRecord, PlayerCharacter } from "@shared";
 import { executePoisonFoodAction } from "../../src/match/actions/poisonFood";
 import { executeFeedAction } from "../../src/match/actions/feed";
 import { executeUseAntidoteAction } from "../../src/match/actions/useAntidote";
+import { executeThrowObjectAction } from "../../src/match/actions/throwObject";
+import { executeDropAction } from "../../src/match/actions/drop";
+import { executePickUpAction } from "../../src/match/actions/pickup";
 import { applyIntoxicationBeforeAction, decrementIntoxicationAfterAction } from "../../src/match/actions/intoxication";
 import type { PlannedActionParticipant } from "../../src/match/actions/utils";
 import { createDefaultCharacter } from "../../src/utils/playerCharacter";
@@ -106,6 +109,79 @@ test("poison_food does not consume poison on failure when character target has n
   assert.equal(events[0].kind === "player" ? events[0].action.actionId : undefined, "failedAction");
   assert.equal(events[0].kind === "player" ? events[0].action.metadata?.reason : undefined, "invalid_target");
   assert.equal(attacker.inventory.carriedItems[0]?.quantity, 1);
+});
+
+test("poison_food can target own character inventory through unified item selector", () => {
+  const attacker = createDefaultCharacter("attacker");
+  attacker.position = { tileId: "tile", coord: { q: 0, r: 0 } };
+  attacker.inventory.carriedItems = [stack("poison", 1), stack("food", 1)];
+  const match = createMatch([attacker]);
+  executePoisonFoodAction([
+    participant(attacker, "poison_food", "secondary", undefined, [`character:${attacker.id}`]),
+  ], match);
+  assert.equal(attacker.poisonedFoodCount, 1);
+  assert.equal(attacker.poisonedFoodBy?.[attacker.id], 1);
+  assert.equal(attacker.inventory.carriedItems.some((s) => s.itemId === "poison"), false);
+});
+
+test("throwing poisoned food preserves poison on the created ground item", () => {
+  const thrower = createDefaultCharacter("thrower");
+  thrower.position = { tileId: "tile", coord: { q: 0, r: 0 } };
+  thrower.inventory.carriedItems = [stack("food", 1)];
+  thrower.poisonedFoodCount = 1;
+  thrower.poisonedFoodBy = { "poisoner-id": 1 };
+  const match = createMatch([thrower]);
+  executeThrowObjectAction([
+    {
+      playerId: thrower.id,
+      character: thrower,
+      plan: { actionId: "throw_object", targetItemIds: ["food"] },
+      planKey: "main",
+    },
+  ], match);
+  assert.equal(thrower.poisonedFoodCount, 0);
+  assert.equal(match.items?.length, 1);
+  assert.equal(match.items?.[0].poisonedBy, "poisoner-id");
+});
+
+test("dropping poisoned food preserves poison on the created ground item", () => {
+  const dropper = createDefaultCharacter("dropper");
+  dropper.position = { tileId: "tile", coord: { q: 0, r: 0 } };
+  dropper.inventory.carriedItems = [stack("food", 1)];
+  dropper.poisonedFoodCount = 1;
+  dropper.poisonedFoodBy = { "poisoner-id": 1 };
+  const match = createMatch([dropper]);
+  executeDropAction([
+    {
+      playerId: dropper.id,
+      character: dropper,
+      plan: { actionId: "drop", targetItemIds: ["food"] },
+      planKey: "main",
+    },
+  ], match);
+  assert.equal(dropper.poisonedFoodCount, 0);
+  assert.equal(match.items?.length, 1);
+  assert.equal(match.items?.[0].poisonedBy, "poisoner-id");
+});
+
+test("picking up poisoned ground food transfers poison to character inventory", () => {
+  const picker = createDefaultCharacter("picker");
+  picker.position = { tileId: "tile", coord: { q: 0, r: 0 } };
+  picker.inventory.carriedItems = [];
+  picker.discoveredItemIds = ["poisoned-ground-food"];
+  const match = createMatch([picker]);
+  match.items = [{ item_id: "poisoned-ground-food", item_type: "food", poisonedBy: "poisoner-id" }];
+  match.map!.tiles[0].itemIds = ["poisoned-ground-food"];
+  executePickUpAction([
+    {
+      playerId: picker.id,
+      character: picker,
+      plan: { actionId: "pick_up", targetItemIds: ["poisoned-ground-food"] },
+      planKey: "main",
+    },
+  ], match);
+  assert.equal(picker.poisonedFoodCount, 1);
+  assert.equal(picker.poisonedFoodBy?.["poisoner-id"], 1);
 });
 
 test("poison_food can target a character inventory through the unified item selector", () => {

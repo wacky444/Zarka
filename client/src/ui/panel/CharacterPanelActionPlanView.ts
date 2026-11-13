@@ -4138,9 +4138,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       return hadValues;
     }
     const optionsList =
-      this.secondaryActionSelection === "drop" ||
-      this.secondaryActionSelection === "black_market_trade" ||
-      this.secondaryActionSelection === "give"
+      this.secondaryActionSelection === "poison_food"
+        ? this.getPoisonFoodItemOptions()
+        : this.secondaryActionSelection === "drop" ||
+          this.secondaryActionSelection === "black_market_trade" ||
+          this.secondaryActionSelection === "give"
         ? this.inventoryItemOptions
         : this.itemOptions;
     const filtered = this.filterPriorityIds(ids, optionsList);
@@ -4170,9 +4172,11 @@ export class CharacterPanelActionPlanView extends Phaser.Events.EventEmitter {
       return hadValues;
     }
     const optionsList =
-      this.extraSecondaryActionSelection === "drop" ||
-      this.extraSecondaryActionSelection === "black_market_trade" ||
-      this.extraSecondaryActionSelection === "give"
+      this.extraSecondaryActionSelection === "poison_food"
+        ? this.getPoisonFoodItemOptions()
+        : this.extraSecondaryActionSelection === "drop" ||
+          this.extraSecondaryActionSelection === "black_market_trade" ||
+          this.extraSecondaryActionSelection === "give"
         ? this.inventoryItemOptions
         : this.itemOptions;
     const filtered = this.filterPriorityIds(ids, optionsList);

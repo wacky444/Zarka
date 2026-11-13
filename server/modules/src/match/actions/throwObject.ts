@@ -29,6 +29,7 @@ import {
 import { awardExperience } from "../progression";
 import { maybeTriggerVengefulCounterAttack } from "./vengeful";
 import { BaseAction } from "./classes/BaseAction";
+import { extractPoisonedServing } from "./intoxication";
 
 interface ThrownItem {
   itemType: ItemId;
@@ -206,7 +207,13 @@ export class ThrowObjectAction extends BaseAction {
         if (!Array.isArray(match.items)) {
           match.items = [];
         }
-        match.items.push({ item_id: itemId, item_type: itemType });
+        const isFoodOrDrink = itemType === "food" || itemType === "drink";
+        const poisonOwner = isFoodOrDrink ? extractPoisonedServing(participant.character) : null;
+        match.items.push({
+          item_id: itemId,
+          item_type: itemType,
+          ...(poisonOwner ? { poisonedBy: poisonOwner } : {}),
+        });
         if (!Array.isArray(targetTile.itemIds)) {
           targetTile.itemIds = [];
         }

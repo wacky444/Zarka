@@ -18,6 +18,7 @@ import { findTileById } from "./search";
 import { findTileAtCoord } from "../../utils/location";
 import { getUsableExtraExecutions } from "../../utils/energy";
 import { BaseAction } from "./classes/BaseAction";
+import { extractPoisonedServing } from "./intoxication";
 
 function normalizePriorityIds(
   plan: PlannedActionParticipant["plan"]
@@ -220,7 +221,13 @@ export class DropAction extends BaseAction {
           if (!Array.isArray(match.items)) {
             match.items = [];
           }
-          match.items.push({ item_id: newId, item_type: itemType });
+          const isFoodOrDrink = itemType === "food" || itemType === "drink";
+          const poisonOwner = isFoodOrDrink ? extractPoisonedServing(participant.character) : null;
+          match.items.push({
+            item_id: newId,
+            item_type: itemType,
+            ...(poisonOwner ? { poisonedBy: poisonOwner } : {}),
+          });
 
           if (tile) {
             if (!Array.isArray(tile.itemIds)) {

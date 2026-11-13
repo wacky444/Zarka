@@ -108,11 +108,22 @@ export class PoisonFoodAction extends BaseAction {
         }
         continue;
       }
+      const requestedTargets = participant.plan.targetPlayerIds ?? [];
+      const includeSelf = requestedTargets.includes(participant.playerId);
       const targets = collectTargets(actionId, participant, match, {
         deadCharacterPolicy: "exclude",
         allowMultiple: true,
+        includeSelf,
         filter: (candidate) => availableFood(candidate.character) > 0,
       });
+      if (!targets.length && availableFood(participant.character) > 0) {
+        targets.push({
+          id: participant.playerId,
+          character: participant.character,
+          coord: participant.character.position?.coord ?? { q: 0, r: 0 },
+          distance: 0,
+        });
+      }
       const poisonCount = initialPoisonCount;
       const availableServings = targets.reduce(
         (sum, target) => sum + availableFood(target.character),

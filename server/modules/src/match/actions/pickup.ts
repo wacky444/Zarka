@@ -20,6 +20,7 @@ import { type PlannedActionParticipant } from "./utils";
 import { buildItemLookup, findTileById } from "./search";
 import { getUsableExtraExecutions } from "../../utils/energy";
 import { BaseAction } from "./classes/BaseAction";
+import { addPoisonedServing } from "./intoxication";
 
 type PickupItem = {
   id: string;
@@ -292,6 +293,9 @@ export class PickUpAction extends BaseAction {
                 const weight = resolveItemWeight(itemType);
                 // TODO check for exceeding load capacity to reduce health
                 addCarriedItem(participant.character, itemType, 1, { unitWeight: weight });
+                if (record.poisonedBy && (itemType === "food" || itemType === "drink")) {
+                  addPoisonedServing(participant.character, record.poisonedBy);
+                }
               }
               removeItemFromTile(tile, itemId);
               removeItemFromMatch(match, itemId);

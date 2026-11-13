@@ -6,6 +6,7 @@ import {
   type ReplayPlayerEvent,
 } from "@shared";
 import type { MatchRecord } from "../models/types";
+import { extractPoisonedServing } from "./actions/intoxication";
 
 interface DropCandidate {
   itemId: ItemId;
@@ -83,7 +84,13 @@ function removeOneItem(
     .toString(36)
     .slice(2, 7)}`;
   match.items = match.items ?? [];
-  match.items.push({ item_id: itemIdOnGround, item_type: itemId });
+  const isFoodOrDrink = itemId === "food" || itemId === "drink";
+  const poisonOwner = isFoodOrDrink ? extractPoisonedServing(character) : null;
+  match.items.push({
+    item_id: itemIdOnGround,
+    item_type: itemId,
+    ...(poisonOwner ? { poisonedBy: poisonOwner } : {}),
+  });
   tile.itemIds = Array.isArray(tile.itemIds) ? tile.itemIds : [];
   tile.itemIds.push(itemIdOnGround);
   character.discoveredItemIds = character.discoveredItemIds ?? [];

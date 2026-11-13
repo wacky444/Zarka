@@ -13,6 +13,7 @@ import type { MatchRecord } from "../../models/types";
 import { getUsableExtraExecutions } from "../../utils/energy";
 import { isCharacterDead } from "../../utils/playerCharacter";
 import { BaseAction } from "./classes/BaseAction";
+import { addPoisonedServing, extractPoisonedServing } from "./intoxication";
 import {
   createFailedActionEvent,
   type PlannedActionParticipant,
@@ -222,6 +223,12 @@ export class GiveAction extends BaseAction {
           continue;
         }
         addItem(recipient, itemType, weight);
+        if (itemType === "food" || itemType === "drink") {
+          const poisonOwner = extractPoisonedServing(participant.character);
+          if (poisonOwner) {
+            addPoisonedServing(recipient, poisonOwner);
+          }
+        }
         givenItems.push({ itemType });
       }
 

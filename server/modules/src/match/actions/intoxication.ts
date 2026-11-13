@@ -15,23 +15,43 @@ export interface PoisonedFoodOutcome {
   healthEvent?: ReplayPlayerEvent;
 }
 
-export function consumePoisonedServing(character: PlayerCharacter): PoisonedFoodOutcome {
+export function extractPoisonedServing(character: PlayerCharacter): string | null {
   const poisonedFoodCount = Math.max(0, Math.floor(character.poisonedFoodCount ?? 0));
   if (poisonedFoodCount <= 0) {
-    return { consumedPoison: false, intoxicationStarted: false };
+    return null;
   }
   character.poisonedFoodCount = poisonedFoodCount - 1;
   const poisonOwners = Object.entries(character.poisonedFoodBy ?? {});
   const consumedOwner = poisonOwners.find(([, count]) => count > 0)?.[0];
   if (consumedOwner) {
     const remaining = (character.poisonedFoodBy?.[consumedOwner] ?? 0) - 1;
-    if (remaining > 0) character.poisonedFoodBy = { ...character.poisonedFoodBy, [consumedOwner]: remaining };
-    else {
+    if (remaining > 0) {
+      character.poisonedFoodBy = { ...character.poisonedFoodBy, [consumedOwner]: remaining };
+    } else {
       const remainingOwners = { ...character.poisonedFoodBy };
       delete remainingOwners[consumedOwner];
       character.poisonedFoodBy = remainingOwners;
     }
-    if (Object.keys(character.poisonedFoodBy ?? {}).length === 0) delete character.poisonedFoodBy;
+    if (Object.keys(character.poisonedFoodBy ?? {}).length === 0) {
+      delete character.poisonedFoodBy;
+    }
+    return consumedOwner;
+  }
+  return "";
+}
+
+export function addPoisonedServing(character: PlayerCharacter, poisonerId: string): void {
+  character.poisonedFoodCount = Math.max(0, Math.floor(character.poisonedFoodCount ?? 0)) + 1;
+  character.poisonedFoodBy = {
+    ...(character.poisonedFoodBy ?? {}),
+    [poisonerId]: (character.poisonedFoodBy?.[poisonerId] ?? 0) + 1,
+  };
+}
+
+export function consumePoisonedServing(character: PlayerCharacter): PoisonedFoodOutcome {
+  const consumedOwner = extractPoisonedServing(character);
+  if (consumedOwner === null) {
+    return { consumedPoison: false, intoxicationStarted: false };
   }
   if (!hasActiveIntoxication(character)) {
     const statuses = character.statuses ?? { conditions: [] };

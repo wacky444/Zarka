@@ -24,6 +24,7 @@ import {
   type PlannedActionParticipant,
 } from "./utils";
 import { BaseAction } from "./classes/BaseAction";
+import { addPoisonedServing, extractPoisonedServing } from "./intoxication";
 
 function ensureCarriedItems(character: PlayerCharacter): PlayerItemStack[] {
   if (!character.inventory) {
@@ -272,6 +273,12 @@ export class StealAction extends BaseAction {
           continue;
         }
         addItem(participant.character, itemType, weight);
+        if (itemType === "food" || itemType === "drink") {
+          const poisonOwner = extractPoisonedServing(candidate.character);
+          if (poisonOwner) {
+            addPoisonedServing(participant.character, poisonOwner);
+          }
+        }
         stolenItems.push(itemType);
         result.stolenItems.push(itemType);
         match.playerCharacters![candidate.id] = candidate.character;
