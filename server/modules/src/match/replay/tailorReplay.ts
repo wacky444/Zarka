@@ -47,6 +47,37 @@ function filterMapEvent(
   return canSeeCoord(event.cell, viewer, Math.max(0, viewDistance));
 }
 
+function sanitizePlayerEventForViewer(
+  event: ReplayPlayerEvent,
+  playerId: string
+): ReplayPlayerEvent {
+  if (event.actorId === playerId || !event.action.metadata) {
+    return event;
+  }
+  const metadata = event.action.metadata as Record<string, unknown>;
+  if (
+    metadata.levelsGained === undefined &&
+    metadata.experienceGained === undefined
+  ) {
+    return event;
+  }
+  const {
+    levelsGained: _levelsGained,
+    experienceGained: _experienceGained,
+    ...restMetadata
+  } = metadata;
+  const { metadata: _ignored, ...restAction } = event.action;
+  return {
+    ...event,
+    action: {
+      ...restAction,
+      ...(Object.keys(restMetadata).length > 0
+        ? { metadata: restMetadata }
+        : {}),
+    },
+  };
+}
+
 export function tailorReplayEvents(
   events: ReplayEvent[],
   playerId: string,
@@ -110,7 +141,7 @@ export function tailorReplayEvents(
           visibility: { scope: "all" },
         });
       } else if (filterPlayerEvent(event, playerId)) {
-        result.push(event);
+        result.push(sanitizePlayerEventForViewer(event, playerId));
       }
     } else if (event.kind === "map") {
       if (filterMapEvent(event, playerId, viewerCoord, allowedDistance)) {
