@@ -2045,13 +2045,97 @@ export class CharacterPanelLogView {
                 : typeof targetId === "string"
                   ? this.resolvePlayerName(targetId)
                   : t("the target");
-            lines.push(
-              stolenItems.length > 0
-                ? `${actor} ${t("stole")} ${stolenItems.join(", ")} ${t(
-                    "from"
-                  )} ${targetName}`
-                : `${actor} ${t("stole nothing from")} ${targetName}`
-            );
+            if (stolenItems.length > 0) {
+              lines.push(
+                `${actor} ${t("stole")} ${stolenItems.join(", ")} ${t(
+                  "from"
+                )} ${targetName}`
+              );
+            } else if (
+              !(
+                event.action.metadata as
+                  | { blockedByProtection?: unknown }
+                  | undefined
+              )?.blockedByProtection &&
+              !(
+                event.action.metadata as
+                  | { targetHadNoMoreItems?: unknown }
+                  | undefined
+              )?.targetHadNoMoreItems
+            ) {
+              lines.push(`${actor} ${t("stole nothing from")} ${targetName}`);
+            }
+
+            const meta = event.action.metadata as
+              | {
+                  blockedByProtection?: unknown;
+                  protectedTargetPlayerIds?: unknown;
+                  targetHadNoMoreItems?: unknown;
+                  noItemTargetPlayerIds?: unknown;
+                  secondTargetPlayerId?: unknown;
+                  targetPlayerId?: unknown;
+                }
+              | undefined;
+
+            if (meta?.blockedByProtection) {
+              const protectedIds: string[] =
+                Array.isArray(meta.protectedTargetPlayerIds) &&
+                meta.protectedTargetPlayerIds.length > 0
+                  ? (meta.protectedTargetPlayerIds as string[])
+                  : typeof meta.secondTargetPlayerId === "string" &&
+                      !targetIds.includes(meta.secondTargetPlayerId)
+                    ? [meta.secondTargetPlayerId]
+                    : typeof meta.targetPlayerId === "string" &&
+                        !targetIds.includes(meta.targetPlayerId)
+                      ? [meta.targetPlayerId]
+                      : [];
+              if (protectedIds.length > 0) {
+                for (const pid of protectedIds) {
+                  const pName = this.resolvePlayerName(pid);
+                  lines.push(
+                    `${actor} ${t("failed to use")} ${t(
+                      ActionLibrary.steal.name
+                    )} (${pName} ${t("is protected")})`
+                  );
+                }
+              } else {
+                lines.push(
+                  `${actor} ${t("failed to use")} ${t(
+                    ActionLibrary.steal.name
+                  )} (${t("target is protected")})`
+                );
+              }
+            }
+
+            if (meta?.targetHadNoMoreItems) {
+              const noItemIds: string[] =
+                Array.isArray(meta.noItemTargetPlayerIds) &&
+                meta.noItemTargetPlayerIds.length > 0
+                  ? (meta.noItemTargetPlayerIds as string[])
+                  : typeof meta.secondTargetPlayerId === "string" &&
+                      !targetIds.includes(meta.secondTargetPlayerId)
+                    ? [meta.secondTargetPlayerId]
+                    : typeof meta.targetPlayerId === "string" &&
+                        !targetIds.includes(meta.targetPlayerId)
+                      ? [meta.targetPlayerId]
+                      : [];
+              if (noItemIds.length > 0) {
+                for (const pid of noItemIds) {
+                  const pName = this.resolvePlayerName(pid);
+                  lines.push(
+                    `${actor} ${t("failed to use")} ${t(
+                      ActionLibrary.steal.name
+                    )} (${pName}: ${t("target had no items to steal")})`
+                  );
+                }
+              } else {
+                lines.push(
+                  `${actor} ${t("failed to use")} ${t(
+                    ActionLibrary.steal.name
+                  )} (${t("target had no items to steal")})`
+                );
+              }
+            }
           } else if (actionId === "give") {
             const givenItems = this.extractGivenItemNames(
               event.action.metadata
@@ -2387,6 +2471,19 @@ export class CharacterPanelLogView {
         : `${actor} ${t("failed to use")} ${attemptedName} (${t("target is protected")})`;
     }
     if (attemptedId === "steal") {
+      if (container.reason === "target_protected") {
+        const targetName =
+          typeof container.targetPlayerId === "string"
+            ? this.resolvePlayerName(container.targetPlayerId)
+            : null;
+        return targetName
+          ? `${actor} ${t("failed to use")} ${attemptedName} (${targetName} ${t(
+              "is protected"
+            )})`
+          : `${actor} ${t("failed to use")} ${attemptedName} (${t(
+              "target is protected"
+            )})`;
+      }
       if (container.reason === "invalid_target") {
         return `${actor} ${t("failed to use")} ${attemptedName} (${t("target out of range")})`;
       }

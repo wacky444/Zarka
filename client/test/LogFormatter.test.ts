@@ -600,3 +600,69 @@ test("formatCharacterTurnLog reveals dropped items on character location under V
   assert.ok(log.includes("Ves: cuchillo"), `Expected log to include 'Ves: cuchillo', got: ${log}`);
   assert.ok(!log.includes("hacha"), `Hidden item should not be in Ves, got: ${log}`);
 });
+
+test("CharacterPanelLogView formatReplayEvents formats steal blocked by protection in English and Spanish", () => {
+  const { getLocale, setLocale } = require("../src/services/i18n");
+
+  const scene = createMockScene();
+  const logView = new CharacterPanelLogView({
+    panel: { add() {}, emit() {} } as any,
+    elements: {
+      prevButton: createMockElement(scene) as any,
+      nextButton: createMockElement(scene) as any,
+      playButton: createMockElement(scene) as any,
+      filterTrack: createMockElement(scene) as any,
+      filterKnob: createMockElement(scene) as any,
+      filterLabel: createMockElement(scene) as any,
+      turnLabel: createMockElement(scene) as any,
+      statusText: createMockElement(scene) as any,
+      eventsBox: createMockElement(scene) as any,
+      eventsText: createMockElement(scene) as any,
+    },
+    resolvePlayerName: (id) =>
+      id === "p1" ? "Haymitch" : id === "p2" ? "Heken" : id === "p3" ? "Vito" : id ?? "Unknown",
+    resolveItemName: (type) =>
+      type === "food" ? (getLocale() === "es" ? "Comida" : "Food") : type,
+  });
+
+  const partialStealEvent: ReplayEvent = {
+    kind: "player",
+    importance: 1,
+    actorId: "p1",
+    action: {
+      actionId: "steal",
+      metadata: {
+        extraExecutions: 1,
+        targetPlayerId: "p2",
+        secondTargetPlayerId: "p3",
+        stolenCount: 1,
+        stolenItems: [{ itemType: "food" }],
+        blockedByProtection: true,
+        protectedTargetPlayerIds: ["p3"],
+      },
+    },
+    targets: [
+      {
+        targetId: "p2",
+        metadata: {
+          stolenCount: 1,
+          stolenItems: [{ itemType: "food" }],
+        },
+      },
+    ],
+  };
+
+  logView.setUsernames({ p1: "Haymitch", p2: "Heken", p3: "Vito" });
+
+  setLocale("en");
+  const enLines = logView.formatReplayEvents([partialStealEvent]);
+  assert.ok(enLines.some((l) => l.includes("Haymitch stole Food from Heken")));
+  assert.ok(enLines.some((l) => l.includes("Haymitch failed to use Steal (Vito is protected)")));
+
+  setLocale("es");
+  const esLines = logView.formatReplayEvents([partialStealEvent]);
+  assert.ok(esLines.some((l) => l.includes("Haymitch robó Comida a Heken")));
+  assert.ok(esLines.some((l) => l.includes("Haymitch no pudo usar Robar (Vito está protegido)")));
+
+  setLocale("en");
+});

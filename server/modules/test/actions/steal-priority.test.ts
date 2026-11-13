@@ -322,3 +322,28 @@ test("main-action RPC sets secondTargetPlayerId when given targetPlayerIds with 
     "target2"
   );
 });
+
+test("extra steal records blockedByProtection and protectedTargetPlayerIds when a target is protected", () => {
+  const fixture = createFixture(["knife"], ["knife"], undefined, 1);
+  const secondTarget = createDefaultCharacter("target2");
+  secondTarget.position = { tileId: "tile", coord: { q: 0, r: 0 } };
+  secondTarget.statuses.conditions = ["protected"];
+  secondTarget.inventory.carriedItems = [
+    { itemId: "medicine", quantity: 1, weight: ItemLibrary.medicine.weight }
+  ];
+  fixture.match.players.push(secondTarget.id);
+  fixture.match.playerCharacters[secondTarget.id] = secondTarget;
+  fixture.participant.plan.secondTargetPlayerId = secondTarget.id;
+
+  const events = executeStealAction([fixture.participant], fixture.match);
+
+  assert.equal(events.length, 1);
+  assert.equal(events[0].action.metadata?.blockedByProtection, true);
+  assert.deepEqual(events[0].action.metadata?.protectedTargetPlayerIds, ["target2"]);
+  assert.equal(events[0].action.metadata?.stolenCount, 1);
+  assert.deepEqual(
+    fixture.actor.inventory.carriedItems.map((stack) => stack.itemId),
+    ["knife"]
+  );
+  assert.equal(secondTarget.inventory.carriedItems.length, 1);
+});

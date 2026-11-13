@@ -203,6 +203,8 @@ export class StealAction extends BaseAction {
       let secondTargetCandidate: TargetCandidate | undefined;
       let blockedByProtection = false;
       let targetHadNoMoreItems = false;
+      const protectedTargetPlayerIds: string[] = [];
+      const noItemTargetPlayerIds: string[] = [];
       const stolenItems: ItemId[] = [];
       const targetResults = new Map<
         string,
@@ -233,6 +235,9 @@ export class StealAction extends BaseAction {
 
         if (isTargetProtected(candidate.character)) {
           blockedByProtection = true;
+          if (!protectedTargetPlayerIds.includes(candidate.id)) {
+            protectedTargetPlayerIds.push(candidate.id);
+          }
           continue;
         }
         const result = targetResults.get(candidate.id) ?? {
@@ -253,11 +258,17 @@ export class StealAction extends BaseAction {
         );
         if (!itemType) {
           targetHadNoMoreItems = true;
+          if (!noItemTargetPlayerIds.includes(candidate.id)) {
+            noItemTargetPlayerIds.push(candidate.id);
+          }
           continue;
         }
         const weight = itemWeight(itemType);
         if (!removeItem(candidate.character, itemType, weight)) {
           targetHadNoMoreItems = true;
+          if (!noItemTargetPlayerIds.includes(candidate.id)) {
+            noItemTargetPlayerIds.push(candidate.id);
+          }
           continue;
         }
         addItem(participant.character, itemType, weight);
@@ -274,7 +285,10 @@ export class StealAction extends BaseAction {
       match.playerCharacters![participant.playerId] = participant.character;
 
       if (stolenItems.length === 0) {
-        const targetId = firstTargetCandidate?.id ?? requestedTargetPlayerId;
+        const targetId =
+          protectedTargetPlayerIds[0] ??
+          firstTargetCandidate?.id ??
+          requestedTargetPlayerId;
         const targetChar = targetId ? match.playerCharacters?.[targetId] : undefined;
         const isProtected = blockedByProtection || (targetChar && isTargetProtected(targetChar));
         const reason = isProtected
@@ -301,9 +315,11 @@ export class StealAction extends BaseAction {
       };
       if (blockedByProtection) {
         metadata.blockedByProtection = true;
+        metadata.protectedTargetPlayerIds = protectedTargetPlayerIds;
       }
       if (targetHadNoMoreItems) {
         metadata.targetHadNoMoreItems = true;
+        metadata.noItemTargetPlayerIds = noItemTargetPlayerIds;
       }
 
       const action: ReplayActionDone = {
