@@ -9,7 +9,7 @@ const PICK_UP_SOUNDS = [
   "item_equip",
   "wood_small_pickup",
 ];
-const PICKUP_TRAIL_DURATION = 420;
+const PICKUP_TRAIL_DURATION = 630;
 
 type ReplayPickUpItemMetadata = {
   id: string | null;
@@ -82,7 +82,7 @@ export async function animatePickUpEvent(
   const promises: Array<Promise<void>> = [];
   const maxVisuals = Math.min(items.length, 3);
   const angleStep = maxVisuals > 1 ? Math.PI / 3 / (maxVisuals - 1) : 0;
-  const baseAngle = -((maxVisuals - 1) * angleStep) / 2;
+  const baseAngle = Math.PI / 2 - ((maxVisuals - 1) * angleStep) / 2;
 
   for (let index = 0; index < maxVisuals; index += 1) {
     const item = items[index];
@@ -92,7 +92,7 @@ export async function animatePickUpEvent(
     const startY = originWorld.y + Math.sin(angle) * 18;
     const depth = destination.depth + index;
     let node: Phaser.GameObjects.GameObject;
-    let startScale = 0.85;
+    let startScale = 1.7;
     if (
       visual &&
       scene.textures.exists(visual.texture) &&
@@ -110,6 +110,7 @@ export async function animatePickUpEvent(
       context.ignoreUI(image);
       node = image;
     } else {
+      startScale = 2;
       const label = scene.add.text(
         startX,
         startY,
@@ -123,11 +124,11 @@ export async function animatePickUpEvent(
         }
       );
       label.setOrigin(0.5, 0.5);
+      label.setScale(startScale);
       label.setAlpha(0);
       label.setDepth(depth);
       context.ignoreUI(label);
       node = label;
-      startScale = 1;
     }
     promises.push(
       new Promise<void>((resolve) => {
