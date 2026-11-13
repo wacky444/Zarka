@@ -666,3 +666,76 @@ test("CharacterPanelLogView formatReplayEvents formats steal blocked by protecti
 
   setLocale("en");
 });
+
+test("CharacterPanelLogView formatReplayEvents formats pick_lock safe opening and lockpick breaking in English and Spanish", () => {
+  const scene = createMockScene();
+  const logView = new CharacterPanelLogView({
+    panel: { add() {}, emit() {} } as any,
+    elements: {
+      prevButton: createMockElement(scene) as any,
+      nextButton: createMockElement(scene) as any,
+      playButton: createMockElement(scene) as any,
+      filterTrack: createMockElement(scene) as any,
+      filterKnob: createMockElement(scene) as any,
+      filterLabel: createMockElement(scene) as any,
+      turnLabel: createMockElement(scene) as any,
+      statusText: createMockElement(scene) as any,
+      eventsBox: createMockElement(scene) as any,
+      eventsText: createMockElement(scene) as any,
+    },
+  });
+  logView.setUsernames({ p1: "Alice" });
+
+  const breakEvent: ReplayEvent = {
+    kind: "player",
+    importance: 1,
+    actorId: "p1",
+    action: {
+      actionId: "pick_lock",
+      metadata: {
+        outcome: "success",
+        openedInstantly: true,
+        lockpickConsumed: true,
+        contents: ["medicine"],
+      },
+    },
+  };
+
+  const noBreakEvent: ReplayEvent = {
+    kind: "player",
+    importance: 1,
+    actorId: "p1",
+    action: {
+      actionId: "pick_lock",
+      metadata: {
+        outcome: "success",
+        openedInstantly: true,
+        lockpickConsumed: false,
+        contents: ["medicine"],
+      },
+    },
+  };
+
+  const { setLocale } = require("../src/services/i18n");
+
+  setLocale("en");
+  const enLinesBreak = logView.formatReplayEvents([breakEvent]);
+  assert.ok(enLinesBreak.some((l) => l.includes("Alice opened the safe, it contains: Medicine")));
+  assert.ok(enLinesBreak.some((l) => l === "The lockpick broke"));
+
+  const enLinesNoBreak = logView.formatReplayEvents([noBreakEvent]);
+  assert.ok(enLinesNoBreak.some((l) => l.includes("Alice opened the safe, it contains: Medicine")));
+  assert.ok(!enLinesNoBreak.some((l) => l === "The lockpick broke"));
+
+  setLocale("es");
+  const esLinesBreak = logView.formatReplayEvents([breakEvent]);
+  assert.ok(esLinesBreak.some((l) => l.includes("Alice abrió la caja fuerte, contiene: Medicamento")));
+  assert.ok(esLinesBreak.some((l) => l === "La ganzúa se rompió"));
+
+  const esLinesNoBreak = logView.formatReplayEvents([noBreakEvent]);
+  assert.ok(esLinesNoBreak.some((l) => l.includes("Alice abrió la caja fuerte, contiene: Medicamento")));
+  assert.ok(!esLinesNoBreak.some((l) => l === "La ganzúa se rompió"));
+
+  setLocale("en");
+});
+

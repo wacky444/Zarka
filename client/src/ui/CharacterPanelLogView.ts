@@ -1517,6 +1517,7 @@ export class CharacterPanelLogView {
                 turnsCompleted?: unknown;
                 turnsRequired?: unknown;
                 contents?: unknown;
+                lockpickConsumed?: unknown;
               }
             | undefined;
           if (metadata?.outcome === "progress") {
@@ -1536,6 +1537,9 @@ export class CharacterPanelLogView {
               );
             } else {
               lines.push(`${actor} ${t("opened the safe")}`);
+            }
+            if (metadata.lockpickConsumed === true) {
+              lines.push(t("The lockpick broke"));
             }
           } else if (metadata?.outcome === "interrupted") {
             lines.push(`${actor} ${t("lockpicking was interrupted")}`);

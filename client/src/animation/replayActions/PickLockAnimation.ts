@@ -13,6 +13,7 @@ interface PickLockMetadata {
   safeItemId?: string;
   tileId?: string;
   openedInstantly?: boolean;
+  lockpickConsumed?: boolean;
 }
 
 export async function animatePickLockEvent(
