@@ -120,6 +120,10 @@ npm run lint
 
 All of these commands finish quickly (≤15 seconds). Let them complete—never cancel mid-run.
 
+## Publish to itchi.io
+
+cd client; npm run build;H:\Dev\Butler.\butler.exe push dist Wacky/zarka:html
+
 ## Testing & QA expectations
 
 - Manual smoke test after changes:

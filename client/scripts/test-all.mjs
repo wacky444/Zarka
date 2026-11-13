@@ -145,6 +145,11 @@ const suites = [
     name: "character-panel-player-options",
     entryPoint: "test/CharacterPanelPlayerOptions.test.ts",
     alias: { phaser: phaserShim, phaser3spectorjs: phaserShim }
+  },
+  {
+    name: "google-service-itch",
+    entryPoint: "test/GoogleServiceItch.test.ts",
+    alias: { phaser: phaserShim, phaser3spectorjs: phaserShim }
   }
 ];
 
