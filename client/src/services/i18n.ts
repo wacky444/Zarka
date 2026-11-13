@@ -813,6 +813,7 @@ const SPANISH_TRANSLATIONS: Record<string, string> = {
   "target had no items to steal": "el objetivo no tiene objetos que robar",
   "is protected": "está protegido",
   protects: "protege a",
+  fed: "alimentó a",
   "Reduce un tercio del daño recibido; siempre protege al propio personaje y, si se selecciona un objetivo, protege a ambos. Bloquea asaltos, robos y registros salvo consentimiento.":
     "Reduce un tercio del daño recibido; siempre protege al propio personaje y, si se selecciona un objetivo, protege a ambos. Bloquea asaltos, robos y registros salvo consentimiento.",
   "Reduces damage received by one third; always protects your own character and, if a target is selected, protects both. Blocks assaults, thefts, and searches unless consented.":
@@ -1178,6 +1179,7 @@ const ENGLISH_GAME_NAMES: Record<string, string> = {
   "If protection prevents damage.": "If protection prevents damage.",
   "protege a": "protects",
   protects: "protects",
+  fed: "fed",
   Esquivar: "Dodge",
   "Atacar con cuchillo": "Knife attack",
   Desplazarse: "Move",

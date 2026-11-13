@@ -22,9 +22,15 @@ import {
 } from "./utils";
 import { collectTargets } from "./targeting";
 import { BaseAction } from "./classes/BaseAction";
-import { applyPoisonedServingOutcome, consumePoisonedServing } from "./intoxication";
+import {
+  applyPoisonedServingOutcome,
+  consumePoisonedServing,
+  extractPoisonedServing,
+  type PoisonedFoodOutcome,
+} from "./intoxication";
 import { getUsableExtraExecutions } from "../../utils/energy";
 import { isCharacterDead } from "../../utils/playerCharacter";
+import { areSameLocation } from "../../utils/location";
 
 const FEED_ITEM_PRIORITY: ItemId[] = ["food", "drink"];
 
@@ -158,6 +164,42 @@ function consumeCorpse(
   return corpse;
 }
 
+function isSameCell(a: PlayerCharacter, b: PlayerCharacter): boolean {
+  if (areSameLocation(a.position?.coord, b.position?.coord)) {
+    return true;
+  }
+  if (
+    a.position?.tileId &&
+    b.position?.tileId &&
+    a.position.tileId === b.position.tileId
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function resolveFeedRecipient(
+  participant: PlannedActionParticipant,
+  match: MatchRecord
+): { recipient: PlayerCharacter; isTargetingOther: boolean } {
+  const requestedTargetId = participant.plan.targetPlayerIds?.[0];
+  if (
+    requestedTargetId &&
+    requestedTargetId !== participant.playerId &&
+    match.playerCharacters
+  ) {
+    const candidate = match.playerCharacters[requestedTargetId];
+    if (
+      candidate &&
+      !isCharacterDead(candidate) &&
+      isSameCell(participant.character, candidate)
+    ) {
+      return { recipient: candidate, isTargetingOther: true };
+    }
+  }
+  return { recipient: participant.character, isTargetingOther: false };
+}
+
 export class FeedAction extends BaseAction {
   protected override readonly shouldShuffleParticipants = false;
 
@@ -175,6 +217,11 @@ export class FeedAction extends BaseAction {
         }
         continue;
       }
+      const { recipient, isTargetingOther } = resolveFeedRecipient(
+        participant,
+        match
+      );
+      const recipientId = isTargetingOther ? recipient.id : participant.playerId;
       const extraExecutions = getUsableExtraExecutions(
         participant.character,
         participant.plan,
@@ -193,22 +240,32 @@ export class FeedAction extends BaseAction {
       for (let rep = 0; rep < totalReps; rep += 1) {
         const consumed = consumeFeedItem(participant.character);
         const consumedItemId = consumed?.itemId ?? null;
-        const corpse = consumedItemId
-          ? null
-          : canEatCorpse(participant.character, match)
-            ? consumeCorpse(participant.character, match)
-            : null;
+        const corpse =
+          consumedItemId || isTargetingOther
+            ? null
+            : canEatCorpse(participant.character, match)
+              ? consumeCorpse(participant.character, match)
+              : null;
         if (!consumedItemId && !corpse) {
           break;
         }
         consumedItemIds.push(corpse ? "corpse" : consumedItemId!);
         const energyGain = corpse ? 20 : getEnergyGain(consumedItemId!);
-        const restored = applyEnergy(participant.character, energyGain);
+        const restored = applyEnergy(recipient, energyGain);
         totalEnergyRestored += restored;
         if (consumedItemId) {
-          const poisonOutcome = consumed?.poisonedBy
-            ? applyPoisonedServingOutcome(participant.character, consumed.poisonedBy)
-            : consumePoisonedServing(participant.character);
+          let poisonOutcome: PoisonedFoodOutcome;
+          if (consumed?.poisonedBy) {
+            poisonOutcome = applyPoisonedServingOutcome(recipient, consumed.poisonedBy);
+          } else if (recipient === participant.character) {
+            poisonOutcome = consumePoisonedServing(participant.character);
+          } else {
+            const legacyPoisonOwner = extractPoisonedServing(participant.character);
+            poisonOutcome =
+              legacyPoisonOwner !== null
+                ? applyPoisonedServingOutcome(recipient, legacyPoisonOwner)
+                : { consumedPoison: false, intoxicationStarted: false };
+          }
           if (poisonOutcome.consumedPoison) consumedAnyPoison = true;
           if (poisonOutcome.intoxicationStarted) intoxicationStarted = true;
           if (poisonOutcome.overdose) lastOverdose = poisonOutcome.overdose;
@@ -228,7 +285,7 @@ export class FeedAction extends BaseAction {
             if (healthOutcome.event) healthEvents.push(healthOutcome.event);
           }
         }
-        if (isCharacterDead(participant.character)) {
+        if (isCharacterDead(participant.character) || isCharacterDead(recipient)) {
           break;
         }
       }
@@ -253,6 +310,7 @@ export class FeedAction extends BaseAction {
           consumedPoison: consumedAnyPoison,
           intoxicationStarted,
           overdose: lastOverdose,
+          ...(isTargetingOther ? { targetPlayerId: recipientId } : {}),
           ...(extraExecutions > 0 ? { extraExecutions } : {}),
         }
       };
@@ -260,7 +318,7 @@ export class FeedAction extends BaseAction {
         action.originLocation = participant.character.position.coord;
       }
       const target: ReplayActionTarget = {
-        targetId: participant.playerId,
+        targetId: recipientId,
         effects: ReplayActionEffect.Heal,
         metadata: {
           consumedItemId: consumedItemIds[0],
@@ -274,6 +332,9 @@ export class FeedAction extends BaseAction {
       this.clearPlan(participant);
       if (match.playerCharacters) {
         match.playerCharacters[participant.playerId] = participant.character;
+        if (isTargetingOther) {
+          match.playerCharacters[recipientId] = recipient;
+        }
       }
       events.push({
         kind: "player",

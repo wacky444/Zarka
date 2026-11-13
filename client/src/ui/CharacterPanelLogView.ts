@@ -1499,6 +1499,11 @@ export class CharacterPanelLogView {
             intoxicationStarted?: unknown;
             overdose?: unknown;
           };
+          const targetId = event.targets?.[0]?.targetId;
+          const targetName =
+            targetId && targetId !== event.actorId
+              ? this.resolvePlayerName(targetId)
+              : actor;
           const result =
             metadata.overdose === "dead"
               ? t("the overdose was fatal")
@@ -1507,7 +1512,7 @@ export class CharacterPanelLogView {
                 : metadata.intoxicationStarted === true
                   ? t("became intoxicated")
                   : t("was poisoned again");
-          lines.push(`${actor} ${result}`);
+          lines.push(`${targetName} ${result}`);
           continue;
         }
         if (actionId === "pick_lock") {
@@ -1766,6 +1771,15 @@ export class CharacterPanelLogView {
             if (targetId && targetId !== event.actorId) {
               lines.push(
                 `${actor} ${t("protects")} ${this.resolvePlayerName(targetId)}`
+              );
+            } else {
+              lines.push(`${actor} ${t("used")} ${actionName}${extraLabel}`);
+            }
+          } else if (actionId === "feed") {
+            const targetId = event.targets?.find((target) => target.targetId && target.targetId !== event.actorId)?.targetId;
+            if (targetId && targetId !== event.actorId) {
+              lines.push(
+                `${actor} ${t("fed")} ${this.resolvePlayerName(targetId)}`
               );
             } else {
               lines.push(`${actor} ${t("used")} ${actionName}${extraLabel}`);
