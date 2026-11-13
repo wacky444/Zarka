@@ -21,14 +21,13 @@ function getCellKey(participant: PlannedActionParticipant): string | null {
   if (!position) {
     return null;
   }
+  if (position.coord) {
+    return `coord:${position.coord.q},${position.coord.r}`;
+  }
   if (typeof position.tileId === "string" && position.tileId.length > 0) {
     return `tile:${position.tileId}`;
   }
-  const coord = position.coord;
-  if (!coord) {
-    return null;
-  }
-  return `coord:${coord.q},${coord.r}`;
+  return null;
 }
 
 export class SleepAction extends BaseSelfHealAction {
@@ -38,16 +37,17 @@ export class SleepAction extends BaseSelfHealAction {
     roster: PlannedActionParticipant[],
     match: MatchRecord,
   ): ReplayPlayerEvent[] {
-    const extraExecutionsByPlayerId: Record<string, number> = {};
     const extraPoweredByCell: Record<string, number> = {};
 
+    // First pass: identify participants who request and can afford extra power,
+    // without deducting energy yet.
     for (const participant of roster) {
       const extraExecutions = getUsableExtraExecutions(
         participant.character,
         participant.plan,
         ActionLibrary.sleep,
+        false,
       );
-      extraExecutionsByPlayerId[participant.playerId] = extraExecutions;
       const cellKey = getCellKey(participant);
       if (extraExecutions > 0 && cellKey) {
         extraPoweredByCell[cellKey] = (extraPoweredByCell[cellKey] ?? 0) + 1;
@@ -61,13 +61,25 @@ export class SleepAction extends BaseSelfHealAction {
         this.clearPlan(participant);
         continue;
       }
-      const extraExecutions =
-        extraExecutionsByPlayerId[participant.playerId] ?? 0;
       const cellKey = getCellKey(participant);
-      const sharedExtraPower =
-        extraExecutions > 0 &&
-        cellKey !== null &&
-        (extraPoweredByCell[cellKey] ?? 0) > 1;
+      const canShareExtraPower =
+        cellKey !== null && (extraPoweredByCell[cellKey] ?? 0) > 1;
+
+      let extraExecutions = 0;
+      let sharedExtraPower = false;
+
+      if (canShareExtraPower) {
+        extraExecutions = getUsableExtraExecutions(
+          participant.character,
+          participant.plan,
+          ActionLibrary.sleep,
+          true,
+        );
+        sharedExtraPower = extraExecutions > 0;
+      }
+
+      // If nobody else in the same location uses extra power, perform a normal
+      // sleep action without power (heal 2 HP, 0 extra energy deducted, extraExecutions: 0).
       const healed = this.healAmount + (sharedExtraPower ? 5 : 0);
       const { result: healthChange, character: updatedCharacter } =
         applyHealthDelta(participant.character, healed);

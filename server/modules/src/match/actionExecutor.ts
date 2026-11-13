@@ -1890,10 +1890,13 @@ function calculateActionExperience(
     return 0;
   }
 
-  // 5. Dormir (sleep): +4 if with extra execution
+  // 5. Dormir (sleep): +4 if with shared extra execution
   if (action.id === ActionLibrary.sleep.id) {
-    const extra = (event.action.metadata as { extraExecutions?: number })?.extraExecutions ?? 0;
-    if (extra > 0) {
+    const metadata = event.action.metadata as
+      | { extraExecutions?: number; sharedExtraPower?: boolean }
+      | undefined;
+    const extra = metadata?.extraExecutions ?? 0;
+    if (extra > 0 && metadata?.sharedExtraPower === true) {
       return 4;
     }
     return 0;

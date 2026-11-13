@@ -125,6 +125,20 @@ test("sleep reveals a coward only when an extra execution is used", () => {
   assert.equal(restedCoward.cowardRevealedTurn, undefined);
   assert.equal(hasHiddenLogEvent(restedResult.events, restedCoward.id), true);
 
+  const aloneCoward = createCharacter("alone-coward", 0);
+  aloneCoward.abilities.push("coward");
+  aloneCoward.actionPlan = {
+    main: {
+      actionId: ActionLibrary.sleep.id,
+      extraExecutions: 1,
+    },
+  };
+  const aloneMatch = createMatch([aloneCoward], 1);
+  const aloneResult = advanceTurn(aloneMatch, 1, logger);
+  // Nobody else slept with extra power, so aloneCoward performed normal sleep without power and stayed hidden
+  assert.equal(aloneCoward.cowardRevealedTurn, undefined);
+  assert.equal(hasHiddenLogEvent(aloneResult.events, aloneCoward.id), true);
+
   const energizedCoward = createCharacter("energized-coward", 0);
   energizedCoward.abilities.push("coward");
   energizedCoward.actionPlan = {
@@ -133,7 +147,14 @@ test("sleep reveals a coward only when an extra execution is used", () => {
       extraExecutions: 1,
     },
   };
-  const energizedMatch = createMatch([energizedCoward], 1);
+  const partner = createCharacter("partner", 0);
+  partner.actionPlan = {
+    main: {
+      actionId: ActionLibrary.sleep.id,
+      extraExecutions: 1,
+    },
+  };
+  const energizedMatch = createMatch([energizedCoward, partner], 1);
   const energizedResult = advanceTurn(energizedMatch, 1, logger);
   assert.equal(energizedCoward.cowardRevealedTurn, 1);
   assert.equal(hasHiddenLogEvent(energizedResult.events, energizedCoward.id), false);
