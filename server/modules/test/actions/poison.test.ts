@@ -90,6 +90,22 @@ test("poison_food fails when targeted ground food is not on ground and own chara
   ], match);
   assert.equal(events[0].kind === "player" ? events[0].action.actionId : undefined, "failedAction");
   assert.equal(events[0].kind === "player" ? events[0].action.metadata?.reason : undefined, "invalid_target");
+  assert.equal(attacker.inventory.carriedItems[0]?.quantity, 1);
+});
+
+test("poison_food does not consume poison on failure when character target has no food", () => {
+  const attacker = createDefaultCharacter("attacker");
+  const target = createDefaultCharacter("target");
+  attacker.position = target.position = { tileId: "tile", coord: { q: 0, r: 0 } };
+  attacker.inventory.carriedItems = [stack("poison", 1)];
+  target.inventory.carriedItems = []; // No food
+  const match = createMatch([attacker, target]);
+  const events = executePoisonFoodAction([
+    participant(attacker, "poison_food", "secondary", [target.id]),
+  ], match);
+  assert.equal(events[0].kind === "player" ? events[0].action.actionId : undefined, "failedAction");
+  assert.equal(events[0].kind === "player" ? events[0].action.metadata?.reason : undefined, "invalid_target");
+  assert.equal(attacker.inventory.carriedItems[0]?.quantity, 1);
 });
 
 test("poison_food can target a character inventory through the unified item selector", () => {

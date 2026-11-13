@@ -1,5 +1,6 @@
 import {
   ActionLibrary,
+  addCarriedItem,
   ReplayActionEffect,
   type ActionId,
   type ReplayActionDone,
@@ -30,10 +31,11 @@ export class PoisonFoodAction extends BaseAction {
     const events: ReplayPlayerEvent[] = [];
     for (const participant of roster) {
       const actionId = participant.plan.actionId as ActionId;
+      const initialPoisonCount = countCarriedItem(participant.character, "poison");
       const selectedItemIds = (participant.plan.targetItemIds ?? []).filter((id) => typeof id === "string");
       if (selectedItemIds.length > 0) {
         let poisoned = 0;
-        const poisonCount = countCarriedItem(participant.character, "poison");
+        const poisonCount = initialPoisonCount;
         const selectedTargets: ReplayActionTarget[] = [];
         const actorTileId = participant.character.position?.tileId;
         const groundIds = new Set(
@@ -98,7 +100,11 @@ export class PoisonFoodAction extends BaseAction {
           events.push({ kind: "player",
   importance: 1, actorId: participant.playerId, action, targets: selectedTargets });
         } else {
-          events.push(createFailedActionEvent(participant, actionId, { reason: poisonCount <= 0 ? "missing_item" : "invalid_target", ...(poisonCount <= 0 ? { missingItemId: "poison" } : {}) }));
+          const currentPoison = countCarriedItem(participant.character, "poison");
+          if (currentPoison < initialPoisonCount) {
+            addCarriedItem(participant.character, "poison", initialPoisonCount - currentPoison, { unitWeight: 1 });
+          }
+          events.push(createFailedActionEvent(participant, actionId, { reason: initialPoisonCount <= 0 ? "missing_item" : "invalid_target", ...(initialPoisonCount <= 0 ? { missingItemId: "poison" } : {}) }));
         }
         continue;
       }
@@ -107,7 +113,7 @@ export class PoisonFoodAction extends BaseAction {
         allowMultiple: true,
         filter: (candidate) => availableFood(candidate.character) > 0,
       });
-      const poisonCount = countCarriedItem(participant.character, "poison");
+      const poisonCount = initialPoisonCount;
       const availableServings = targets.reduce(
         (sum, target) => sum + availableFood(target.character),
         0,
@@ -163,7 +169,11 @@ export class PoisonFoodAction extends BaseAction {
         events.push({ kind: "player",
   importance: 1, actorId: participant.playerId, action, targets: poisonedTargets });
       } else {
-        events.push(createFailedActionEvent(participant, actionId, { reason: "missing_item", missingItemId: "poison" }));
+        const currentPoison = countCarriedItem(participant.character, "poison");
+        if (currentPoison < initialPoisonCount) {
+          addCarriedItem(participant.character, "poison", initialPoisonCount - currentPoison, { unitWeight: 1 });
+        }
+        events.push(createFailedActionEvent(participant, actionId, { reason: initialPoisonCount <= 0 ? "missing_item" : "invalid_target", ...(initialPoisonCount <= 0 ? { missingItemId: "poison" } : {}) }));
       }
     }
     return events;
