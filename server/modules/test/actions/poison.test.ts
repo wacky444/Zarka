@@ -59,6 +59,39 @@ test("poison_food can poison a selected visible ground food item", () => {
   assert.equal(events[0].kind === "player" ? events[0].action.metadata?.poisonedItems : undefined, 1);
 });
 
+test("poison_food falls back to own character inventory when targeted ground food is not found on the ground", () => {
+  const attacker = createDefaultCharacter("attacker");
+  attacker.position = { tileId: "tile", coord: { q: 0, r: 0 } };
+  attacker.inventory.carriedItems = [stack("poison", 1), stack("food", 1)];
+  const match = createMatch([attacker]);
+  // Item was picked up or does not exist on ground
+  match.items = [];
+  match.map!.tiles[0].itemIds = [];
+  const events = executePoisonFoodAction([
+    participant(attacker, "poison_food", "secondary", undefined, ["picked-up-ground-food"]),
+  ], match);
+  assert.equal(attacker.poisonedFoodCount, 1);
+  assert.equal(attacker.poisonedFoodBy?.[attacker.id], 1);
+  assert.equal(attacker.inventory.carriedItems.some((s) => s.itemId === "poison"), false);
+  assert.equal(events[0].kind === "player" ? events[0].action.actionId : undefined, "poison_food");
+  assert.equal(events[0].kind === "player" ? events[0].action.metadata?.poisonedItems : undefined, 1);
+  assert.equal(events[0].kind === "player" ? events[0].targets?.[0]?.targetId : undefined, attacker.id);
+});
+
+test("poison_food fails when targeted ground food is not on ground and own character has no food", () => {
+  const attacker = createDefaultCharacter("attacker");
+  attacker.position = { tileId: "tile", coord: { q: 0, r: 0 } };
+  attacker.inventory.carriedItems = [stack("poison", 1)];
+  const match = createMatch([attacker]);
+  match.items = [];
+  match.map!.tiles[0].itemIds = [];
+  const events = executePoisonFoodAction([
+    participant(attacker, "poison_food", "secondary", undefined, ["missing-ground-food"]),
+  ], match);
+  assert.equal(events[0].kind === "player" ? events[0].action.actionId : undefined, "failedAction");
+  assert.equal(events[0].kind === "player" ? events[0].action.metadata?.reason : undefined, "invalid_target");
+});
+
 test("poison_food can target a character inventory through the unified item selector", () => {
   const attacker = createDefaultCharacter("attacker");
   const target = createDefaultCharacter("target");

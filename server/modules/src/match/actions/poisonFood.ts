@@ -58,11 +58,37 @@ export class PoisonFoodAction extends BaseAction {
             continue;
           }
           const item = (match.items ?? []).find((entry) => entry.item_id === targetId);
-          if (!item || !groundIds.has(targetId) || !["food", "drink"].includes(item.item_type) || item.poisonedBy) continue;
-          if (!consumeCarriedItem(participant.character, "poison", 1)) break;
-          item.poisonedBy = participant.playerId;
-          poisoned += 1;
-          selectedTargets.push({ targetId: targetId, effects: ReplayActionEffect.Hit });
+          if (item && groundIds.has(targetId)) {
+            if (!["food", "drink"].includes(item.item_type) || item.poisonedBy) continue;
+            if (!consumeCarriedItem(participant.character, "poison", 1)) break;
+            item.poisonedBy = participant.playerId;
+            poisoned += 1;
+            selectedTargets.push({ targetId: targetId, effects: ReplayActionEffect.Hit });
+            continue;
+          }
+          if (availableFood(participant.character) > 0) {
+            if (!consumeCarriedItem(participant.character, "poison", 1)) break;
+            participant.character.poisonedFoodCount = Math.max(0, participant.character.poisonedFoodCount ?? 0) + 1;
+            participant.character.poisonedFoodBy = {
+              ...(participant.character.poisonedFoodBy ?? {}),
+              [participant.playerId]: (participant.character.poisonedFoodBy?.[participant.playerId] ?? 0) + 1,
+            };
+            poisoned += 1;
+            const existingTarget = selectedTargets.find((entry) => entry.targetId === participant.playerId);
+            if (existingTarget) {
+              existingTarget.metadata = {
+                ...existingTarget.metadata,
+                poisonedServings: (typeof existingTarget.metadata?.poisonedServings === "number" ? existingTarget.metadata.poisonedServings : 1) + 1,
+              };
+            } else {
+              selectedTargets.push({
+                targetId: participant.playerId,
+                effects: ReplayActionEffect.Hit,
+                metadata: { poisonedServings: 1 },
+              });
+            }
+            continue;
+          }
         }
         this.clearPlan(participant);
         match.playerCharacters![participant.playerId] = participant.character;
