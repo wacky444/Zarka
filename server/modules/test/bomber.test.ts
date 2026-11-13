@@ -209,3 +209,85 @@ test("bomber damage log is private to each affected player", () => {
   );
   assert.equal(storedMatch.pendingBomberStrikes, undefined);
 });
+
+test("bomber strike respects resilience4 lethal damage protection", () => {
+  const characters = Object.fromEntries(
+    ["buyer", "resilient_victim", "fragile_victim"].map((playerId) => {
+      const character = createDefaultCharacter(playerId);
+      character.economy.zarkans = playerId === "buyer" ? 100 : 0;
+      character.stats.health.current = 4;
+      character.stats.health.max = 4;
+      if (playerId === "resilient_victim") {
+        character.abilities = ["resilience4"];
+      }
+      character.position = {
+        tileId: playerId === "buyer" ? "other" : "blast",
+        coord: playerId === "buyer" ? { q: 1, r: 0 } : BLAST_COORD,
+      };
+      return [playerId, character];
+    })
+  ) as MatchRecord["playerCharacters"];
+
+  const match: MatchRecord = {
+    match_id: "bomber-resilience-test",
+    players: Object.keys(characters),
+    playerCharacters: characters,
+    playerList: {},
+    size: 3,
+    created_at: 1,
+    current_turn: 1,
+    started: true,
+    removed: 0,
+    map: {
+      cols: 1,
+      rows: 1,
+      seed: "bomber-resilience-test",
+      tiles: [
+        {
+          id: "blast",
+          coord: BLAST_COORD,
+          localizationType: LocalizationType.Road,
+          walkable: true,
+          itemIds: [],
+        },
+      ],
+    },
+    pendingBomberStrikes: [
+      {
+        targetLocation: BLAST_COORD,
+        buyerPlayerId: "buyer",
+        purchasedTurn: 1,
+      },
+    ],
+  };
+
+  const nakama = {
+    storageRead: () => [],
+    storageWrite: () => [],
+    storageList: () => ({ objects: [] }),
+    storageDelete: () => undefined,
+    matchCreate: () => "",
+    matchList: () => ({ matches: [] }),
+    matchSignal: () => "",
+  } as unknown as nkruntime.Nakama;
+  const logger = {
+    debug: () => undefined,
+    info: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+  } as unknown as nkruntime.Logger;
+
+  advanceTurn(match, 2, logger, nakama);
+
+  const resilientVictim = match.playerCharacters["resilient_victim"];
+  const fragileVictim = match.playerCharacters["fragile_victim"];
+
+  // Resilient victim had 4 HP and took 5 lethal damage, so should survive at 1 HP
+  assert.equal(resilientVictim.stats.health.current, 1);
+  assert.equal(resilientVictim.statuses?.conditions?.includes("dead"), false);
+
+  // Fragile victim had 4 HP and took 5 lethal damage without resilience4, so should die
+  assert.equal(fragileVictim.stats.health.current, 0);
+  assert.equal(fragileVictim.statuses?.conditions?.includes("dead"), true);
+});
+

@@ -80,7 +80,6 @@ export function executeBomberStrikes(
         ignoreGuarded: true,
         ignoreSkillReduction: true,
         canDamageUnconscious: true,
-        bypassResilience: true,
       });
       characters[playerId] = outcome.character;
       const damageTaken = Math.max(0, -outcome.result.delta);
