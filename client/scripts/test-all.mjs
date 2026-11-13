@@ -140,6 +140,11 @@ const suites = [
     name: "virus-damage-animation",
     entryPoint: "test/VirusDamageAnimation.test.ts",
     alias: { phaser: phaserShim, phaser3spectorjs: phaserShim }
+  },
+  {
+    name: "character-panel-player-options",
+    entryPoint: "test/CharacterPanelPlayerOptions.test.ts",
+    alias: { phaser: phaserShim, phaser3spectorjs: phaserShim }
   }
 ];
 

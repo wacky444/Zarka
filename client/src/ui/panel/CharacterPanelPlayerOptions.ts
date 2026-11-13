@@ -1,4 +1,10 @@
-import { isBot, type MatchRecord, type Skin, type UserAccount } from "@shared";
+import {
+  axialDistance,
+  isBot,
+  type MatchRecord,
+  type Skin,
+  type UserAccount
+} from "@shared";
 import { THEME } from "../ColorPalette";
 import type { PlayerOption } from "../PlayerSelector";
 import type { PlayerOptionSkinInfo } from "./PlayerOptionSkinCache";
@@ -91,6 +97,29 @@ export function buildPlayerTargetOptionSets(options: {
   secondaryAllowsSelf: boolean;
   extraSecondaryAllowsSelf: boolean;
 }): PlayerTargetOptionSets {
+  const isFirstTurn = (options.match?.current_turn ?? 0) === 0;
+  const actorCoord = options.currentUserId
+    ? options.match?.playerCharacters?.[options.currentUserId]?.position?.coord
+    : undefined;
+
+  const isVisibleTarget = (targetId: string): boolean => {
+    const character = options.match?.playerCharacters?.[targetId];
+    if (!character) {
+      return false;
+    }
+    if (isFirstTurn) {
+      if (options.currentUserId && targetId === options.currentUserId) {
+        return true;
+      }
+      const targetCoord = character.position?.coord;
+      if (!actorCoord || !targetCoord) {
+        return false;
+      }
+      return axialDistance(actorCoord, targetCoord) === 0;
+    }
+    return true;
+  };
+
   const buildForAction = (
     actionId: string | null,
     allowsSelf: boolean
@@ -108,12 +137,12 @@ export function buildPlayerTargetOptionSets(options: {
       return allowsSelf || option.id !== options.currentUserId;
     });
     targets.sort((a, b) => {
-      const aVisible = options.match?.playerCharacters?.[a.id] !== undefined;
-      const bVisible = options.match?.playerCharacters?.[b.id] !== undefined;
+      const aVisible = isVisibleTarget(a.id);
+      const bVisible = isVisibleTarget(b.id);
       return Number(!aVisible) - Number(!bVisible);
     });
     return targets.map((option) =>
-      options.match?.playerCharacters?.[option.id] !== undefined
+      isVisibleTarget(option.id)
         ? option
         : { ...option, warning: "Not visible" }
     );
