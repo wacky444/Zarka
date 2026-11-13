@@ -127,9 +127,7 @@ test("poison_food can target own character inventory through unified item select
 test("throwing poisoned food preserves poison on the created ground item", () => {
   const thrower = createDefaultCharacter("thrower");
   thrower.position = { tileId: "tile", coord: { q: 0, r: 0 } };
-  thrower.inventory.carriedItems = [stack("food", 1)];
-  thrower.poisonedFoodCount = 1;
-  thrower.poisonedFoodBy = { "poisoner-id": 1 };
+  thrower.inventory.carriedItems = [{ itemId: "food", quantity: 1, weight: 1, metadata: { poisonedBy: "poisoner-id" } }];
   const match = createMatch([thrower]);
   executeThrowObjectAction([
     {
@@ -147,9 +145,7 @@ test("throwing poisoned food preserves poison on the created ground item", () =>
 test("dropping poisoned food preserves poison on the created ground item", () => {
   const dropper = createDefaultCharacter("dropper");
   dropper.position = { tileId: "tile", coord: { q: 0, r: 0 } };
-  dropper.inventory.carriedItems = [stack("food", 1)];
-  dropper.poisonedFoodCount = 1;
-  dropper.poisonedFoodBy = { "poisoner-id": 1 };
+  dropper.inventory.carriedItems = [{ itemId: "food", quantity: 1, weight: 1, metadata: { poisonedBy: "poisoner-id" } }];
   const match = createMatch([dropper]);
   executeDropAction([
     {
@@ -201,8 +197,7 @@ test("poison_food can target a character inventory through the unified item sele
 test("feeding poisoned food starts five-action intoxication and consumes one poisoned serving", () => {
   const target = createDefaultCharacter("target");
   target.position = { tileId: "tile", coord: { q: 0, r: 0 } };
-  target.inventory.carriedItems = [stack("food", 1)];
-  target.poisonedFoodCount = 1;
+  target.inventory.carriedItems = [{ itemId: "food", quantity: 1, weight: 1, metadata: { poisonedBy: "attacker" } }];
   const match = createMatch([target]);
   const events = executeFeedAction([participant(target, "feed", "main")], match);
   assert.equal(target.poisonedFoodCount, 0);

@@ -12,6 +12,7 @@ import { countCarriedItem, consumeCarriedItem, createFailedActionEvent, type Pla
 import { getUsableExtraExecutions } from "../../utils/energy";
 import { collectTargets } from "./targeting";
 import { BaseAction } from "./classes/BaseAction";
+import { addPoisonedServing } from "./intoxication";
 
 function foodCount(character: PlannedActionParticipant["character"]): number {
   return countCarriedItem(character, "food") + countCarriedItem(character, "drink");
@@ -51,10 +52,9 @@ export class PoisonFoodAction extends BaseAction {
             while (amount < availableFood(target) && poisoned < poisonCount && consumeCarriedItem(participant.character, "poison", 1)) {
               amount += 1;
               poisoned += 1;
+              addPoisonedServing(target, participant.playerId);
             }
             if (amount > 0) {
-              target.poisonedFoodCount = Math.max(0, target.poisonedFoodCount ?? 0) + amount;
-              target.poisonedFoodBy = { ...(target.poisonedFoodBy ?? {}), [participant.playerId]: (target.poisonedFoodBy?.[participant.playerId] ?? 0) + amount };
               selectedTargets.push({ targetId: characterId, effects: ReplayActionEffect.Hit, metadata: { poisonedServings: amount } });
             }
             continue;
@@ -70,11 +70,7 @@ export class PoisonFoodAction extends BaseAction {
           }
           if (availableFood(participant.character) > 0) {
             if (!consumeCarriedItem(participant.character, "poison", 1)) break;
-            participant.character.poisonedFoodCount = Math.max(0, participant.character.poisonedFoodCount ?? 0) + 1;
-            participant.character.poisonedFoodBy = {
-              ...(participant.character.poisonedFoodBy ?? {}),
-              [participant.playerId]: (participant.character.poisonedFoodBy?.[participant.playerId] ?? 0) + 1,
-            };
+            addPoisonedServing(participant.character, participant.playerId);
             poisoned += 1;
             const existingTarget = selectedTargets.find((entry) => entry.targetId === participant.playerId);
             if (existingTarget) {
@@ -154,10 +150,9 @@ export class PoisonFoodAction extends BaseAction {
         let amount = 0;
         while (amount < requestedAmount && consumeCarriedItem(participant.character, "poison", 1)) {
           amount += 1;
+          addPoisonedServing(target.character, participant.playerId);
         }
         if (amount <= 0) break;
-        target.character.poisonedFoodCount = Math.max(0, target.character.poisonedFoodCount ?? 0) + amount;
-        target.character.poisonedFoodBy = { ...(target.character.poisonedFoodBy ?? {}), [participant.playerId]: (target.character.poisonedFoodBy?.[participant.playerId] ?? 0) + amount };
         match.playerCharacters![target.id] = target.character;
         poisonedServings += amount;
         poisonedTargets.push({

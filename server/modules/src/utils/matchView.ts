@@ -8,7 +8,9 @@ import {
   type MatchRecord as SharedMatchRecord,
   type TrapRecord,
   type PlayerCharacter,
-  type PlayerCharacterUnknown
+  type PlayerCharacterUnknown,
+  type PlayerInventory,
+  type PlayerItemStack
 } from "@shared";
 import type { MatchRecord } from "../models/types";
 import { axialDistance } from "./location";
@@ -130,8 +132,44 @@ export function tailorTrapsForViewer(
   return traps.filter((trap) => trap.ownerId === viewerId);
 }
 
+function redactInventory(
+  inventory: PlayerInventory,
+  viewerId?: string | null,
+  viewAll = false
+): PlayerInventory {
+  if (!inventory || !Array.isArray(inventory.carriedItems)) return inventory;
+  if (viewAll) return inventory;
+  const carriedItems: PlayerItemStack[] = [];
+  for (const stack of inventory.carriedItems) {
+    if (!stack || stack.quantity <= 0) continue;
+    const isPoisoned = !!stack.metadata?.poisonedBy;
+    const canSeePoison = !!viewerId && stack.metadata?.poisonedBy === viewerId;
+    if (!isPoisoned || canSeePoison) {
+      carriedItems.push({ ...stack, ...(stack.metadata ? { metadata: { ...stack.metadata } } : {}) });
+    } else {
+      const { poisonedBy: _p, ...cleanMeta } = stack.metadata!;
+      const cleanStack: PlayerItemStack = {
+        ...stack,
+        ...(Object.keys(cleanMeta).length > 0 ? { metadata: cleanMeta } : {}),
+      };
+      if (Object.keys(cleanMeta).length === 0) delete cleanStack.metadata;
+      const existing = carriedItems.find((s) => s.itemId === cleanStack.itemId && !s.metadata?.poisonedBy);
+      if (existing) {
+        existing.quantity += cleanStack.quantity;
+        existing.weight += cleanStack.weight;
+      } else {
+        carriedItems.push(cleanStack);
+      }
+    }
+  }
+  return { ...inventory, carriedItems };
+}
+
 function redactPoisonAttribution(character: PlayerCharacter, viewerId: string | undefined | null, viewAll: boolean): PlayerCharacter {
   const sanitized = { ...character };
+  if (sanitized.inventory) {
+    sanitized.inventory = redactInventory(sanitized.inventory, viewerId, viewAll);
+  }
   if (viewAll) return sanitized;
   const ownAttribution = viewerId ? sanitized.poisonedFoodBy?.[viewerId] : undefined;
   if (typeof ownAttribution === "number" && ownAttribution > 0) {

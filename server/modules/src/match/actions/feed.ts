@@ -2,6 +2,8 @@
 
 import type { MatchRecord } from "../../models/types";
 import {
+  ActionLibrary,
+  extractCarriedItem,
   getSkillEffectTotal,
   ReplayActionEffect,
   syncBandolierLoadCapacity,
@@ -20,7 +22,9 @@ import {
 } from "./utils";
 import { collectTargets } from "./targeting";
 import { BaseAction } from "./classes/BaseAction";
-import { consumePoisonedServing } from "./intoxication";
+import { applyPoisonedServingOutcome, consumePoisonedServing } from "./intoxication";
+import { getUsableExtraExecutions } from "../../utils/energy";
+import { isCharacterDead } from "../../utils/playerCharacter";
 
 const FEED_ITEM_PRIORITY: ItemId[] = ["food", "drink"];
 
@@ -125,11 +129,12 @@ function applyEnergy(character: PlayerCharacter, amount: number): number {
   return next - current;
 }
 
-function consumeFeedItem(character: PlayerCharacter): ItemId | null {
+function consumeFeedItem(character: PlayerCharacter): { itemId: ItemId; poisonedBy?: string } | null {
   for (let i = 0; i < FEED_ITEM_PRIORITY.length; i += 1) {
     const candidateId = FEED_ITEM_PRIORITY[i];
-    if (consumeCarriedItem(character, candidateId, 1)) {
-      return candidateId;
+    const extracted = extractCarriedItem(character, candidateId, 1, { preferPoisoned: true });
+    if (extracted) {
+      return { itemId: candidateId, poisonedBy: extracted.metadata?.poisonedBy };
     }
   }
   return null;
@@ -170,47 +175,85 @@ export class FeedAction extends BaseAction {
         }
         continue;
       }
-      const consumedItemId = consumeFeedItem(participant.character);
-      const corpse = consumedItemId
-        ? null
-        : canEatCorpse(participant.character, match)
-          ? consumeCorpse(participant.character, match)
-          : null;
-      if (!consumedItemId && !corpse) {
+      const extraExecutions = getUsableExtraExecutions(
+        participant.character,
+        participant.plan,
+        ActionLibrary.feed
+      );
+      const totalReps = 1 + extraExecutions;
+      let totalEnergyRestored = 0;
+      let totalHealthLost = 0;
+      let consumedAnyPoison = false;
+      let intoxicationStarted = false;
+      let lastOverdose: string | null = null;
+      let lastCorpseRationsRemaining: number | null = null;
+      const consumedItemIds: (ItemId | "corpse")[] = [];
+      const healthEvents: ReplayPlayerEvent[] = [];
+
+      for (let rep = 0; rep < totalReps; rep += 1) {
+        const consumed = consumeFeedItem(participant.character);
+        const consumedItemId = consumed?.itemId ?? null;
+        const corpse = consumedItemId
+          ? null
+          : canEatCorpse(participant.character, match)
+            ? consumeCorpse(participant.character, match)
+            : null;
+        if (!consumedItemId && !corpse) {
+          break;
+        }
+        consumedItemIds.push(corpse ? "corpse" : consumedItemId!);
+        const energyGain = corpse ? 20 : getEnergyGain(consumedItemId!);
+        const restored = applyEnergy(participant.character, energyGain);
+        totalEnergyRestored += restored;
+        if (consumedItemId) {
+          const poisonOutcome = consumed?.poisonedBy
+            ? applyPoisonedServingOutcome(participant.character, consumed.poisonedBy)
+            : consumePoisonedServing(participant.character);
+          if (poisonOutcome.consumedPoison) consumedAnyPoison = true;
+          if (poisonOutcome.intoxicationStarted) intoxicationStarted = true;
+          if (poisonOutcome.overdose) lastOverdose = poisonOutcome.overdose;
+          if (poisonOutcome.healthEvent) healthEvents.push(poisonOutcome.healthEvent);
+        }
+        const corpseHealthLoss = corpse
+          ? getSkillEffectTotal(participant.character, "corpse_consumption") > 0
+            ? 0
+            : 1
+          : 0;
+        if (corpse) {
+          lastCorpseRationsRemaining = corpse.corpseRations ?? null;
+          if (corpseHealthLoss > 0) {
+            totalHealthLost += corpseHealthLoss;
+            const healthOutcome = applyHealthDelta(participant.character, -corpseHealthLoss);
+            mergeCharacterState(participant.character, healthOutcome.character);
+            if (healthOutcome.event) healthEvents.push(healthOutcome.event);
+          }
+        }
+        if (isCharacterDead(participant.character)) {
+          break;
+        }
+      }
+
+      if (consumedItemIds.length === 0) {
         this.clearPlan(participant);
         if (match.playerCharacters) {
           match.playerCharacters[participant.playerId] = participant.character;
         }
         continue;
       }
-      const energyGain = corpse ? 20 : getEnergyGain(consumedItemId!);
-      const restored = applyEnergy(participant.character, energyGain);
-      const poisonOutcome = consumedItemId
-        ? consumePoisonedServing(participant.character)
-        : { consumedPoison: false, intoxicationStarted: false };
-      const healthEvents: ReplayPlayerEvent[] = [];
-      if (poisonOutcome.healthEvent) healthEvents.push(poisonOutcome.healthEvent);
-      const corpseHealthLoss = corpse
-        ? getSkillEffectTotal(participant.character, "corpse_consumption") > 0
-          ? 0
-          : 1
-        : 0;
-      if (corpse && corpseHealthLoss > 0) {
-        const healthOutcome = applyHealthDelta(participant.character, -1);
-        mergeCharacterState(participant.character, healthOutcome.character);
-        if (healthOutcome.event) healthEvents.push(healthOutcome.event);
-      }
+
       const action: ReplayActionDone = {
         actionId,
         effects: ReplayActionEffect.Heal,
         metadata: {
-          consumedItemId: corpse ? "corpse" : consumedItemId,
-          energyRestored: restored,
-          corpseRationsRemaining: corpse?.corpseRations,
-          healthLost: corpseHealthLoss,
-          consumedPoison: poisonOutcome.consumedPoison,
-          intoxicationStarted: poisonOutcome.intoxicationStarted,
-          overdose: poisonOutcome.overdose,
+          consumedItemId: consumedItemIds[0],
+          consumedItems: consumedItemIds,
+          energyRestored: totalEnergyRestored,
+          corpseRationsRemaining: lastCorpseRationsRemaining,
+          healthLost: totalHealthLost,
+          consumedPoison: consumedAnyPoison,
+          intoxicationStarted,
+          overdose: lastOverdose,
+          ...(extraExecutions > 0 ? { extraExecutions } : {}),
         }
       };
       if (participant.character.position?.coord) {
@@ -220,10 +263,12 @@ export class FeedAction extends BaseAction {
         targetId: participant.playerId,
         effects: ReplayActionEffect.Heal,
         metadata: {
-          consumedItemId: corpse ? "corpse" : consumedItemId,
-          energyRestored: restored,
-          corpseRationsRemaining: corpse?.corpseRations,
-          healthLost: corpseHealthLoss
+          consumedItemId: consumedItemIds[0],
+          consumedItems: consumedItemIds,
+          energyRestored: totalEnergyRestored,
+          corpseRationsRemaining: lastCorpseRationsRemaining,
+          healthLost: totalHealthLost,
+          ...(extraExecutions > 0 ? { extraExecutions } : {}),
         }
       };
       this.clearPlan(participant);

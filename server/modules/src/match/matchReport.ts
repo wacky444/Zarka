@@ -155,7 +155,12 @@ function collectEvents(
         event.action.actionId === "feed" ||
         event.action.actionId === "breakfast"
       ) {
-        actor.consumables_used += 1;
+        const metadata = event.action.metadata;
+        const count =
+          Array.isArray(metadata?.consumedItems) && metadata.consumedItems.length > 0
+            ? metadata.consumedItems.length
+            : 1;
+        actor.consumables_used += count;
       }
       if (event.action.actionId === "move") {
         actor.movement_actions += 1;

@@ -1,5 +1,5 @@
-import type { ActionId, ReplayPlayerEvent, PlayerCharacter } from "@shared";
-import { getKnockoutThreshold } from "@shared";
+import type { ActionId, ReplayPlayerEvent, PlayerCharacter, ItemId } from "@shared";
+import { extractCarriedItem, addCarriedItem, removeCarriedItem, syncPoisonCounters, getKnockoutThreshold } from "@shared";
 import type { MatchRecord } from "../../models/types";
 import { applyHealthDelta, mergeCharacterState } from "./utils";
 
@@ -15,7 +15,7 @@ export interface PoisonedFoodOutcome {
   healthEvent?: ReplayPlayerEvent;
 }
 
-export function extractPoisonedServing(character: PlayerCharacter): string | null {
+function consumeLegacyPoison(character: PlayerCharacter): string | null {
   const poisonedFoodCount = Math.max(0, Math.floor(character.poisonedFoodCount ?? 0));
   if (poisonedFoodCount <= 0) {
     return null;
@@ -40,19 +40,38 @@ export function extractPoisonedServing(character: PlayerCharacter): string | nul
   return "";
 }
 
-export function addPoisonedServing(character: PlayerCharacter, poisonerId: string): void {
-  character.poisonedFoodCount = Math.max(0, Math.floor(character.poisonedFoodCount ?? 0)) + 1;
-  character.poisonedFoodBy = {
-    ...(character.poisonedFoodBy ?? {}),
-    [poisonerId]: (character.poisonedFoodBy?.[poisonerId] ?? 0) + 1,
-  };
+export function extractPoisonedServing(character: PlayerCharacter): string | null {
+  const extracted =
+    extractCarriedItem(character, "food", 1, { preferPoisoned: true }) ??
+    extractCarriedItem(character, "drink", 1, { preferPoisoned: true });
+  if (extracted) {
+    if (extracted.metadata?.poisonedBy) {
+      return extracted.metadata.poisonedBy;
+    }
+    const legacyOwner = consumeLegacyPoison(character);
+    if (legacyOwner !== null) {
+      return legacyOwner;
+    }
+    addCarriedItem(character, extracted.itemId, 1, { unitWeight: extracted.weight, metadata: extracted.metadata });
+    return null;
+  }
+  return consumeLegacyPoison(character);
 }
 
-export function consumePoisonedServing(character: PlayerCharacter): PoisonedFoodOutcome {
-  const consumedOwner = extractPoisonedServing(character);
-  if (consumedOwner === null) {
-    return { consumedPoison: false, intoxicationStarted: false };
+export function addPoisonedServing(character: PlayerCharacter, poisonerId: string, itemType: "food" | "drink" = "food"): void {
+  const carried = character.inventory?.carriedItems ?? [];
+  const unpoisoned = carried.find((s) => (s.itemId === "food" || s.itemId === "drink") && !s.metadata?.poisonedBy && s.quantity > 0);
+  if (unpoisoned) {
+    const targetType = unpoisoned.itemId as ItemId;
+    removeCarriedItem(character, targetType, 1, { metadata: unpoisoned.metadata });
+    addCarriedItem(character, targetType, 1, { metadata: { poisonedBy: poisonerId } });
+  } else {
+    addCarriedItem(character, itemType, 1, { metadata: { poisonedBy: poisonerId } });
   }
+  syncPoisonCounters(character);
+}
+
+export function applyPoisonedServingOutcome(character: PlayerCharacter, consumedOwner?: string): PoisonedFoodOutcome {
   if (!hasActiveIntoxication(character)) {
     const statuses = character.statuses ?? { conditions: [] };
     const conditions = [...(statuses.conditions ?? [])];
@@ -96,6 +115,14 @@ export function consumePoisonedServing(character: PlayerCharacter): PoisonedFood
     overdose: injured ? "dead" : "unconscious",
     healthEvent: healthOutcome.event,
   };
+}
+
+export function consumePoisonedServing(character: PlayerCharacter): PoisonedFoodOutcome {
+  const consumedOwner = extractPoisonedServing(character);
+  if (consumedOwner === null) {
+    return { consumedPoison: false, intoxicationStarted: false };
+  }
+  return applyPoisonedServingOutcome(character, consumedOwner);
 }
 
 export function applyIntoxicationBeforeAction(

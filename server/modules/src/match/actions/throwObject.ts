@@ -3,6 +3,7 @@
 import {
   ActionLibrary,
   axialDistance,
+  extractCarriedItem,
   getDodgeSuccessChance,
   ItemLibrary,
   ReplayActionEffect,
@@ -200,15 +201,15 @@ export class ThrowObjectAction extends BaseAction {
       );
       const thrownItems: ThrownItem[] = [];
       for (const itemType of itemTypesToThrow) {
-        if (!consumeCarriedItem(participant.character, itemType)) {
+        const extracted = extractCarriedItem(participant.character, itemType, 1, { preferPoisoned: true });
+        if (!extracted) {
           continue;
         }
         const itemId = createMatchItemId();
         if (!Array.isArray(match.items)) {
           match.items = [];
         }
-        const isFoodOrDrink = itemType === "food" || itemType === "drink";
-        const poisonOwner = isFoodOrDrink ? extractPoisonedServing(participant.character) : null;
+        const poisonOwner = extracted.metadata?.poisonedBy;
         match.items.push({
           item_id: itemId,
           item_type: itemType,

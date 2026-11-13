@@ -89,8 +89,8 @@ export function buildCharacterPanelItemOptions(
       const count = Math.max(1, Math.floor(stack.quantity));
       for (let i = 0; i < count; i++) {
         const isFoodOrDrink = itemId === "food" || itemId === "drink";
-        const isPoisoned = isFoodOrDrink && poisonedFoodRemaining > 0;
-        if (isPoisoned) {
+        const isPoisoned = isFoodOrDrink && (stack.metadata?.poisonedBy !== undefined || poisonedFoodRemaining > 0);
+        if (isPoisoned && poisonedFoodRemaining > 0) {
           poisonedFoodRemaining--;
         }
         inventoryItems.push({

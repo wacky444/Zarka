@@ -1,6 +1,7 @@
 import type { MatchRecord } from "../../models/types";
 import {
   ActionLibrary,
+  extractCarriedItem,
   getLockerSaleBonus,
   getSkillRank,
   ItemLibrary,
@@ -179,16 +180,16 @@ export class DropAction extends BaseAction {
 
       for (const itemType of chosenItems) {
         const weight = resolveItemWeight(itemType);
-        const removed = removeItemFromInventory(
-          participant.character,
-          itemType,
-          weight
-        );
-        if (!removed) {
-          continue;
-        }
 
         if (isSell) {
+          const removed = removeItemFromInventory(
+            participant.character,
+            itemType,
+            weight
+          );
+          if (!removed) {
+            continue;
+          }
           const itemDef = ItemLibrary[itemType];
           const rawSellValue = itemDef?.sellValue;
           const baseValue =
@@ -215,14 +216,22 @@ export class DropAction extends BaseAction {
 
           processedItems.push({ itemType, zarkans: earned });
         } else {
+          const extracted = extractCarriedItem(
+            participant.character,
+            itemType,
+            1,
+            { unitWeight: weight, preferPoisoned: true }
+          );
+          if (!extracted) {
+            continue;
+          }
           const newId = `itm_${Date.now().toString(36)}_${Math.random()
             .toString(36)
             .slice(2, 7)}`;
           if (!Array.isArray(match.items)) {
             match.items = [];
           }
-          const isFoodOrDrink = itemType === "food" || itemType === "drink";
-          const poisonOwner = isFoodOrDrink ? extractPoisonedServing(participant.character) : null;
+          const poisonOwner = extracted.metadata?.poisonedBy;
           match.items.push({
             item_id: newId,
             item_type: itemType,

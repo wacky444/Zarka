@@ -121,10 +121,16 @@ export interface PlayerInventory {
   stash?: PlayerItemStack[];
 }
 
+export interface PlayerItemStackMetadata {
+  poisonedBy?: string;
+  [key: string]: unknown;
+}
+
 export interface PlayerItemStack {
   itemId: string;
   quantity: number;
   weight: number;
+  metadata?: PlayerItemStackMetadata;
 }
 
 export interface PlayerRelationships {
