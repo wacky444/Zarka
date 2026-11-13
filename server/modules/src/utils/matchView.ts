@@ -17,6 +17,34 @@ import { axialDistance } from "./location";
 import { isCharacterDead } from "./playerCharacter";
 import { canCharacterDetectFire } from "./fireVisibility";
 import { canReceiveTrackerSignal } from "../match/trackerState";
+import { isAdminUser, isGameMasterUser } from "./admin";
+
+/**
+ * Resolves whether the current viewer has full untailored view permissions.
+ * True if the match has Game Master mode active for this viewer, or if the
+ * viewer is an admin and requested `view_all`.
+ */
+export function resolveViewAll(
+  nk: nkruntime.Nakama | undefined | null,
+  userId: string | undefined | null,
+  requestedViewAll?: boolean,
+  matchOrIsGM?: MatchRecord | boolean
+): boolean {
+  const isGM =
+    typeof matchOrIsGM === "boolean"
+      ? matchOrIsGM
+      : matchOrIsGM
+      ? isGameMasterUser(matchOrIsGM, userId)
+      : false;
+
+  if (isGM) {
+    return true;
+  }
+  if (requestedViewAll === true && nk && userId) {
+    return isAdminUser(nk, userId);
+  }
+  return false;
+}
 
 type DiscoveredItemLookup = Record<string, true>;
 

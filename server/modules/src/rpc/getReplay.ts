@@ -18,6 +18,7 @@ import {
   tailorMatchItemsForCharacter,
   tailorPlayerCharactersForViewer,
   tailorTrapsForViewer,
+  resolveViewAll,
 } from "../utils/matchView";
 import { isAdminUser } from "../utils/admin";
 
@@ -124,9 +125,8 @@ export function getReplayRpc(
   }
 
   const canFilterOrViewAll =
-    match.gameMasterMode === true ||
     hasMatchReport ||
-    (json.view_all === true && isAdmin);
+    resolveViewAll(nk, ctx.userId, json.view_all, match.gameMasterMode === true);
 
   let viewAll = false;
   let targetViewerId = ctx.userId;
@@ -139,9 +139,8 @@ export function getReplayRpc(
       viewAll = false;
     } else {
       viewAll =
-        (json.view_all === true && isAdmin) ||
         hasMatchReport ||
-        match.gameMasterMode === true;
+        resolveViewAll(nk, ctx.userId, json.view_all, match.gameMasterMode === true);
     }
   } else {
     targetViewerId = ctx.userId;

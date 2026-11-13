@@ -18,6 +18,7 @@ import {
   tailorMatchItemsForCharacter,
   tailorPlayerCharactersForViewer,
   tailorTrapsForViewer,
+  resolveViewAll,
 } from "../utils/matchView";
 import { isCharacterIncapacitated, isCharacterDead } from "../utils/playerCharacter";
 import { resolveTurnForMatch, type TurnResolutionResult } from "../match/turnResolution";
@@ -25,7 +26,7 @@ import { sendTutorialBotMessageForTurn } from "../match/TutorialBotChat";
 import { emitMatchEndedSignal } from "../match/checkEndGame";
 import { validateTime } from "../utils/validation";
 import { getRuntimeMatchId } from "../utils/matchIds";
-import { isAdminUser, isGameMasterUser } from "../utils/admin";
+import { isGameMasterUser } from "../utils/admin";
 import { recordHumanGameplayActivity } from "../utils/activityClock";
 import { createReplaySnapshot } from "../match/replay/snapshot";
 import {
@@ -106,8 +107,7 @@ export function updateReadyStateRpc(
       throw makeNakamaError("not_in_match", nkruntime.Codes.PERMISSION_DENIED);
     }
   }
-  const viewAll =
-    (json.view_all === true && isAdminUser(nk, ctx.userId)) || isGM;
+  const viewAll = resolveViewAll(nk, ctx.userId, json.view_all, isGM);
   if (match.removed && match.removed !== 0) {
     throw makeNakamaError("match_ended", nkruntime.Codes.FAILED_PRECONDITION);
   }
