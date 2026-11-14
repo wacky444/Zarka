@@ -289,3 +289,21 @@ test("admin in ongoing match with view_all enabled can load untailored replay ev
   assert.deepEqual(result.events, [HIDDEN_EVENT]);
   assert.equal(result.character, "all");
 });
+
+test("admin in ongoing match with view_all enabled can filter replay events by specific character", () => {
+  const { nk, logger } = createHarness(false);
+  const response = getReplayRpc(
+    { userId: "admin" } as nkruntime.Context,
+    logger,
+    nk,
+    JSON.stringify({ match_id: MATCH_ID, turn: 1, view_all: true, character: "other-player" }),
+  );
+  const result = JSON.parse(response) as {
+    events: unknown[];
+    character?: string;
+  };
+
+  assert.deepEqual(result.events, [HIDDEN_EVENT]);
+  assert.equal(result.character, "other-player");
+});
+

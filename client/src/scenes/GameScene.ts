@@ -3794,7 +3794,7 @@ export class GameScene extends Phaser.Scene {
         this.updateCharacterPanel(this.currentMatch);
         const turn = this.currentMatch.current_turn ?? 0;
         if (result.event) {
-          const cacheKey = this.getReplayCacheKey(turn);
+          const cacheKey = this.getReplayCacheKey(turn, this.currentUserId);
           const cached = this.logReplayCache.get(cacheKey);
           const events = [...(cached?.events ?? []), result.event];
           this.logReplayCache.set(cacheKey, {
@@ -4082,7 +4082,7 @@ export class GameScene extends Phaser.Scene {
         });
       }
 
-      this.logReplayCache.set(this.getReplayCacheKey(turnNumber), { events: replayEvents });
+      this.logReplayCache.set(this.getReplayCacheKey(turnNumber, this.currentUserId), { events: replayEvents });
       if (this.adminViewEnabled) {
         this.logReplayCache.set(this.getReplayCacheKey(turnNumber, "all"), { events: replayEvents });
       }
@@ -4116,7 +4116,7 @@ export class GameScene extends Phaser.Scene {
       if (!this.replayView && !this.replayPlaying) {
         this.renderPlayerCharacters(match);
       }
-      this.logReplayCache.set(this.getReplayCacheKey(turnNumber), { events: [] });
+      this.logReplayCache.set(this.getReplayCacheKey(turnNumber, this.currentUserId), { events: [] });
       if (this.adminViewEnabled) {
         this.logReplayCache.set(this.getReplayCacheKey(turnNumber, "all"), { events: [] });
       }
@@ -4844,7 +4844,9 @@ export class GameScene extends Phaser.Scene {
       const characterParam = canFilterOrViewAll
         ? (isAll ? "all" : this.selectedLogCharacterId ?? undefined)
         : (this.currentUserId ?? undefined);
-      const viewAllParam = canFilterOrViewAll && isAll;
+      const viewAllParam = Boolean(
+        this.adminViewEnabled || (canFilterOrViewAll && isAll)
+      );
       const res = await service.getReplay(
         matchId,
         turn,
