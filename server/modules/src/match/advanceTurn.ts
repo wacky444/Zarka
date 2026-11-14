@@ -4,6 +4,7 @@ import {
   ActionLibrary,
   getSkillRank,
   isCharacterHidden,
+  recalculateCharacterLoad,
   syncBandolierLoadCapacity,
   type ActionDefinition,
   type PlayerCharacter,
@@ -456,6 +457,13 @@ export function advanceTurn(
   appendHiddenStatusEvents(match, resolvedTurn, replayEvents);
   recordMatchReportProgress(match);
   recordRankedTeamEliminations(match, resolvedTurn);
+  if (match.playerCharacters) {
+    for (const charId in match.playerCharacters) {
+      if (Object.prototype.hasOwnProperty.call(match.playerCharacters, charId)) {
+        recalculateCharacterLoad(match.playerCharacters[charId]);
+      }
+    }
+  }
   if (nk) {
     finalizeMatchIfEnded(match, nk, logger, replayEvents, resolvedTurn);
   }

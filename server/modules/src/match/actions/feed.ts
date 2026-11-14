@@ -24,8 +24,7 @@ import { collectTargets } from "./targeting";
 import { BaseAction } from "./classes/BaseAction";
 import {
   applyPoisonedServingOutcome,
-  consumePoisonedServing,
-  extractPoisonedServing,
+  consumeLegacyPoison,
   type PoisonedFoodOutcome,
 } from "./intoxication";
 import { getUsableExtraExecutions } from "../../utils/energy";
@@ -140,7 +139,9 @@ function consumeFeedItem(character: PlayerCharacter): { itemId: ItemId; poisoned
     const candidateId = FEED_ITEM_PRIORITY[i];
     const extracted = extractCarriedItem(character, candidateId, 1, { preferPoisoned: true });
     if (extracted) {
-      return { itemId: candidateId, poisonedBy: extracted.metadata?.poisonedBy };
+      const legacyPoison = consumeLegacyPoison(character);
+      const poisonedBy = extracted.metadata?.poisonedBy ?? (legacyPoison !== null ? legacyPoison : undefined);
+      return { itemId: candidateId, poisonedBy };
     }
   }
   return null;
@@ -254,22 +255,13 @@ export class FeedAction extends BaseAction {
         const restored = applyEnergy(recipient, energyGain);
         totalEnergyRestored += restored;
         if (consumedItemId) {
-          let poisonOutcome: PoisonedFoodOutcome;
           if (consumed?.poisonedBy) {
-            poisonOutcome = applyPoisonedServingOutcome(recipient, consumed.poisonedBy);
-          } else if (recipient === participant.character) {
-            poisonOutcome = consumePoisonedServing(participant.character);
-          } else {
-            const legacyPoisonOwner = extractPoisonedServing(participant.character);
-            poisonOutcome =
-              legacyPoisonOwner !== null
-                ? applyPoisonedServingOutcome(recipient, legacyPoisonOwner)
-                : { consumedPoison: false, intoxicationStarted: false };
+            const poisonOutcome = applyPoisonedServingOutcome(recipient, consumed.poisonedBy);
+            if (poisonOutcome.consumedPoison) consumedAnyPoison = true;
+            if (poisonOutcome.intoxicationStarted) intoxicationStarted = true;
+            if (poisonOutcome.overdose) lastOverdose = poisonOutcome.overdose;
+            if (poisonOutcome.healthEvent) healthEvents.push(poisonOutcome.healthEvent);
           }
-          if (poisonOutcome.consumedPoison) consumedAnyPoison = true;
-          if (poisonOutcome.intoxicationStarted) intoxicationStarted = true;
-          if (poisonOutcome.overdose) lastOverdose = poisonOutcome.overdose;
-          if (poisonOutcome.healthEvent) healthEvents.push(poisonOutcome.healthEvent);
         }
         const corpseHealthLoss = corpse
           ? getSkillEffectTotal(participant.character, "corpse_consumption") > 0

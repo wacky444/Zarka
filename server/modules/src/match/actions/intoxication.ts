@@ -15,7 +15,7 @@ export interface PoisonedFoodOutcome {
   healthEvent?: ReplayPlayerEvent;
 }
 
-function consumeLegacyPoison(character: PlayerCharacter): string | null {
+export function consumeLegacyPoison(character: PlayerCharacter): string | null {
   const poisonedFoodCount = Math.max(0, Math.floor(character.poisonedFoodCount ?? 0));
   if (poisonedFoodCount <= 0) {
     return null;

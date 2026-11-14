@@ -2,6 +2,7 @@ import type { MatchRecord } from "../../models/types";
 import {
   ActionLibrary,
   addCarriedItem,
+  extractCarriedItem,
   ItemCategory,
   ItemLibrary,
   MAX_STEAL_PRIORITY_ITEMS,
@@ -24,7 +25,6 @@ import {
   type PlannedActionParticipant,
 } from "./utils";
 import { BaseAction } from "./classes/BaseAction";
-import { addPoisonedServing, extractPoisonedServing } from "./intoxication";
 
 function ensureCarriedItems(character: PlayerCharacter): PlayerItemStack[] {
   if (!character.inventory) {
@@ -265,20 +265,21 @@ export class StealAction extends BaseAction {
           continue;
         }
         const weight = itemWeight(itemType);
-        if (!removeItem(candidate.character, itemType, weight)) {
+        const extracted = extractCarriedItem(candidate.character, itemType, 1, {
+          unitWeight: weight,
+          preferPoisoned: true,
+        });
+        if (!extracted) {
           targetHadNoMoreItems = true;
           if (!noItemTargetPlayerIds.includes(candidate.id)) {
             noItemTargetPlayerIds.push(candidate.id);
           }
           continue;
         }
-        addItem(participant.character, itemType, weight);
-        if (itemType === "food" || itemType === "drink") {
-          const poisonOwner = extractPoisonedServing(candidate.character);
-          if (poisonOwner) {
-            addPoisonedServing(participant.character, poisonOwner);
-          }
-        }
+        addCarriedItem(participant.character, itemType, 1, {
+          unitWeight: weight,
+          metadata: extracted.metadata,
+        });
         stolenItems.push(itemType);
         result.stolenItems.push(itemType);
         match.playerCharacters![candidate.id] = candidate.character;

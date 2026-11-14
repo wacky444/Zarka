@@ -131,7 +131,7 @@ export function buildCharacterPanelItemOptions(
 }
 
 export function buildInventoryGridItems(
-  stacks: Array<{ itemId?: string; quantity?: number; weight?: number }>,
+  stacks: Array<{ itemId?: string; quantity?: number; weight?: number; metadata?: { poisonedBy?: string } }>,
   walletZarkans = 0,
   poisonedFoodCount = 0
 ): InventoryGridItem[] {
@@ -181,6 +181,7 @@ export function buildInventoryGridItems(
     const visual = definition
       ? resolveItemTexture(definition)
       : { texture: "hex", frame: "grass_01.png" as const };
+    const hasPoisonMetadata = (itemId === "food" || itemId === "drink") && stacks.some((s) => s.itemId === itemId && s.metadata?.poisonedBy !== undefined);
     items.push({
       id: definition?.id ?? itemId,
       name: definition?.name ?? formatItemName(itemId),
@@ -192,7 +193,7 @@ export function buildInventoryGridItems(
       weightPerItem: normalizeWeight(perItemWeight),
       texture: visual.texture,
       frame: visual.frame,
-      poisoned: poisonedFoodCount > 0 && (itemId === "food" || itemId === "drink")
+      poisoned: hasPoisonMetadata || (poisonedFoodCount > 0 && (itemId === "food" || itemId === "drink"))
     });
   }
   return items.sort((a, b) => a.name.localeCompare(b.name));

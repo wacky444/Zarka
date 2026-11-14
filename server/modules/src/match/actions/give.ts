@@ -1,6 +1,7 @@
 import {
   ActionLibrary,
   addCarriedItem,
+  extractCarriedItem,
   ItemLibrary,
   removeCarriedItem,
   syncBandolierLoadCapacity,
@@ -13,7 +14,6 @@ import type { MatchRecord } from "../../models/types";
 import { getUsableExtraExecutions } from "../../utils/energy";
 import { isCharacterDead } from "../../utils/playerCharacter";
 import { BaseAction } from "./classes/BaseAction";
-import { addPoisonedServing, extractPoisonedServing } from "./intoxication";
 import {
   createFailedActionEvent,
   type PlannedActionParticipant,
@@ -219,16 +219,17 @@ export class GiveAction extends BaseAction {
       const givenItems: Array<{ itemType: ItemId }> = [];
       for (const itemType of itemsToGive) {
         const weight = resolveItemWeight(itemType);
-        if (!removeItem(participant.character, itemType, weight)) {
+        const extracted = extractCarriedItem(participant.character, itemType, 1, {
+          unitWeight: weight,
+          preferPoisoned: true,
+        });
+        if (!extracted) {
           continue;
         }
-        addItem(recipient, itemType, weight);
-        if (itemType === "food" || itemType === "drink") {
-          const poisonOwner = extractPoisonedServing(participant.character);
-          if (poisonOwner) {
-            addPoisonedServing(recipient, poisonOwner);
-          }
-        }
+        addCarriedItem(recipient, itemType, 1, {
+          unitWeight: weight,
+          metadata: extracted.metadata,
+        });
         givenItems.push({ itemType });
       }
 
